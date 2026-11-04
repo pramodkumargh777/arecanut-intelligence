@@ -1,0 +1,26 @@
+{
+  "name": "arecanut-intelligence",
+  "private": true,
+  "engines": {
+    "node": "^22.18.0 || >=24.0.0"
+  },
+  "workspaces": [
+    "frontend",
+    "api"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,frontend -c green,blue \"npm:dev:api\" \"npm:dev:frontend\"",
+    "dev:api": "npm --workspace api run dev",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "db:migrate:local": "npm --workspace api run db:migrate:local",
+    "build": "npm --workspace frontend run build && npm --workspace api run typecheck",
+    "test": "npm --workspace api run test",
+    "backfill:monthly": "node scripts/backfill-monthly.mjs",
+    "refresh:intelligence": "node scripts/refresh-intelligence.mjs",
+    "evaluate:forecasts": "node scripts/evaluate-forecasts.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "pdfjs-dist": "^6.5.438"
+  }
+}

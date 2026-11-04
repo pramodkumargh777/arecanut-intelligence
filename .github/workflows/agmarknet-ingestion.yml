@@ -1,0 +1,33 @@
+name: AGMARKNET ingestion
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agmarknet-ingestion
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    if: ${{ vars.AGMARKNET_RESOURCE_ID != '' && vars.ANI_API_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch and submit authorized AGMARKNET records
+        run: python data-platform/connectors/agmarknet/fetch_api.py --api-url "$ANI_API_URL"
+        env:
+          AGMARKNET_RESOURCE_ID: ${{ vars.AGMARKNET_RESOURCE_ID }}
+          AGMARKNET_API_BASE_URL: ${{ vars.AGMARKNET_API_BASE_URL }}
+          AGMARKNET_PRICE_UNIT: ${{ vars.AGMARKNET_PRICE_UNIT }}
+          DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
+          INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
+          ANI_API_URL: ${{ vars.ANI_API_URL }}

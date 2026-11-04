@@ -1,0 +1,3 @@
+# The initial CSV/API ingestion connector uses Python's standard library only.
+# Optional quality and analytical workflows can use pytest, pandas, and DuckDB later.
+pytest>=8.3,<9

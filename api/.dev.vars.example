@@ -1,0 +1,12 @@
+# Copy to api/.dev.vars. Never commit the filled-in file.
+# Generate two different tokens with:
+# node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+INGESTION_TOKEN=
+ADMIN_TOKEN=
+CORS_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
+MIN_INDEX_MARKETS=3
+REFERENCE_STATE=Karnataka
+
+# Enable collection only after confirming publisher/service permissions.
+MAMCOS_SCHEDULE_ENABLED=false
+INTELLIGENCE_SCHEDULE_ENABLED=false

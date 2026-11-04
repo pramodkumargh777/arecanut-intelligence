@@ -1,0 +1,38 @@
+export type HistoryPoint = {
+  reporting_month: string; weighted_price: number | null; status: string; fetched_at: string | null;
+  source_url: string | null; refresh_run_id: string | null; rolling_3: number | null; rolling_12: number | null;
+  yoy_percent: number | null; volatility_percent: number | null;
+  latest_attempt: { status: string; error_message: string | null; started_at: string } | null;
+};
+export type MonthlyHistory = {
+  points: HistoryPoint[]; varieties: string[]; variety: string; state: string; from: string; to: string;
+  expected_months: number; observed_months: number; reporting_months: number; methodology: string;
+  seasonal: { month: number; index: number | null; complete_years: number }[]; seasonal_years: string[];
+  versions: { reporting_month: string; weighted_price: number | null; fetched_at: string; source_url: string; refresh_run_id: string; variety_present: number }[];
+};
+export type Aggregates = {
+  data: { period: string; from: string; to: string; mean_average_price: number | null; minimum_average: number | null;
+    maximum_average: number | null; reporting_days: number; calendar_days: number; fetched_at: string | null; unit_status: string | null }[];
+  observations: { reporting_date: string; average_price: number; fetched_at: string; source_url: string; unit_status: string }[];
+  methodology: string;
+};
+export type PriceReference = { kind: "cooperative"; id: string } | { kind: "monthly"; month: string; variety: string; refresh_run_id: string } | { kind: "manual"; value: number };
+export type CalculationInputs = {
+  name: string; quantity_quintals: number; commission_percent: number; transport_cost: number; other_selling_cost: number;
+  area_hectares: number; production_cost: number; byproduct_income: number; hold_days: number;
+  annual_finance_percent: number; storage_cost: number; weight_loss_percent: number; scenario_price: number; price: PriceReference;
+};
+export type Calculation = {
+  id?: string; created_at?: string; name?: string; inputs: CalculationInputs; formula_version: string;
+  price: { value: number; source: string; reporting_period: string | null; fetched_at: string | null; source_url: string | null;
+    variety: string | null; branch: string | null; state: string | null; unit_status: string; price_type: string; reference_id: string | null };
+  results: { gross_realization: number; selling_costs: number; net_realization: number; net_per_quintal: number;
+    farm_profit: number; profit_per_hectare: number; roi_percent: number | null; remaining_quintals: number;
+    finance_cost: number; hold_net_realization: number; hold_advantage: number; break_even_hold_price: number;
+    break_even_increase_percent: number; farm_break_even_price: number;
+    hold_unchanged_net_realization: number; hold_unchanged_advantage: number };
+};
+export type DecisionPrices = {
+  cooperative: { id: string; source_key: string; branch: string; reporting_date: string; variety: string; average_price: number; unit_status: string; fetched_at: string }[];
+  monthly: { reporting_month: string; variety_name: string; weighted_price: number; refresh_run_id: string; fetched_at: string }[];
+};

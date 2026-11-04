@@ -1,0 +1,17 @@
+name = "ani-market-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-09"
+
+[triggers]
+crons = ["30 3 * * *"]
+
+[vars]
+CORS_ORIGIN = "http://localhost:5173,http://127.0.0.1:5173"
+MIN_INDEX_MARKETS = "3"
+REFERENCE_STATE = "Karnataka"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ani-market-data"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"

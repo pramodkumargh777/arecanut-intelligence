@@ -1,0 +1,23 @@
+{
+  "name": "@ani/api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.toml --ip 127.0.0.1",
+    "db:migrate:local": "wrangler d1 migrations apply ani-market-data --local --config wrangler.toml",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.6.16",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "@types/node": "^22.20.5",
+    "typescript": "~5.7.2",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.157.0"
+  }
+}
