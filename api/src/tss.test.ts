@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTss, TSS_LOCATIONS, tssUrl, validTssDate } from "./tss";
+import { aggregateTssLots, parseTss, TSS_BACKFILL_MAX_DAYS, TSS_LOCATIONS, tssBackfillDates, tssUrl, validTssDate } from "./tss";
 import { cooperativeSeries } from "./cooperative";
 
 const row = { date1: "2026-11-03", iname: "RASHI", iname_en: "RASHI", itemcode: 1, mnrate: 44099, mxrate: 47299, avgrate: 46055, norrate: 45699 };
@@ -57,5 +57,30 @@ describe("TSS reported averages with explicit unit assumption", () => {
     const quotes = await Promise.all(TSS_LOCATIONS.map((location) =>
       parseTss(report(), location, "2026-11-03", "2026-11-03T18:00:00Z")));
     expect(cooperativeSeries(quotes.flatMap((parsed) => parsed.quotes), 3)).toEqual([]);
+  });
+});
+
+describe("TSS tender lot aggregation", () => {
+  // Field names follow the public tender endpoint; identity values here are synthetic placeholders.
+  const lot = { date1: "2026-11-03", typ: "A", acno: "ACC-1", lotno: 1, vname: "RASHI", rate: "46000", bags: 1, weight: "82.500",
+    buyer: "BUYER-X", seller_name: "Seller Person", seller_name_en: "Seller Person", seller_name_kn: "x", item_en: "RASHI", itemcode: 1 };
+  it("aggregates lots, bags and weight per exact variety and drops all personal fields", () => {
+    const result = aggregateTssLots({ success: true, data: [lot, { ...lot, typ: "S", bags: 2, weight: "160.250" },
+      { ...lot, item_en: "PEPPER" }, { ...lot, date1: "2026-11-02" }, { ...lot, weight: "" }] }, "2026-11-03");
+    expect(Object.fromEntries(result.lots)).toEqual({ RASHI: { lot_count: 2, bag_count: 3, reported_weight: 242.75, session_codes: ["A", "S"] } });
+    expect(result).toMatchObject({ tender_row_count: 5, skipped_row_count: 3 });
+    expect(JSON.stringify(Object.fromEntries(result.lots))).not.toMatch(/Seller|BUYER|ACC-1/);
+  });
+  it("attaches lot aggregates to the matching quotation with an unconfirmed quantity unit", async () => {
+    const lots = aggregateTssLots({ success: true, data: [lot] }, "2026-11-03").lots;
+    const parsed = await parseTss(report(), "Sirsi", "2026-11-03", "2026-11-03T18:00:00Z", lots);
+    expect(parsed.quotes[0]).toMatchObject({ lot_count: 1, bag_count: 1, reported_weight: 82.5, session_codes: "A", review_flags: ["quantity_unit_unconfirmed"] });
+    expect(parsed.quotes[0].raw_record).not.toContain("Seller");
+    expect(parsed.quotes[0].id).not.toBe((await parse(report())).quotes[0].id);
+  });
+  it("bounds historical backfill to a small number of real dates", () => {
+    expect(tssBackfillDates("2026-10-30", "2026-11-03")).toEqual(["2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02", "2026-11-03"]);
+    expect(() => tssBackfillDates("2026-10-01", "2026-11-03")).toThrow(`${TSS_BACKFILL_MAX_DAYS} reporting dates`);
+    expect(() => tssBackfillDates("2026-11-03", "2026-11-01")).toThrow("start date");
   });
 });

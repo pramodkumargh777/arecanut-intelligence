@@ -1,0 +1,243 @@
+"""Tests for the assistant document ingester. Fixtures are small synthetic documents used only in these tests."""
+import io
+import json
+import sys
+import tempfile
+import unittest
+import unittest.mock
+import urllib.error
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "data-platform"))
+from documents import ingest  # noqa: E402
+from documents.ingest import (  # noqa: E402
+    Chunk, IngestError, Page, build_payload, chunk_pages, download, extract, extract_pib, ingest_document, load_manifest,
+    post_document, quantize_embedding, stated_pib_date, validate_entry,
+)
+
+TOKEN = "admin-token-should-never-appear"
+
+
+def minimal_pdf(pages: list[str]) -> bytes:
+    """A valid PDF with one Helvetica text line per page (built by hand so tests need no PDF writer)."""
+    objects = ["<< /Type /Catalog /Pages 2 0 R >>", ""]
+    kids = []
+    for text in pages:
+        content = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode("latin-1")
+        page_id, content_id = len(objects) + 1, len(objects) + 2
+        kids.append(f"{page_id} 0 R")
+        objects.append(f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents {content_id} 0 R "
+                       f"/Resources << /Font << /F1 {len(pages) * 2 + 3} 0 R >> >> >>")
+        objects.append(f"<< /Length {len(content)} >>\nstream\n{content.decode('latin-1')}\nendstream")
+    objects[1] = f"<< /Type /Pages /Kids [{' '.join(kids)}] /Count {len(pages)} >>"
+    objects.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for number, body in enumerate(objects, start=1):
+        offsets.append(len(out))
+        out += f"{number} 0 obj\n{body}\nendobj\n".encode("latin-1")
+    xref = len(out)
+    out += f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode()
+    out += "".join(f"{offset:010d} 00000 n \n" for offset in offsets).encode()
+    out += f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode()
+    return bytes(out)
+
+
+def entry(**overrides):
+    base = {"key": "test-booklet", "title": "Test booklet", "publisher": "ICAR-CPCRI", "document_type": "cpcri_publication",
+            "language": "en", "source_url": "https://example.org/booklet.pdf", "mime_type": "application/pdf",
+            "publication_date": "1999-12", "publication_date_basis": "stated", "reuse_note": "test"}
+    base.update(overrides)
+    return base
+
+
+PIB_HTML = """<html><body><nav>Home | Login | Visitor counter 12345</nav>
+<div class="innner-page-main-about-us-content-right-part"><h2>Tariff Notification No. 50/2025-Customs</h2>
+<p>Posted On: 14 AUG 2025 6:30PM by PIB Delhi</p><p>Tariff value of Areca Nut is fixed as per the table.</p>
+<script>var tracking = 1;</script><p>(Release ID: 2156666)</p><p>Footer links</p></div></body></html>"""
+
+
+class FakeResponse(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class ManifestTests(unittest.TestCase):
+    def test_repository_manifest_is_valid(self):
+        entries = load_manifest()
+        self.assertGreaterEqual(len(entries), 6)
+        for item in entries:
+            if item["publication_date"] is not None:
+                self.assertTrue(item["publication_date_evidence"], item["key"])
+
+    def test_rejects_invalid_entries(self):
+        for bad in (entry(key="Bad Key"), entry(document_type="blog"), entry(source_url="http://example.org/x.pdf"),
+                    entry(publication_date="14-08-2025"), entry(publication_date_basis=None),
+                    entry(publication_date=None, publication_date_basis="stated"), entry(title="")):
+            with self.subTest(bad=bad), self.assertRaises(IngestError):
+                validate_entry(bad)
+        validate_entry(entry(publication_date=None, publication_date_basis=None))
+
+    def test_rejects_duplicate_keys(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "manifest.json"
+            path.write_text(json.dumps({"documents": [entry(), entry()]}), encoding="utf-8")
+            with self.assertRaisesRegex(IngestError, "Duplicate"):
+                load_manifest(path)
+
+
+class QuantizationTests(unittest.TestCase):
+    def test_matches_the_api_encoding_byte_for_byte(self):
+        # Same vector and expected value as api/src/assistant/assistant.test.ts.
+        self.assertEqual(quantize_embedding([0.1, -0.2, 0.3, -0.4, 0.5, -0.6, 0.7, -0.05]), "C+sg1TbAS/s=")
+
+    def test_normalises_and_clamps(self):
+        import base64
+        self.assertEqual(list(base64.b64decode(quantize_embedding([3, 4]))), [76, 102])
+        self.assertEqual(quantize_embedding([0.0, 0.0]), "AAA=")
+
+
+class ExtractionTests(unittest.TestCase):
+    def test_pdf_pages_keep_their_numbers(self):
+        pages, warnings = extract(entry(), minimal_pdf(["Mahali fruit rot", "Bordeaux mixture spray"]))
+        self.assertEqual([page.number for page in pages], [1, 2])
+        self.assertIn("Bordeaux", pages[1].text)
+        self.assertEqual(warnings, [])
+
+    def test_rejects_non_pdf_and_image_only_pdf(self):
+        with self.assertRaisesRegex(IngestError, "not a PDF"):
+            extract(entry(), b"<html>login</html>")
+        with self.assertRaisesRegex(IngestError, "no extractable text"):
+            extract(entry(), minimal_pdf([""]))
+
+    def test_pib_release_body_only(self):
+        [page] = extract_pib(PIB_HTML)
+        self.assertTrue(page.text.startswith("Tariff Notification"))
+        self.assertTrue(page.text.endswith("(Release ID: 2156666)"))
+        self.assertNotIn("Visitor counter", page.text)
+        self.assertNotIn("tracking", page.text)
+        self.assertNotIn("Footer", page.text)
+        self.assertEqual(stated_pib_date(page.text), "2025-08-14")
+
+    def test_pib_date_must_match_the_manifest(self):
+        pib = entry(source_url="https://pib.gov.in/PressReleasePage.aspx?PRID=1", mime_type="text/html",
+                    document_type="government_notification", publication_date="2025-08-14")
+        pages, warnings = extract(pib, PIB_HTML.encode())
+        self.assertEqual((len(pages), warnings), (1, []))
+        with self.assertRaisesRegex(IngestError, "differs"):
+            extract({**pib, "publication_date": "2025-08-21"}, PIB_HTML.encode())
+
+    def test_pib_layout_change_is_an_error(self):
+        with self.assertRaisesRegex(IngestError, "layout"):
+            extract_pib("<html><body>Changed</body></html>")
+
+
+class ChunkingTests(unittest.TestCase):
+    def test_short_document_is_one_chunk_with_heading_and_page(self):
+        [chunk] = chunk_pages([Page(3, "DISEASES OF ARECANUT\nFruit rot is controlled by Bordeaux mixture.")])
+        self.assertEqual((chunk.page_from, chunk.page_to, chunk.heading), (3, 3, "DISEASES OF ARECANUT"))
+
+    def test_long_text_splits_with_overlap_and_page_spans(self):
+        sentences = [f"Sentence {index} about arecanut nursery practice and irrigation." for index in range(120)]
+        pages = [Page(1, "\n\n".join(sentences[:60])), Page(2, "\n\n".join(sentences[60:]))]
+        chunks = chunk_pages(pages, target=600, overlap=120)
+        self.assertGreater(len(chunks), 5)
+        self.assertTrue(all(len(chunk.text) <= 700 for chunk in chunks))
+        self.assertEqual([chunk.chunk_index for chunk in chunks], list(range(len(chunks))))
+        self.assertTrue(any(chunk.page_from == 1 and chunk.page_to == 2 for chunk in chunks))
+        # Consecutive chunks share the overlap carried from the previous chunk's tail.
+        last_sentence = next(sentence for sentence in reversed(sentences) if sentence in chunks[0].text)
+        self.assertIn(last_sentence, chunks[1].text)
+        joined = " ".join(chunk.text for chunk in chunks)
+        for sentence in sentences:
+            self.assertIn(sentence, joined)
+
+    def test_too_many_chunks_is_refused(self):
+        with self.assertRaisesRegex(IngestError, "at most"):
+            chunk_pages([Page(1, ("word " * 50 + ". ") * 500)], target=50, overlap=0)
+
+
+class NetworkTests(unittest.TestCase):
+    def test_refuses_to_work_around_access_restrictions(self):
+        calls = []
+
+        def forbidden(request, timeout):
+            calls.append(request.get_header("User-agent"))
+            raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, None)
+
+        with self.assertRaisesRegex(IngestError, "--local-dir"):
+            download("https://pib.gov.in/x", opener=forbidden, sleep=lambda _: None)
+        self.assertEqual(calls, [ingest.USER_AGENT])
+
+    def test_retries_server_errors(self):
+        attempts = []
+
+        def flaky(request, timeout):
+            attempts.append(1)
+            if len(attempts) < 3:
+                raise urllib.error.HTTPError(request.full_url, 503, "Unavailable", {}, None)
+            return FakeResponse(b"%PDF-data")
+
+        self.assertEqual(download("https://example.org/x.pdf", opener=flaky, sleep=lambda _: None), b"%PDF-data")
+        self.assertEqual(len(attempts), 3)
+
+    def test_api_errors_never_contain_the_token(self):
+        def rejecting(request, timeout):
+            self.assertEqual(request.get_header("Authorization"), f"Bearer {TOKEN}")
+            raise urllib.error.HTTPError(request.full_url, 401, "Unauthorized", {}, io.BytesIO(f"bad token {TOKEN}".encode()))
+
+        with self.assertRaises(IngestError) as caught:
+            post_document({}, api_url="http://127.0.0.1:1/api/v1", token=TOKEN, opener=rejecting)
+        self.assertNotIn(TOKEN, str(caught.exception))
+        self.assertIn("[redacted]", str(caught.exception))
+        with self.assertRaisesRegex(IngestError, "ANI_ADMIN_TOKEN"):
+            post_document({}, api_url="http://x", token="")
+
+
+class OrchestrationTests(unittest.TestCase):
+    def test_payload_identity_follows_content(self):
+        data = minimal_pdf(["Mahali"])
+        payload = build_payload(entry(), data, [Chunk(0, 1, 1, None, "Mahali")], page_count=1, fetched_at="2026-11-05T00:00:00+00:00", job_id="job-1")
+        self.assertEqual(payload["document"]["id"], f"test-booklet-{payload['document']['content_sha256'][:12]}")
+        self.assertEqual(payload["chunks"], [{"chunk_index": 0, "page_from": 1, "page_to": 1, "heading": None, "text": "Mahali"}])
+
+    def test_dry_run_from_local_copy_posts_nothing(self):
+        def never(*args, **kwargs):
+            raise AssertionError("must not be called")
+
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, "test-booklet.pdf").write_bytes(minimal_pdf(["Mahali fruit rot"]))
+            result = ingest_document(entry(), job_id="job", dry_run=True, local_dir=Path(folder), api_url="", token="",
+                                     embedder=lambda texts: [[1.0, 0.0] for _ in texts], fetcher=never, poster=never)
+        self.assertEqual((result.status, result.chunks, result.embedded, result.error), ("dry_run", 1, 1, None))
+
+    def test_missing_local_copy_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = ingest_document(entry(), job_id="job", dry_run=True, local_dir=Path(folder), api_url="", token="", embedder=None)
+        self.assertEqual(result.status, "failed")
+        self.assertIn("No local file", result.error)
+
+    def test_stores_and_reports_withdrawn_versions(self):
+        posted = []
+
+        def poster(payload, api_url, token):
+            posted.append(payload)
+            return {"status": "ingested", "document_id": payload["document"]["id"], "withdrawn_versions": ["old-id"]}
+
+        result = ingest_document(entry(), job_id="job", dry_run=False, local_dir=None, api_url="http://api", token=TOKEN, embedder=None,
+                                 fetcher=lambda url: minimal_pdf(["Mahali"]), poster=poster)
+        self.assertEqual(result.status, "ingested")
+        self.assertEqual(len(posted), 1)
+        self.assertIn("old-id", result.warnings[0])
+
+    def test_cli_requires_credentials_unless_dry_run(self):
+        with unittest.mock.patch.dict("os.environ", {"ANI_API_URL": "", "ANI_ADMIN_TOKEN": ""}), \
+                unittest.mock.patch("sys.stderr", new=io.StringIO()):
+            self.assertEqual(ingest.main(["--only", "cpcri-disease-management-arecanut-cocoa"]), 2)
+
+
+if __name__ == "__main__":
+    unittest.main()

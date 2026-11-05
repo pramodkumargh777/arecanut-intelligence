@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { median } from "./domain/analytics";
+import { fetchWithRetry, sha256Hex, SourceFetchError } from "./cooperative-fetch";
+import { priceBasisForSource } from "../../shared/commodities";
 
 export const MAMCOS_URL = "https://mamcos.info/areca-market-rates";
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -7,15 +9,30 @@ const sourceRow = z.object({
   itemname: z.string(), minprice: z.string(), maxprice: z.string(), avgprice: z.string(),
   branch: z.string().min(1), Date: z.string(),
 });
+export type CooperativeSource = "mamcos" | "tss" | "tumcos";
+export type CooperativeCommodity = "arecanut" | "black_pepper";
+export type IngestMode = "scheduled" | "manual_refresh" | "backfill" | "manual_csv" | "snapshot_replay";
+export type UnitStatus = "source_confirmed" | "assumed" | "source_conflict";
 export type CooperativeQuote = {
   id: string; source_key: string; branch: string; reporting_date: string; variety: string;
   minimum_price: number | null; maximum_price: number | null; average_price: number | null;
-  price_type: "reported_average"; price_unit: "INR/quintal"; source_url: string;
+  price_type: "reported_average"; price_unit: "INR/quintal" | "unconfirmed"; source_url: string;
   fetched_at: string; raw_record: string; validation_message: string | null;
   status: string;
-  unit_status: "source_confirmed" | "assumed";
+  unit_status: UnitStatus;
   normal_price: number | null;
+  commodity?: CooperativeCommodity;
+  variety_reported?: boolean;
+  source_unit_label?: string | null;
+  lot_count?: number | null;
+  bag_count?: number | null;
+  reported_weight?: number | null;
+  session_codes?: string | null;
+  source_record_id?: string;
+  source_published_at?: string | null;
+  review_flags?: string[];
 };
+export type FetchMeta = { mode?: IngestMode; attempts?: number; httpStatus?: number | null; notes?: string | null; requestedDate?: string | null; replayOf?: string | null };
 
 function decodeAttribute(value: string): string {
   return value.replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&lt;/g, "<")
@@ -73,57 +90,100 @@ export async function parseMamcos(html: string, fetchedAt: string): Promise<Coop
   return result;
 }
 
-export async function refreshMamcos(db: D1Database) {
-  const fetchId = crypto.randomUUID();
-  await db.prepare(`INSERT INTO cooperative_fetches (id,source_key,source_url,started_at,status)
-    VALUES (?,'mamcos',?,?,'running')`).bind(fetchId, MAMCOS_URL, new Date().toISOString()).run();
+export async function startCooperativeFetch(db: D1Database, source: CooperativeSource, url: string, meta: FetchMeta = {}) {
+  const id = crypto.randomUUID();
+  await db.prepare(`INSERT INTO cooperative_fetches (id,source_key,source_url,started_at,status,ingest_mode,requested_date,replay_of)
+    VALUES (?,?,?,?,'running',?,?,?)`).bind(id, source, url, new Date().toISOString(), meta.mode ?? "manual_refresh",
+    meta.requestedDate ?? null, meta.replayOf ?? null).run();
+  return id;
+}
+
+export async function failCooperativeFetch(db: D1Database, fetchId: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const attempts = error instanceof SourceFetchError ? error.attempts : null;
+  const httpStatus = error instanceof SourceFetchError ? error.httpStatus : null;
+  await db.prepare(`UPDATE cooperative_fetches SET status='failed',finished_at=?,error_message=?,
+    attempt_count=COALESCE(?,attempt_count),http_status=? WHERE id=?`)
+    .bind(new Date().toISOString(), message.slice(0, 1_000), attempts, httpStatus, fetchId).run();
+  return message;
+}
+
+export async function refreshMamcos(db: D1Database, options: { mode?: IngestMode; attempts?: number; fetcher?: typeof fetch } = {}) {
+  const fetchId = await startCooperativeFetch(db, "mamcos", MAMCOS_URL, { mode: options.mode });
   try {
-    const response = await fetch(MAMCOS_URL, { redirect: "manual", signal: AbortSignal.timeout(60_000), headers: { Accept: "text/html" } });
-    if (!response.ok) throw new Error(`MAMCOS returned HTTP ${response.status}`);
+    const { response, attempts } = await fetchWithRetry(MAMCOS_URL, { headers: { Accept: "text/html" } }, { attempts: options.attempts, fetcher: options.fetcher });
     if (!response.headers.get("content-type")?.includes("text/html")) throw new Error("MAMCOS did not return HTML.");
     const html = await response.text();
     if (html.length > 1_500_000) throw new Error("MAMCOS snapshot exceeds supported size.");
     const fetchedAt = new Date().toISOString();
     const rows = await parseMamcos(html, fetchedAt);
-    const inserted = await storeCooperativeSnapshot(db, fetchId, "mamcos", html, rows);
-    return { received_count: rows.length, inserted_count: inserted, invalid_count: rows.filter((row) => row.status === "invalid").length };
+    const inserted = await storeCooperativeSnapshot(db, fetchId, "mamcos", html, rows, rows.length, 0,
+      { mode: options.mode, attempts, httpStatus: response.status });
+    return { fetch_id: fetchId, attempts, received_count: rows.length, inserted_count: inserted, duplicate_count: rows.length - inserted,
+      invalid_count: rows.filter((row) => row.status === "invalid").length };
   } catch (error) {
-    await db.prepare("UPDATE cooperative_fetches SET status='failed',finished_at=?,error_message=? WHERE id=?")
-      .bind(new Date().toISOString(), error instanceof Error ? error.message : String(error), fetchId).run();
+    await failCooperativeFetch(db, fetchId, error);
     throw error;
   }
 }
 
-export async function storeCooperativeSnapshot(db: D1Database, fetchId: string, source: "mamcos" | "tss",
-  snapshot: string, rows: CooperativeQuote[], receivedCount = rows.length, excludedCount = 0) {
+const STORE_CHUNK = 400;
+
+export async function storeCooperativeSnapshot(db: D1Database, fetchId: string, source: CooperativeSource,
+  snapshot: string, rows: CooperativeQuote[], receivedCount = rows.length, excludedCount = 0, meta: FetchMeta = {}) {
     const statements: D1PreparedStatement[] = [];
     const insertionIndexes: number[] = [];
     for (const row of rows) {
+      if (row.source_key !== source) throw new Error("Cooperative snapshot rows must belong to the snapshot source.");
+      const commodity = row.commodity ?? "arecanut", recordId = row.source_record_id ?? "";
       statements.push(db.prepare(`UPDATE cooperative_quotes SET status='superseded'
-        WHERE source_key=? AND branch=? AND reporting_date=? AND variety=? AND id!=? AND status!='superseded'`)
-        .bind(source, row.branch, row.reporting_date, row.variety, row.id));
+        WHERE source_key=? AND commodity=? AND branch=? AND reporting_date=? AND variety=? AND source_record_id=? AND id!=? AND status!='superseded'`)
+        .bind(source, commodity, row.branch, row.reporting_date, row.variety, recordId, row.id));
       insertionIndexes.push(statements.length);
       statements.push(db.prepare(`INSERT INTO cooperative_quotes
-        (id,source_key,branch,reporting_date,variety,minimum_price,maximum_price,average_price,price_type,price_unit,source_url,fetched_at,fetch_id,raw_record,validation_message,status,unit_status,normal_price)
-        VALUES (?,?,?,?,?,?,?,?,'reported_average','INR/quintal',?,?,?,?,?,?,?,?)
+        (id,source_key,commodity,branch,reporting_date,variety,variety_reported,minimum_price,maximum_price,average_price,price_type,price_unit,
+         source_unit_label,unit_status,normal_price,lot_count,bag_count,reported_weight,session_codes,source_record_id,source_published_at,review_flags,
+         ingest_mode,source_url,fetched_at,fetch_id,raw_record,validation_message,status,price_basis)
+        VALUES (?,?,?,?,?,?,?,?,?,?,'reported_average',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET status=excluded.status, fetched_at=excluded.fetched_at,fetch_id=excluded.fetch_id
         WHERE cooperative_quotes.status='superseded'`)
-        .bind(row.id, source, row.branch, row.reporting_date, row.variety, row.minimum_price, row.maximum_price, row.average_price,
-          row.source_url, row.fetched_at, fetchId, row.raw_record, row.validation_message, row.status, row.unit_status, row.normal_price));
+        .bind(row.id, source, commodity, row.branch, row.reporting_date, row.variety, row.variety_reported === false ? 0 : 1,
+          row.minimum_price, row.maximum_price, row.average_price, row.price_unit, row.source_unit_label ?? null, row.unit_status,
+          row.normal_price, row.lot_count ?? null, row.bag_count ?? null, row.reported_weight ?? null, row.session_codes ?? null,
+          recordId, row.source_published_at ?? null, row.review_flags?.length ? JSON.stringify(row.review_flags) : null,
+          meta.mode ?? "manual_refresh", row.source_url, row.fetched_at, fetchId, row.raw_record, row.validation_message, row.status,
+          priceBasisForSource(source)));
     }
-    statements.push(db.prepare(`UPDATE cooperative_fetches SET status='succeeded',finished_at=?,raw_snapshot=?,received_count=?,excluded_count=? WHERE id=?`)
-      .bind(new Date().toISOString(), snapshot, receivedCount, excludedCount, fetchId));
-    const results = await db.batch(statements);
-    const inserted = insertionIndexes.reduce((sum, index) => sum + results[index].meta.changes, 0);
-    await db.prepare("UPDATE cooperative_fetches SET inserted_count=? WHERE id=?").bind(inserted, fetchId).run();
+    let inserted = 0;
+    for (let start = 0; start < statements.length; start += STORE_CHUNK) {
+      const results = await db.batch(statements.slice(start, start + STORE_CHUNK));
+      inserted += insertionIndexes.filter((index) => index >= start && index < start + STORE_CHUNK)
+        .reduce((sum, index) => sum + results[index - start].meta.changes, 0);
+    }
+    await db.prepare(`UPDATE cooperative_fetches SET status='succeeded',finished_at=?,raw_snapshot=?,snapshot_sha256=?,received_count=?,
+      excluded_count=?,inserted_count=?,attempt_count=?,http_status=?,notes=? WHERE id=?`)
+      .bind(new Date().toISOString(), snapshot, await sha256Hex(snapshot), receivedCount, excludedCount, inserted,
+        meta.attempts ?? 1, meta.httpStatus ?? null, meta.notes ?? null, fetchId).run();
     return inserted;
 }
 
 export function cooperativeSeries(rows: CooperativeQuote[], coverage: number) {
+  if (new Set(rows.map((row) => row.source_key)).size > 1 || new Set(rows.map((row) => row.variety)).size > 1) {
+    throw new Error("A cooperative benchmark requires one source and one exact variety");
+  }
+  if (new Set(rows.map((row) => row.commodity ?? "arecanut")).size > 1) {
+    throw new Error("A cooperative benchmark requires one commodity");
+  }
   const dates = new Map<string, Map<string, number>>();
   for (const row of rows) {
     if (row.average_price === null || row.unit_status !== "source_confirmed") continue;
+    if (!Number.isFinite(row.average_price) || row.average_price <= 0 || row.price_unit !== "INR/quintal") {
+      throw new Error("Invalid confirmed-unit cooperative benchmark observation");
+    }
     const branches = dates.get(row.reporting_date) ?? new Map<string, number>();
+    if (branches.has(row.branch) && branches.get(row.branch) !== row.average_price) {
+      throw new Error("Conflicting cooperative observations for the same branch and reporting date");
+    }
     branches.set(row.branch, row.average_price);
     dates.set(row.reporting_date, branches);
   }

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "./index";
+import { calendarDateToTime, completedMonthIST, shiftCalendarMonth, timestampToTime } from "../../shared/dates";
 
 export const FORECAST_VERSION = "monthly-baselines-v1";
 export const FORECAST_STATE = "Karnataka";
@@ -45,6 +46,7 @@ const INITIAL_HISTORY = 24;
 export const MIN_FORECAST_MONTHS = INITIAL_HISTORY + BLOCK * 3;
 export const INTERVAL_LEVEL = 0.8;
 export const FORECAST_LIMITATIONS = [
+  "Experimental reference baselines, not proven predictive models. Last value repeats the latest observed monthly price; seasonal naive repeats the same month last year. No prospective predictive advantage is established.",
   "Rolling-origin backtests use current revised history, not as-of source vintages; vintage leakage is not ruled out.",
   "Monthly Karnataka exact-variety weighted prices only; no official daily, assumed-unit or TSS blending.",
   "Only the next reporting month is evaluated; this is not a multi-step or daily forecast.",
@@ -57,9 +59,11 @@ export function shiftMonth(month: string, offset: number): string {
   return new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)) - 1 + offset, 1)).toISOString().slice(0, 7);
 }
 export function completedMonth(asOf: string): string {
-  const date = new Date(asOf);
-  if (!Number.isFinite(date.valueOf())) throw new Error("Invalid evaluation time");
-  return shiftMonth(date.toISOString().slice(0, 7), -1);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
+    calendarDateToTime(asOf);
+    return shiftCalendarMonth(asOf.slice(0, 7), -1);
+  }
+  return completedMonthIST(new Date(timestampToTime(asOf)));
 }
 
 function normalizedRow(row: MonthlyForecastInput): MonthlyForecastInput {
@@ -173,7 +177,7 @@ export function evaluateForecast(inputs: ForecastInputs, variety: string, asOf: 
     evaluation: {
       selection_rule: "Lowest pre-test validation MAE; ties choose last_value. Calibration and holdout never select the model.",
       initial_training_months: n - 36, selected_model: selected,
-      label: selected === "last_value" ? "Last-value baseline; no demonstrated predictive edge" : "Seasonal-naive monthly baseline",
+      label: selected === "last_value" ? "Experimental last-value reference; no demonstrated predictive edge" : "Experimental seasonal-naive monthly reference",
       validation: { points: validation, metrics: validationScores },
       calibration: { points: calibration, count: calibration.length, absolute_residual_radius: radius,
         nominal_coverage: INTERVAL_LEVEL, quantile_rank: Math.ceil((calibration.length + 1) * INTERVAL_LEVEL) },

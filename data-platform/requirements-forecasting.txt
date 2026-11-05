@@ -1,0 +1,14 @@
+# Core forecasting experimentation stack (CPU only). Install with:
+#   uv pip install --python .venv/bin/python -r data-platform/requirements-forecasting.txt
+# LightGBM on macOS also needs the OpenMP runtime: `brew install libomp`.
+-r requirements.txt
+pandas==2.3.3
+numpy==2.5.4
+scipy==1.18.1
+statsforecast==2.1.1
+statsmodels==0.14.6
+lightgbm==4.7.0
+scikit-learn==1.9.1
+utilsforecast==0.2.17
+coreforecast==0.0.20
+pyarrow==26.0.1

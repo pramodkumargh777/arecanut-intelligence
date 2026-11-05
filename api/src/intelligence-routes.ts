@@ -48,8 +48,8 @@ export async function refreshSirsiWeather(db: D1Database) {
     const raw = await fetchText(SIRSI_WEATHER_URL, "application/json");
     const weather = parseWeather(JSON.parse(raw), new Date().toISOString());
     const capture = await captureStatements(db, { source: "sirsi_weather", domain: "weather", url: SIRSI_WEATHER_URL, raw, type: "application/json", publication: null }, weather.rows.length);
-    await db.batch([capture.statement, ...weather.rows.map((row) => db.prepare(`INSERT INTO weather_records VALUES(?,?,?,?,?,?,?,?,?)`)
-      .bind(capture.id, row.date, row.kind, row.maximum, row.minimum, row.rain, weather.latitude, weather.longitude, weather.elevation))]);
+    await db.batch([capture.statement, ...weather.rows.map((row) => db.prepare(`INSERT INTO weather_records(capture_id,date,kind,temperature_max_c,temperature_min_c,precipitation_mm,grid_latitude,grid_longitude,elevation_m,relative_humidity_mean_pct)
+      VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(capture.id, row.date, row.kind, row.maximum, row.minimum, row.rain, weather.latitude, weather.longitude, weather.elevation, row.humidity))]);
     return { capture_id: capture.id, count: weather.rows.length };
   });
 }

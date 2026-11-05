@@ -2,8 +2,16 @@ name: AGMARKNET ingestion
 
 on:
   schedule:
+    # The current-daily resource only exposes the latest arrival date, so each
+    # day must be captured while it is current. Two runs are idempotent.
+    - cron: "45 17 * * *"
     - cron: "17 3 * * *"
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Fetch and validate only; persist nothing
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,7 +22,7 @@ concurrency:
 
 jobs:
   ingest:
-    if: ${{ vars.AGMARKNET_RESOURCE_ID != '' && vars.ANI_API_URL != '' }}
+    if: ${{ vars.ANI_API_URL != '' && vars.AGMARKNET_PRICE_UNIT != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -22,12 +30,36 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Fetch and submit authorized AGMARKNET records
-        run: python data-platform/connectors/agmarknet/fetch_api.py --api-url "$ANI_API_URL"
+      - name: Check credentials
+        id: credentials
+        run: |
+          if [ -z "$DATA_GOV_IN_API_KEY" ] || [ -z "$INGESTION_TOKEN" ]; then
+            echo "::warning::DATA_GOV_IN_API_KEY or INGESTION_TOKEN secret is not configured; skipping ingestion."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
         env:
-          AGMARKNET_RESOURCE_ID: ${{ vars.AGMARKNET_RESOURCE_ID }}
+          DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
+          INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
+      - name: Ingest Karnataka arecanut daily observations (data.gov.in)
+        if: steps.credentials.outputs.configured == 'true'
+        run: |
+          args=(daily --env-file /dev/null --report-dir "$RUNNER_TEMP/agmarknet-report")
+          if [ "${{ inputs.dry_run }}" = "true" ]; then args+=(--dry-run); fi
+          python data-platform/connectors/agmarknet/run_daily.py "${args[@]}"
+        env:
+          AGMARKNET_DAILY_RESOURCE_ID: ${{ vars.AGMARKNET_DAILY_RESOURCE_ID }}
           AGMARKNET_API_BASE_URL: ${{ vars.AGMARKNET_API_BASE_URL }}
           AGMARKNET_PRICE_UNIT: ${{ vars.AGMARKNET_PRICE_UNIT }}
           DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
           INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
           ANI_API_URL: ${{ vars.ANI_API_URL }}
+      - name: Archive source pages and reports for replay
+        if: always() && steps.credentials.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: agmarknet-daily-${{ github.run_id }}
+          path: ${{ runner.temp }}/agmarknet-report
+          if-no-files-found: ignore
+          retention-days: 90

@@ -1,3 +1,5 @@
+import { calendarTodayIST, shiftCalendarMonth } from "../../shared/dates";
+
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 export const MONTHLY_METHOD = "State/UT and variety-level arrival-weighted modal price: sum(arrival quantity * modal price) / sum(arrival quantity). Not a daily market quotation.";
 
@@ -12,7 +14,7 @@ export function validMonth(value: string): boolean {
 }
 
 export function previousMonth(now: Date, offset = 1): string {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1)).toISOString().slice(0, 7);
+  return shiftCalendarMonth(calendarTodayIST(now).slice(0, 7), -offset);
 }
 
 function monthLabel(month: string): string {
@@ -60,7 +62,9 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-export function parseMonthlyReport(text: string, requestedMonth: string): MonthlyRow[] {
+export type MonthlyEvidence = MonthlyRow & { source_value: string; source_unit: "Rs./Quintal"; source_columns: string[] };
+
+export function parseMonthlyEvidence(text: string, requestedMonth: string): MonthlyEvidence[] {
   if (!validMonth(requestedMonth)) throw new Error("Invalid reporting month.");
   const rows = parseCsv(text);
   const title = rows.shift()?.filter(Boolean);
@@ -75,7 +79,7 @@ export function parseMonthlyReport(text: string, requestedMonth: string): Monthl
   if (!headers || headers.length !== expected.length || headers.some((value, i) => value !== expected[i])) {
     throw new Error("Unexpected monthly report columns, periods or price units.");
   }
-  const result: MonthlyRow[] = [];
+  const result: MonthlyEvidence[] = [];
   const keys = new Set<string>();
   const states = new Set<string>();
   let state = "";
@@ -102,10 +106,15 @@ export function parseMonthlyReport(text: string, requestedMonth: string): Monthl
     if (value !== "-" && (!/^\d+(?:\.\d+)?$/.test(value) || !Number.isFinite(Number(value)))) {
       throw new Error(`Invalid weighted price for ${state}: ${row[0]}`);
     }
-    result.push({ state, variety_name: row[0], weighted_price: value === "-" ? null : Number(value) });
+    result.push({ state, variety_name: row[0], weighted_price: value === "-" ? null : Number(value),
+      source_value: value, source_unit: "Rs./Quintal", source_columns: row });
   }
   if (!methodology || !result.length) throw new Error("Missing weighted-price methodology or observations.");
   return result;
+}
+
+export function parseMonthlyReport(text: string, requestedMonth: string): MonthlyRow[] {
+  return parseMonthlyEvidence(text, requestedMonth).map(({ state, variety_name, weighted_price }) => ({ state, variety_name, weighted_price }));
 }
 
 export async function refreshMonthly(db: Pick<D1Database, "prepare" | "batch">, month: string, state: string): Promise<{ reporting_month: string; record_count: number }> {

@@ -37,7 +37,9 @@
   .page-content { padding: 24px 18px; }
   .page-stack { gap: 18px; }
   .topbar { padding: 12px 18px; flex-wrap: wrap; }
-  .topbar-tools { width: 100%; }
+  .topbar-tools { width: 100%; flex-wrap: wrap; gap: 10px; }
+  .commodity-select { width: 100%; }
+  .commodity-select select { flex: 1; height: 40px; font-size: 16px; }
   .topbar-tools form { width: 100%; }
   .search-field { width: 100%; }
   .search-field input { font-size: 16px; }
@@ -97,4 +99,16 @@
   .comparison-row { grid-template-columns: 20px minmax(0, 1fr) 86px; gap: 8px; }
   .comparison-price { font-size: 15px; }
   .breadcrumb { gap: 7px; }
+}
+
+@media (max-width: 1180px) {
+  .scorecard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .chart-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .scorecard-grid { grid-template-columns: 1fr; }
+  .fact-list > div { grid-template-columns: 1fr; gap: 2px; }
+  th .sort-button { min-height: 32px; }
 }

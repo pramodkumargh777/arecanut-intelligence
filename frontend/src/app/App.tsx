@@ -14,6 +14,10 @@ const HistoricalAnalyticsPage = lazy(() => import("../pages/HistoricalAnalyticsP
 const DecisionToolsPage = lazy(() => import("../pages/DecisionToolsPage").then((module) => ({ default: module.DecisionToolsPage })));
 const IntelligencePage = lazy(() => import("../pages/IntelligencePage").then((module) => ({ default: module.IntelligencePage })));
 const QualityInspectionsPage = lazy(() => import("../pages/QualityInspectionsPage").then((module) => ({ default: module.QualityInspectionsPage })));
+const ForecastEvaluationPage = lazy(() => import("../pages/ForecastEvaluationPage").then((module) => ({ default: module.ForecastEvaluationPage })));
+const SupplyPage = lazy(() => import("../pages/SupplyPage").then((module) => ({ default: module.SupplyPage })));
+const AssistantPage = lazy(() => import("../pages/AssistantPage").then((module) => ({ default: module.AssistantPage })));
+const WorkspacePage = lazy(() => import("../pages/WorkspacePage").then((module) => ({ default: module.WorkspacePage })));
 const ForecastsPage = lazy(() => import("../pages/ForecastsPage").then((module) => ({ default: module.ForecastsPage })));
 
 export function App() {
@@ -29,9 +33,13 @@ export function App() {
           <Route path="intelligence" element={<Navigate to="/intelligence/production" replace />} />
           <Route path="intelligence/quality" element={<Suspense fallback={<LoadingState />}><QualityInspectionsPage /></Suspense>} />
           <Route path="intelligence/:domain" element={<Suspense fallback={<LoadingState />}><IntelligencePage /></Suspense>} />
+          <Route path="supply" element={<Suspense fallback={<LoadingState />}><SupplyPage /></Suspense>} />
           <Route path="forecasts" element={<Suspense fallback={<LoadingState />}><ForecastsPage /></Suspense>} />
+          <Route path="forecasts/evaluation" element={<Suspense fallback={<LoadingState />}><ForecastEvaluationPage /></Suspense>} />
+          <Route path="assistant" element={<Suspense fallback={<LoadingState />}><AssistantPage /></Suspense>} />
           <Route path="analytics" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<AnalyticsPage />} /></Suspense>} />
           <Route path="compare" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<ComparePage />} /></Suspense>} />
+          <Route path="workspace" element={<Suspense fallback={<LoadingState />}><WorkspacePage /></Suspense>} />
           <Route path="data-quality" element={<Suspense fallback={<LoadingState />}><DataQualityPage /></Suspense>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

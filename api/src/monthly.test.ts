@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { MONTHLY_METHOD, monthlySourceUrl, parseCsv, parseMonthlyReport, previousMonth, refreshMonthly } from "./monthly";
+import { MONTHLY_METHOD, monthlySourceUrl, parseCsv, parseMonthlyEvidence, parseMonthlyReport, previousMonth, refreshMonthly } from "./monthly";
 
 const report = `,,,"State/UT-wise & Variety-wise Prices Monthly Analysis for Arecanut(Betelnut/Supari) - October, 2026",,
 Variety,"Prices October, 2026 (Rs./Quintal)","Prices September, 2026 (Rs./Quintal)","Prices October, 2025 (Rs./Quintal)",Change (Over Previous Month),Change (Over Previous Year)
@@ -18,6 +18,13 @@ Change (Over Previous Month) = [Price - Price(Over Previous Month)/Price(Over Pr
 afterEach(() => vi.unstubAllGlobals());
 
 describe("monthly report parsing", () => {
+  it("retains the raw primary source token and declared unit without scaling or importing comparison prices", () => {
+    expect(parseMonthlyEvidence(report, "2026-10")[1]).toMatchObject({
+      state: "Karnataka", variety_name: "Rashi", source_value: "47174.91", weighted_price: 47174.91,
+      source_unit: "Rs./Quintal", source_columns: ["Rashi", "47174.91", "47805.13", "58193.68", "-1.3%", "-18.9%"],
+    });
+    expect(parseMonthlyEvidence(report, "2026-10")[2]).toMatchObject({ source_value: "-", weighted_price: null });
+  });
   it("preserves state and variety, ignores comparisons and totals, retains missing primary prices", () => {
     expect(parseMonthlyReport(report, "2026-10")).toEqual([
       { state: "Goa", variety_name: "Rashi", weighted_price: 38128.08 },

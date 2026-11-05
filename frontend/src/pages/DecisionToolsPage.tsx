@@ -4,6 +4,7 @@ import { api } from "../services/api";
 import { toCsv } from "../services/csv";
 import type { Calculation, CalculationInputs, PriceReference } from "../services/intelligence";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
+import { formatTimestampIST } from "../../../shared/dates";
 
 type NumericKey = Exclude<keyof CalculationInputs, "name" | "price">;
 const fields: { key: NumericKey; label: string; min: number; max?: number; step?: string; section: string }[] = [
@@ -96,10 +97,10 @@ export function DecisionToolsPage() {
       <button className="button-primary" disabled={busy}>{calculate.isPending ? "Calculating..." : "Calculate actual-input scenario"}</button>
     </form>}
     {error && <ErrorState error={error} />}
-    {result && <section className="panel" aria-label="Calculation results"><div className="panel-heading"><div><h2>{result.inputs.name} · Results</h2><p>{result.created_at ? `Saved snapshot: ${new Date(result.created_at).toLocaleString("en-IN")}. Retained independently of later source corrections.` : "Calculated but not stored. Save with reviewer access below."} · {result.formula_version}</p></div><button className="button-secondary" onClick={() => exportResult(result)}>Export scenario CSV</button></div>
+    {result && <section className="panel" aria-label="Calculation results"><div className="panel-heading"><div><h2>{result.inputs.name} · Results</h2><p>{result.created_at ? `Saved snapshot: ${formatTimestampIST(result.created_at)}. Retained independently of later source corrections.` : "Calculated but not stored. Save with reviewer access below."} · {result.formula_version}</p></div><button className="button-secondary" onClick={() => exportResult(result)}>Export scenario CSV</button></div>
       <div className="monthly-details">
         <p><strong>Price: {money(result.price.value)} / quintal · {result.price.source} · {result.price.unit_status.replace(/_/g, " ")}</strong></p>
-        <p>{result.price.branch} · {result.price.variety} · Reporting: {result.price.reporting_period ?? "User entered; no reporting date"} · Fetched: {result.price.fetched_at ? new Date(result.price.fetched_at).toLocaleString("en-IN") : "Not sourced"} · {result.price.price_type.replace(/_/g, " ")} {result.price.source_url && <a href={result.price.source_url} target="_blank" rel="noreferrer">Source evidence</a>}</p>
+        <p>{result.price.branch} · {result.price.variety} · Market reporting period: {result.price.reporting_period ?? "User entered; no reporting date"} · Platform fetched: {result.price.fetched_at ? formatTimestampIST(result.price.fetched_at) : "Not sourced"} · {result.price.price_type.replace(/_/g, " ")} {result.price.source_url && <a href={result.price.source_url} target="_blank" rel="noreferrer">Source evidence</a>}</p>
         {result.price.state && <p>Source reporting state: {result.price.state}</p>}
         {result.price.price_type === "monthly_weighted_modal" && result.price.reference_id && <p><a href={api.monthlySnapshotUrl(result.price.reference_id)} target="_blank" rel="noreferrer">Download the archived report used for this calculation</a> (unchanged by later source refreshes).</p>}
         {result.price.unit_status === "assumed" && <p role="note">INR/quintal is assumed, not source-confirmed. All monetary results inherit this assumption.</p>}
@@ -130,7 +131,7 @@ export function DecisionToolsPage() {
       {!unlocked ? <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); setUnlocked(true); }}><label className="filter-control"><span>Scenario storage reviewer token</span><input type="password" autoComplete="off" value={token} required onChange={(event) => setToken(event.target.value)} /></label><button className="button-secondary">Unlock saved scenarios</button></form> : <>
         <div className="monthly-refresh"><button className="button-secondary" disabled={busy} onClick={() => { client.removeQueries({ queryKey: ["saved-calculations"] }); setToken(""); setUnlocked(false); setResult(null); setValues(emptyValues()); setName(""); setSelection(""); setManualPrice(""); setError(null); save.reset(); }}>Lock and clear private inputs</button>
           <button className="button-primary" disabled={busy || !result || Boolean(result.id) || !saved.isSuccess} onClick={() => { if (result) { setError(null); save.mutate(result.inputs); } }}>Save calculated scenario</button></div>
-        {saved.isLoading ? <LoadingState /> : saved.error ? <ErrorState error={saved.error} onRetry={() => void saved.refetch()} /> : !saved.data?.data.length ? <EmptyState title="No saved scenarios">No example costs or fictitious farm inputs are stored.</EmptyState> : <ul>{saved.data.data.map((value) => <li key={value.id}><button className="text-button" disabled={busy} onClick={() => load(value)}>{value.inputs.name} · {value.created_at ? new Date(value.created_at).toLocaleString("en-IN") : ""}</button></li>)}</ul>}
+        {saved.isLoading ? <LoadingState /> : saved.error ? <ErrorState error={saved.error} onRetry={() => void saved.refetch()} /> : !saved.data?.data.length ? <EmptyState title="No saved scenarios">No example costs or fictitious farm inputs are stored.</EmptyState> : <ul>{saved.data.data.map((value) => <li key={value.id}><button className="text-button" disabled={busy} onClick={() => load(value)}>{value.inputs.name} · {value.created_at ? formatTimestampIST(value.created_at) : ""}</button></li>)}</ul>}
       </>}
     </div></section>
   </div>;

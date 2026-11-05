@@ -20,6 +20,12 @@ Versioned REST API ── verified prices and reference-index analytics
 React + Vite dashboard
 ```
 
+Storage, query bounds, the market summary cache and the optional R2 evidence archive are described in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Retention, backup and restore procedures are in
+[docs/DATA_RETENTION_AND_BACKUP.md](docs/DATA_RETENTION_AND_BACKUP.md). Supply, production, arrivals, weather and
+expert-reviewed crop-risk analytics (`/supply`) are described in [docs/SUPPLY_AND_RISK.md](docs/SUPPLY_AND_RISK.md).
+The optional, data-grounded AI assistant (`/assistant`) is described in [docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md).
+
 The API and ingestion tools are separate from frontend components. SQL schema changes are migration-managed, and all runtime data access stays inside the Worker API (the initial MVP keeps repository queries in its API module). Prices are standardized to INR per quintal only when the original unit is explicit and convertible. The reference index is calculated separately for an exact reported variety using the median of one verified modal price per market/date; dates below the configured market-coverage threshold are withheld.
 
 ## Requirements
@@ -122,7 +128,24 @@ Daily analytics no longer silently cap input at 10,000 observations. Queries
 fail explicitly if database limits are exceeded rather than returning a
 partial index. CSV export uses standard double-quote escaping.
 
-## AGMARKNET API connector
+## AGMARKNET daily connector (data.gov.in, Karnataka arecanut)
+
+A dedicated connector for the verified current-daily mandi resource
+`9ef84268-d588-465a-a308-a864a43d0070` lives in
+`data-platform/connectors/agmarknet/daily.py`; see
+[docs/AGMARKNET_DAILY_CONNECTOR.md](docs/AGMARKNET_DAILY_CONNECTOR.md) for the
+verified schema, limitations, backfill/replay/CSV fallback and run reports:
+
+```sh
+.venv/bin/python data-platform/connectors/agmarknet/run_daily.py daily --dry-run
+.venv/bin/python data-platform/connectors/agmarknet/run_daily.py daily
+```
+
+The resource only exposes the current arrival date; history accumulates from
+scheduled runs and archived replays. Run status appears in Data quality →
+Data-source status. The scheduled workflow uses this connector.
+
+## AGMARKNET API connector (generic)
 
 The API connector follows the configurable data.gov.in resource endpoint format. It requires the caller to confirm authorized access and provide the resource identifier and API key; no resource ID or key is assumed:
 
@@ -140,7 +163,16 @@ Pagination, bounded retries for rate-limit/transient errors, a configurable inte
 
 The endpoint/pagination pattern follows the official data.gov.in resource API format. No particular arecanut resource, field schema, access permission, or price-unit declaration has been verified with credentials; configure and validate those before enabling scheduled ingestion.
 
-## Cooperative branch prices (MAMCOS and TSS)
+## Cooperative branch prices (MAMCOS, TSS and TUMCOS)
+
+> **Current policy (2026-11-04):** see
+> [docs/COOPERATIVE_SOURCES.md](docs/COOPERATIVE_SOURCES.md).
+>
+> - Only rows whose unit is source-confirmed INR/quintal can be published. Today that means MAMCOS only, labelled "Permission not confirmed".
+> - TSS (no published unit) and TUMCOS (labels "kg" but shows per-quintal values) are archived and reviewable. When approved they become `accepted_unit_unconfirmed`, which is not published.
+> - Migration 0013 converted earlier TSS approvals accordingly. The TSS text below about assumed-unit publication is history.
+> - TUMCOS (`?feed=tumcos`) adds Channagiri arecanut and black pepper. Black pepper never enters arecanut benchmarks, calculators or aggregates.
+> - Scheduled collection needs both `<SOURCE>_SCHEDULE_ENABLED=true` (`MAMCOS`, `TSS` or `TUMCOS`) **and** a permission grant recorded in Data quality → Cooperative source intelligence.
 
 The four daily market screens now default to **MAMCOS cooperative branch
 averages**. Their source selector also offers **TSS reported averages with
@@ -172,13 +204,13 @@ reviewed against their raw records; two invalid rows were withheld.
 3 November 2026 (4, 3 and 3 branches respectively). These are cooperative
 branches, not claimed verified APMC market identifiers.
 
-Automatic collection is **disabled by default**. After confirming permission
-for scheduled collection, set Worker variable `MAMCOS_SCHEDULE_ENABLED=true`.
+Automatic collection is **disabled by default**. After recording a
+permission grant, set Worker variable `MAMCOS_SCHEDULE_ENABLED=true`.
 It then fetches at the existing 09:00 IST cron; new/corrected records still
 require review. Local refresh uses the authenticated button. The browser
 polls stored observations every minute, not the source website.
 
-### TSS: explicitly assumed units
+### TSS: explicitly assumed units (superseded publication policy)
 
 The user authorized publishing TSS rates with **INR/quintal assumed, not
 source-confirmed**. This assumption is stored per quotation (`unit_status`),
@@ -440,6 +472,8 @@ reviewer identity or laboratory accreditation verification.
 
 ## Evaluated monthly forecast baselines
 
+An independent experimental engine (`data-platform/forecasting`, dashboard `/forecasts/evaluation`) benchmarks statistical, LightGBM and Chronos-2 models against these baselines with walk-forward evaluation. See [docs/FORECASTING.md](docs/FORECASTING.md). It does not replace the baselines below.
+
 Open `http://localhost:5173/forecasts`. To evaluate and persist snapshots:
 
 ```sh
@@ -485,6 +519,47 @@ and can be reused by subsequent evaluations. There is no prospective trading
 validation, multi-step model, predictive sell/hold recommendation or grounded
 AI chat. CSV holdout exports and full evaluation JSON support inspection.
 
+## Multiple commodities
+
+Arecanut is the production commodity. Migration `0014` adds a commodity master
+covering black pepper, coffee, cardamom, coconut/copra, cocoa and natural
+rubber, with commodity-specific varieties, grades and units. It also adds an
+immutable price-basis taxonomy on every observation. Use the topbar
+**Commodity** selector (or `?commodity=`) to switch.
+
+Commodities without an integrated source show their configured profile only.
+No prices are estimated. See [docs/COMMODITY_MODEL.md](docs/COMMODITY_MODEL.md).
+
+## AI assistant (optional)
+
+`/assistant` answers English or Kannada questions using only ANI tool results (prices, index, forecasts, arrivals,
+production, trade, weather, advisories and calculators) and cited document excerpts (CPCRI, DASD). The LLM explains
+facts but never supplies numbers, and ungrounded answers fall back to a rule-based answer. It is off by default
+(`ASSISTANT_LLM_PROVIDER=none`), and the rest of ANI does not depend on it. Local setup with Ollama
+(`qwen3.5:4b`, `bge-m3`), document ingestion and limitations: [docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md).
+
+## Frontend overview
+
+Market pages (overview, prices, analytics, comparison) switch between the official AGMARKNET feed and cooperative
+feeds without mixing price bases. Tables sort, paginate and export bounded CSV. Charts are lazy-loaded and show
+observed values only. `/forecasts` and `/forecasts/evaluation` chart actual backtests, including poor performance.
+`/workspace` stores organization or role dashboard profiles (filters and sections) in browser localStorage only.
+
+## Performance, archive and backups
+
+Migration `0015` adds compound indexes, a trigger-maintained daily summary cache, idempotent import
+keys, `operational_errors`, an `archive_objects` registry and no-delete guards on evidence tables.
+Migration `0016` lets verified R2 offload clear a cooperative snapshot without allowing any rewrite.
+Public list and chart endpoints are bounded and paginated; the browser never loads the full history.
+
+```sh
+npm run db:backup                                   # wrangler d1 export + SHA-256 manifest
+npm run db:restore-check -- backups/<name>.manifest.json
+npm run retention:temp                              # dry-run purge of data/tmp (add -- --apply)
+```
+
+R2 is optional and off by default; local development needs no R2 configuration.
+
 ## Tests and build
 
 ```sh
@@ -500,11 +575,13 @@ Deployment is not configured until a real D1 database, Worker secrets, Pages pro
 
 1. Create a D1 database: `npx wrangler d1 create ani-market-data --config api/wrangler.toml`. Set the returned `database_id` in `api/wrangler.toml`.
 2. Apply migrations: `npx wrangler d1 migrations apply ani-market-data --remote --config api/wrangler.toml`.
-3. Configure API secrets with `npx wrangler secret put INGESTION_TOKEN --config api/wrangler.toml` and `npx wrangler secret put ADMIN_TOKEN --config api/wrangler.toml`. Configure `CORS_ORIGIN`, `MIN_INDEX_MARKETS`, and `REFERENCE_STATE` as Worker vars.
+3. Optionally take a backup first (`npm run db:backup -- --remote`) on later deployments; see [docs/DATA_RETENTION_AND_BACKUP.md](docs/DATA_RETENTION_AND_BACKUP.md). Configure API secrets with `npx wrangler secret put INGESTION_TOKEN --config api/wrangler.toml` and `npx wrangler secret put ADMIN_TOKEN --config api/wrangler.toml`. Configure `CORS_ORIGIN`, `MIN_INDEX_MARKETS`, and `REFERENCE_STATE` as Worker vars.
 4. Create a GitHub environment named `production`, with approval rules where your GitHub plan supports them. Configure `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` as Actions secrets available to that environment. Set `CLOUDFLARE_PAGES_PROJECT_NAME` and `VITE_API_BASE_URL` as **repository** variables; the API URL must be HTTPS and end in `/api/v1`. Set the production frontend's exact HTTPS origin in `CORS_ORIGIN` in `api/wrangler.toml`. Worker runtime secrets from step 3 are distinct from GitHub deployment credentials.
 5. Only when ready to deploy, set the repository variable `CLOUDFLARE_DEPLOY_ENABLED=true` and dispatch `.github/workflows/deploy-cloudflare.yml` from the default branch. The workflow runs build/tests and local migration validation, rejects placeholder D1/production CORS configuration, applies remote migrations, then deploys the Worker. Pages waits for the Worker and is skipped unless its project and API URL variables are configured. Merely pushing code does **not** deploy. For command-line deployment instead, apply the migrations in step 2 before running `npx wrangler deploy --config api/wrangler.toml` and `npx wrangler pages deploy frontend/dist --project-name=YOUR_PAGES_PROJECT`.
 
-The scheduled AGMARKNET workflow runs only when `AGMARKNET_RESOURCE_ID` and `ANI_API_URL` repository variables are configured. It also requires `DATA_GOV_IN_API_KEY` and `INGESTION_TOKEN` repository secrets; unit configuration must match the verified resource schema.
+The scheduled AGMARKNET workflow runs the daily connector only when the `ANI_API_URL` and `AGMARKNET_PRICE_UNIT` repository variables are configured, and skips with a warning unless the `DATA_GOV_IN_API_KEY` and `INGESTION_TOKEN` repository secrets are present. Apply migration 0012 before enabling it.
+
+Migrations `0015`/`0016` must be applied before the Worker that uses them is deployed. R2 is not required: leave the `[[r2_buckets]]` block commented out unless an archive bucket has been created (`npx wrangler r2 bucket create ani-evidence`). `ARCHIVE_SCHEDULE_ENABLED`, `ARCHIVE_OFFLOAD_MIN_BYTES` and `TEMP_RETENTION_DAYS` are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Deployment success has not been claimed or tested in a Cloudflare account.
 

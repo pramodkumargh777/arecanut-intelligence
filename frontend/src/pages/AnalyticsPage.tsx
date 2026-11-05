@@ -2,7 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { CalendarDays, ShieldCheck } from "lucide-react";
 import { api } from "../services/api";
+import { useCommodity } from "../services/commodity";
 import { ErrorState, EmptyState, LoadingState } from "../components/State";
+import { MonthlyInsights } from "../components/MonthlyInsights";
+import { LazyBarChart } from "../components/LazyCharts";
+import { SourceLabel } from "../components/Scorecard";
+import { crossSectionSpread, quoteSpread } from "../services/insights";
+import { formatCalendarDate } from "../../../shared/dates";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
 const money = (value: number | null) => value == null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
@@ -10,15 +16,16 @@ const money = (value: number | null) => value == null ? "—" : `₹${Math.round
 export function AnalyticsPage() {
   const [variety, setVariety] = useState("");
   const [period, setPeriod] = useState("90");
-  const varieties = useQuery({ queryKey: ["varieties"], queryFn: api.varieties });
+  const { code: commodity } = useCommodity();
+  const varieties = useQuery({ queryKey: ["varieties", commodity], queryFn: () => api.varieties(commodity) });
   useEffect(() => {
     if (!variety && varieties.data?.length) setVariety(varieties.data[0]);
   }, [variety, varieties.data]);
   const from = new Date();
   from.setDate(from.getDate() - Number(period));
   const index = useQuery({
-    queryKey: ["reference-index", period, variety],
-    queryFn: () => api.referenceIndex({ from: from.toISOString().slice(0, 10), variety }),
+    queryKey: ["reference-index", period, commodity, variety],
+    queryFn: () => api.referenceIndex({ commodity, from: from.toISOString().slice(0, 10), variety }),
     enabled: Boolean(variety),
   });
   const points = index.data?.data ?? [];
@@ -26,6 +33,10 @@ export function AnalyticsPage() {
   const volatility = points.length > 1 ? Math.sqrt(points.reduce((sum, point) => sum + (point.median_modal_price - (avg ?? 0)) ** 2, 0) / (points.length - 1)) : null;
   const high = points.length ? Math.max(...points.map((point) => point.median_modal_price)) : null;
   const low = points.length ? Math.min(...points.map((point) => point.median_modal_price)) : null;
+  const comparison = useQuery({ queryKey: ["market-comparison", commodity, variety], queryFn: () => api.marketComparison(variety, commodity), enabled: Boolean(variety) });
+  const spreadDate = (comparison.data?.data ?? []).reduce<string | null>((latest, row) => !latest || row.reporting_date > latest ? row.reporting_date : latest, null);
+  const sameDate = (comparison.data?.data ?? []).filter((row) => row.reporting_date === spreadDate);
+  const marketSpread = crossSectionSpread(sameDate.map((row) => row.modal_price));
   const loading = varieties.isLoading || (Boolean(variety) && index.isLoading);
   const unavailable = loading || varieties.error || index.error;
 
@@ -73,6 +84,15 @@ export function AnalyticsPage() {
             The index requires at least {index.data?.minimum_market_coverage ?? 3} verified markets for a reporting date. Current imports and coverage are shown in Data quality.
           </EmptyState>}
       </section>
+      <section className="panel chart-panel">
+        <div className="panel-heading"><div><h2>Market spreads</h2><p>Same-date verified quotations only · within-market spread is maximum minus minimum; cross-market spread is highest minus lowest modal price</p></div></div>
+        {comparison.isLoading && variety ? <LoadingState label="Loading market spreads" /> : comparison.error ? <ErrorState error={comparison.error} onRetry={() => void comparison.refetch()} />
+          : sameDate.length < 2 ? <EmptyState title="Fewer than two verified markets on a common date">Spreads are only computed across markets reporting the same date. {sameDate.length === 1 ? "One market reported on the latest date." : "No verified daily quotations are published."}</EmptyState>
+          : <><div className="metric-strip"><div><span>Cross-market spread</span><strong>{money(marketSpread.spread)}</strong></div><div><span>Relative to lowest</span><strong>{marketSpread.percent === null ? "—" : `${marketSpread.percent.toFixed(1)}%`}</strong></div><div><span>Markets compared</span><strong>{marketSpread.count}</strong></div></div>
+            <LazyBarChart horizontal categories={sameDate.map((row) => row.market_name)} values={sameDate.map((row) => quoteSpread(row, row.modal_price).spread)} name="Within-market spread" description={`Within-market price spread on ${spreadDate}`} /></>}
+        <div className="chart-foot"><SourceLabel>AGMARKNET daily · verified modal, min and max · {spreadDate ? formatCalendarDate(spreadDate) : "no common date"} · {variety || "no variety"}</SourceLabel></div>
+      </section>
+      <MonthlyInsights />
       <section className="methodology-note">
         <span className="method-icon"><ShieldCheck size={18} /></span>
         <div><strong>Index and summary methodology</strong>

@@ -9,9 +9,35 @@ crons = ["30 3 * * *"]
 CORS_ORIGIN = "http://localhost:5173,http://127.0.0.1:5173"
 MIN_INDEX_MARKETS = "3"
 REFERENCE_STATE = "Karnataka"
+# Archive maintenance in the daily cron (R2 sync + temporary-object purge). Off by default.
+ARCHIVE_SCHEDULE_ENABLED = "false"
+# Days before archive objects classified as temporary expire (1-365). Evidence never expires.
+TEMP_RETENTION_DAYS = "7"
+# Optional: offload inline D1 evidence copies >= this many bytes to R2 after verified upload.
+# Leave unset to keep every inline copy in D1 (the default).
+# ARCHIVE_OFFLOAD_MIN_BYTES = "262144"
+# AI assistant (docs/AI_ASSISTANT.md). "none" = rule-based answers from verified data, no language model.
+# Options: none | ollama (local development) | workers_ai (requires the commented [ai] binding below).
+ASSISTANT_LLM_PROVIDER = "none"
+ASSISTANT_EMBEDDING_PROVIDER = "none"
+ASSISTANT_RATE_LIMIT_PER_HOUR = "30"
+ASSISTANT_LOG_QUESTIONS = "false"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "ani-market-data"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
+
+# Optional R2 evidence archive. Local development and tests work without it: archive endpoints
+# return 503 and evidence stays inline in D1. To enable (R2 free tier: 10 GB-month storage):
+#   npx wrangler r2 bucket create ani-evidence-archive
+# then uncomment:
+# [[r2_buckets]]
+# binding = "ARCHIVE"
+# bucket_name = "ani-evidence-archive"
+
+# Optional Workers AI binding for the assistant (free daily neuron allocation; paid beyond it).
+# Set ASSISTANT_LLM_PROVIDER / ASSISTANT_EMBEDDING_PROVIDER = "workers_ai" when enabled.
+# [ai]
+# binding = "AI"

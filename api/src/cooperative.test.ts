@@ -49,4 +49,14 @@ describe("MAMCOS published snapshot parser", () => {
       reporting_date: "2026-11-02", median_average_price: 46448, branch_count: 3, branches: ["SAGARA", "SHIVAMOGGA", "Tarikere"],
     }]);
   });
+  it("counts branches once, withholds sparse dates, and never blends source, variety or assumed units", async () => {
+    const quotes = await parseMamcos(html([row, { ...row, branch: "SAGARA" }, { ...row, branch: "Tarikere" }]), "2026-11-04T00:00:00Z");
+    const later = { ...quotes[0], reporting_date: "2026-11-03" };
+    expect(cooperativeSeries([...quotes, quotes[0], later], 3)).toHaveLength(1);
+    expect(cooperativeSeries([...quotes, quotes[0]], 3)[0].branch_count).toBe(3);
+    expect(cooperativeSeries(quotes.map((quote) => ({ ...quote, unit_status: "assumed" })), 3)).toEqual([]);
+    expect(() => cooperativeSeries([...quotes, { ...later, source_key: "tss" }], 3)).toThrow("one source");
+    expect(() => cooperativeSeries([...quotes, { ...later, variety: "BETTE" }], 3)).toThrow("exact variety");
+    expect(() => cooperativeSeries([...quotes, { ...quotes[0], average_price: 48000 }], 3)).toThrow("Conflicting");
+  });
 });

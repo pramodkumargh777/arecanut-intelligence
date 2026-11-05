@@ -3,21 +3,19 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
+import { completedMonthIST, formatTimestampIST } from "../../../shared/dates";
 
 const price = (value: number | null) => value === null ? "Not reported" : new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2,
 }).format(value);
 const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
-const timestamp = (value: string) => new Date(value).toLocaleString("en-IN");
+const timestamp = formatTimestampIST;
 
 export function MonthlyTrendsPage() {
   const [month, setMonth] = useState("");
   const [variety, setVariety] = useState("");
   const [token, setToken] = useState("");
-  const [refreshMonth, setRefreshMonth] = useState(() => {
-    const now = new Date();
-    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
-  });
+  const [refreshMonth, setRefreshMonth] = useState(completedMonthIST);
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["monthly-prices", month, variety],
