@@ -53,10 +53,10 @@ describe("TSS reported averages with explicit unit assumption", () => {
     expect(a.id).not.toBe(corrected.id);
     expect(a.id).not.toBe(elsewhere.id);
   });
-  it("excludes assumed-unit rows at the benchmark calculation boundary", async () => {
+  it("includes operator-assumed INR/quintal rows in the benchmark", async () => {
     const quotes = await Promise.all(TSS_LOCATIONS.map((location) =>
       parseTss(report(), location, "2026-11-03", "2026-11-03T18:00:00Z")));
-    expect(cooperativeSeries(quotes.flatMap((parsed) => parsed.quotes), 3)).toEqual([]);
+    expect(cooperativeSeries(quotes.flatMap((parsed) => parsed.quotes), 3)).toEqual([expect.objectContaining({ branch_count: 3 })]);
   });
 });
 

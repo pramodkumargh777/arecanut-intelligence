@@ -10,16 +10,17 @@ export function calendarDateToTime(value: string): number {
   return time;
 }
 
+// Fixed three-letter names: browsers disagree on en-IN abbreviations ("Sept" beside "Nov" on one axis).
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export function formatCalendarDate(value: string): string {
-  return new Date(calendarDateToTime(value)).toLocaleDateString("en-IN", {
-    day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
-  });
+  const date = new Date(calendarDateToTime(value));
+  return `${date.getUTCDate()} ${MONTH_NAMES[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
 export function formatCalendarMonth(value: string): string {
-  return new Date(calendarDateToTime(`${value}-01`)).toLocaleDateString("en-IN", {
-    month: "short", year: "numeric", timeZone: "UTC",
-  });
+  const date = new Date(calendarDateToTime(`${value}-01`));
+  return `${MONTH_NAMES[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
 export function formatChartDate(time: number): string {

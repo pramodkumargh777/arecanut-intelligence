@@ -3,28 +3,28 @@ import { calendarTodayIST, formatCalendarDate, formatTimestampIST } from "../../
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, QUEUE_PAGE_SIZE } from "../services/api";
 import { QueuePager } from "./QueuePager";
-import { reviewFlags, unitConfirmed, type CooperativeQuote, type CooperativeSource } from "../services/cooperative";
+import { reviewFlags, unitPublishable, type CooperativeQuote, type CooperativeSource } from "../services/cooperative";
 import { EmptyState, ErrorState, LoadingState } from "./State";
 
 const UNIT_LABEL: Record<CooperativeQuote["unit_status"], string> = {
   source_confirmed: "source-confirmed",
-  assumed: "assumed, not source-confirmed",
-  source_conflict: "source unit label conflicts with value magnitude",
+  assumed: "operator assumption",
+  source_conflict: "source unit label conflicts with value magnitude; not publishable",
 };
 const COMMODITY_LABEL: Record<string, string> = { arecanut: "Arecanut", black_pepper: "Black pepper" };
 
 function QueueRow({ row, busy, onReview }: { row: CooperativeQuote; busy: boolean; onReview: (action: "approve" | "reject") => void }) {
   const flags = reviewFlags(row.review_flags);
-  const confirmed = unitConfirmed(row);
+  const publishable = unitPublishable(row);
   return <article className="review-row"><div className="review-details">
     <strong>{row.source_key.toUpperCase()} · {COMMODITY_LABEL[row.commodity ?? "arecanut"] ?? row.commodity} · {row.branch} · {row.variety || "Missing variety"}{row.variety_reported === 0 ? " (variety not reported by source)" : ""}</strong>
     <p>Market reporting date {formatCalendarDate(row.reporting_date)} · {row.price_unit}{row.source_unit_label ? ` (source label "${row.source_unit_label}")` : ""} — {UNIT_LABEL[row.unit_status]} · Reported average, not an APMC modal price</p>
     <p>Minimum {row.minimum_price ?? "Missing"} · Average {row.average_price ?? "Missing"} · Maximum {row.maximum_price ?? "Missing"}</p>
     {row.source_key === "tss" && <p>Normal rate {row.normal_price ?? "Missing"} (separate from reported average){row.lot_count != null ? ` · Tender lots ${row.lot_count} · Bags ${row.bag_count ?? "Missing"} · Reported weight ${row.reported_weight ?? "Missing"} (unit unconfirmed)` : ""}</p>}
-    {flags.length > 0 && <p role="note">Review flags: {flags.join(", ")}</p>}
+    {flags.length > 0 && <p role="note">Review flags: {flags.map((flag) => flag.replace(/_/g, " ")).join(", ")}</p>}
     {row.validation_message && <p role="note">{row.validation_message}</p>}
     <details className="review-evidence"><summary>Original source evidence</summary><p><a href={row.source_url} target="_blank" rel="noreferrer">Source</a> · Platform fetched {formatTimestampIST(row.fetched_at)} · Source publication timestamp {row.source_published_at ?? "not supplied"}{row.source_record_id ? ` · Source record ${row.source_record_id}` : ""}{row.ingest_mode ? ` · Ingest mode ${row.ingest_mode}` : ""}</p><pre>{row.raw_record}</pre></details>
-  </div><div className="review-actions"><button className="approve-button" disabled={busy || row.status !== "pending"} title={confirmed ? undefined : "Approval archives the record as accepted; it is not published while the unit is unconfirmed."} onClick={() => onReview("approve")}>{confirmed ? "Verify average" : "Accept (unit unconfirmed)"}</button>
+  </div><div className="review-actions"><button className="approve-button" disabled={busy || row.status !== "pending"} title={publishable ? undefined : "Approval archives the record as accepted; it is not published while the unit is unconfirmed."} onClick={() => onReview("approve")}>{publishable ? "Verify average" : "Accept (unit unconfirmed)"}</button>
     <button className="reject-button" disabled={busy} onClick={() => onReview("reject")}>Reject</button></div></article>;
 }
 
@@ -36,7 +36,6 @@ export function CooperativeReview() {
   const [queueSource, setQueueSource] = useState<CooperativeSource | "">("");
   const [tssDate, setTssDate] = useState(today);
   const [includeLots, setIncludeLots] = useState(false);
-  const [acceptAssumption, setAcceptAssumption] = useState(false);
   const [backfillStart, setBackfillStart] = useState(today);
   const [backfillEnd, setBackfillEnd] = useState(today);
   const [tumcosScope, setTumcosScope] = useState<"recent" | "full_history">("recent");
@@ -61,7 +60,7 @@ export function CooperativeReview() {
   const refresh = useMutation({ mutationFn: () => api.refreshMamcos(token), onError: invalidate,
     onSuccess: async (r) => done(`MAMCOS: fetched ${r.received_count} rows; ${r.inserted_count} new or reactivated; ${r.invalid_count} invalid rows withheld.`)() });
   const tssRefresh = useMutation({ mutationFn: () => api.refreshTss(token, tssDate, includeLots), onError: invalidate,
-    onSuccess: async (r) => done(`TSS: ${r.received_count} source rows; ${r.inserted_count} new or reactivated; ${r.invalid_count} invalid; ${r.excluded_count} non-arecanut items excluded. INR/quintal remains assumed and unpublished.`)() });
+    onSuccess: async (r) => done(`TSS: ${r.received_count} source rows; ${r.inserted_count} new or reactivated; ${r.invalid_count} invalid; ${r.excluded_count} non-arecanut items excluded. Approve rows below to publish them.`)() });
   const tssBackfill = useMutation({ mutationFn: () => api.backfillTss(token, backfillStart, backfillEnd), onError: invalidate,
     onSuccess: async (r) => done(`TSS backfill: ${r.succeeded} of ${r.dates} dates fetched.${r.results.filter((x) => x.status === "failed").map((x) => ` ${x.date}: ${typeof x.detail === "string" ? x.detail : "failed"}.`).join("")}`)() });
   const tumcos = useMutation({ mutationFn: () => api.refreshTumcos(token, tumcosScope), onError: invalidate,
@@ -82,12 +81,12 @@ export function CooperativeReview() {
   const busy = mutations.some((m) => m.isPending);
   function lock() {
     client.removeQueries({ queryKey: ["cooperative-quality"] });
-    setToken(""); setUnlocked(false); setFeedback(""); setAcceptAssumption(false); setAttested(false); setCsvText("");
+    setToken(""); setUnlocked(false); setFeedback(""); setAttested(false); setCsvText("");
     mutations.forEach((m) => m.reset());
   }
   const submit = (action: () => void) => (event: FormEvent) => { event.preventDefault(); setFeedback(""); action(); };
   async function loadCsvFile(file: File | undefined) { if (file) setCsvText(await file.text()); }
-  return <section className="panel"><div className="panel-heading"><div><h2>Cooperative source review</h2><p>MAMCOS, TSS and TUMCOS averages are separate from official modal prices and from each other. Invalid records cannot be approved. Records whose unit is assumed or conflicting are accepted without publication.</p></div></div>
+  return <section className="panel"><div className="panel-heading"><div><h2>Cooperative source review</h2><p>MAMCOS, TSS and TUMCOS averages are separate from official modal prices and from each other. Invalid records cannot be approved. Approved records are published in INR/quintal.</p></div></div>
     <div className="monthly-details">
       {!unlocked ? <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); setUnlocked(true); }}>
         <label className="filter-control"><span>Cooperative reviewer token</span><input type="password" autoComplete="off" required value={token} onChange={(event) => setToken(event.target.value)} /></label>
@@ -98,13 +97,12 @@ export function CooperativeReview() {
         <form className="monthly-refresh" onSubmit={submit(() => tssRefresh.mutate())}>
           <label className="filter-control"><span>TSS reporting date (IST)</span><input type="date" required max={today} value={tssDate} onChange={(event) => setTssDate(event.target.value)} disabled={busy} /></label>
           <label><input type="checkbox" checked={includeLots} onChange={(event) => setIncludeLots(event.target.checked)} disabled={busy} /> Add tender lot/bag/weight totals (personal data is discarded)</label>
-          <label><input type="checkbox" checked={acceptAssumption} onChange={(event) => setAcceptAssumption(event.target.checked)} disabled={busy} /> Accept INR/quintal as assumed, not source-confirmed</label>
-          <button className="button-secondary" disabled={busy || !acceptAssumption || !tssDate}>{tssRefresh.isPending ? "Fetching TSS..." : "Fetch TSS reporting date"}</button>
+          <button className="button-secondary" disabled={busy || !tssDate}>{tssRefresh.isPending ? "Fetching TSS..." : "Fetch TSS reporting date"}</button>
         </form>
         <form className="monthly-refresh" onSubmit={submit(() => tssBackfill.mutate())}>
           <label className="filter-control"><span>TSS backfill start</span><input type="date" required max={today} value={backfillStart} onChange={(event) => setBackfillStart(event.target.value)} disabled={busy} /></label>
           <label className="filter-control"><span>TSS backfill end (max 5 days)</span><input type="date" required max={today} value={backfillEnd} onChange={(event) => setBackfillEnd(event.target.value)} disabled={busy} /></label>
-          <button className="button-secondary" disabled={busy || !acceptAssumption || backfillStart > backfillEnd}>{tssBackfill.isPending ? "Backfilling TSS..." : "Backfill TSS dates"}</button>
+          <button className="button-secondary" disabled={busy || backfillStart > backfillEnd}>{tssBackfill.isPending ? "Backfilling TSS..." : "Backfill TSS dates"}</button>
         </form>
         <form className="monthly-refresh" onSubmit={submit(() => tumcos.mutate())}>
           <label className="filter-control"><span>TUMCOS scope</span><select value={tumcosScope} onChange={(event) => setTumcosScope(event.target.value === "full_history" ? "full_history" : "recent")} disabled={busy}>
@@ -122,7 +120,7 @@ export function CooperativeReview() {
             <label><input type="checkbox" checked={dryRun} onChange={(event) => setDryRun(event.target.checked)} disabled={busy} /> Dry run (validate only)</label>
             <button className="button-secondary" disabled={busy || !attested || !csvText.trim()}>{csvImport.isPending ? "Importing..." : dryRun ? "Validate CSV" : "Import CSV for review"}</button>
           </form>
-          <p>Imported rows enter the review queue. A unit is source-confirmed only when the declared unit is INR/quintal with recorded evidence; TSS units always remain assumed.</p>
+          <p>Imported rows enter the review queue. A unit is source-confirmed only when the declared unit is INR/quintal with recorded evidence. TSS and TUMCOS rows otherwise use the operator assumption of INR/quintal.</p>
         </details>
         <details className="review-evidence"><summary>Replay a stored raw snapshot</summary>
           <form className="monthly-refresh" onSubmit={submit(() => replay.mutate())}>
@@ -138,7 +136,7 @@ export function CooperativeReview() {
       {mutations.map((m, index) => m.error ? <ErrorState key={index} error={m.error} /> : null)}
       {feedback && <p role="status">{feedback}</p>}
       <p>Every fetch archives the raw source snapshot. Missing source history is not fabricated. Scheduled collection runs only after the source's permission is recorded as granted.</p>
-      <p>TSS publishes no unit; INR/quintal is assumed. TUMCOS labels values "kg" although magnitudes are per-quintal-like, and reports no variety. Neither is published as verified INR/quintal until the unit is confirmed by the source.</p>
+      <p>TSS publishes no unit, and TUMCOS labels values "kg" although their size is only plausible per quintal. Both are treated as INR/quintal by operator decision and published after review; the source's own label stays on each record. TUMCOS values under ₹1,000 stay unconfirmed because they could genuinely be per kg.</p>
     </div>
   </section>;
 }

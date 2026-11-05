@@ -184,7 +184,7 @@ historyRoutes.get("/history/monthly/snapshots/:id", async (c) => {
 
 historyRoutes.get("/history/aggregates", async (c) => {
   const validDay = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
-  const input = z.object({ source: z.enum(["mamcos", "tss"]), variety: z.string().trim().min(1).max(160), branch: z.string().trim().min(1).max(160),
+  const input = z.object({ source: z.enum(["mamcos", "tss", "tumcos"]), variety: z.string().trim().min(1).max(160), branch: z.string().trim().min(1).max(160),
     from: z.string().refine(validDay), to: z.string().refine(validDay), interval: z.enum(["weekly", "monthly"]) }).safeParse(c.req.query());
   if (!input.success || input.data.from > input.data.to || Date.parse(input.data.to) - Date.parse(input.data.from) > 366 * 86_400_000
     || input.data.to > calendarTodayIST()) return c.json({ error: "Select source, exact variety, branch, interval and a valid date range up to 366 days through today (IST)." }, 400);
@@ -193,7 +193,7 @@ historyRoutes.get("/history/aggregates", async (c) => {
     WHERE source_key=? AND commodity='arecanut' AND variety=? AND branch=? AND status='verified' AND reporting_date BETWEEN ? AND ? ORDER BY reporting_date`)
     .bind(source, variety, branch, from, to).all<DailyQuote>();
   return c.json({ data: aggregateDaily(rows.results, from, to, interval), observations: rows.results, ...input.data,
-    methodology: "Equal-weight arithmetic mean of captured daily reported averages for one exact variety and branch. Coverage is observed days / calendar days in the selected range, not a claim about trading-day completeness. No interpolation or volume weighting. TSS INR/quintal remains assumed. Not the official monthly arrival-weighted report." });
+    methodology: "Equal-weight arithmetic mean of captured daily reported averages for one exact variety and branch. Coverage is observed days / calendar days in the selected range, not a claim about trading-day completeness. No interpolation or volume weighting. TSS and TUMCOS INR/quintal is an operator assumption. Not the official monthly arrival-weighted report." });
 });
 
 /** Inline report, or its verified R2 copy when the inline column was offloaded. */

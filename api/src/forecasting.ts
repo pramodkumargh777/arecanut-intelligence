@@ -24,7 +24,7 @@ export const FORECASTING_LIMITATIONS = [
 ];
 
 const MONTHLY_BASIS = "MONTHLY_STATE_WEIGHTED_AVERAGE";
-const BASES = [MONTHLY_BASIS, "APMC_MODAL", "COOPERATIVE_AVERAGE"] as const;
+const BASES = [MONTHLY_BASIS, "APMC_MODAL", "COOPERATIVE_AVERAGE", "COOPERATIVE_TENDER_AVERAGE"] as const;
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/;
 const SHA = /^[0-9a-f]{64}$/;
 const text = (max: number) => z.string().min(1).max(max).refine((v) => v === v.trim() && !/[\u0000-\u001f\u007f]/.test(v));
@@ -176,11 +176,11 @@ const OUTCOME_SQL = [
   `INSERT OR IGNORE INTO forecast_outcomes (prediction_id, actual_value, actual_captured_at, error, absolute_error, within_interval, source_table)
    SELECT p.id, q.average_price, q.fetched_at, q.average_price - p.median, abs(q.average_price - p.median),
      CASE WHEN q.average_price BETWEEN p.lower_bound AND p.upper_bound THEN 1 ELSE 0 END, 'cooperative_quotes'
-   FROM forecast_predictions p JOIN cooperative_quotes q ON q.source_key = 'mamcos' AND q.commodity = 'arecanut' AND q.status = 'verified'
-     AND q.price_basis = 'COOPERATIVE_AVERAGE' AND q.price_unit = 'INR/quintal'
-     AND q.unit_status = 'source_confirmed' AND 'mamcos|' || q.branch || '|' || q.variety = p.series_id
+   FROM forecast_predictions p JOIN cooperative_quotes q ON q.commodity = 'arecanut' AND q.status = 'verified'
+     AND q.price_basis = p.price_basis AND q.price_unit = 'INR/quintal'
+     AND q.source_key || '|' || q.branch || '|' || q.variety = p.series_id
      AND q.reporting_date = p.target_period AND q.average_price > 0
-   WHERE p.price_basis = 'COOPERATIVE_AVERAGE' AND NOT EXISTS (SELECT 1 FROM forecast_outcomes x WHERE x.prediction_id = p.id)`,
+   WHERE p.price_basis IN ('COOPERATIVE_AVERAGE', 'COOPERATIVE_TENDER_AVERAGE') AND NOT EXISTS (SELECT 1 FROM forecast_outcomes x WHERE x.prediction_id = p.id)`,
 ];
 
 type OutcomeRow = {

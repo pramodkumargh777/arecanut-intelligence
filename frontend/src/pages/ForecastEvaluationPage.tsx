@@ -7,6 +7,7 @@ import { PUBLICATION_LABEL, STATUS_LABEL, showsValues } from "../services/foreca
 import { formatTimestampIST } from "../../../shared/dates";
 import { LazyBarChart } from "../components/LazyCharts";
 import { SourceLabel, StatusBadge } from "../components/Scorecard";
+import { INK } from "../components/chartPalette";
 
 const num = (value: number | null | undefined, digits = 0) => value == null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: digits });
 const pct = (value: number | null | undefined) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -39,7 +40,7 @@ export function ForecastEvaluationPage() {
     {overview.isLoading ? <LoadingState /> : overview.error ? <ErrorState error={overview.error} onRetry={() => void overview.refetch()} /> : !experiment ? <EmptyState title="No forecasting experiment published">Run <code>python -m forecasting run --publish</code> from data-platform against real observations. No results are invented to fill this page.</EmptyState> : <>
       <section className="snapshot-grid">
         <article className="snapshot-card"><div className="card-kicker">EXPERIMENT</div><div className="snapshot-value">{experiment.origins_evaluated} origins</div><p>{experiment.id} · {experiment.engine_version} · {experiment.vintage_mode} vintages</p></article>
-        <article className="snapshot-card"><div className="card-kicker">FORECAST EXECUTION</div><div className="snapshot-value">{formatTimestampIST(experiment.created_at)}</div><p>Last market period used: {experiment.origin_period}. Not a market reporting date.</p></article>
+        <article className="snapshot-card"><div className="card-kicker">FORECAST EXECUTION</div><div className="snapshot-value snapshot-date">{formatTimestampIST(experiment.created_at)}</div><p>Last market period used: {experiment.origin_period}. Not a market reporting date.</p></article>
         <article className="snapshot-card"><div className="card-kicker">EVALUATION STATUS</div><div className="snapshot-value">{overview.data?.status_counts.candidate ?? 0} candidates</div><p>{Object.entries(overview.data?.status_counts ?? {}).map(([key, value]) => `${STATUS_LABEL[key] ?? label(key)}: ${value}`).join(" · ")}</p></article>
         <article className="snapshot-card"><div className="card-kicker">PROSPECTIVE OUTCOMES</div><div className="snapshot-value">{overview.data?.totals.outcomes ?? 0}</div><p>{overview.data?.totals.validated_events ?? 0} validated · {overview.data?.totals.revoked_events ?? 0} revoked model events</p></article>
       </section>
@@ -65,31 +66,31 @@ export function ForecastEvaluationPage() {
         const intervals = pooled.filter((row) => row.interval_coverage !== null);
         const beating = relative.filter((row) => row.relative_mae_vs_best_baseline! < 1).length;
         return <section className="chart-grid">
-          <article className="panel chart-panel"><div className="panel-heading"><div><h2>Error relative to the best naive baseline</h2><p>Horizon {horizon} · pooled MAE ÷ better of last value and seasonal naive · below 1.00 is lower error in backtests; grey is the baseline itself, red is worse</p></div>
+          <article className="panel chart-panel"><div className="panel-heading"><div><h2>Error relative to the best naive baseline</h2><p>Horizon {horizon} · pooled MAE ÷ better of last value and seasonal naive · below 1.00 is lower error in backtests; dark bars beat the baseline, light bars match it or are worse</p></div>
             <StatusBadge tone={beating ? "warn" : "bad"}>{beating ? `${beating} model${beating === 1 ? "" : "s"} below 1.00 pooled · see per-series status` : "No model beats the baseline"}</StatusBadge></div>
-            {!relative.length ? <EmptyState title="No relative metrics for this horizon" /> : <LazyBarChart horizontal categories={relative.map((row) => row.model)} values={relative.map((row) => row.relative_mae_vs_best_baseline)} name="Relative MAE" valueFormat="ratio" referenceLine={{ value: 1, label: "Baseline" }} description={`Relative MAE by model at horizon ${horizon}`} color={(index) => { const value = relative[index]?.relative_mae_vs_best_baseline ?? 1; return value < 1 ? "#286348" : value === 1 ? "#8a958e" : "#9a3d3d"; }} height={Math.max(220, relative.length * 34 + 60)} />}
+            {!relative.length ? <EmptyState title="No relative metrics for this horizon" /> : <LazyBarChart horizontal categories={relative.map((row) => row.model)} values={relative.map((row) => row.relative_mae_vs_best_baseline)} name="Relative MAE" valueFormat="ratio" referenceLine={{ value: 1, label: "Baseline" }} description={`Relative MAE by model at horizon ${horizon}`} color={(index) => { const value = relative[index]?.relative_mae_vs_best_baseline ?? 1; return value < 1 ? INK[900] : INK[400]; }} height={Math.max(220, relative.length * 34 + 60)} />}
             <div className="chart-foot"><SourceLabel>Walk-forward backtests · experiment {experiment.id} · {experiment.vintage_mode} vintages</SourceLabel></div></article>
-          <article className="panel chart-panel"><div className="panel-heading"><div><h2>Prediction interval coverage</h2><p>Share of backtest actuals inside the 80% interval · coverage far below 80% means intervals are too narrow</p></div></div>
-            {!intervals.length ? <EmptyState title="No interval forecasts at this horizon" /> : <LazyBarChart horizontal categories={intervals.map((row) => row.model)} values={intervals.map((row) => (row.interval_coverage ?? 0) * 100)} name="Interval coverage" valueFormat="percent" referenceLine={{ value: 80, label: "Nominal 80%" }} description={`Interval coverage by model at horizon ${horizon}`} color={(index) => Math.abs((intervals[index]?.interval_coverage ?? 0) - 0.8) <= 0.05 ? "#286348" : "#a8672a"} height={Math.max(220, intervals.length * 34 + 60)} />}
+          <article className="panel chart-panel"><div className="panel-heading"><div><h2>Prediction interval coverage</h2><p>Share of backtest actuals inside the 80% interval · dark bars are within 5 points of 80%; far below 80% means intervals are too narrow</p></div></div>
+            {!intervals.length ? <EmptyState title="No interval forecasts at this horizon" /> : <LazyBarChart horizontal categories={intervals.map((row) => row.model)} values={intervals.map((row) => (row.interval_coverage ?? 0) * 100)} name="Interval coverage" valueFormat="percent" referenceLine={{ value: 80, label: "Nominal 80%" }} description={`Interval coverage by model at horizon ${horizon}`} color={(index) => Math.abs((intervals[index]?.interval_coverage ?? 0) - 0.8) <= 0.05 ? INK[900] : INK[400]} height={Math.max(220, intervals.length * 34 + 60)} />}
             <div className="chart-foot"><SourceLabel>Walk-forward backtests · interval width shown in the table above</SourceLabel></div></article>
         </section>;
       })()}
       <section className="panel table-panel"><div className="panel-heading"><div><h2>Per-series evaluations</h2><p>Each model is compared with the better of last value and seasonal naive for the same series and horizon</p></div></div>
         {evaluations.isLoading ? <LoadingState /> : evaluations.error ? <ErrorState error={evaluations.error} /> : !evaluations.data?.data.length ? <EmptyState title="No evaluations match">Change the filters.</EmptyState> : <>
-          <div className="table-scroll" tabIndex={0} role="region" aria-label="Model evaluations"><table><thead><tr><th>Variety</th><th>Horizon</th><th>Model</th><th>Baseline</th><th>n</th><th>MAE</th><th>MAE skill</th><th>Holm p</th><th>Coverage</th><th>Status</th><th>Reasons</th></tr></thead><tbody>
+          <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label="Model evaluations"><table><thead><tr><th>Variety</th><th>Horizon</th><th>Model</th><th>Baseline</th><th>n</th><th>MAE</th><th>MAE skill</th><th>Holm p</th><th>Coverage</th><th>Status</th><th>Reasons</th></tr></thead><tbody>
             {evaluations.data.data.map((row) => <tr key={row.id}><td>{row.variety}</td><td>{row.horizon}</td><td>{row.model}</td><td>{row.baseline_model}</td><td>{row.n}</td><td>{num(row.mae)}</td><td>{pct(row.mae_skill_vs_baseline)}</td><td>{num(row.p_value_holm, 3)}</td><td>{pct(row.interval_coverage)} ({label(row.coverage_status)})</td><td>{STATUS_LABEL[row.status] ?? label(row.status)}</td><td>{row.reasons.map(label).join(", ")}</td></tr>)}
           </tbody></table></div>
-          <div className="filter-bar">
+          <div className="pagination"><span>{evaluations.data.data.length} evaluations on this page</span><div>
             <button type="button" className="button-secondary" disabled={!history.length} onClick={() => { const previous = [...history]; const last = previous.pop(); setHistory(previous); setCursor(last === -1 ? undefined : last); }}>Previous</button>
             <button type="button" className="button-secondary" disabled={evaluations.data.next_after == null} onClick={() => { setHistory([...history, cursor ?? -1]); setCursor(evaluations.data?.next_after ?? undefined); }}>Next</button>
-          </div>
+          </div></div>
         </>}
       </section>
 
       <section className="panel table-panel"><div className="panel-heading"><div><h2>Latest saved predictions</h2><p>Stored before outcomes are known. {withheldPredictions} predictions from models that did not beat their baseline are withheld. Values are not statements that prices will rise or fall.</p></div></div>
         {predictions.isLoading ? <LoadingState /> : predictions.error ? <ErrorState error={predictions.error} /> : !shownPredictions.length ? <EmptyState title="No publishable predictions">Every model was withheld for this experiment.</EmptyState> :
-          <div className="table-scroll" tabIndex={0} role="region" aria-label="Stored predictions"><table><thead><tr><th>Variety · basis</th><th>Target month</th><th>Horizon</th><th>Model</th><th>Median</th><th>Interval</th><th>Last observed ({shownPredictions[0].origin_period})</th><th>Publication</th><th>Actual</th></tr></thead><tbody>
-            {shownPredictions.map((row) => <tr key={row.id}><td>{row.variety}<br /><small>{label(row.price_basis)} · {row.unit}</small></td><td>{row.target_period}</td><td>{row.horizon}</td><td>{row.model}</td><td>{num(row.median)}</td><td>{num(row.lower_bound)}–{num(row.upper_bound)} ({Math.round(row.interval_level * 100)}%)</td><td>{num(row.last_observed_value)}</td><td>{PUBLICATION_LABEL[row.publication]}</td><td>{row.actual_value == null ? "Not yet observed" : `${num(row.actual_value)} (error ${num(row.absolute_error)})`}</td></tr>)}
+          <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label="Stored predictions"><table><thead><tr><th>Variety · basis</th><th>Target month</th><th>Horizon</th><th>Model</th><th>Median</th><th>Interval</th><th>Last observed ({shownPredictions[0].origin_period})</th><th>Publication</th><th>Actual</th></tr></thead><tbody>
+            {shownPredictions.map((row) => <tr key={row.id}><td>{row.variety}<br /><small>{label(row.price_basis)} · {row.unit}</small></td><td>{row.target_period}</td><td>{row.horizon}</td><td>{row.model}</td><td>{num(row.median)}</td><td>{num(row.lower_bound)}–{num(row.upper_bound)} ({Math.round(row.interval_level)}%)</td><td>{num(row.last_observed_value)}</td><td>{PUBLICATION_LABEL[row.publication]}</td><td>{row.actual_value == null ? "Not yet observed" : `${num(row.actual_value)} (error ${num(row.absolute_error)})`}</td></tr>)}
           </tbody></table></div>}
       </section>
 

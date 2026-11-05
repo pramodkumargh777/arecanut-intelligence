@@ -2,10 +2,11 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { calendarTodayIST } from "../../shared/dates";
 import type { Env } from "./index";
-import { cooperativeSeries, refreshMamcos, type CooperativeQuote } from "./cooperative";
+import { cooperativeConflicts, cooperativeSeries, refreshMamcos, type CooperativeQuote } from "./cooperative";
 import { configuredAttempts } from "./cooperative-fetch";
 import { importCooperativeCsv, importRequest, replayCooperativeSnapshot } from "./cooperative-import";
 import { cooperativeSourceStatus, permissionLabel, permissionUpdate, readCooperativeSource, updateCooperativePermission } from "./cooperative-sources";
+import { publishableUnit } from "./cooperative-units";
 import { backfillTss, refreshTss, validTssDate } from "./tss";
 import { refreshTumcos } from "./tumcos";
 
@@ -40,11 +41,6 @@ const sourceSchema = z.enum(["mamcos", "tss", "tumcos"]);
 const commoditySchema = z.enum(["arecanut", "black_pepper"]);
 const authorized = (header: string | undefined, token: string | undefined) => Boolean(token && header === `Bearer ${token}`);
 const DEFAULT_VARIETY: Record<z.infer<typeof sourceSchema>, string> = { mamcos: "RASHI EDI", tss: "RASHI", tumcos: "areca" };
-const PUBLICATION_BLOCK: Record<z.infer<typeof sourceSchema>, string | null> = {
-  mamcos: null,
-  tss: "TSS publishes no price unit. INR/quintal is assumed, so TSS quotations are kept in the review queue and are not published as verified INR/quintal prices.",
-  tumcos: "TUMCOS labels every record \"kg\" while values are only plausible per quintal, and publishes no variety. The unit conflict keeps TUMCOS quotations in the review queue; none are published as verified prices.",
-};
 
 cooperativeRoutes.get("/cooperative/prices", async (c) => {
   const source = sourceSchema.safeParse(c.req.query("source") ?? "mamcos");
@@ -91,6 +87,7 @@ cooperativeRoutes.get("/cooperative/prices", async (c) => {
     WHERE source_key=? AND commodity=? AND status!='superseded' GROUP BY status`).bind(source.data, commodity.data).all();
   const archived = await c.env.DB.prepare(`SELECT MAX(reporting_date) AS latest FROM cooperative_quotes
     WHERE source_key=? AND commodity=? AND status IN ('pending','accepted_unit_unconfirmed','verified')`).bind(source.data, commodity.data).first<{ latest: string | null }>();
+  const awaitingReview = (counts.results as { status: string; count: number }[]).filter((row) => row.status === "pending").reduce((sum, row) => sum + row.count, 0);
   const registry = await readCooperativeSource(c.env.DB, source.data);
   return c.json({
     source: source.data, commodity: commodity.data, varieties, variety: selected, data: rows, latest_by_branch: latestByBranch,
@@ -100,20 +97,23 @@ cooperativeRoutes.get("/cooperative/prices", async (c) => {
     series, latest_reporting_date: latestDate, benchmark_reporting_date: headlineSeries.at(-1)?.reporting_date ?? null,
     source_publication_timestamp: null, reference_price: latest?.median_average_price ?? null,
     previous_reference_price: previous?.median_average_price ?? null,
-    minimum_branch_coverage: coverage, last_fetch: fetchStatus, recent_fetches: recentFetches.results, counts: counts.results,
-    publication: { published: rows.length > 0, blocked_reason: PUBLICATION_BLOCK[source.data], latest_archived_reporting_date: archived?.latest ?? null },
+    minimum_branch_coverage: coverage, benchmark_conflicts: cooperativeConflicts(seriesRows.results),
+    last_fetch: fetchStatus, recent_fetches: recentFetches.results, counts: counts.results,
+    publication: { published: rows.length > 0, awaiting_review_count: awaitingReview,
+      blocked_reason: rows.length || !awaitingReview ? null : `${awaitingReview} quotation${awaitingReview === 1 ? " is" : "s are"} waiting for reviewer approval in Data quality.`,
+      latest_archived_reporting_date: archived?.latest ?? null },
     permission: registry ? {
       status: registry.permission_status, label: permissionLabel(registry), operator: registry.operator,
       scheduled_collection_allowed: registry.scheduled_collection_allowed === 1, redistribution_allowed: registry.redistribution_allowed === 1,
       terms_checked_at: registry.terms_checked_at,
     } : null,
     methodology: source.data === "tumcos"
-      ? "TUMCOS (Channagiri) publishes low, average and high values per date without a variety. Values are archived exactly as published with their source record IDs. They are not APMC modal prices and are not merged with MAMCOS, TSS or AGMARKNET."
+      ? "TUMCOS (Channagiri) publishes low, average and high values per date without a variety. Its page labels values \"kg\"; they are treated as INR/quintal by operator decision because their size is only plausible per quintal. Source records are kept unchanged. They are not APMC modal prices and are not merged with MAMCOS, TSS or AGMARKNET."
       : source.data === "tss"
-      ? "TSS reported averages (avgrate), with normal rates (norrate) preserved separately. INR/quintal is assumed, not source-confirmed. Excluded from verified-unit benchmarks. Only the exact arecanut labels RASHI, BETTE, CHALI, MURI, KOLE and ARECANUT are included; other items are archived but not published."
+      ? `TSS reported averages (avgrate), with normal rates (norrate) preserved separately. TSS publishes no unit; INR/quintal is an operator assumption. The benchmark is the median across locations for one exact variety and date, with at least ${coverage} locations. Only the exact arecanut labels RASHI, BETTE, CHALI, MURI, KOLE and ARECANUT are included; other items are archived but not published.`
       : `Median of published cooperative branch averages for one exact variety and reporting date, with at least ${coverage} branches. Not the official APMC modal-price index. Branch constituents can differ between dates; changes do not imply a like-for-like market movement.`,
-    availability: source.data === "tss" ? "INR/quintal — assumed, not source-confirmed. Review approval does not confirm the unit."
-      : source.data === "tumcos" ? "Source unit label \"kg\" conflicts with value magnitude — unit unconfirmed. Review approval does not confirm the unit." : null,
+    availability: source.data === "tss" ? "INR/quintal — operator assumption; TSS publishes no unit."
+      : source.data === "tumcos" ? "INR/quintal — operator assumption; the source page labels values \"kg\"." : null,
   });
 });
 
@@ -148,10 +148,10 @@ cooperativeRoutes.post("/admin/cooperative/tss/refresh", async (c) => {
   if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   const input = z.object({
     date: z.string().refine(validTssDate).refine((value) => value <= calendarTodayIST()),
-    accept_assumed_unit: z.literal(true),
+    accept_assumed_unit: z.boolean().optional(), // Accepted for older clients; the unit decision is now recorded policy.
     include_lots: z.boolean().optional(),
   }).strict().safeParse(await c.req.json().catch(() => null));
-  if (!input.success) return c.json({ error: "Provide a real reporting date no later than today (IST) and accept_assumed_unit: true." }, 400);
+  if (!input.success) return c.json({ error: "Provide a real reporting date no later than today (IST)." }, 400);
   try {
     return c.json(await refreshTss(c.env.DB, input.data.date, {
       includeLots: input.data.include_lots ?? false, attempts: configuredAttempts(c.env.COOPERATIVE_FETCH_ATTEMPTS),
@@ -176,16 +176,24 @@ cooperativeRoutes.post("/admin/cooperative/:id/review", async (c) => {
     || row.reporting_date > calendarTodayIST())) {
     return c.json({ error: "Invalid source quotation cannot be approved. A corrected source record is required." }, 409);
   }
-  const unitConfirmed = row.unit_status === "source_confirmed" && row.price_unit === "INR/quintal";
-  const status = payload.data.action === "reject" ? "rejected" : unitConfirmed ? "verified" : "accepted_unit_unconfirmed";
+  const status = payload.data.action === "reject" ? "rejected" : publishableUnit(row) ? "verified" : "accepted_unit_unconfirmed";
+  const conflict = `SELECT 1 FROM cooperative_quotes other WHERE other.id!=? AND other.source_key=? AND other.commodity=? AND other.branch=?
+    AND other.reporting_date=? AND other.variety=? AND other.status='verified' AND other.average_price!=?`;
+  const conflictValues = [row.id, row.source_key, row.commodity ?? "arecanut", row.branch, row.reporting_date, row.variety, row.average_price];
+  // Checked inside the UPDATE so two concurrent approvals cannot both publish different prices for one branch and date.
   const results = await c.env.DB.batch([
-    c.env.DB.prepare("UPDATE cooperative_quotes SET status=? WHERE id=? AND status=?")
-      .bind(status, row.id, row.status),
+    c.env.DB.prepare(`UPDATE cooperative_quotes SET status=? WHERE id=? AND status=? AND (?!='verified' OR NOT EXISTS (${conflict}))`)
+      .bind(status, row.id, row.status, status, ...conflictValues),
     c.env.DB.prepare(`INSERT INTO cooperative_reviews (id,quote_id,action,reviewer,reviewed_at,previous_status,new_status)
       SELECT ?,?,?,'shared-reviewer-token',?,?,? WHERE changes()=1`)
       .bind(crypto.randomUUID(), row.id, payload.data.action, new Date().toISOString(), row.status, status),
   ]);
-  if (!results[0].meta.changes) return c.json({ error: "Quotation changed during review. Reload the queue." }, 409);
+  if (!results[0].meta.changes) {
+    const conflicted = status === "verified" && await c.env.DB.prepare(conflict).bind(...conflictValues).first();
+    return c.json({ error: conflicted
+      ? "A different verified price already exists for this branch, date and variety. Reject this quotation or resolve the source conflict first."
+      : "Quotation changed during review. Reload the queue." }, 409);
+  }
   return c.json({ success: true, status, published: status === "verified",
     note: status === "accepted_unit_unconfirmed" ? "Accepted as a source record, but the unit is unconfirmed, so it is not published as a verified price." : null });
 });
@@ -208,9 +216,9 @@ cooperativeRoutes.post("/admin/cooperative/tss/backfill", async (c) => {
   if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   const input = z.object({
     start: z.string().refine(validTssDate), end: z.string().refine(validTssDate).refine((value) => value <= calendarTodayIST()),
-    accept_assumed_unit: z.literal(true),
+    accept_assumed_unit: z.boolean().optional(),
   }).strict().safeParse(await c.req.json().catch(() => null));
-  if (!input.success) return c.json({ error: "Provide start and end dates (end no later than today IST) and accept_assumed_unit: true." }, 400);
+  if (!input.success) return c.json({ error: "Provide start and end dates (end no later than today IST)." }, 400);
   try { return c.json(await backfillTss(c.env.DB, input.data.start, input.data.end, { attempts: configuredAttempts(c.env.COOPERATIVE_FETCH_ATTEMPTS, 2) })); }
   catch (error) { return c.json({ error: failureMessage(error) }, 400); }
 });

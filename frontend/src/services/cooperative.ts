@@ -16,7 +16,7 @@ export type CooperativeCommodity = "arecanut" | "black_pepper";
 export type PermissionStatus = "not_requested" | "requested" | "granted" | "denied";
 export type CooperativeData = {
   source: CooperativeSource; commodity: CooperativeCommodity;
-  publication: { published: boolean; blocked_reason: string | null; latest_archived_reporting_date: string | null };
+  publication: { published: boolean; awaiting_review_count: number; blocked_reason: string | null; latest_archived_reporting_date: string | null };
   permission: { status: PermissionStatus; label: string; operator: string; scheduled_collection_allowed: boolean; redistribution_allowed: boolean; terms_checked_at: string } | null; varieties: string[]; variety: string; data: CooperativeQuote[];
   latest_by_branch: CooperativeQuote[];
   /** All branches reporting the selected variety, independent of the bounded row window. */
@@ -26,6 +26,7 @@ export type CooperativeData = {
   latest_reporting_date: string | null; reference_price: number | null; previous_reference_price: number | null;
   benchmark_reporting_date: string | null; source_publication_timestamp: null;
   minimum_branch_coverage: number; methodology: string; availability: string | null;
+  benchmark_conflicts: { reporting_date: string; branch: string; prices: number[] }[];
   counts: { status: string; count: number }[];
   last_fetch: { started_at: string; finished_at: string | null; status: string; error_message: string | null } | null;
   recent_fetches: { source_url: string; started_at: string; status: string; error_message: string | null; received_count: number | null; excluded_count: number }[];
@@ -62,9 +63,9 @@ export type CooperativeSourceStatus = {
   }[];
 };
 
-/** Only a source-confirmed INR/quintal unit can be verified and published. */
-export function unitConfirmed(row: Pick<CooperativeQuote, "unit_status" | "price_unit">): boolean {
-  return row.unit_status === "source_confirmed" && row.price_unit === "INR/quintal";
+/** INR/quintal that the source confirms, or that the operator has decided to assume, can be verified and published. */
+export function unitPublishable(row: Pick<CooperativeQuote, "unit_status" | "price_unit">): boolean {
+  return row.price_unit === "INR/quintal" && (row.unit_status === "source_confirmed" || row.unit_status === "assumed");
 }
 
 export function reviewFlags(value: string | null | undefined): string[] {

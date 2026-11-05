@@ -100,7 +100,7 @@ class ForecastDataset:
 
     @property
     def publication_eligible(self) -> bool:
-        return self.provenance == "database" and not self.suppressed and self.unit_status in {"source_confirmed", "derived_report"}
+        return self.provenance == "database" and not self.suppressed and self.unit_status in {"source_confirmed", "assumed", "derived_report"}
 
     def summary(self) -> dict[str, Any]:
         return {
@@ -280,8 +280,8 @@ def _build_cooperative(conn: sqlite3.Connection, config: ExperimentConfig, *, ke
         dataset.notes.append(f"{len(frame)} reviewed observations across {frame.reporting_date.nunique()} reporting date(s).")
     if len(units) > 1 or len(unit_statuses) > 1:
         dataset.suppression_reasons.append("mixed_units_or_unit_status")
-    if dataset.unit_status != "source_confirmed":
-        dataset.suppression_reasons.append(f"unit_not_source_confirmed:{dataset.unit_status}")
+    if dataset.unit != "INR/quintal" or dataset.unit_status not in {"source_confirmed", "assumed"}:
+        dataset.suppression_reasons.append(f"unit_not_publishable:{dataset.unit}:{dataset.unit_status}")
     _apply_rule(dataset, config)
     dataset.data_version = data_version(dataset.price_basis, dataset.unit, dataset.series)
     return dataset
@@ -294,16 +294,22 @@ def build_mamcos(conn: sqlite3.Connection, config: ExperimentConfig | None = Non
 
 
 def build_tss(conn: sqlite3.Connection, config: ExperimentConfig | None = None) -> ForecastDataset:
-    # TSS units are still assumed, so this dataset is research-only and never publication-eligible.
+    # INR/quintal is an operator assumption (migration 0020); publication is still subject to the history rules.
     return _build_cooperative(conn, config or ExperimentConfig(), key="tss_tender_average", source_key="tss",
-                              price_basis="COOPERATIVE_TENDER_AVERAGE", statuses=("verified", "accepted_unit_unconfirmed"),
-                              description="TSS tender/auction averages (unit assumed; research-only)")
+                              price_basis="COOPERATIVE_TENDER_AVERAGE", statuses=("verified",),
+                              description="TSS tender/auction averages, verified rows only (INR/quintal by operator decision)")
+
+
+def build_tumcos(conn: sqlite3.Connection, config: ExperimentConfig | None = None) -> ForecastDataset:
+    return _build_cooperative(conn, config or ExperimentConfig(), key="tumcos_branch_average", source_key="tumcos",
+                              price_basis="COOPERATIVE_AVERAGE", statuses=("verified",),
+                              description="TUMCOS Channagiri averages, verified rows only (INR/quintal by operator decision)")
 
 
 def build_all(conn: sqlite3.Connection, config: ExperimentConfig | None = None) -> dict[str, ForecastDataset]:
     config = config or ExperimentConfig()
     datasets = [build_monthly_reference(conn, config), build_daily_agmarknet(conn, config),
-                build_mamcos(conn, config), build_tss(conn, config)]
+                build_mamcos(conn, config), build_tss(conn, config), build_tumcos(conn, config)]
     return {dataset.key: dataset for dataset in datasets}
 
 

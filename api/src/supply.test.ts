@@ -212,14 +212,15 @@ describe("arrivals", () => {
     expect(monthly.measures.arrival.map((item: any) => item.bucket)).toEqual(["2026-10", "2026-11"]);
     expect((await app.request("/api/v1/supply/arrivals?from=2020-01-01&to=2026-11-05", {}, env)).status).toBe(400);
   });
-  it("pairs arrivals with validated AGMARKNET prices only on the same market, date and variety", async () => {
+  it("pairs arrivals with verified AGMARKNET prices only on the same market, date and variety", async () => {
     await post("/ingest/arrivals", batch([row(1), row(2, { variety: null, market: "Shimoga", observation_date: "2026-11-03" })]), "import");
     db.sqlite.prepare("INSERT OR IGNORE INTO markets(id,name,district,state) VALUES('test-market-shimoga','Shimoga','Shivamogga','Karnataka')").run();
     const market = db.sqlite.prepare("SELECT id FROM markets WHERE name='Shimoga' AND state='Karnataka'").get() as { id: string } | undefined;
     expect(market).toBeDefined();
     db.sqlite.prepare(`INSERT INTO market_price_observations(id,source_id,source_record_id,market_id,reporting_date,commodity_name,original_commodity_name,variety_name,
       original_variety_name,minimum_price,maximum_price,modal_price,original_unit,price_unit,validation_status,raw_payload,price_basis)
-      VALUES('o1','source-agmarknet','r1',?,'2026-11-02','Arecanut','Arecanut(Betelnut/Supari)','Rashi','Rashi',40000,50000,45000,'Rs/Quintal','INR/quintal','validated','{}','APMC_MODAL')`).run(market!.id);
+      VALUES('o1','source-agmarknet','r1',?,'2026-11-02','Arecanut','Arecanut(Betelnut/Supari)','Rashi','Rashi',40000,50000,45000,'Rs/Quintal','INR/quintal','verified','{}','APMC_MODAL')`).run(market!.id);
+    db.sqlite.prepare("UPDATE markets SET mapping_status='verified' WHERE id=?").run(market!.id);
     const body = await get("/supply/arrivals/price-comparison?from=2026-10-01&to=2026-11-05");
     expect(body.pairs).toHaveLength(1);
     expect(body.pairs[0]).toMatchObject({ observation_date: "2026-11-02", modal_price: 45000, price_basis: "APMC_MODAL", quantity_tonnes: 12 });

@@ -35,7 +35,7 @@ export function DecisionToolsPage() {
   const options = [
     ...(prices.data?.cooperative.map((row) => ({ key: `cooperative:${row.id}`,
       reference: { kind: "cooperative", id: row.id } satisfies PriceReference,
-      label: `${row.source_key.toUpperCase()} · ${row.branch} · ${row.variety} · ${row.reporting_date} · ${money(row.average_price)} / qtl${row.unit_status === "assumed" ? " — unit assumed" : ""}` })) ?? []),
+      label: `${row.source_key.toUpperCase()} · ${row.branch} · ${row.variety} · ${row.reporting_date} · ${money(row.average_price)} / qtl${row.unit_status === "assumed" ? " — unit by operator assumption" : ""}` })) ?? []),
     ...(prices.data?.monthly.map((row) => ({ key: `monthly:${row.refresh_run_id}:${row.variety_name}`,
       reference: { kind: "monthly", month: row.reporting_month, variety: row.variety_name, refresh_run_id: row.refresh_run_id } satisfies PriceReference,
       label: `AGMARKNET monthly · ${row.variety_name} · ${row.reporting_month} · ${money(row.weighted_price)} / qtl — state aggregate` })) ?? []),
@@ -103,8 +103,8 @@ export function DecisionToolsPage() {
         <p>{result.price.branch} · {result.price.variety} · Market reporting period: {result.price.reporting_period ?? "User entered; no reporting date"} · Platform fetched: {result.price.fetched_at ? formatTimestampIST(result.price.fetched_at) : "Not sourced"} · {result.price.price_type.replace(/_/g, " ")} {result.price.source_url && <a href={result.price.source_url} target="_blank" rel="noreferrer">Source evidence</a>}</p>
         {result.price.state && <p>Source reporting state: {result.price.state}</p>}
         {result.price.price_type === "monthly_weighted_modal" && result.price.reference_id && <p><a href={api.monthlySnapshotUrl(result.price.reference_id)} target="_blank" rel="noreferrer">Download the archived report used for this calculation</a> (unchanged by later source refreshes).</p>}
-        {result.price.unit_status === "assumed" && <p role="note">INR/quintal is assumed, not source-confirmed. All monetary results inherit this assumption.</p>}
-        <div className="table-scroll" tabIndex={0} role="region" aria-label="Decision calculation outputs"><table><caption>Scenario arithmetic, not forecasts or personalized investment advice</caption><thead><tr><th>Measure</th><th>Value</th></tr></thead><tbody>
+        {result.price.unit_status === "assumed" && <p role="note">INR/quintal is an operator assumption for this source. All monetary results inherit it.</p>}
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Decision calculation outputs"><table><caption>Scenario arithmetic, not forecasts or personalized investment advice</caption><thead><tr><th>Measure</th><th className="numeric">Value</th></tr></thead><tbody>
           {([
             ["Gross realization", result.results.gross_realization], ["Selling costs", result.results.selling_costs],
             ["Net realization now", result.results.net_realization], ["Net per quintal", result.results.net_per_quintal],
@@ -113,9 +113,9 @@ export function DecisionToolsPage() {
             ["Hold finance / opportunity cost", result.results.finance_cost], ["Hold net realization at your scenario price", result.results.hold_net_realization],
             ["Hold advantage vs selling now", result.results.hold_advantage], ["Hold break-even price / remaining quintal", result.results.break_even_hold_price],
           ] as [string, number][]).map(([label, value]) => <tr key={label}><td>{label}</td><td className="numeric">{money(value)}</td></tr>)}
-          <tr><td>Return on production cost</td><td>{result.results.roi_percent === null ? "Unavailable: production cost is zero" : `${result.results.roi_percent.toFixed(2)}%`}</td></tr>
-          <tr><td>Saleable quantity after holding</td><td>{result.results.remaining_quintals.toFixed(4)} quintals</td></tr>
-          <tr><td>Required increase to hold break-even</td><td>{result.results.break_even_increase_percent.toFixed(2)}%</td></tr>
+          <tr><td>Return on production cost</td><td className="numeric">{result.results.roi_percent === null ? "Unavailable: production cost is zero" : `${result.results.roi_percent.toFixed(2)}%`}</td></tr>
+          <tr><td>Saleable quantity after holding</td><td className="numeric">{result.results.remaining_quintals.toFixed(4)} quintals</td></tr>
+          <tr><td>Required increase to hold break-even</td><td className="numeric">{result.results.break_even_increase_percent.toFixed(2)}%</td></tr>
         </tbody></table></div>
         <div className="table-scroll" tabIndex={0} role="region" aria-label="Hold scenarios"><table><caption>Deterministic hold scenarios — no probabilities or predicted outcomes</caption><thead><tr><th>Scenario</th><th>Future price / quintal</th><th>Hold net proceeds</th><th>Advantage vs sell now</th></tr></thead><tbody>
           <tr><td>Price unchanged from reference</td><td>{money(result.price.value)}</td><td>{money(result.results.hold_unchanged_net_realization)}</td><td>{money(result.results.hold_unchanged_advantage)}</td></tr>

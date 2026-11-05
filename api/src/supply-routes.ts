@@ -327,11 +327,11 @@ supplyRoutes.get("/supply/arrivals/price-comparison", async (c) => {
     JOIN markets m ON m.state=a.state AND lower(m.name)=lower(a.market)
     JOIN market_price_observations o ON o.market_id=m.id AND o.reporting_date=a.observation_date AND o.original_variety_name=a.variety
     WHERE a.source_key='agmarknet' AND a.measure='arrival' AND a.commodity_code=? AND a.state=? AND a.variety IS NOT NULL
-      AND a.observation_date BETWEEN ? AND ? AND o.source_id='source-agmarknet' AND o.validation_status IN ('validated','verified')
-      AND o.commodity_name='Arecanut'
+      AND a.observation_date BETWEEN ? AND ? AND o.source_id='source-agmarknet' AND o.validation_status='verified'
+      AND m.mapping_status='verified' AND o.commodity_name='Arecanut'
     ORDER BY a.observation_date DESC, a.market LIMIT 500`).bind(COMMODITY, state, range.from, range.to).all();
   return c.json({ state, requested_range: range, pairs: rows.results,
-    method: "Pairs AGMARKNET arrivals with validated AGMARKNET price observations for the same market, reporting date and exact source variety. Rows without a variety are not paired.",
+    method: "Pairs AGMARKNET arrivals with reviewer-verified AGMARKNET price observations for the same market, reporting date and exact source variety. Rows without a variety are not paired.",
     caution: "Co-movement between arrivals and prices is descriptive only and does not establish cause.",
     message: rows.results.length ? null : "No same-day, same-variety AGMARKNET arrival and price pairs exist for this range." });
 });

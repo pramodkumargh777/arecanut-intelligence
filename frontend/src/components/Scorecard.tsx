@@ -69,7 +69,7 @@ export function IntelligenceScorecard({ feed, variety }: { feed: MarketFeed; var
   const latest = official ? overview.data?.latest_reporting_date ?? null : cooperative.data?.latest_reporting_date ?? null;
   const fresh = reportingFreshness(latest, today, 3);
   const sourceError = official ? varieties.error ?? overview.error : cooperative.error;
-  const publicationBlocked = !official && cooperative.data && !cooperative.data.publication.published;
+  const awaitingReview = !official && cooperative.data && !cooperative.data.publication.published && cooperative.data.publication.awaiting_review_count > 0;
   const archived = cooperative.data?.publication.latest_archived_reporting_date ?? null;
 
   const latestRows = cooperative.data ? cooperative.data.data.filter((row) => row.reporting_date === latest) : [];
@@ -87,13 +87,13 @@ export function IntelligenceScorecard({ feed, variety }: { feed: MarketFeed; var
     <div className="scorecard-heading"><div><h2>Intelligence scorecard</h2><p>Evidence status for the selected source and commodity. Calendar dates are market reporting dates (IST calendar); nothing here is a live feed.</p></div></div>
     <div className="scorecard-grid">
       <ScoreItem icon={<CalendarCheck size={16} />} label="Data freshness" loading={sourceLoading}
-        value={sourceError ? "Unavailable" : publicationBlocked ? "Withheld" : latest ? formatCalendarDate(latest) : "No reports"}
-        tone={sourceError ? "bad" : publicationBlocked ? "warn" : fresh.state === "fresh" ? "good" : fresh.state === "stale" ? "warn" : "bad"}
-        detail={sourceError ? (sourceError as Error).message : publicationBlocked ? `${cooperative.data?.publication.blocked_reason ?? "Publication withheld."}${archived ? ` Latest archived reporting date ${formatCalendarDate(archived)}.` : ""}`
+        value={sourceError ? "Unavailable" : awaitingReview ? "Awaiting review" : latest ? formatCalendarDate(latest) : "No reports"}
+        tone={sourceError ? "bad" : awaitingReview ? "warn" : fresh.state === "fresh" ? "good" : fresh.state === "stale" ? "warn" : "bad"}
+        detail={sourceError ? (sourceError as Error).message : awaitingReview ? `${cooperative.data?.publication.blocked_reason ?? ""}${archived ? ` Latest archived reporting date ${formatCalendarDate(archived)}.` : ""}`
           : fresh.ageDays === null ? (official ? "No verified daily observations are published for this commodity." : "No reviewed quotations are published.") : `Latest market reporting date is ${fresh.ageDays} day${fresh.ageDays === 1 ? "" : "s"} before today (${formatCalendarDate(today)}). Stale after 3 days.`}
         source={`${FEED_NAME[feed]}${official ? " · verified modal prices" : " · reported averages"}`} to="/data-quality" />
       <ScoreItem icon={<Gauge size={16} />} label="Reporting coverage" loading={sourceLoading}
-        value={!latest ? "—" : official ? `${reporting} market${reporting === 1 ? "" : "s"}` : `${reporting} of ${universe} branches`}
+        value={!latest ? "—" : official ? `${reporting} market${reporting === 1 ? "" : "s"}` : `${reporting} of ${universe} ${universe === 1 ? "branch" : "branches"}`}
         tone={coverageTone}
         detail={!latest ? "Coverage is reported once observations are published." : official
           ? `Verified markets on ${formatCalendarDate(latest)} for ${officialVariety}. The reference index needs at least ${universe}.`

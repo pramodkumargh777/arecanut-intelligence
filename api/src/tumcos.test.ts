@@ -20,14 +20,14 @@ describe("TUMCOS market-rate parser", () => {
     expect(JSON.parse(latest.raw_record)).toMatchObject({ id: "1131", unit: "kg", quality: "Karnataka, India" });
     expect(parsed.quotes.filter((quote) => quote.commodity === "black_pepper").map((quote) => quote.source_record_id)).toEqual(["303", "4"]);
   });
-  it("never confirms the unit: the source says kg while values are only plausible per quintal", async () => {
+  it("treats per-quintal-sized values as INR/quintal by operator assumption, keeping the source label and flag", async () => {
     const parsed = await parseTumcos(html, FETCHED, "full_history");
     for (const quote of parsed.quotes) {
-      expect(quote).toMatchObject({ price_unit: "unconfirmed", unit_status: "source_conflict", source_unit_label: "kg" });
+      expect(quote).toMatchObject({ price_unit: "INR/quintal", unit_status: "assumed", source_unit_label: "kg" });
       expect(quote.review_flags).toContain("declared_unit_conflicts_with_magnitude");
       expect(quote.review_flags).toContain("variety_not_reported");
     }
-    expect(cooperativeSeries(parsed.quotes.filter((quote) => quote.commodity === "arecanut" && quote.variety === "areca"), 1)).toEqual([]);
+    expect(cooperativeSeries(parsed.quotes.filter((quote) => quote.commodity === "arecanut" && quote.variety === "areca"), 1)).not.toEqual([]);
   });
   it("marks commodity conflicts invalid instead of reassigning them", async () => {
     const parsed = await parseTumcos(html, FETCHED, "full_history");

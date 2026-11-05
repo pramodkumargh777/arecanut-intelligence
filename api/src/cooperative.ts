@@ -2,6 +2,7 @@ import { z } from "zod";
 import { median } from "./domain/analytics";
 import { fetchWithRetry, sha256Hex, SourceFetchError } from "./cooperative-fetch";
 import { priceBasisForSource } from "../../shared/commodities";
+import { publishableUnit } from "./cooperative-units";
 
 export const MAMCOS_URL = "https://mamcos.info/areca-market-rates";
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -167,6 +168,31 @@ export async function storeCooperativeSnapshot(db: D1Database, fetchId: string, 
     return inserted;
 }
 
+type BenchmarkRow = Pick<CooperativeQuote, "branch" | "reporting_date" | "average_price" | "unit_status" | "price_unit">;
+
+/** Distinct publishable INR/quintal prices per date and branch. More than one price for a branch and date is a conflict. */
+function confirmedPrices(rows: BenchmarkRow[]) {
+  const dates = new Map<string, Map<string, Set<number>>>();
+  for (const row of rows) {
+    if (row.average_price === null || !publishableUnit(row)) continue;
+    if (!Number.isFinite(row.average_price) || row.average_price <= 0) {
+      throw new Error("Invalid cooperative benchmark observation");
+    }
+    const branches = dates.get(row.reporting_date) ?? new Map<string, Set<number>>();
+    branches.set(row.branch, (branches.get(row.branch) ?? new Set<number>()).add(row.average_price));
+    dates.set(row.reporting_date, branches);
+  }
+  return dates;
+}
+
+/** Branch/date pairs left out of the benchmark because verified rows disagree on the price. */
+export function cooperativeConflicts(rows: BenchmarkRow[]) {
+  return [...confirmedPrices(rows)].flatMap(([reporting_date, branches]) => [...branches]
+    .filter(([, prices]) => prices.size > 1)
+    .map(([branch, prices]) => ({ reporting_date, branch, prices: [...prices].sort((a, b) => a - b) })))
+    .sort((a, b) => a.reporting_date.localeCompare(b.reporting_date) || a.branch.localeCompare(b.branch));
+}
+
 export function cooperativeSeries(rows: CooperativeQuote[], coverage: number) {
   if (new Set(rows.map((row) => row.source_key)).size > 1 || new Set(rows.map((row) => row.variety)).size > 1) {
     throw new Error("A cooperative benchmark requires one source and one exact variety");
@@ -174,21 +200,12 @@ export function cooperativeSeries(rows: CooperativeQuote[], coverage: number) {
   if (new Set(rows.map((row) => row.commodity ?? "arecanut")).size > 1) {
     throw new Error("A cooperative benchmark requires one commodity");
   }
-  const dates = new Map<string, Map<string, number>>();
-  for (const row of rows) {
-    if (row.average_price === null || row.unit_status !== "source_confirmed") continue;
-    if (!Number.isFinite(row.average_price) || row.average_price <= 0 || row.price_unit !== "INR/quintal") {
-      throw new Error("Invalid confirmed-unit cooperative benchmark observation");
-    }
-    const branches = dates.get(row.reporting_date) ?? new Map<string, number>();
-    if (branches.has(row.branch) && branches.get(row.branch) !== row.average_price) {
-      throw new Error("Conflicting cooperative observations for the same branch and reporting date");
-    }
-    branches.set(row.branch, row.average_price);
-    dates.set(row.reporting_date, branches);
-  }
-  return [...dates].filter(([, branches]) => branches.size >= coverage).map(([reporting_date, branches]) => ({
-    reporting_date, median_average_price: median([...branches.values()])!, branch_count: branches.size,
-    branches: [...branches.keys()].sort(),
+  // A conflicted branch is withheld for that date, never averaged or picked; cooperativeConflicts reports it.
+  return [...confirmedPrices(rows)].map(([reporting_date, branches]) => {
+    const usable = new Map([...branches].filter(([, prices]) => prices.size === 1).map(([branch, prices]) => [branch, [...prices][0]]));
+    return { reporting_date, usable };
+  }).filter(({ usable }) => usable.size >= coverage).map(({ reporting_date, usable }) => ({
+    reporting_date, median_average_price: median([...usable.values()])!, branch_count: usable.size,
+    branches: [...usable.keys()].sort(),
   })).sort((a, b) => a.reporting_date.localeCompare(b.reporting_date));
 }

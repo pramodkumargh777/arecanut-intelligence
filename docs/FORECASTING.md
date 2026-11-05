@@ -12,7 +12,7 @@ Worker's `monthly-baselines-v1` reference (`/forecasts`). That baseline stays li
    | `monthly_reference` | `MONTHLY_STATE_WEIGHTED_AVERAGE` | `monthly_variety_prices` + `monthly_price_versions` (vintages) | Latest contiguous run per Karnataka variety; earlier gaps are dropped, never interpolated |
    | `daily_agmarknet` | `APMC_MODAL` | `market_price_observations` (validated) | Series = market × variety × grade |
    | `mamcos_branch_average` | `COOPERATIVE_AVERAGE` | `cooperative_quotes` (verified) | Branch × variety |
-   | `tss_tender_average` | `COOPERATIVE_TENDER_AVERAGE` | `cooperative_quotes` | The unit is assumed, so this dataset is never publication-eligible |
+   | `tss_tender_average` | `COOPERATIVE_TENDER_AVERAGE` | `cooperative_quotes` | INR/quintal is an operator assumption (migration 0020); publication depends on the history rules |
 
    `build_unified_dataset` raises `IncomparableDatasets` unless basis, unit, unit status, frequency and provenance are all identical and series IDs do not overlap.
 
@@ -159,7 +159,7 @@ The engine reads the local Miniflare D1 SQLite file, which it discovers automati
   These differences are not statistically meaningful after Holm correction.
 
 **Datasets not evaluated:**
-- The daily AGMARKNET, MAMCOS and TSS datasets are suppressed for insufficient history. TSS is also suppressed because its unit is assumed.
+- The daily AGMARKNET, MAMCOS and TSS datasets are suppressed for insufficient history. That run predates the 2026-11-05 unit decision, which removed the TSS unit suppression.
 - A unified dataset was refused for every pair.
 
 **Vintages:** strict as-of evaluation covered 1 origin. Vintages start at 2026-11-03.

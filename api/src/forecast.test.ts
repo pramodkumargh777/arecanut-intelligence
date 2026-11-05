@@ -129,7 +129,7 @@ describe("monthly forecast evaluation", () => {
 });
 
 describe("snapshot identity and API boundaries", () => {
-  it("fingerprints input values, reporting periods and capture lineage independently of order", async () => {
+  it("fingerprints input values and reporting periods independently of order and capture lineage", async () => {
     const input = series();
     const fingerprint = await sourceFingerprint(input);
     expect(fingerprint).toMatch(/^[a-f0-9]{64}$/);
@@ -137,13 +137,20 @@ describe("snapshot identity and API boundaries", () => {
     expect(canonicalInputs(input)).not.toContain('"kind"');
     for (const change of [
       (copy: ForecastInputs) => { copy.prices[0].weighted_price! += 1; },
-      (copy: ForecastInputs) => { copy.prices[0].refresh_run_id = "revised"; },
-      (copy: ForecastInputs) => { copy.versions[0].fetched_at = "2026-11-02T00:00:00Z"; },
-      (copy: ForecastInputs) => { copy.versions.push({ ...copy.versions[0], refresh_run_id: "extra" }); },
+      (copy: ForecastInputs) => { copy.prices[0].price_unit = "INR/kg"; },
+      (copy: ForecastInputs) => { copy.prices.pop(); },
     ]) {
       const copy = structuredClone(input);
       change(copy);
       expect(await sourceFingerprint(copy)).not.toBe(fingerprint);
+    }
+    for (const change of [
+      (copy: ForecastInputs) => { copy.prices[0].refresh_run_id = "refetched"; copy.prices[0].fetched_at = "2026-11-02T00:00:00Z"; },
+      (copy: ForecastInputs) => { copy.versions.push({ ...copy.versions[0], refresh_run_id: "extra" }); },
+    ]) {
+      const copy = structuredClone(input);
+      change(copy);
+      expect(await sourceFingerprint(copy)).toBe(fingerprint);
     }
     const snapshot = { source_fingerprint: fingerprint, formula_version: FORECAST_VERSION };
     expect(snapshotStaleReasons(snapshot, fingerprint, input, AS_OF)).toEqual([]);

@@ -84,7 +84,7 @@ within the file and against stored rows, and conflicts are rejected.
 - `GET /api/v1/supply/arrivals?granularity=daily|weekly|monthly|seasonal&from&to&district&market&source`
   (maximum range 1,100 days). Weeks start on Monday, and seasons follow the IMD meteorological seasons.
   Market participation is reported as the number of markets and reporting days.
-- `GET /api/v1/supply/arrivals/price-comparison` pairs arrivals with **validated AGMARKNET APMC prices on the
+- `GET /api/v1/supply/arrivals/price-comparison` pairs arrivals with **reviewer-verified AGMARKNET APMC prices on the
   same market, date and variety** only.
 
 **Current state.** No arrival rows exist, because no authorized file has been imported. Arrival forecasts are

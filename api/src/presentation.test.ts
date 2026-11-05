@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { calendarDateToTime, calendarTodayIST, completedMonthIST, formatCalendarDate, formatCalendarMonth, formatChartDate, formatTimestampIST, timestampToTime } from "../../shared/dates";
-import { buildChartData } from "../../frontend/src/services/chart";
+import { buildChartData, connectShortGaps, missingPeriods } from "../../frontend/src/services/chart";
 import { defaultGeography } from "../../frontend/src/services/intelligence";
 import { completedMonth } from "./forecast";
 import { previousMonth } from "./monthly";
@@ -76,4 +76,31 @@ it("defaults production and reset geography to Karnataka without restricting oth
   expect(defaultGeography("production")).toBe("Karnataka");
   expect(defaultGeography("trade")).toBe("");
   expect(defaultGeography("weather")).toBe("");
+});
+
+describe("chart line continuity", () => {
+  const point = (reporting_date: string, value = 100) => ({ reporting_date, value, constituents: 3 });
+  it("joins reports across a short gap without adding a value", () => {
+    const { series } = buildChartData([point("2026-10-31", 48585), point("2026-11-02", 46448), point("2026-11-03", 46232)], "daily");
+    const line = connectShortGaps(series, "daily");
+    expect(line.map(([, value]) => value)).toEqual([48585, 46448, 46232]);
+  });
+  it("keeps a long gap as a visible break", () => {
+    const { series } = buildChartData([point("2026-09-01"), point("2026-11-01")], "daily");
+    expect(connectShortGaps(series, "daily").map(([, value]) => value)).toEqual([100, null, 100]);
+    const monthly = buildChartData([point("2024-01-01"), point("2024-02-01"), point("2025-02-01")], "monthly").series;
+    expect(connectShortGaps(monthly, "monthly").map(([, value]) => value)).toEqual([100, 100, null, 100]);
+  });
+  it("names the periods without a report", () => {
+    expect(missingPeriods([point("2026-10-31"), point("2026-11-02")], "daily")).toEqual(["2026-11-01"]);
+    expect(missingPeriods([point("2024-01-01")], "monthly", { from: "2024-01-01", to: "2024-03-01" })).toEqual(["2024-02-01", "2024-03-01"]);
+    expect(missingPeriods([], "daily")).toEqual([]);
+  });
+});
+
+describe("calendar labels", () => {
+  it("uses one three-letter month form regardless of browser locale data", () => {
+    expect(formatCalendarMonth("2023-09")).toBe("Sep 2023");
+    expect(formatCalendarDate("2026-09-03")).toBe("3 Sep 2026");
+  });
 });

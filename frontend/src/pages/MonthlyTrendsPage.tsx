@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { completedMonthIST, formatTimestampIST } from "../../../shared/dates";
 
+const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
 const price = (value: number | null) => value === null ? "Not reported" : new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2,
 }).format(value);
@@ -53,9 +54,9 @@ export function MonthlyTrendsPage() {
     </section>
     {query.isLoading ? <LoadingState label="Loading monthly reports" /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : <section className="panel table-panel">
       <div className="panel-heading"><div><h2>{data?.state} · {data?.reporting_month ? monthLabel(data.reporting_month) : "No report imported"}</h2>
-        <p>Last successfully fetched for this report: {latestFetch ? timestamp(latestFetch) : "Never"}</p></div></div>
+        <p>Last successfully fetched for this report: {latestFetch ? timestamp(latestFetch) : "Never"}{!variety && data?.data.length ? " · Choose a variety above to see its 24-month trend" : ""}</p></div></div>
       {!data?.data.length ? <EmptyState title="No monthly observations available">An authorized refresh can fetch a completed reporting month. Daily imports do not populate this view.</EmptyState> :
-        <div className="table-scroll" tabIndex={0} role="region" aria-label="Monthly weighted prices">
+        <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label="Monthly weighted prices">
           <table><caption>Reported state-level weighted prices, not individual market prices · INR / quintal</caption>
             <thead><tr><th scope="col">Variety</th><th scope="col" className="numeric">Weighted price</th><th scope="col">Reporting month</th><th scope="col">Source</th></tr></thead>
             <tbody>{data.data.filter((row) => !variety || row.variety_name === variety).map((row) => <tr key={row.variety_name}>
@@ -65,10 +66,10 @@ export function MonthlyTrendsPage() {
         </div>}
     </section>}
     {variety && data && <section className="panel table-panel"><div className="panel-heading"><div><h2>{variety} · Monthly history</h2><p>24 calendar months through the selected period. Missing months are not interpolated. Full coverage, revisions and statistics are in Historical analytics.</p></div></div>
-      {!data.history.length ? <EmptyState title="No stored history for this selection" /> : <div className="table-scroll" tabIndex={0} role="region" aria-label="Selected variety monthly history">
+      {!data.history.length ? <EmptyState title="No stored history for this selection" /> : <>{data.history.some((row) => row.weighted_price !== null) && <Suspense fallback={<LoadingState label="Loading chart" />}><PriceChart label={`${variety} · Official monthly weighted price`} calendarInterval="monthly" range={{ from: `${[...data.history].sort((a, b) => a.reporting_month.localeCompare(b.reporting_month))[0].reporting_month}-01`, to: `${[...data.history].sort((a, b) => b.reporting_month.localeCompare(a.reporting_month))[0].reporting_month}-01` }} quotePoints={data.history.flatMap((row) => row.weighted_price === null ? [] : [{ reporting_date: `${row.reporting_month}-01`, average_price: row.weighted_price }])} /></Suspense>}<details className="chart-data"><summary>View monthly table</summary><div className="table-scroll table-tall" tabIndex={0} role="region" aria-label="Selected variety monthly history">
         <table><caption>{variety} · {data.state} · INR / quintal</caption><thead><tr><th scope="col">Reporting month</th><th scope="col" className="numeric">Weighted price</th><th scope="col">Fetched at</th></tr></thead>
           <tbody>{data.history.map((row) => <tr key={row.reporting_month}><td>{monthLabel(row.reporting_month)}</td><td className="numeric">{price(row.weighted_price)}</td><td>{row.fetched_at ? timestamp(row.fetched_at) : "No captured variety observation"}</td></tr>)}</tbody>
-        </table></div>}
+        </table></div></details></>}
     </section>}
     <section className="panel"><div className="panel-heading"><div><h2>Methodology and refresh status</h2><p>{data?.methodology}</p></div></div>
       <div className="monthly-details">

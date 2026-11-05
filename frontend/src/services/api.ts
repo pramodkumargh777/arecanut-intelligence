@@ -75,10 +75,10 @@ export const api = {
   refreshMamcos: (token: string) => request<RefreshSummary>("/admin/cooperative/refresh", { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
   refreshTss: (token: string, date: string, includeLots = false) => request<RefreshSummary & { excluded_count: number }>("/admin/cooperative/tss/refresh", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ date, accept_assumed_unit: true, include_lots: includeLots }),
+    body: JSON.stringify({ date, include_lots: includeLots }),
   }),
   backfillTss: (token: string, start: string, end: string) => request<TssBackfillSummary>("/admin/cooperative/tss/backfill", {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ start, end, accept_assumed_unit: true }),
+    method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ start, end }),
   }),
   refreshTumcos: (token: string, scope: "recent" | "full_history") => request<TumcosRefreshSummary>("/admin/cooperative/tumcos/refresh", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ scope }),

@@ -14,8 +14,9 @@ These rules apply to all three sources:
 - Values are never merged with each other, with the AGMARKNET daily feed or with the monthly feed.
 - Every benchmark covers exactly one source, commodity and variety. `cooperativeSeries` throws on mixed commodities.
 - The arecanut decision tools and `/history/aggregates` read only rows where `commodity='arecanut'`.
-- A quotation can become `verified` (published) only if `unit_status='source_confirmed'` and `price_unit='INR/quintal'`. Database triggers enforce this.
-- When a reviewer approves a record whose unit is assumed or conflicting, the record becomes `accepted_unit_unconfirmed`. It is archived and remains unpublished.
+- A quotation can become `verified` (published) only if `price_unit='INR/quintal'` and `unit_status` is `source_confirmed` or `assumed`. Database triggers enforce this.
+- **Operator decision (2026-11-05, migration 0020):** TSS and TUMCOS prices are treated as INR/quintal and published after review. They stay labelled `assumed`, because neither source confirms that unit, and the source's own label and raw record are retained.
+- A TUMCOS value under 1,000 could genuinely be per kg, so it stays `price_unit='unconfirmed'`. If a reviewer approves such a record it becomes `accepted_unit_unconfirmed` and remains unpublished.
 - Missing dates are never filled. Invalid rows are retained with reasons and cannot be approved.
 
 ## 2. Source facts and recorded compliance state
@@ -105,8 +106,8 @@ Public:
 Admin (`Authorization: Bearer <ADMIN_TOKEN>`):
 - `GET /admin/cooperative/quality?source=`
 - `POST /admin/cooperative/refresh` (MAMCOS)
-- `POST /admin/cooperative/tss/refresh` with `{date, accept_assumed_unit: true, include_lots?}`
-- `POST /admin/cooperative/tss/backfill` with `{start, end, accept_assumed_unit: true}`
+- `POST /admin/cooperative/tss/refresh` with `{date, include_lots?}`
+- `POST /admin/cooperative/tss/backfill` with `{start, end}`
 - `POST /admin/cooperative/tumcos/refresh` with `{scope: "recent" | "full_history"}`
 - `POST /admin/cooperative/import`
 - `POST /admin/cooperative/replay/:fetchId`

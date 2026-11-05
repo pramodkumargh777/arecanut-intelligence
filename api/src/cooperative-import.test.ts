@@ -10,15 +10,19 @@ describe("authorized cooperative CSV import", () => {
     expect(parseCsv('\uFEFFa,b\r\n"x, y","say ""hi""\nthere"\n')).toEqual([["a", "b"], ["x, y", 'say "hi"\nthere']]);
     expect(() => parseCsv('a,"b')).toThrow("quoted");
   });
-  it("confirms INR/quintal only for a declared unit with evidence, and never for TSS", async () => {
+  it("confirms INR/quintal only for a declared unit with evidence, and uses the operator assumption for TSS and TUMCOS", async () => {
     const row = 'SHIVAMOGGA,2026-11-02,arecanut,RASHI EDI,39089,49389,48089,INR/quintal,"Page states ₹ per Quintal",mamcos-sheet-1';
     const [confirmed] = await parseCooperativeCsv("mamcos", csv(row), meta);
     expect(confirmed).toMatchObject({ unit_status: "source_confirmed", price_unit: "INR/quintal", status: "pending", variety: "RASHI EDI" });
     const [noEvidence] = await parseCooperativeCsv("mamcos", csv(row.replace('"Page states ₹ per Quintal"', "")), meta);
     expect(noEvidence).toMatchObject({ unit_status: "assumed", price_unit: "unconfirmed" });
     const [tss] = await parseCooperativeCsv("tss", csv(row.replace("SHIVAMOGGA", "Sirsi")), meta);
-    expect(tss).toMatchObject({ unit_status: "assumed", price_unit: "unconfirmed" });
-    expect(tss.review_flags).toContain("tss_unit_never_confirmed");
+    expect(tss).toMatchObject({ unit_status: "assumed", price_unit: "INR/quintal" });
+    expect(tss.review_flags).toContain("unit_operator_assumed");
+    const [tumcos] = await parseCooperativeCsv("tumcos", csv(row.replace('"Page states ₹ per Quintal"', "")), meta);
+    expect(tumcos).toMatchObject({ unit_status: "assumed", price_unit: "INR/quintal" });
+    const [perKg] = await parseCooperativeCsv("tumcos", csv(row.replace('"Page states ₹ per Quintal"', "").replace("39089,49389,48089", "390,493,480")), meta);
+    expect(perKg).toMatchObject({ unit_status: "assumed", price_unit: "unconfirmed" });
   });
   it("keeps invalid rows for review with reasons instead of dropping them", async () => {
     const rows = await parseCooperativeCsv("mamcos", csv(

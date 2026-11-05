@@ -206,6 +206,7 @@ async function cooperativeLatest(ctx: ToolContext, target: ToolResult, sourceKey
     return;
   }
   if (body?.permission?.label) target.limitations.push(`${label} reuse status: ${body.permission.label}.`);
+  if (rows.some((row) => row.unit_status === "assumed")) target.assumptions.push(`${label} prices are treated as INR/quintal by operator decision; the source does not confirm that unit.`);
   for (const row of rows) {
     const key = addSource(target, {
       key: `${sourceKey}:${row.reporting_date}`, kind: "data", label: `${label} published market rates, ${row.reporting_date}`,

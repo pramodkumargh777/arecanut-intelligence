@@ -78,8 +78,16 @@ export function canonicalInputs(inputs: ForecastInputs): string {
     .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b), "en"));
   return JSON.stringify({ prices: sorted(inputs.prices), versions: sorted(inputs.versions) });
 }
+/**
+ * Hashes only what the forecast is computed from: month, scope, price and unit. Capture lineage (run id, fetch time,
+ * version rows) stays in the stored snapshot as evidence but is excluded here, because the daily monthly refresh
+ * writes a new capture even when the report is unchanged, and that must not suppress a still-valid forecast.
+ */
 export async function sourceFingerprint(inputs: ForecastInputs): Promise<string> {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalInputs(inputs)));
+  const values = inputs.prices
+    .map((row) => JSON.stringify([row.reporting_month, row.state, row.variety_name, row.weighted_price, row.price_unit]))
+    .sort();
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`[${values.join(",")}]`));
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 

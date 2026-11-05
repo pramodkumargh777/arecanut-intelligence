@@ -8,6 +8,7 @@ import {
 import { sha256Hex } from "./cooperative-fetch";
 import { parseTss, TSS_LOCATIONS, validTssDate, type TssLotAggregate } from "./tss";
 import { parseTumcos, tumcosNotes } from "./tumcos";
+import { operatorAssumesUnit, PER_KG_PLAUSIBILITY_LIMIT } from "./cooperative-units";
 
 export const CSV_MAX_ROWS = 500;
 export const CSV_MAX_BYTES = 512_000;
@@ -100,7 +101,8 @@ export async function parseCooperativeCsv(source: CooperativeSource, csv: string
     const evidence = record.unit_evidence ?? "";
     let unitStatus: UnitStatus = "assumed";
     if (source !== "tss" && QUINTAL.test(declaredUnit) && evidence.length >= 10) unitStatus = "source_confirmed";
-    else flags.push(source === "tss" ? "tss_unit_never_confirmed" : "unit_not_confirmed");
+    const operatorAssumed = unitStatus === "assumed" && operatorAssumesUnit(source) && (source === "tss" || (average !== null && average >= PER_KG_PLAUSIBILITY_LIMIT));
+    if (unitStatus === "assumed") flags.push(operatorAssumed ? "unit_operator_assumed" : "unit_not_confirmed");
     const key = JSON.stringify([commodity, record.branch, record.reporting_date, record.variety, record.source_record_id ?? ""]);
     if (seen.has(key)) throw new Error(`Duplicate CSV observation at row ${position + 2}.`);
     seen.add(key);
@@ -110,7 +112,7 @@ export async function parseCooperativeCsv(source: CooperativeSource, csv: string
       source_key: source, commodity, branch: record.branch, reporting_date: record.reporting_date,
       variety: record.variety, variety_reported: true,
       minimum_price: minimum, maximum_price: maximum, average_price: average, normal_price: null,
-      price_type: "reported_average", price_unit: unitStatus === "source_confirmed" ? "INR/quintal" : "unconfirmed",
+      price_type: "reported_average", price_unit: unitStatus === "source_confirmed" || operatorAssumed ? "INR/quintal" : "unconfirmed",
       source_unit_label: declaredUnit || null, unit_status: unitStatus,
       lot_count: lots.value, bag_count: bags.value, reported_weight: weight.value,
       source_record_id: record.source_record_id ?? "", review_flags: flags,

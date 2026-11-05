@@ -257,46 +257,56 @@ export function createAssistantRoutes(caller: ApiCaller) {
 
     const existing = await db.prepare("SELECT id, status FROM documents WHERE source_url = ? AND content_sha256 = ?")
       .bind(document.source_url, document.content_sha256).first<{ id: string; status: string }>();
-    if (existing) {
-      // Same file already ingested: only attach embeddings that are missing for identical chunk text.
-      const updates = chunks.flatMap((chunk, index) => chunk.embedding ? [db.prepare(`UPDATE document_chunks SET embedding_model = ?, embedding_dim = ?, embedding_q8 = ?
-        WHERE document_id = ? AND chunk_index = ? AND text_sha256 = ? AND embedding_q8 IS NULL`)
-        .bind(chunk.embedding.model, chunk.embedding.dim, chunk.embedding.q8, existing.id, chunk.chunk_index, hashes[index])] : []);
-      await runBatches(db, updates);
-      return c.json({ status: "unchanged", document_id: existing.id, embeddings_offered: updates.length, document_status: existing.status });
+    const stored = existing
+      ? (await db.prepare("SELECT chunk_index, text_sha256 FROM document_chunks WHERE document_id = ?").bind(existing.id).all<{ chunk_index: number; text_sha256: string }>()).results
+      : [];
+    const storedHash = new Map(stored.map((row) => [row.chunk_index, row.text_sha256]));
+    const missing = chunks.flatMap((chunk, index) => storedHash.has(chunk.chunk_index) ? [] : [{ chunk, hash: hashes[index] }]);
+    // Same file already ingested: only attach embeddings that are missing for identical chunk text.
+    const embeddingUpdates = existing ? chunks.flatMap((chunk, index) => chunk.embedding && storedHash.has(chunk.chunk_index) ? [db.prepare(`UPDATE document_chunks SET embedding_model = ?, embedding_dim = ?, embedding_q8 = ?
+      WHERE document_id = ? AND chunk_index = ? AND text_sha256 = ? AND embedding_q8 IS NULL`)
+      .bind(chunk.embedding.model, chunk.embedding.dim, chunk.embedding.q8, existing.id, chunk.chunk_index, hashes[index])] : []) : [];
+    if (existing?.status === "active" && !missing.length) {
+      await runBatches(db, embeddingUpdates);
+      return c.json({ status: "unchanged", document_id: existing.id, embeddings_offered: embeddingUpdates.length, document_status: existing.status });
+    }
+    if (chunks.some((chunk, index) => storedHash.has(chunk.chunk_index) && storedHash.get(chunk.chunk_index) !== hashes[index])) {
+      return c.json({ error: "Stored chunks for this file differ from this upload (chunking changed?). Nothing was changed." }, 409);
     }
 
-    const previous = await db.prepare("SELECT id FROM documents WHERE source_url = ? AND status = 'active'").bind(document.source_url).all<{ id: string }>();
-    const now = new Date().toISOString();
-    const statements: D1PreparedStatement[] = [];
-    for (const old of previous.results) {
-      statements.push(db.prepare("UPDATE documents SET status = 'withdrawn' WHERE id = ?").bind(old.id));
-      statements.push(db.prepare("DELETE FROM document_chunks_fts WHERE chunk_id IN (SELECT id FROM document_chunks WHERE document_id = ?)").bind(old.id));
-    }
-    statements.push(db.prepare(`INSERT INTO documents (id, title, publisher, document_type, language, source_url, publication_date, publication_date_basis,
-      mime_type, content_sha256, page_count, reuse_note, archive_object_id, fetched_at, ingested_at, ingestion_job_id, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`)
-      .bind(document.id, document.title, document.publisher, document.document_type, document.language, document.source_url, document.publication_date,
-        document.publication_date_basis, document.mime_type, document.content_sha256, document.page_count, document.reuse_note, document.archive_object_id ?? null,
-        document.fetched_at, now, ingestion_job_id));
-    chunks.forEach((chunk, index) => {
-      const chunkId = `${document.id}:${chunk.chunk_index}`;
-      statements.push(db.prepare(`INSERT INTO document_chunks (id, document_id, chunk_index, page_from, page_to, heading, text, text_sha256, language,
-        embedding_model, embedding_dim, embedding_q8) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(chunkId, document.id, chunk.chunk_index, chunk.page_from, chunk.page_to, chunk.heading, chunk.text, hashes[index], chunk.language ?? document.language,
-          chunk.embedding?.model ?? null, chunk.embedding?.dim ?? null, chunk.embedding?.q8 ?? null));
-      statements.push(db.prepare("INSERT INTO document_chunks_fts (chunk_id, title, heading, text) VALUES (?, ?, ?, ?)")
-        .bind(chunkId, document.title, chunk.heading ?? "", chunk.text));
-    });
+    // Chunks are written while the document is 'withdrawn', which keeps it out of every reader. A single atomic batch
+    // then publishes it, so a failure leaves the previous version live and retrying the same upload resumes the work.
+    const documentId = existing?.id ?? document.id;
     try {
-      // The document row is first in the first batch, so a duplicate id fails before any chunk is written.
-      await runBatches(db, statements);
+      if (!existing) {
+        await db.prepare(`INSERT INTO documents (id, title, publisher, document_type, language, source_url, publication_date, publication_date_basis,
+          mime_type, content_sha256, page_count, reuse_note, archive_object_id, fetched_at, ingested_at, ingestion_job_id, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'withdrawn')`)
+          .bind(document.id, document.title, document.publisher, document.document_type, document.language, document.source_url, document.publication_date,
+            document.publication_date_basis, document.mime_type, document.content_sha256, document.page_count, document.reuse_note, document.archive_object_id ?? null,
+            document.fetched_at, new Date().toISOString(), ingestion_job_id).run();
+      }
+      await runBatches(db, missing.map(({ chunk, hash }) => db.prepare(`INSERT INTO document_chunks (id, document_id, chunk_index, page_from, page_to, heading, text, text_sha256, language,
+        embedding_model, embedding_dim, embedding_q8) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(`${documentId}:${chunk.chunk_index}`, documentId, chunk.chunk_index, chunk.page_from, chunk.page_to, chunk.heading, chunk.text, hash, chunk.language ?? document.language,
+          chunk.embedding?.model ?? null, chunk.embedding?.dim ?? null, chunk.embedding?.q8 ?? null)));
+      await runBatches(db, embeddingUpdates);
+      const previous = (await db.prepare("SELECT id FROM documents WHERE source_url = ? AND status = 'active' AND id != ?")
+        .bind(document.source_url, documentId).all<{ id: string }>()).results.map((row) => row.id);
+      const removeFromIndex = (id: string) => db.prepare("DELETE FROM document_chunks_fts WHERE chunk_id IN (SELECT id FROM document_chunks WHERE document_id = ?)").bind(id);
+      await db.batch([
+        ...previous.flatMap((id) => [db.prepare("UPDATE documents SET status = 'withdrawn' WHERE id = ?").bind(id), removeFromIndex(id)]),
+        removeFromIndex(documentId),
+        db.prepare(`INSERT INTO document_chunks_fts (chunk_id, title, heading, text)
+          SELECT c.id, d.title, COALESCE(c.heading, ''), c.text FROM document_chunks c JOIN documents d ON d.id = c.document_id WHERE c.document_id = ?`).bind(documentId),
+        db.prepare("UPDATE documents SET status = 'active' WHERE id = ?").bind(documentId),
+      ]);
+      return c.json({ status: "ingested", document_id: documentId, chunks: chunks.length, embedded_chunks: chunks.filter((chunk) => chunk.embedding).length,
+        withdrawn_versions: previous }, 201);
     } catch (error) {
       console.error("document ingestion failed", error);
-      return c.json({ error: "Document could not be stored (duplicate id or constraint failure). Nothing in the failed batch was written." }, 409);
+      return c.json({ error: "Document was not published (duplicate id, constraint or database failure). Any previous version is still active; retry the same upload to resume." }, 409);
     }
-    return c.json({ status: "ingested", document_id: document.id, chunks: chunks.length, embedded_chunks: chunks.filter((chunk) => chunk.embedding).length,
-      withdrawn_versions: previous.results.map((row) => row.id) }, 201);
   });
 
   routes.post("/admin/documents/reindex", async (c) => {

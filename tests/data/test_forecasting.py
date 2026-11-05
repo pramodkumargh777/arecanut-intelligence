@@ -148,10 +148,12 @@ class DatasetSeparationTests(unittest.TestCase):
         self.assertTrue(ds.suppressed)
         self.assertIn("insufficient_observations", ds.series[0].excluded_reason)
 
-    def test_synthetic_and_assumed_unit_datasets_are_never_publication_eligible(self):
+    def test_synthetic_datasets_are_never_eligible_and_operator_assumed_units_are(self):
         self.assertFalse(dataset([monthly(seasonal_series())]).publication_eligible)
         assumed = dataset([monthly(seasonal_series())], provenance="database", unit_status="assumed")
-        self.assertFalse(assumed.publication_eligible)
+        self.assertTrue(assumed.publication_eligible)
+        conflict = dataset([monthly(seasonal_series())], provenance="database", unit_status="source_conflict")
+        self.assertFalse(conflict.publication_eligible)
 
     def test_data_version_changes_with_any_value(self):
         series = monthly(seasonal_series())

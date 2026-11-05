@@ -138,10 +138,10 @@ describe("commodity master after migration", () => {
     expect(normalizePrice(15000, "quintal", "kg", catalog.units)).toBe(150);
   });
 
-  it("exposes capability-driven feeds: pepper only via unpublished TUMCOS, other configured commodities none", () => {
+  it("exposes capability-driven feeds: pepper only via TUMCOS, other configured commodities none", () => {
     expect(marketFeeds(findCommodity(catalog, "arecanut"))).toEqual(["mamcos", "tss", "tumcos", "official"]);
     expect(marketFeeds(findCommodity(catalog, "black_pepper"))).toEqual(["tumcos"]);
-    expect(capabilityStatus(findCommodity(catalog, "black_pepper"), "cooperative_tumcos")).toBe("unpublished");
+    expect(capabilityStatus(findCommodity(catalog, "black_pepper"), "cooperative_tumcos")).toBe("available");
     expect(marketFeeds(findCommodity(catalog, "coffee"))).toEqual([]);
     expect(capabilityStatus(findCommodity(catalog, "coffee"), "daily_prices")).toBe("not_integrated");
     const fallback = findCommodity(FALLBACK_CATALOG, "arecanut")!;
@@ -218,7 +218,12 @@ describe("upgrading existing arecanut data to the commodity model", () => {
     const dailyAfter = db.sqlite.prepare("SELECT * FROM market_price_observations ORDER BY id").all();
     const coopAfter = db.sqlite.prepare("SELECT * FROM cooperative_quotes ORDER BY id").all();
     expect(JSON.stringify(dailyAfter.map(({ price_basis: _basis, ...row }) => row))).toBe(dailyBefore);
-    expect(JSON.stringify(coopAfter.map(({ price_basis: _basis, ...row }) => row))).toBe(coopBefore);
+    // Migration 0020 applies the operator unit decision; every source value and label must still be untouched.
+    const evidence = (rows: Record<string, unknown>[]) => rows.map(({ price_basis: _basis, status: _status, price_unit: _unit, unit_status: _unitStatus, ...row }) => row);
+    expect(evidence(coopAfter)).toEqual(evidence(JSON.parse(coopBefore)));
+    expect(Object.fromEntries(coopAfter.map((row) => [row.id, [row.status, row.price_unit, row.unit_status]]))).toEqual({
+      cm: ["verified", "INR/quintal", "source_confirmed"], ct: ["verified", "INR/quintal", "assumed"], cp: ["pending", "INR/quintal", "assumed"],
+    });
     expect(dailyAfter.map((row) => row.price_basis)).toEqual(["APMC_MODAL", "APMC_MODAL", "APMC_MODAL"]);
     expect(Object.fromEntries(coopAfter.map((row) => [row.id, row.price_basis])))
       .toEqual({ cm: "COOPERATIVE_AVERAGE", cp: "COOPERATIVE_AVERAGE", ct: "COOPERATIVE_TENDER_AVERAGE" });
@@ -233,8 +238,8 @@ describe("upgrading existing arecanut data to the commodity model", () => {
     expect(byId.cm).toMatchObject({ commodity_code: "arecanut", variety_id: null, original_variety_label: "RASHI EDI", price_basis: "COOPERATIVE_AVERAGE",
       modal_price: null, average_price: 45000, normalized_unit: "INR/quintal", market_kind: "cooperative_branch", published: 1 });
     expect(byId.ct).toMatchObject({ variety_id: "variety-arecanut-rashi", variety_mapping_status: "unverified", price_basis: "COOPERATIVE_TENDER_AVERAGE",
-      normalized_unit: null, published: 0 });
-    expect(byId.cp).toMatchObject({ commodity_code: "black_pepper", normalized_unit: null, published: 0 });
+      normalized_unit: "INR/quintal", published: 1 });
+    expect(byId.cp).toMatchObject({ commodity_code: "black_pepper", normalized_unit: "INR/quintal", published: 0 });
     expect(db.sqlite.prepare("SELECT market_id, commodity_id, source_key FROM market_commodities ORDER BY source_key").all().map((row) => ({ ...row })))
       .toEqual([
         { market_id: "m-sirsi", commodity_id: "commodity-arecanut", source_key: "agmarknet" },

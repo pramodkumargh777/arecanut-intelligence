@@ -5,11 +5,12 @@ import {
   type CooperativeCommodity, type CooperativeQuote, type IngestMode, type UnitStatus,
 } from "./cooperative";
 import { fetchWithRetry, sha256Hex } from "./cooperative-fetch";
+import { PER_KG_PLAUSIBILITY_LIMIT } from "./cooperative-units";
 
 export const TUMCOS_URL = "https://www.tumcos.com/market-rates.php?lang=en";
 export const TUMCOS_RECENT_DAYS = 45;
-/** Values above this are implausible as INR per kilogram for arecanut or black pepper. */
-export const TUMCOS_PER_KG_PLAUSIBILITY_LIMIT = 1_000;
+/** Values at or above this are implausible as INR per kilogram for arecanut or black pepper. */
+export const TUMCOS_PER_KG_PLAUSIBILITY_LIMIT = PER_KG_PLAUSIBILITY_LIMIT;
 
 const ARRAYS: { key: string; commodity: CooperativeCommodity; category: string; itemName: string }[] = [
   { key: "arecanut", commodity: "arecanut", category: "Arecanut", itemName: "areca" },
@@ -151,9 +152,10 @@ export async function parseTumcos(html: string, fetchedAt: string, scope: "recen
     let unitStatus: UnitStatus = "assumed";
     let priceUnit: CooperativeQuote["price_unit"] = "unconfirmed";
     if (declaredUnit && /quintal|qtl/i.test(declaredUnit)) { unitStatus = "source_confirmed"; priceUnit = "INR/quintal"; }
-    else if (declaredUnit && /^kg$/i.test(declaredUnit) && [minimum, maximum, average].some((value) => value !== null && value >= TUMCOS_PER_KG_PLAUSIBILITY_LIMIT)) {
-      unitStatus = "source_conflict";
-      flags.push("declared_unit_conflicts_with_magnitude");
+    else if ([minimum, maximum, average].some((value) => value !== null && value >= TUMCOS_PER_KG_PLAUSIBILITY_LIMIT)) {
+      // Operator decision: per-quintal-sized values are treated as INR/quintal. The source's own label stays on the row.
+      priceUnit = "INR/quintal";
+      flags.push(declaredUnit && /^kg$/i.test(declaredUnit) ? "declared_unit_conflicts_with_magnitude" : "unit_operator_assumed");
     } else flags.push("unit_not_confirmed");
     if ((perDate.get(`${spec.commodity}|${branch}|${reportingDate}`) ?? 0) > 1) flags.push("multiple_source_records_same_date");
     const rawRecord = JSON.stringify(raw);
@@ -215,7 +217,7 @@ export function tumcosSummary(parsed: TumcosParseResult, inserted: number) {
     inserted_count: inserted, duplicate_count: parsed.quotes.length - inserted,
     invalid_count: parsed.quotes.filter((row) => row.status === "invalid").length,
     commodities: { arecanut: by("arecanut").length, black_pepper: by("black_pepper").length },
-    unit_conflict_count: parsed.quotes.filter((row) => row.unit_status === "source_conflict").length,
+    unit_conflict_count: parsed.quotes.filter((row) => row.review_flags?.includes("declared_unit_conflicts_with_magnitude")).length,
     latest_record_date: parsed.latest_record_date, page_last_updated: parsed.page_last_updated?.label ?? null,
     stale_page_metadata: parsed.stale_page_metadata, table_check: { rows: parsed.table_check.rows, matched: parsed.table_check.matched },
   };

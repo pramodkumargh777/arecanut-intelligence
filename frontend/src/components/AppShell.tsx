@@ -3,24 +3,35 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { routeAvailable } from "../../../shared/commodities";
 import { useCommodity } from "../services/commodity";
 import { CommodityGate } from "./CommodityGate";
-import { Activity, ArrowLeftRight, BarChart3, Calculator, CircleHelp, ClipboardCheck, LayoutDashboard, Leaf, MapPin, Menu, MessageSquareText, Search, TableProperties, X } from "lucide-react";
+import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FlaskConical, Gauge, History, LayoutDashboard, Leaf, MapPin, Menu, MessageSquareText, Search, TableProperties, X } from "lucide-react";
 
-const navigation = [
-  { to: "/", label: "Overview", icon: Activity, end: true },
-  { to: "/workspace", label: "Organization dashboard", icon: LayoutDashboard },
-  { to: "/prices", label: "Market prices", icon: TableProperties },
-  { to: "/analytics", label: "Price analytics", icon: BarChart3 },
-  { to: "/monthly-trends", label: "Monthly Trends", icon: BarChart3 },
-  { to: "/history", label: "Historical analytics", icon: BarChart3 },
-  { to: "/decision-tools", label: "Decision tools", icon: Calculator },
-  { to: "/intelligence", label: "Source intelligence", icon: Leaf },
-  { to: "/supply", label: "Supply & crop risk", icon: MapPin },
-  { to: "/forecasts", label: "Experimental baselines", icon: BarChart3, end: true },
-  { to: "/forecasts/evaluation", label: "Forecast evaluation", icon: BarChart3 },
-  { to: "/assistant", label: "AI assistant", icon: MessageSquareText },
-  { to: "/compare", label: "Market comparison", icon: ArrowLeftRight },
-  { to: "/data-quality", label: "Data quality", icon: ClipboardCheck },
+const navigationGroups = [
+  { label: "Markets", items: [
+    { to: "/", label: "Overview", icon: Activity, end: true },
+    { to: "/prices", label: "Market prices", icon: TableProperties },
+    { to: "/analytics", label: "Price analytics", icon: ChartNoAxesCombined },
+    { to: "/compare", label: "Market comparison", icon: ArrowLeftRight },
+  ] },
+  { label: "History", items: [
+    { to: "/monthly-trends", label: "Monthly trends", icon: CalendarRange },
+    { to: "/history", label: "Historical analytics", icon: History },
+  ] },
+  { label: "Intelligence", items: [
+    { to: "/intelligence", label: "Source intelligence", icon: BookOpenText },
+    { to: "/supply", label: "Supply & crop risk", icon: MapPin },
+    { to: "/assistant", label: "AI assistant", icon: MessageSquareText },
+  ] },
+  { label: "Forecasting", items: [
+    { to: "/forecasts", label: "Experimental baselines", icon: FlaskConical, end: true },
+    { to: "/forecasts/evaluation", label: "Forecast evaluation", icon: Gauge },
+  ] },
+  { label: "Workspace", items: [
+    { to: "/workspace", label: "Organization dashboard", icon: LayoutDashboard },
+    { to: "/decision-tools", label: "Decision tools", icon: Calculator },
+    { to: "/data-quality", label: "Data quality", icon: ClipboardCheck },
+  ] },
 ];
+const navigation: { to: string; label: string; icon: typeof Activity; end?: boolean }[] = navigationGroups.flatMap((group) => group.items);
 
 export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -98,21 +109,23 @@ export function AppShell() {
       {menuOpen && <button className="mobile-scrim" tabIndex={-1} aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
       <aside ref={sidebar} id="main-navigation" aria-label="Market intelligence navigation" role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen || undefined} className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
         <div className="brand">
-          <span className="brand-mark"><Leaf size={21} strokeWidth={2.2} /></span>
-          <span className="brand-copy"><strong>ANI</strong><small>ARECANUT INTELLIGENCE</small></span>
+          <span className="brand-mark"><Leaf size={15} strokeWidth={2.2} /></span>
+          <span className="brand-copy"><strong>ANI</strong><small>Arecanut Intelligence</small></span>
           <button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={19} /></button>
         </div>
-        <div className="workspace-label">MARKET INTELLIGENCE</div>
         <nav className="main-nav" aria-label="Main navigation">
-          {navigation.map(({ to, label, icon: Icon, end }) => {
-            const available = routeAvailable(commodity, to);
-            return <NavLink key={to} to={["/", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)} title={available ? undefined : `No integrated source for ${commodity?.display_name ?? commodityCode}`} className={({ isActive }) => `nav-link ${isActive ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
-              <Icon size={18} strokeWidth={1.8} /><span>{label}</span>
-            </NavLink>;
-          })}
+          {navigationGroups.map((group) => <div key={group.label} role="group" aria-label={group.label}>
+            <div className="nav-group" aria-hidden="true">{group.label}</div>
+            {(group.items as typeof navigation).map(({ to, label, icon: Icon, end }) => {
+              const available = routeAvailable(commodity, to);
+              return <NavLink key={to} to={["/", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)} title={available ? undefined : `No integrated source for ${commodity?.display_name ?? commodityCode}`} className={({ isActive }) => `nav-link ${isActive ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
+                <Icon size={15} strokeWidth={1.8} /><span>{label}</span>
+              </NavLink>;
+            })}
+          </div>)}
         </nav>
         <div className="sidebar-bottom">
-          <div className="source-note"><span className="source-note-icon"><CircleHelp size={17} /></span><span><b>Reviewed source records</b><small>Every quote has a source and date.</small></span></div>
+          <div className="source-note"><span className="source-note-icon"><CircleHelp size={15} /></span><span><b>Reviewed source records</b><small>Every quote has a source and date.</small></span></div>
           <div className="sidebar-foot">KARNATAKA · {unit}</div>
         </div>
       </aside>
@@ -135,7 +148,7 @@ export function AppShell() {
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><Outlet /></CommodityGate></main>
-        <footer className="site-footer"><span>ARECANUT INTELLIGENCE</span><span>Market observations · Not financial advice</span></footer>
+        <footer className="site-footer"><span>Arecanut Intelligence</span><span>Market observations · Not financial advice</span></footer>
       </div>
     </div>
   );

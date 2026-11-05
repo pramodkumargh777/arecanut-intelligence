@@ -86,17 +86,16 @@ export function AssistantPage() {
       <div className="calculator-grid" style={{ padding: 0 }}>
         <label className="filter-control calculator-wide"><span>Question</span>
           <textarea required minLength={2} maxLength={1000} rows={3} value={question} disabled={ask.isPending} onChange={(event) => setQuestion(event.target.value)}
-            onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); submit(); } }}
-            style={{ width: "100%", border: "1px solid #cbd6c7", borderRadius: 4, padding: 10, font: "inherit", fontSize: 13, resize: "vertical" }} />
+            onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); submit(); } }} />
         </label>
         <label className="filter-control"><span>Answer language</span><select value={language} disabled={ask.isPending} onChange={(event) => setLanguage(event.target.value as typeof language)}>
           <option value="auto">Detect from question</option><option value="en">English</option><option value="kn">ಕನ್ನಡ (Kannada)</option>
         </select></label>
         <label className="filter-control"><span>Explanation</span><select value={useLlm ? "llm" : "rules"} disabled={ask.isPending} onChange={(event) => setUseLlm(event.target.value === "llm")}>
-          <option value="llm">Language model when available (grounding-checked)</option><option value="rules">Rule-based only (no language model)</option>
+          <option value="llm">Language model (grounding-checked)</option><option value="rules">Rule-based only</option>
         </select></label>
         <label className="filter-control"><span>Calculation inputs</span><select value={showCalculation ? "yes" : "no"} disabled={ask.isPending} onChange={(event) => setShowCalculation(event.target.value === "yes")}>
-          <option value="no">None</option><option value="yes">Provide my own figures (net realisation / sell-or-hold)</option>
+          <option value="no">None</option><option value="yes">Provide my own figures</option>
         </select></label>
         {showCalculation && CALCULATION_FIELDS.map((field) => <label className="filter-control" key={field.key}><span>{field.label}</span>
           <input type="number" step="any" min={0} value={calculation[field.key] ?? ""} disabled={ask.isPending} onChange={(event) => setCalculation((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}

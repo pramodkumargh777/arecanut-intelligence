@@ -231,14 +231,14 @@ describe("cooperative source publication and provenance", () => {
 
 describe("TSS source routes with migrated storage", () => {
   const row = { date1: "2026-11-03", iname: "RASHI", iname_en: "RASHI", itemcode: 1, mnrate: 44099, mxrate: 47299, avgrate: 46055, norrate: 45699 };
-  const refresh = (body: unknown = { date: "2026-11-03", accept_assumed_unit: true }) => post("/admin/cooperative/tss/refresh", body, "review");
-  it("requires authentication and explicit assumed-unit acknowledgement; rejects invalid dates", async () => {
+  const refresh = (body: unknown = { date: "2026-11-03" }) => post("/admin/cooperative/tss/refresh", body, "review");
+  it("requires authentication; rejects invalid dates", async () => {
     expect((await post("/admin/cooperative/tss/refresh", {})).status).toBe(401);
-    for (const body of [{ date: "2026-11-03" }, { date: "2026-02-31", accept_assumed_unit: true }, { date: "9999-01-01", accept_assumed_unit: true }]) {
+    for (const body of [{}, { date: "2026-02-31" }, { date: "9999-01-01" }]) {
       expect((await refresh(body)).status).toBe(400);
     }
   });
-  it("never publishes reviewed TSS items while the unit is only assumed", async () => {
+  it("publishes TSS only after review, labelled as an operator-assumed INR/quintal unit", async () => {
     let average = 46055;
     vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({
       success: true, data: [{ ...row, avgrate: average }, { ...row, iname_en: "PEPPER" }],
@@ -250,18 +250,20 @@ describe("TSS source routes with migrated storage", () => {
     const quotes = db.sqlite.prepare("SELECT id FROM cooperative_quotes WHERE source_key='tss'").all();
     for (const quote of quotes) {
       const review = await post(`/admin/cooperative/${quote.id}/review`, { action: "approve" }, "review");
-      expect(await review.json()).toMatchObject({ status: "accepted_unit_unconfirmed", published: false });
+      expect(await review.json()).toMatchObject({ status: "verified", published: true });
     }
-    const published = await (await read()).json();
-    expect(published).toMatchObject({ data: [], series: [], reference_price: null,
-      publication: { published: false, blocked_reason: expect.stringContaining("assumed"), latest_archived_reporting_date: "2026-11-03" },
+    const published = await (await read()).json() as { data: unknown[] };
+    expect(published).toMatchObject({ reference_price: 46055, series: [expect.objectContaining({ branch_count: 3 })],
+      publication: { published: true, blocked_reason: null, latest_archived_reporting_date: "2026-11-03" },
+      availability: expect.stringContaining("operator assumption"),
       permission: { status: "not_requested", label: "Permission not confirmed" } });
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes WHERE status='accepted_unit_unconfirmed'").get()?.count).toBe(3);
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_reviews WHERE new_status='accepted_unit_unconfirmed'").get()?.count).toBe(3);
-    expect(() => db.sqlite.prepare("UPDATE cooperative_quotes SET status='verified' WHERE source_key='tss'").run()).toThrow();
+    expect(published.data).toHaveLength(3);
+    expect(published.data[0]).toMatchObject({ unit_status: "assumed", price_unit: "INR/quintal" });
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes WHERE status='verified'").get()?.count).toBe(3);
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_reviews WHERE new_status='verified'").get()?.count).toBe(3);
     expect(() => db.sqlite.prepare("UPDATE cooperative_quotes SET unit_status='source_confirmed' WHERE source_key='tss'").run()).toThrow("explicitly assumed");
     expect(await (await refresh()).json()).toMatchObject({ inserted_count: 0, duplicate_count: 3 });
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes WHERE status='accepted_unit_unconfirmed'").get()?.count).toBe(3);
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes WHERE status='verified'").get()?.count).toBe(3);
     average = 46500;
     expect(await (await refresh()).json()).toMatchObject({ inserted_count: 3 });
     expect(await (await read()).json()).toMatchObject({ data: [], series: [] });
@@ -527,7 +529,7 @@ describe("TUMCOS, CSV import, replay and permission records with migrated storag
   beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-04T12:00:00Z")); });
   afterEach(() => vi.useRealTimers());
 
-  it("archives TUMCOS arecanut and pepper separately, keeps them unpublished after review, and is idempotent", async () => {
+  it("keeps TUMCOS arecanut and pepper separate, publishes them only after review, and is idempotent", async () => {
     serveTumcos();
     expect((await post("/admin/cooperative/tumcos/refresh", {})).status).toBe(401);
     const first = await (await post("/admin/cooperative/tumcos/refresh", { scope: "full_history" }, "review")).json();
@@ -539,13 +541,12 @@ describe("TUMCOS, CSV import, replay and permission records with migrated storag
     expect(JSON.parse(String(fetchRow?.notes))).toMatchObject({ page_last_updated: { label: "03 Apr 2026" }, stale_page_metadata: true });
     const latest = db.sqlite.prepare("SELECT id FROM cooperative_quotes WHERE source_key='tumcos' AND source_record_id='1131'").get();
     expect(await (await post(`/admin/cooperative/${latest?.id}/review`, { action: "approve" }, "review")).json())
-      .toMatchObject({ status: "accepted_unit_unconfirmed", published: false });
+      .toMatchObject({ status: "verified", published: true });
     const pepper = await (await app.request("/api/v1/cooperative/prices?source=tumcos&commodity=black_pepper", {}, env)).json();
-    expect(pepper).toMatchObject({ commodity: "black_pepper", data: [], publication: { published: false, latest_archived_reporting_date: "2026-10-26" } });
+    expect(pepper).toMatchObject({ commodity: "black_pepper", data: [], publication: { published: false, blocked_reason: expect.stringContaining("reviewer approval"), latest_archived_reporting_date: "2026-10-26" } });
     const areca = await (await app.request("/api/v1/cooperative/prices?source=tumcos", {}, env)).json();
-    expect(areca).toMatchObject({ data: [], publication: { blocked_reason: expect.stringContaining("kg"), latest_archived_reporting_date: "2026-11-04" } });
+    expect(areca).toMatchObject({ data: [expect.objectContaining({ unit_status: "assumed", price_unit: "INR/quintal", source_url: expect.any(String) })], publication: { published: true, blocked_reason: null, latest_archived_reporting_date: "2026-11-04" } });
     expect((await app.request("/api/v1/cooperative/prices?source=mamcos&commodity=black_pepper", {}, env)).status).toBe(400);
-    expect(() => db.sqlite.prepare("UPDATE cooperative_quotes SET status='verified' WHERE source_key='tumcos'").run()).toThrow();
     expect(() => db.sqlite.prepare("UPDATE cooperative_quotes SET average_price=1 WHERE source_key='tumcos'").run()).toThrow();
     expect(() => db.sqlite.prepare("UPDATE cooperative_fetches SET raw_snapshot='x' WHERE source_key='tumcos'").run()).toThrow();
   });

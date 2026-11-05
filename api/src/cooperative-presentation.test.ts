@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { formatCalendarDate } from "../../shared/dates";
-import { describeFreshness, reviewFlags, unitConfirmed } from "../../frontend/src/services/cooperative";
+import { describeFreshness, reviewFlags, unitPublishable } from "../../frontend/src/services/cooperative";
 
 describe("cooperative review presentation", () => {
-  it("treats only source-confirmed INR/quintal as publishable", () => {
-    expect(unitConfirmed({ unit_status: "source_confirmed", price_unit: "INR/quintal" })).toBe(true);
-    expect(unitConfirmed({ unit_status: "assumed", price_unit: "INR/quintal" })).toBe(false);
-    expect(unitConfirmed({ unit_status: "source_conflict", price_unit: "unconfirmed" })).toBe(false);
-    expect(unitConfirmed({ unit_status: "source_confirmed", price_unit: "INR/kg" })).toBe(false);
+  it("publishes INR/quintal that is source-confirmed or an operator assumption", () => {
+    expect(unitPublishable({ unit_status: "source_confirmed", price_unit: "INR/quintal" })).toBe(true);
+    expect(unitPublishable({ unit_status: "assumed", price_unit: "INR/quintal" })).toBe(true);
+    expect(unitPublishable({ unit_status: "assumed", price_unit: "unconfirmed" })).toBe(false);
+    expect(unitPublishable({ unit_status: "source_conflict", price_unit: "unconfirmed" })).toBe(false);
+    expect(unitPublishable({ unit_status: "source_confirmed", price_unit: "INR/kg" })).toBe(false);
   });
 
   it("reads stored review flags without trusting malformed JSON", () => {

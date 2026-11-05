@@ -14,7 +14,7 @@ import {
   WORKSPACE_ROLES, WORKSPACE_SECTIONS, type WorkspaceProfile, type WorkspaceRole, type WorkspaceStore,
 } from "../services/workspace";
 
-const FEED_LABEL: Record<MarketFeed, string> = { official: "AGMARKNET · official APMC modal", mamcos: "MAMCOS · cooperative average", tss: "TSS · tender average (unit assumed)", tumcos: "TUMCOS · cooperative average (unit unconfirmed)" };
+const FEED_LABEL: Record<MarketFeed, string> = { official: "AGMARKNET · official APMC modal", mamcos: "MAMCOS · cooperative average", tss: "TSS · tender average", tumcos: "TUMCOS · cooperative average" };
 const inr = (value: number | null | undefined) => value == null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const newId = () => globalThis.crypto?.randomUUID?.() ?? `p-${Date.now().toString(36)}`;
 

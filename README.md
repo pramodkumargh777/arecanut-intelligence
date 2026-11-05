@@ -168,9 +168,8 @@ The endpoint/pagination pattern follows the official data.gov.in resource API fo
 > **Current policy (2026-11-04):** see
 > [docs/COOPERATIVE_SOURCES.md](docs/COOPERATIVE_SOURCES.md).
 >
-> - Only rows whose unit is source-confirmed INR/quintal can be published. Today that means MAMCOS only, labelled "Permission not confirmed".
-> - TSS (no published unit) and TUMCOS (labels "kg" but shows per-quintal values) are archived and reviewable. When approved they become `accepted_unit_unconfirmed`, which is not published.
-> - Migration 0013 converted earlier TSS approvals accordingly. The TSS text below about assumed-unit publication is history.
+> - **Operator decision (2026-11-05, migration 0020):** TSS (no published unit) and TUMCOS (labels "kg" but shows per-quintal values) are treated as INR/quintal and published after review, in every module. They stay labelled as an operator assumption, not a source confirmation. TUMCOS values under 1,000 stay unconfirmed because they could genuinely be per kg.
+> - Older text below about TSS benchmark exclusion and non-publication is history.
 > - TUMCOS (`?feed=tumcos`) adds Channagiri arecanut and black pepper. Black pepper never enters arecanut benchmarks, calculators or aggregates.
 > - Scheduled collection needs both `<SOURCE>_SCHEDULE_ENABLED=true` (`MAMCOS`, `TSS` or `TUMCOS`) **and** a permission grant recorded in Data quality → Cooperative source intelligence.
 
@@ -240,7 +239,7 @@ For manual refresh, open **Data quality → Cooperative source review**, unlock
 with `ADMIN_TOKEN`, select a UTC reporting day, acknowledge the unit
 assumption and fetch. The authenticated endpoint is
 `POST /api/v1/admin/cooperative/tss/refresh` with
-`{"date":"2026-11-03","accept_assumed_unit":true}`. Then inspect and approve
+`{"date":"2026-11-03"}`. Then inspect and approve
 supported records with their assumed-unit label intact. TSS has **no automatic
 schedule**; source collection permission remains a separate requirement.
 
@@ -483,7 +482,7 @@ npm run evaluate:forecasts -- --all        # all varieties in latest monthly rep
 
 The same reviewer-protected operation is available in the UI. Evaluations use
 only exact-variety Karnataka monthly weighted prices with archived capture
-provenance. No monthly/daily blending or assumed TSS units enter the models.
+provenance. No monthly/daily blending or TSS prices enter these monthly baselines.
 Production, weather and news are not predictive features in this baseline.
 
 - Require at least 60 consecutive positive calendar-month prices and data
@@ -501,9 +500,10 @@ Production, weather and news are not predictive features in this baseline.
   last-value baseline means **no demonstrated predictive edge**, not an AI
   prediction with proven profitability.
 - Save immutable inputs, source references/fingerprint, formula version,
-  scores, gates and results. Source changes or a calendar rollover suppress
-  the displayed forecast until re-evaluation. Even unchanged re-fetches can
-  change capture provenance and require re-evaluation.
+  scores, gates and results. A changed month, price or unit, or a calendar
+  rollover, suppresses the displayed forecast until re-evaluation. Re-fetching
+  an unchanged report adds a capture record but does not suppress the forecast,
+  so the daily refresh leaves valid forecasts published.
 
 Initial real-data evaluation: **28 varieties evaluated, 11 published
 last-value baselines, 17 withheld**. Rashi uses 70 months and its November
