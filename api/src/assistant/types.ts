@@ -60,5 +60,5 @@ export type ToolResult = {
   reporting_period: string | null;
   args: Record<string, unknown>;
   /** Untrusted document text passed to the language model as quoted evidence (documents/news only). */
-  excerpts?: { source_key: string; text: string }[];
+  excerpts?: { source_key: string; text: string; scanned?: boolean }[];
 };

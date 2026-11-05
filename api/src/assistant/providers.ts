@@ -117,13 +117,19 @@ class OllamaEmbedding implements EmbeddingProvider {
   }
 }
 
+/** Qwen3 reasons before answering by default, which would spend the token budget and the billed output on hidden text. */
+export function withoutReasoning(messages: ChatMessage[], model: string): ChatMessage[] {
+  if (!/qwen3/i.test(model)) return messages;
+  return messages.map((message, index) => index === messages.length - 1 && message.role === "user" ? { ...message, content: `${message.content}\n/no_think` } : message);
+}
+
 class WorkersAiChat implements ChatProvider {
   readonly name = "workers_ai" as const;
   constructor(readonly model: string, private readonly ai: NonNullable<AssistantConfig["AI"]>, private readonly timeout: number) {}
   async chat(messages: ChatMessage[], options: ChatOptions = {}) {
     return withTimeout(this.timeout, async () => {
       const result = (await this.ai.run(this.model, {
-        messages,
+        messages: withoutReasoning(messages, this.model),
         max_tokens: options.maxTokens ?? 400,
         temperature: options.temperature ?? 0.1,
         ...(options.json ? { response_format: { type: "json_object" } } : {}),

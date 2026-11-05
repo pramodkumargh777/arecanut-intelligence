@@ -725,11 +725,15 @@ const DOCUMENT_TYPE_LABEL: Record<string, string> = {
   cpcri_publication: "ICAR-CPCRI publication", dasd_report: "DASD report", government_notification: "Government notification", agricultural_research: "Agricultural research",
 };
 
+/** Publications before this year are flagged, because recommendations and approved products change. */
+const OLD_PUBLICATION_YEAR = 2010;
+const isScanned = (hit: { reuse_note: string | null }) => /\bOCR\b/.test(hit.reuse_note ?? "");
+
 async function searchAgriculturalDocuments(ctx: ToolContext, args: ToolArgs<"search_agricultural_documents">): Promise<ToolResult> {
   const target = result("search_agricultural_documents", args, "Agricultural documents");
   const retrieval = await searchDocuments(ctx.db, args.query, {
     embedder: ctx.embedder, documentTypes: args.document_type ? [args.document_type] : undefined,
-    semanticThreshold: ctx.semanticThreshold, semanticScanLimit: ctx.semanticScanLimit,
+    semanticThreshold: ctx.semanticThreshold, semanticScanLimit: ctx.semanticScanLimit, language: ctx.language,
   });
   target.excerpts = [];
   for (const hit of retrieval.hits) {
@@ -741,13 +745,32 @@ async function searchAgriculturalDocuments(ctx: ToolContext, args: ToolArgs<"sea
     const snippet = hit.text.length > 600 ? `${hit.text.slice(0, 600).replace(/\s+\S*$/, "")} …` : hit.text;
     target.facts.push({ label: `${DOCUMENT_TYPE_LABEL[hit.document_type] ?? hit.document_type}${hit.heading ? ` – ${hit.heading}` : ""}`, value: snippet, unit: null,
       basis: hit.matched_by.join("+"), reporting_period: hit.publication_date, source_key: key });
-    target.excerpts.push({ source_key: key, text: hit.text });
+    target.excerpts.push({ source_key: key, text: hit.text, scanned: isScanned(hit) });
   }
   if (!retrieval.corpus.chunks) target.missing.push("No agricultural documents have been ingested yet (see data-platform/documents).");
   else if (!retrieval.hits.length) target.missing.push(`No passage in ${retrieval.corpus.documents} ingested document(s) is relevant to the question.`);
   if (retrieval.semantic_status === "failed") target.uncertainty.push(`Semantic search was unavailable (${retrieval.semantic_error}); keyword matches only.`);
   else if (retrieval.semantic_status !== "used") target.limitations.push("Semantic (BGE-M3) search is not active; results use keyword matching only.");
-  if (ctx.language === "kn") target.limitations.push("The ingested documents are in English. Kannada questions are matched through a reviewed glossary and multilingual embeddings; passages are quoted in English.");
+  if (ctx.language === "kn" && retrieval.hits.some((hit) => hit.language !== "kn")) target.limitations.push("ಕೆಲವು ಭಾಗಗಳು ಮೂಲ ಇಂಗ್ಲಿಷ್ ದಾಖಲೆಗಳಿಂದ ಬಂದಿವೆ ಮತ್ತು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲೇ ಉಲ್ಲೇಖಿಸಲಾಗಿದೆ.");
+  // A scanner can misread a digit, and a dose is the one thing a reader may act on directly.
+  if (retrieval.hits.some(isScanned)) {
+    target.limitations.push(ctx.language === "kn"
+      ? "ಕೆಲವು ಭಾಗಗಳನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿದ ಪ್ರತಿಯಿಂದ ಓದಲಾಗಿದೆ (OCR). ಪ್ರಮಾಣ ಮತ್ತು ಡೋಸ್ ಅನ್ನು ಬಳಸುವ ಮೊದಲು ಉಲ್ಲೇಖಿಸಿದ ಮೂಲ ಪುಟದಲ್ಲಿ ಪರಿಶೀಲಿಸಿ."
+      : "Some passages were read from a scanned copy by OCR, which can misread characters. Check any dose or quantity on the cited page of the original before using it.");
+  }
+  if (retrieval.withheld_pesticides.length) {
+    const names = retrieval.withheld_pesticides.join(", ");
+    target.limitations.push(ctx.language === "kn"
+      ? `ಕೆಲವು ಹಳೆಯ ಭಾಗಗಳನ್ನು ತೋರಿಸಿಲ್ಲ, ಏಕೆಂದರೆ ಅವು ಈಗ ಭಾರತದಲ್ಲಿ ನಿಷೇಧಿತ ಅಥವಾ ನಿರ್ಬಂಧಿತ ಕೀಟನಾಶಕವನ್ನು (${names}) ಶಿಫಾರಸು ಮಾಡುತ್ತವೆ. ಪ್ರಸ್ತುತ ಶಿಫಾರಸಿಗಾಗಿ ICAR-CPCRI ಅಥವಾ ತೋಟಗಾರಿಕೆ ಇಲಾಖೆಯನ್ನು ಸಂಪರ್ಕಿಸಿ.`
+      : `Some older passages are not shown because they name a pesticide now banned or restricted in India (${names}). Ask ICAR-CPCRI or the State Horticulture Department for a current recommendation.`);
+  }
+  const olderThan = retrieval.hits.flatMap((hit) => hit.publication_date && Number(hit.publication_date.slice(0, 4)) < OLD_PUBLICATION_YEAR ? [hit.publication_date.slice(0, 4)] : []);
+  if (olderThan.length) {
+    const earliest = olderThan.sort()[0];
+    target.limitations.push(ctx.language === "kn"
+      ? `ಕೆಲವು ಭಾಗಗಳು ಹಳೆಯ ಪ್ರಕಟಣೆಗಳಿಂದ ಬಂದಿವೆ (${earliest} ರಿಂದ). ಶಿಫಾರಸುಗಳು ಬದಲಾಗಿರಬಹುದು.`
+      : `Some passages come from older publications (from ${earliest}). Recommendations may have changed since then.`);
+  }
   target.limitations.push("Passages are quoted from the cited publications. They are general guidance, not a diagnosis; confirm field problems with ICAR-CPCRI or the State Horticulture Department.");
   target.reporting_period = null;
   target.summary = retrieval.hits.length ? `${retrieval.hits.length} relevant passage(s) (${retrieval.mode} retrieval).` : target.missing.at(-1) ?? "No passages found.";

@@ -1,5 +1,7 @@
 /** Prompt-injection screening and source-grounding checks for language-model output. */
 import { normalizeDigits } from "./language";
+import { restrictedPesticides } from "./pesticides";
+import { namesPlace, PLACES, placeLikeWords, placesIn } from "./places";
 
 const INJECTION_PATTERNS: [string, RegExp][] = [
   ["ignore_instructions", /\b(ignore|disregard|forget|override)\b.{0,40}\b(previous|prior|above|earlier|all|system|your)\b.{0,30}\b(instruction|prompt|rule|direction|guideline)s?/i],
@@ -80,13 +82,163 @@ export type GroundingResult = {
   reasons: string[];
   ungrounded_numbers: number[];
   unknown_citations: string[];
+  wrong_periods: string[];
+  wrong_places: string[];
 };
+
+/** The parts of a verified fact the check needs in order to tie a value to its own period and place. */
+export type GroundingFact = { label: string; value: unknown; reporting_period: string | null };
+
+// ------------------------------------------------------------------------------------------------
+// Dates. Any calendar month written by the model must exist in the evidence and match the value beside it.
+
+type DateMention = { year: number | null; month: number; day: number | null; text: string; index: number };
+
+const LATIN_MONTHS = ["Jan(?:uary)?", "Feb(?:ruary)?", "Mar(?:ch)?", "Apr(?:il)?", "May", "June?", "July?", "Aug(?:ust)?", "Sep(?:t(?:ember)?)?", "Oct(?:ober)?", "Nov(?:ember)?", "Dec(?:ember)?"];
+const KANNADA_MONTHS = ["ಜನವರಿ", "ಫೆಬ್ರ[ವು]ರಿ|ಫೆಬ್ರುವರಿ", "ಮಾರ್ಚ್", "ಏಪ್ರಿಲ್", "ಮೇ", "ಜೂನ್", "ಜುಲೈ", "ಆಗಸ್ಟ್", "ಸ[ೆ]?ಪ್ಟ[ೆ]?ಂಬರ್", "ಅಕ್ಟೋಬರ್", "ನವೆಂಬರ್", "ಡಿಸೆಂಬರ್"];
+const NAMED_MONTHS: { month: number; pattern: RegExp }[] = [
+  ...LATIN_MONTHS.map((name, index) => ({
+    month: index + 1,
+    // "may" is a common English word, so May counts only beside a number or after "in/of/during".
+    pattern: new RegExp(name === "May" ? String.raw`(?:\bMay\b(?=\s+\d)|(?<=\b(?:in|of|during|for)\s)May\b)` : String.raw`\b(?:${name})\b`, "g"),
+  })),
+  ...KANNADA_MONTHS.map((name, index) => ({
+    month: index + 1,
+    // ಮೇ is also a syllable, so it counts only beside a number or the word for month.
+    pattern: new RegExp(name === "ಮೇ" ? "(?<![\\u0C80-\\u0CFF])ಮೇ(?=\\s*(?:\\d|ತಿಂಗಳ))" : `(?<![\\u0C80-\\u0CFF])(?:${name})`, "g"),
+  })),
+];
+
+/** Every calendar date or month in the text: "November 2026", "3 Nov", "2026-10", "03-11-2026", "ನವೆಂಬರ್ 2026". */
+export function dateMentions(raw: string): DateMention[] {
+  const text = normalizeDigits(raw).replace(/\[(?:S|D|N)\d+\]/g, " ");
+  const found: DateMention[] = [];
+  for (const match of text.matchAll(/\b((?:19|20)\d{2})-(0[1-9]|1[0-2])(?:-(0[1-9]|[12]\d|3[01]))?\b/g)) {
+    found.push({ year: Number(match[1]), month: Number(match[2]), day: match[3] ? Number(match[3]) : null, text: match[0], index: match.index });
+  }
+  for (const match of text.matchAll(/\b(0?[1-9]|[12]\d|3[01])[-/.](0?[1-9]|1[0-2])[-/.]((?:19|20)\d{2})\b/g)) {
+    found.push({ year: Number(match[3]), month: Number(match[2]), day: Number(match[1]), text: match[0], index: match.index });
+  }
+  for (const { month, pattern } of NAMED_MONTHS) {
+    for (const match of text.matchAll(pattern)) {
+      const end = match.index + match[0].length;
+      const after = /^[,\s]*(?:(\d{1,2})(?:st|nd|rd|th)?(?!\d))?[,\s]*((?:19|20)\d{2})?/.exec(text.slice(end, end + 16));
+      const before = /(?:((?:19|20)\d{2})ರ?\s*|(\d{1,2})(?:st|nd|rd|th)?\s*(?:of\s+)?)$/.exec(text.slice(Math.max(0, match.index - 12), match.index));
+      const year = after?.[2] ?? before?.[1];
+      const day = after?.[1] ?? before?.[2];
+      found.push({ year: year ? Number(year) : null, month, day: day ? Number(day) : null, text: match[0] + (year ? ` ${year}` : ""), index: match.index });
+    }
+  }
+  return found;
+}
+
+/** All months covered by the text, expanding ranges such as "2024-11 to 2026-10". */
+function evidenceMonths(texts: string[]) {
+  const months = new Set<string>();
+  const add = (year: number, month: number) => months.add(`${year}-${month}`);
+  for (const text of texts) {
+    dateMentions(text).forEach((mention) => {
+      if (mention.year) add(mention.year, mention.month);
+      else months.add(`*-${mention.month}`);
+    });
+    for (const range of text.matchAll(/\b((?:19|20)\d{2})-(0[1-9]|1[0-2])(?:-\d{2})?\s+to\s+((?:19|20)\d{2})-(0[1-9]|1[0-2])\b/g)) {
+      let index = Number(range[1]) * 12 + Number(range[2]) - 1;
+      const last = Number(range[3]) * 12 + Number(range[4]) - 1;
+      for (; index <= last && months.size < 6000; index += 1) add(Math.floor(index / 12), (index % 12) + 1);
+    }
+  }
+  return months;
+}
+
+function mentionInEvidence(mention: DateMention, months: Set<string>) {
+  if (mention.year) return months.has(`${mention.year}-${mention.month}`) || months.has(`*-${mention.month}`);
+  return [...months].some((entry) => entry.endsWith(`-${mention.month}`));
+}
+
+/** True when a date written beside a value can describe that fact's reporting period. */
+function mentionFitsPeriod(mention: DateMention, period: string) {
+  const periodDates = dateMentions(period).filter((date) => date.year);
+  if (!periodDates.length) return true;
+  const months = evidenceMonths([period]);
+  if (!mentionInEvidence(mention, months)) return false;
+  const exactDay = periodDates.length === 1 ? periodDates[0].day : null;
+  return !(mention.day && exactDay && mention.day !== exactDay);
+}
+
+function valueMatches(stated: number, fact: number) {
+  const value = Math.abs(fact);
+  const text = Math.abs(stated);
+  return [0, 1, 2].some((digits) => Number(value.toFixed(digits)) === text) || value === text;
+}
+
+function splitSentences(text: string) {
+  // Abbreviations such as "Rs." and "ರೂ." do not end a sentence, so a price stays with the place named before it.
+  return text.split(/(?<!\b(?:Rs|No|Dr|Mr|sp)\.)(?<!(?:ರೂ|ಮಿ|ಮೀ)\.)(?<=[.!?।])\s+|\n+/).map((sentence) => sentence.trim()).filter(Boolean);
+}
+
+/** Numbers in a sentence with their positions, leaving out the digits that form part of a date. */
+function statedValues(sentence: string) {
+  const text = normalizeDigits(sentence).replace(/\[(?:S|D|N)\d+\]/g, (tag) => " ".repeat(tag.length));
+  const dateSpans = [...text.matchAll(/\b(?:19|20)\d{2}-\d{2}(?:-\d{2})?\b|\b\d{1,2}[-/.]\d{1,2}[-/.](?:19|20)\d{2}\b/g)].map((match) => [match.index, match.index + match[0].length]);
+  return [...text.matchAll(NUMBER)].flatMap((match) => {
+    const value = Math.abs(Number(match[0].replace(/,/g, "")));
+    const insideDate = dateSpans.some(([start, end]) => match.index >= start && match.index < end);
+    return Number.isFinite(value) && value >= IDENTIFYING_VALUE && !insideDate ? [{ value, index: match.index }] : [];
+  });
+}
+
+/** Only large figures identify a fact; small numbers such as counts or percentages recur by coincidence. */
+const IDENTIFYING_VALUE = 100;
+
+function checkDatesAndPlaces(text: string, evidence: string[], facts: GroundingFact[]) {
+  const wrongPeriods = new Set<string>();
+  const wrongPlaces = new Set<string>();
+  const months = evidenceMonths(evidence);
+  for (const mention of dateMentions(text)) {
+    if (!mentionInEvidence(mention, months)) wrongPeriods.add(`${mention.text} is not in the verified data`);
+  }
+  const corpus = evidence.join("\n");
+  for (const place of placesIn(text)) {
+    if (!namesPlace(corpus, place)) wrongPlaces.add(`${place.name} is not in the verified data`);
+  }
+  for (const word of placeLikeWords(text)) {
+    if (!PLACES.some((place) => namesPlace(word, place)) && !corpus.includes(word)) wrongPlaces.add(`${word} is not in the verified data`);
+  }
+
+  const numeric = facts.flatMap((fact) => typeof fact.value === "number" && Math.abs(fact.value) >= IDENTIFYING_VALUE ? [{ ...fact, value: fact.value }] : []);
+  for (const sentence of splitSentences(text)) {
+    const stated = statedValues(sentence).flatMap((item) => {
+      const owners = numeric.filter((fact) => valueMatches(item.value, fact.value));
+      return owners.length ? [{ ...item, owners }] : [];
+    });
+    // A date describes the value nearest to it, so "47,174, down from 58,193 in October 2025" dates only the second figure.
+    const datesOf = new Map<number, DateMention[]>();
+    for (const date of dateMentions(sentence)) {
+      const nearest = stated.reduce<(typeof stated)[number] | null>((best, item) => !best || Math.abs(item.index - date.index) < Math.abs(best.index - date.index) ? item : best, null);
+      if (nearest) datesOf.set(nearest.index, [...(datesOf.get(nearest.index) ?? []), date]);
+    }
+    for (const { value, index, owners } of stated) {
+      const shown = Math.abs(value).toLocaleString("en-IN");
+      const dates = datesOf.get(index) ?? [];
+      if (dates.length && !owners.some((fact) => !fact.reporting_period || dates.some((date) => mentionFitsPeriod(date, fact.reporting_period!)))) {
+        wrongPeriods.add(`${shown} is reported for ${owners[0].reporting_period}, not ${dates.map((date) => date.text).join(", ")}`);
+      }
+      // A branch price must name its own branch, so it cannot be pinned on the wrong place. State values need no place.
+      const ownerPlaces = owners.map((fact) => placesIn(fact.label).filter((place) => place.level === "local"));
+      if (ownerPlaces.every((places) => places.length) && !ownerPlaces.some((places) => places.some((place) => namesPlace(sentence, place)))) {
+        wrongPlaces.add(`${shown} belongs to ${[...new Set(ownerPlaces.flat().map((place) => place.name))].join(" or ")}, which the sentence does not name`);
+      }
+    }
+  }
+  return { wrongPeriods: [...wrongPeriods], wrongPlaces: [...wrongPlaces] };
+}
 
 /**
  * Accept model prose only if every number it contains is present in the verified evidence, every citation label
- * exists, and it makes no directional price promise or recommendation.
+ * exists, every month and place is real and sits beside its own value, and it makes no directional price promise or
+ * recommendation.
  */
-export function checkGrounding(text: string, evidence: string[], citationLabels: string[]): GroundingResult {
+export function checkGrounding(text: string, evidence: string[], citationLabels: string[], facts: GroundingFact[] = [], scannedEvidence: string[] = []): GroundingResult {
   const reasons: string[] = [];
   const allowed = allowedNumbers(evidence);
   const ungrounded = [...new Set(extractNumbers(text).filter((value) => !matchesAllowed(value, allowed)))];
@@ -99,5 +251,10 @@ export function checkGrounding(text: string, evidence: string[], citationLabels:
   if (DIRECTIONAL_CLAIMS.some((pattern) => pattern.test(text))) reasons.push("Contains a directional price promise or trading recommendation.");
   if (!text.trim()) reasons.push("Empty response.");
   if (/https?:\/\//i.test(text)) reasons.push("Contains a URL; links are supplied only from verified citations.");
-  return { status: reasons.length ? "failed" : "passed", reasons, ungrounded_numbers: ungrounded, unknown_citations: unknown };
+  const pesticides = restrictedPesticides(text);
+  if (pesticides.length) reasons.push(`Names a banned or restricted pesticide: ${pesticides.join(", ")}.`);
+  const { wrongPeriods, wrongPlaces } = checkDatesAndPlaces(text, [...evidence, ...scannedEvidence], facts);
+  if (wrongPeriods.length) reasons.push(`Wrong month or date: ${wrongPeriods.slice(0, 3).join("; ")}.`);
+  if (wrongPlaces.length) reasons.push(`Wrong place: ${wrongPlaces.slice(0, 3).join("; ")}.`);
+  return { status: reasons.length ? "failed" : "passed", reasons, ungrounded_numbers: ungrounded, unknown_citations: unknown, wrong_periods: wrongPeriods, wrong_places: wrongPlaces };
 }

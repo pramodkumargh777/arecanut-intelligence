@@ -39,5 +39,6 @@ migrations_dir = "migrations"
 
 # Optional Workers AI binding for the assistant (free daily neuron allocation; paid beyond it).
 # Set ASSISTANT_LLM_PROVIDER / ASSISTANT_EMBEDDING_PROVIDER = "workers_ai" when enabled.
+# Steps are in docs/AI_ASSISTANT.md. Run `wrangler login` first: with this binding, `wrangler dev` connects to Cloudflare.
 # [ai]
 # binding = "AI"

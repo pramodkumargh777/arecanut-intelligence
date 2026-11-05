@@ -26,6 +26,8 @@ User question (English or Kannada)
 | `api/src/assistant/retrieval.ts` | FTS5 keyword search, BGE-M3 cosine search, hybrid ranking, relevance thresholds |
 | `api/src/assistant/providers.ts` | Provider abstraction: `none`, `ollama`, `workers_ai` |
 | `api/src/assistant/grounding.ts` | Injection detection, untrusted-text sanitising, grounding check |
+| `api/src/assistant/places.ts` | Reviewed list of places with Kannada spellings, used by the grounding check |
+| `api/src/assistant/pesticides.ts` | Banned and restricted pesticides, withheld from retrieval and rejected in model text |
 | `api/src/assistant/compose.ts` | Evidence building, prompt, citation numbering, rule-based fallback |
 | `api/src/assistant/routes.ts` | HTTP endpoints, rate limiting, audit log |
 | `api/migrations/0019_assistant_documents.sql` | `documents`, `document_chunks`, `document_chunks_fts`, `assistant_interactions`, `assistant_rate_limits` |
@@ -58,9 +60,16 @@ When a calculator lacks inputs it returns `needs_input` and lists them. It never
 - **No model-generated numbers.** Every fact value is copied from a tool result. The grounding check rejects model text that:
   - contains a number absent from the evidence (small integers up to 12 and date parts are allowed);
   - uses an unknown citation label, or any URL;
-  - makes a directional price claim or a sell/hold/buy recommendation.
+  - makes a directional price claim or a sell/hold/buy recommendation;
+  - writes a month or date that is not in the evidence, or dates a value with a period other than its own. A date describes the value nearest to it in the sentence;
+  - names a place that is not in the evidence (`places.ts`, plus words shaped like a place name such as …ಪುರ or …halli), or states a branch price in a sentence that does not name that branch;
+  - names a banned or restricted pesticide (`pesticides.ts`);
+  - repeats a number found only in a scanned passage;
+  - answers a Kannada question in another language.
 
-  Rejected text is replaced by the rule-based interpretation, and the UI says why.
+  Rejected text is replaced by the rule-based interpretation, and the UI says why. For document questions that interpretation quotes the best matching passages word for word, with their citations.
+- **Withdrawn pesticides are not quoted.** Older booklets recommend products India has since banned or restricted, such as Phorate, Endosulfan and Tridemorph (Calixin). Retrieval withholds any passage naming one, and the answer says which were withheld and where to get current advice. Review `pesticides.ts` against the current CIB&RC list.
+- **Scanned digits are not trusted.** OCR misreads digits in dose tables, and scanning at higher resolution did not fix this. Passages read by OCR are marked for the model, the model may not repeat their numbers, and readers are told to check any dose on the cited page.
 - **Works without an LLM.** With `ASSISTANT_LLM_PROVIDER=none` (the default), or when the model is down, times out or fails grounding, the answer is still built from facts, sources, assumptions and missing-data notes.
 - **Prompt-injection protection.**
   - Questions matching instruction-override patterns (English and Kannada) skip the model entirely.
@@ -108,10 +117,11 @@ Other Qwen models served by Ollama (for example `qwen3:8b`) work through `ASSIST
 
 ### Ingesting documents
 
-Documents are listed in `data-platform/documents/manifest.json` with publisher, URL and reuse note. Every URL was verified on 2026-11-05.
+Documents are listed in `data-platform/documents/manifest.json` with publisher, URL and reuse note. Every URL was verified on 2026-11-05. CPCRI documents come from its [free publications list](https://cpcri.gov.in/page/publications_free_by_type/50).
 
 ```bash
 uv pip install --python .venv/bin/python -r data-platform/requirements-documents.txt
+brew install ocrmypdf tesseract-lang   # scanned PDFs; on Linux: apt-get install ocrmypdf tesseract-ocr-kan
 cd data-platform
 # Inspect extraction and chunking without storing anything:
 ../.venv/bin/python -m documents.ingest --dry-run
@@ -119,7 +129,19 @@ cd data-platform
 ANI_API_URL=http://127.0.0.1:8787/api/v1 ANI_ADMIN_TOKEN=... ../.venv/bin/python -m documents.ingest --embed
 # Use operator-saved copies (<key>.pdf / <key>.html), e.g. PIB pages that refuse automated access:
 ../.venv/bin/python -m documents.ingest --local-dir /path/to/saved --only pib-customs-tariff-value-areca-2025-08-14
+# Reuse OCR text, so repeat runs are fast and every environment stores identical text:
+../.venv/bin/python -m documents.ingest --dry-run --ocr-cache documents/.ocr-cache
 ```
+
+OCR runs automatically when a PDF's embedded text cannot be trusted:
+
+| Check | Sent to OCR when | Why |
+|---|---|---|
+| Text per page | Over half the pages have under 40 characters | Image-only scans |
+| Kannada documents | Under 90% of letters are Kannada | Old non-Unicode fonts extract as Latin garbage such as `~~ P)..2<:;22C'2` |
+| Other documents | Under 45% of tokens are readable | A damaged text layer |
+
+Set `"ocr": "force"` or `"never"` on a manifest entry to override this. OCR output must pass the same test or the document is refused, and lines of OCR noise are removed. The ingester adds an OCR notice to the document's `reuse_note`; the API uses it to mark the passages as scanned.
 
 Ingestion behaviour:
 
@@ -158,6 +180,49 @@ See `api/.dev.vars.example` and `api/wrangler.toml`.
 
 A deployed Worker cannot reach a laptop's Ollama. In production, use `workers_ai` (free daily allocation, paid beyond it) or keep `none`.
 
+## Turning on the language model in production
+
+Workers AI runs inside your Cloudflare account, so there is no API key to manage. If the model fails, is over its limit or gives a rejected answer, the assistant still answers from the rule-based text.
+
+1. **Log in once.** With the `[ai]` binding on, `wrangler dev` also connects to Cloudflare, so local `npm run dev` will not start until you do this. Local answers keep using Ollama through `api/.dev.vars`.
+   ```bash
+   cd api && npx wrangler login
+   ```
+   If this is the first deployment, also replace the placeholder `database_id` in `api/wrangler.toml` with the ID from `npx wrangler d1 create ani-market-data`, and add your HTTPS site address to `CORS_ORIGIN`.
+2. **Edit `api/wrangler.toml`.** Set the providers and uncomment the binding:
+   ```toml
+   ASSISTANT_LLM_PROVIDER = "workers_ai"
+   ASSISTANT_EMBEDDING_PROVIDER = "workers_ai"
+
+   [ai]
+   binding = "AI"
+   ```
+3. **Set the privacy salt.** Paste a long random value when asked:
+   ```bash
+   npx wrangler secret put ASSISTANT_CLIENT_SALT
+   ```
+4. **Deploy** with the "Deploy to Cloudflare" GitHub Action, which also applies migrations, or run:
+   ```bash
+   npx wrangler d1 migrations apply ani-market-data --remote && npx wrangler deploy
+   ```
+5. **Load the documents into production,** unless you loaded your local data with `npm run db:prepare-import` (see the README), which already includes them and their embeddings. This uses your local Ollama for embeddings, which match the Workers AI ones:
+   ```bash
+   cd ../data-platform
+   ANI_API_URL=https://YOUR-WORKER/api/v1 ANI_ADMIN_TOKEN=YOUR_ADMIN_TOKEN \
+     ../.venv/bin/python -m documents.ingest --embed --ocr-cache documents/.ocr-cache
+   ```
+6. **Check it.** `chat.configured` and `embedding.configured` should both be `true`, and `llm.status` should be `used`:
+   ```bash
+   curl https://YOUR-WORKER/api/v1/assistant/status
+   curl -X POST https://YOUR-WORKER/api/v1/assistant/query -H 'Content-Type: application/json' \
+     -d '{"question":"What is the latest Rashi price?"}'
+   ```
+   Ask the Kannada questions from your test list too, and have a Kannada reader check the answers.
+
+**Cost.** Pricing checked on 2026-11-05: 10,000 free neurons a day, then $0.011 per 1,000. The chat model costs 4,625 neurons per million input tokens and 30,475 per million output tokens. A question with about 2,500 input and 300 output tokens uses roughly 20–30 neurons, so the free allowance covers about 300–500 questions a day. Beyond that, each costs about $0.0003. On the Workers Free plan, usage stops at the allowance and answers fall back to rule-based text; a paid plan keeps going and bills the extra.
+
+**To turn it off,** set both providers back to `none` and deploy.
+
 ## Verified behaviour (local, 2026-11-05)
 
 These ran against local D1 with `qwen3.5:4b` and `bge-m3:567m` on Ollama:
@@ -178,14 +243,12 @@ These ran against local D1 with `qwen3.5:4b` and `bge-m3:567m` on Ollama:
   - Qwen 4B sometimes invents citation labels or numbers. Grounding rejects that text and the rule-based answer is shown.
   - It used to cite the prompt block names (`[DATA]`); these bare tags are now removed before grounding.
 - **Kannada quality.**
-  - Kannada prose from the 4B model is weaker, e.g. "ಕನ್ನಡದ" for Karnataka and loose citation placement.
-  - The rule-based Kannada fallback is terse.
-  - Use a larger model (e.g. `qwen3:8b` or Workers AI Qwen3-30B) for better Kannada output.
-- **Kannada documents.**
-  - No machine-readable Kannada CPCRI publication is in the corpus.
-  - Kannada document retrieval depends on glossary expansion and BGE-M3's cross-lingual similarity.
-  - Kannada off-topic similarity (0.44) is close to relevant scores, which is why a stricter threshold applies.
-- **Source text quality.** CPCRI booklets contain OCR noise, which is quoted as-is.
+  - On local models, Kannada answers are often rejected and replaced by quoted passages. Tested 2026-11-05: `qwen3.5:4b` invented places and misdated values, and `qwen3:8b` sometimes answered in English or off the question.
+  - The checks catch wrong numbers, dates, places and language, but not an answer that is simply off the question.
+  - Workers AI Qwen3-30B has not been tested on these questions yet.
+- **Kannada documents.** Kannada passages come from OCR, so their digits can be wrong. A Kannada-script question now scores 0.58–0.74 against relevant Kannada passages, well above the 0.50 floor.
+- **Document age.** Several booklets date from 1989–1999. Answers flag publications from before 2010. The pesticide list catches named products only, so other advice in them may also be out of date.
+- **Source text quality.** CPCRI booklets contain OCR noise, which is quoted as-is. A subject expert should check the dose tables, since no automatic check can confirm them.
 - **PIB access.** PIB returns HTTP 403 to automated fetches, so PIB documents need operator-saved copies via `--local-dir`.
 - **Commodity scope.** The assistant covers arecanut only. Other configured commodities are not yet supported.
 - **Answer content.** Answers are reference information, not financial advice or crop diagnosis.

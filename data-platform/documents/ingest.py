@@ -16,7 +16,10 @@ import json
 import math
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -40,6 +43,17 @@ DEFAULT_OLLAMA_EMBEDDING_MODEL = "bge-m3:567m"
 DOCUMENT_TYPES = {"cpcri_publication", "dasd_report", "government_notification", "agricultural_research"}
 LANGUAGES = {"en", "kn", "hi", "ml", "mixed"}
 MONTHS = {m: i for i, m in enumerate(["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"], 1)}
+OCR_MODES = {"auto", "force", "never"}
+OCR_TIMEOUT_SECONDS = 1800
+OCR_WARNING = "Text read by OCR"
+OCR_NOTE = "Text read from a scanned copy by OCR; check any dose or quantity against the original page."
+MIN_TEXT_CHARS_PER_PAGE = 40
+MIN_KANNADA_SHARE = 0.9
+MIN_READABLE_WORD_SHARE = 0.45
+OCR_READABLE_TOKEN = re.compile(r"[A-Za-z]{3,}|\d{2,}|^\d[.,%]?$")
+KANNADA_LETTER = re.compile(r"[ಀ-೿]")
+LATIN_LETTER = re.compile(r"[A-Za-z]")
+READABLE_TOKEN = re.compile(r"[(\[\"']?(?:[A-Za-z][a-z]+|[A-Z]{2,}|[A-Za-z]|[\d.,:/%-]*\d[\d.,:/%-]*)[)\]\"',.;:?!]*")
 
 
 class IngestError(Exception):
@@ -103,6 +117,8 @@ def validate_entry(entry: dict[str, Any]) -> None:
         raise IngestError(f"Unknown document_type for {entry['key']}: {entry['document_type']}")
     if entry.get("language", "en") not in LANGUAGES:
         raise IngestError(f"Unknown language for {entry['key']}")
+    if entry.get("ocr", "auto") not in OCR_MODES:
+        raise IngestError(f"ocr must be one of {sorted(OCR_MODES)}: {entry['key']}")
     if not entry["source_url"].startswith("https://"):
         raise IngestError(f"Source URL must be https: {entry['key']}")
     date = entry.get("publication_date")
@@ -159,10 +175,101 @@ def extract_pdf(data: bytes) -> list[Page]:
     except ImportError as error:  # pragma: no cover - dependency guard
         raise IngestError("pypdf is required: pip install -r data-platform/requirements-documents.txt") from error
     reader = PdfReader(BytesIO(data))
-    pages = [Page(number, clean_text(page.extract_text() or "")) for number, page in enumerate(reader.pages, start=1)]
-    if not any(page.text for page in pages):
-        raise IngestError("PDF has no extractable text layer (scanned image without OCR); OCR it before ingestion.")
-    return pages
+    return [Page(number, clean_text(page.extract_text() or "")) for number, page in enumerate(reader.pages, start=1)]
+
+
+# ---------------------------------------------------------------- OCR
+
+def kannada_share(pages: list[Page]) -> float:
+    """Kannada letters as a share of all letters. Old Kannada PDFs use non-Unicode fonts whose text layer is Latin garbage."""
+    text = "".join(page.text for page in pages)
+    kannada = len(KANNADA_LETTER.findall(text))
+    latin = len(LATIN_LETTER.findall(text))
+    return kannada / (kannada + latin) if kannada + latin else 0.0
+
+
+def readable_word_share(pages: list[Page]) -> float:
+    """Tokens that look like a word or a number, as a share of all tokens. Table figures count as readable."""
+    tokens = "\n".join(page.text for page in pages).split()
+    return sum(1 for token in tokens if READABLE_TOKEN.fullmatch(token)) / len(tokens) if tokens else 0.0
+
+
+def ocr_reason(pages: list[Page], language: str) -> str | None:
+    """Why the embedded text layer cannot be trusted, or None when it can."""
+    filled = sum(1 for page in pages if len(page.text) >= MIN_TEXT_CHARS_PER_PAGE)
+    if filled * 2 < len(pages):
+        return "no usable text layer"
+    if language == "kn":
+        if kannada_share(pages) < MIN_KANNADA_SHARE:
+            return "text layer is not Unicode Kannada"
+    elif readable_word_share(pages) < MIN_READABLE_WORD_SHARE:
+        return "text layer is unreadable"
+    return None
+
+
+def drop_ocr_noise(text: str) -> str:
+    """Remove lines OCR made from pictures and page furniture. A line of real words or table figures is always kept."""
+    kept = []
+    for line in text.split("\n"):
+        tokens = line.split()
+        readable = sum(1 for token in tokens if len(KANNADA_LETTER.findall(token)) >= 3 or OCR_READABLE_TOKEN.search(token))
+        if len(tokens) < 3 or readable * 2 >= len(tokens):
+            kept.append(line)
+    return clean_text("\n".join(kept))
+
+
+def ocr_languages(entry: dict[str, Any]) -> str:
+    return entry.get("ocr_languages") or ("kan+eng" if entry.get("language", "en") == "kn" else "eng")
+
+
+def run_ocr(data: bytes, languages: str, *, cache_dir: Path | None = None, runner: Callable[..., Any] = subprocess.run) -> list[Page]:
+    """Read every page image with OCRmyPDF and Tesseract. The file itself is never changed or stored."""
+    cached = cache_dir / f"{hashlib.sha256(data).hexdigest()}-{languages}.txt" if cache_dir else None
+    if cached and cached.exists():
+        sidecar_text = cached.read_text(encoding="utf-8")
+    else:
+        executable = shutil.which("ocrmypdf")
+        if not executable:
+            raise IngestError("PDF has no extractable text and ocrmypdf is not installed: brew install ocrmypdf tesseract-lang "
+                              "(or apt-get install ocrmypdf tesseract-ocr-kan).")
+        with tempfile.TemporaryDirectory(prefix="ani-ocr-") as folder:
+            source, output, sidecar = Path(folder, "in.pdf"), Path(folder, "out.pdf"), Path(folder, "out.txt")
+            source.write_bytes(data)
+            command = [executable, "--force-ocr", "--language", languages, "--rotate-pages", "--deskew", "--optimize", "0",
+                       "--output-type", "pdf", "--sidecar", str(sidecar), str(source), str(output)]
+            try:
+                finished = runner(command, capture_output=True, text=True, timeout=OCR_TIMEOUT_SECONDS)
+            except subprocess.TimeoutExpired as error:
+                raise IngestError(f"OCR did not finish within {OCR_TIMEOUT_SECONDS} seconds.") from error
+            if finished.returncode != 0:
+                raise IngestError(f"OCR failed (exit {finished.returncode}): {(finished.stderr or '').strip()[-300:]}")
+            sidecar_text = sidecar.read_text(encoding="utf-8")
+        if cached:
+            cached.parent.mkdir(parents=True, exist_ok=True)
+            cached.write_text(sidecar_text, encoding="utf-8")
+    parts = sidecar_text.split("\f")
+    if parts and not parts[-1].strip():
+        parts.pop()
+    return [Page(number, drop_ocr_noise(clean_text(part))) for number, part in enumerate(parts, start=1)]
+
+
+def pdf_pages(entry: dict[str, Any], data: bytes, *, ocr_cache: Path | None = None) -> tuple[list[Page], list[str]]:
+    """Use the embedded text when it is trustworthy, otherwise OCR. Text that still fails the quality test is refused."""
+    language = entry.get("language", "en")
+    mode = entry.get("ocr", "auto")
+    pages = extract_pdf(data)
+    reason = "manifest requires OCR" if mode == "force" else ocr_reason(pages, language) if mode == "auto" else None
+    if reason is None:
+        if not any(page.text for page in pages):
+            raise IngestError("PDF has no extractable text layer and OCR is switched off for this document.")
+        return pages, []
+    languages = ocr_languages(entry)
+    pages = run_ocr(data, languages, cache_dir=ocr_cache)
+    if language == "kn" and kannada_share(pages) < MIN_KANNADA_SHARE:
+        raise IngestError(f"OCR output is not Kannada ({kannada_share(pages):.0%} Kannada letters); not ingesting it.")
+    if language != "kn" and readable_word_share(pages) < MIN_READABLE_WORD_SHARE:
+        raise IngestError(f"OCR output is unreadable ({readable_word_share(pages):.0%} readable words); not ingesting it.")
+    return pages, [f"{OCR_WARNING} ({reason}; {languages})."]
 
 
 class _TextCollector(HTMLParser):
@@ -226,12 +333,12 @@ def stated_pib_date(text: str) -> str | None:
     return f"{match.group(3)}-{MONTHS[match.group(2).upper()]:02d}-{int(match.group(1)):02d}"
 
 
-def extract(entry: dict[str, Any], data: bytes) -> tuple[list[Page], list[str]]:
+def extract(entry: dict[str, Any], data: bytes, *, ocr_cache: Path | None = None) -> tuple[list[Page], list[str]]:
     warnings: list[str] = []
     if entry["mime_type"] == "application/pdf":
         if not data.startswith(b"%PDF"):
             raise IngestError("Expected a PDF but the response is not a PDF (possibly an error or login page).")
-        return extract_pdf(data), warnings
+        return pdf_pages(entry, data, ocr_cache=ocr_cache)
     markup = data.decode("utf-8", errors="replace")
     if "pib.gov.in" in entry["source_url"]:
         pages = extract_pib(markup)
@@ -359,8 +466,11 @@ def attach_embeddings(chunks: list[Chunk], embedder: Callable[[list[str]], list[
 # ---------------------------------------------------------------- payload and upload
 
 def build_payload(entry: dict[str, Any], data: bytes, chunks: list[Chunk], *, page_count: int | None, fetched_at: str,
-                  job_id: str) -> dict[str, Any]:
+                  job_id: str, used_ocr: bool = False) -> dict[str, Any]:
     sha = hashlib.sha256(data).hexdigest()
+    reuse_note = entry.get("reuse_note")
+    if used_ocr:  # The API reads this note to warn readers that a scanned dose can be misread.
+        reuse_note = f"{reuse_note + ' ' if reuse_note else ''}{OCR_NOTE}"
     return {
         "ingestion_job_id": job_id,
         "document": {
@@ -375,7 +485,7 @@ def build_payload(entry: dict[str, Any], data: bytes, chunks: list[Chunk], *, pa
             "mime_type": entry["mime_type"],
             "content_sha256": sha,
             "page_count": page_count,
-            "reuse_note": entry.get("reuse_note"),
+            "reuse_note": reuse_note,
             "fetched_at": fetched_at,
         },
         "chunks": [chunk.payload() for chunk in chunks],
@@ -407,7 +517,8 @@ def post_document(payload: dict[str, Any], *, api_url: str, token: str, timeout:
 
 def ingest_document(entry: dict[str, Any], *, job_id: str, dry_run: bool, local_dir: Path | None, api_url: str, token: str,
                     embedder: Callable[[list[str]], list[list[float]]] | None,
-                    fetcher: Callable[[str], bytes] = download, poster: Callable[..., dict[str, Any]] = post_document) -> DocumentResult:
+                    fetcher: Callable[[str], bytes] = download, poster: Callable[..., dict[str, Any]] = post_document,
+                    ocr_cache: Path | None = None) -> DocumentResult:
     result = DocumentResult(entry["key"], "failed")
     try:
         if local_dir is not None:
@@ -418,15 +529,16 @@ def ingest_document(entry: dict[str, Any], *, job_id: str, dry_run: bool, local_
         else:
             data = fetcher(entry["source_url"])
         fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-        pages, warnings = extract(entry, data)
+        pages, warnings = extract(entry, data, ocr_cache=ocr_cache)
         result.warnings.extend(warnings)
+        used_ocr = any(warning.startswith(OCR_WARNING) for warning in warnings)
         chunks = chunk_pages(pages)
         if not chunks:
             raise IngestError("No text chunks were produced.")
         if embedder is not None:
             result.embedded = attach_embeddings(chunks, embedder)
         page_count = len(pages) if entry["mime_type"] == "application/pdf" else None
-        payload = build_payload(entry, data, chunks, page_count=page_count, fetched_at=fetched_at, job_id=job_id)
+        payload = build_payload(entry, data, chunks, page_count=page_count, fetched_at=fetched_at, job_id=job_id, used_ocr=used_ocr)
         result.document_id = payload["document"]["id"]
         result.chunks = len(chunks)
         if dry_run:
@@ -453,6 +565,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--embed", action="store_true", help="Embed chunks with BGE-M3 through Ollama before upload.")
     parser.add_argument("--ollama-url", default=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434"))
     parser.add_argument("--ollama-model", default=os.environ.get("ANI_OLLAMA_EMBEDDING_MODEL", DEFAULT_OLLAMA_EMBEDDING_MODEL))
+    parser.add_argument("--ocr-cache", type=Path, help="Reuse OCR text from this folder, so a repeat run is fast and stores identical text.")
     parser.add_argument("--summary", type=Path, help="Write a JSON ingestion summary to this path.")
     args = parser.parse_args(argv)
 
@@ -471,7 +584,7 @@ def main(argv: list[str] | None = None) -> int:
     job_id = f"documents-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:8]}"
 
     results = [ingest_document(entry, job_id=job_id, dry_run=args.dry_run, local_dir=args.local_dir, api_url=api_url,
-                               token=token, embedder=embedder) for entry in entries]
+                               token=token, embedder=embedder, ocr_cache=args.ocr_cache) for entry in entries]
     for result in results:
         line = f"{result.key}: {result.status}"
         if result.document_id:

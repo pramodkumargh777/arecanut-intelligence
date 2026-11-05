@@ -20,6 +20,7 @@
     "evaluate:forecasts": "node scripts/evaluate-forecasts.mjs",
     "db:backup": "node scripts/d1-backup.mjs",
     "db:restore-check": "node scripts/d1-restore-check.mjs",
+    "db:prepare-import": "node --no-warnings scripts/d1-prepare-import.mjs",
     "retention:temp": "python3 data-platform/ingestion/retention.py"
   },
   "devDependencies": {

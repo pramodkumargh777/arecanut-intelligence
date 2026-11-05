@@ -102,7 +102,7 @@ class QuantizationTests(unittest.TestCase):
 
 class ExtractionTests(unittest.TestCase):
     def test_pdf_pages_keep_their_numbers(self):
-        pages, warnings = extract(entry(), minimal_pdf(["Mahali fruit rot", "Bordeaux mixture spray"]))
+        pages, warnings = extract(entry(), minimal_pdf(["Mahali fruit rot appears on arecanut bunches in the monsoon", "Bordeaux mixture spray protects the bunches before the rains"]))
         self.assertEqual([page.number for page in pages], [1, 2])
         self.assertIn("Bordeaux", pages[1].text)
         self.assertEqual(warnings, [])
@@ -110,8 +110,68 @@ class ExtractionTests(unittest.TestCase):
     def test_rejects_non_pdf_and_image_only_pdf(self):
         with self.assertRaisesRegex(IngestError, "not a PDF"):
             extract(entry(), b"<html>login</html>")
-        with self.assertRaisesRegex(IngestError, "no extractable text"):
-            extract(entry(), minimal_pdf([""]))
+        with unittest.mock.patch.object(ingest.shutil, "which", return_value=None):
+            with self.assertRaisesRegex(IngestError, "no extractable text and ocrmypdf is not installed"):
+                extract(entry(), minimal_pdf([""]))
+
+    def test_image_only_pdf_is_read_by_ocr_and_keeps_page_numbers(self):
+        read = [ingest.Page(1, "Spray Bordeaux mixture before the monsoon on the bunches."), ingest.Page(2, "Repeat the spray after forty days.")]
+        with unittest.mock.patch.object(ingest, "run_ocr", return_value=read) as ocr:
+            pages, warnings = extract(entry(), minimal_pdf(["", ""]))
+        self.assertEqual(ocr.call_args.args[1], "eng")
+        self.assertEqual([page.number for page in pages], [1, 2])
+        self.assertTrue(warnings[0].startswith(ingest.OCR_WARNING))
+
+    def test_garbled_kannada_text_layer_goes_to_ocr_in_kannada(self):
+        garbage = "p~eap~ eJJcpj' 8~rm<;e ~~~ mcp,2 '8~rpa ~~ ~eot->c> rpo,2-yeqoQM rpoer rpM " * 3
+        read = [ingest.Page(1, "ಅಡಿಕೆ ಕಾಯಿ ಕೊಳೆಯುವ ರೋಗದ ನಿರ್ವಹಣೆ ಮತ್ತು ಬೋರ್ಡೋ ಮಿಶ್ರಣ")]
+        with unittest.mock.patch.object(ingest, "run_ocr", return_value=read) as ocr:
+            pages, warnings = extract(entry(language="kn"), minimal_pdf([garbage]))
+        self.assertEqual(ocr.call_args.args[1], "kan+eng")
+        self.assertIn("ಅಡಿಕೆ", pages[0].text)
+        self.assertIn("not Unicode Kannada", warnings[0])
+
+    def test_ocr_output_that_is_not_kannada_is_refused(self):
+        with unittest.mock.patch.object(ingest, "run_ocr", return_value=[ingest.Page(1, "plain latin words only here " * 4)]):
+            with self.assertRaisesRegex(IngestError, "not Kannada"):
+                extract(entry(language="kn"), minimal_pdf([""]))
+
+    def test_trustworthy_text_layer_is_not_sent_to_ocr(self):
+        text = "Arecanut palms need well drained soil and regular irrigation during summer months."
+        with unittest.mock.patch.object(ingest, "run_ocr") as ocr:
+            pages, warnings = extract(entry(), minimal_pdf([text]))
+        ocr.assert_not_called()
+        self.assertEqual(warnings, [])
+        self.assertIn("Arecanut", pages[0].text)
+
+    def test_manifest_can_force_or_forbid_ocr(self):
+        read = [ingest.Page(1, "Readable words from the scanned image of the page.")]
+        with unittest.mock.patch.object(ingest, "run_ocr", return_value=read) as ocr:
+            extract(entry(ocr="force"), minimal_pdf(["Arecanut palms need well drained soil and regular irrigation."]))
+        ocr.assert_called_once()
+        with self.assertRaisesRegex(IngestError, "OCR is switched off"):
+            extract(entry(ocr="never"), minimal_pdf([""]))
+
+    def test_run_ocr_splits_pages_reports_failures_and_uses_the_cache(self):
+        def finished(command, **_):
+            Path(command[command.index("--sidecar") + 1]).write_text("page one\f\fpage three\f", encoding="utf-8")
+            return unittest.mock.Mock(returncode=0, stderr="")
+        with tempfile.TemporaryDirectory() as folder, unittest.mock.patch.object(ingest.shutil, "which", return_value="/bin/ocrmypdf"):
+            pages = ingest.run_ocr(b"%PDF", "eng", cache_dir=Path(folder), runner=finished)
+            self.assertEqual([(page.number, page.text) for page in pages], [(1, "page one"), (2, ""), (3, "page three")])
+            never = unittest.mock.Mock(side_effect=AssertionError("cache not used"))
+            self.assertEqual(len(ingest.run_ocr(b"%PDF", "eng", cache_dir=Path(folder), runner=never)), 3)
+            failing = unittest.mock.Mock(return_value=unittest.mock.Mock(returncode=7, stderr="missing language"))
+            with self.assertRaisesRegex(IngestError, "exit 7.*missing language"):
+                ingest.run_ocr(b"%PDF2", "kan", runner=failing)
+
+    def test_ocr_noise_lines_are_removed_but_words_and_table_figures_stay(self):
+        text = "> a << ot, ಕ - 7 . ee ce as | b& ಗ) fo la o.4\nಸಾರಜನಕ (N) 33 66 100\nಶೇಕಡಾ 1ರ ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಣೆ\nSpray in June."
+        self.assertEqual(ingest.drop_ocr_noise(text), "ಸಾರಜನಕ (N) 33 66 100\nಶೇಕಡಾ 1ರ ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಣೆ\nSpray in June.")
+
+    def test_ocr_is_recorded_in_the_reuse_note(self):
+        payload = ingest.build_payload(entry(reuse_note="Public."), b"x", [], page_count=1, fetched_at="t", job_id="j", used_ocr=True)
+        self.assertEqual(payload["document"]["reuse_note"], f"Public. {ingest.OCR_NOTE}")
 
     def test_pib_release_body_only(self):
         [page] = extract_pib(PIB_HTML)
@@ -209,7 +269,7 @@ class OrchestrationTests(unittest.TestCase):
             raise AssertionError("must not be called")
 
         with tempfile.TemporaryDirectory() as folder:
-            Path(folder, "test-booklet.pdf").write_bytes(minimal_pdf(["Mahali fruit rot"]))
+            Path(folder, "test-booklet.pdf").write_bytes(minimal_pdf(["Mahali fruit rot appears on arecanut bunches in the monsoon"]))
             result = ingest_document(entry(), job_id="job", dry_run=True, local_dir=Path(folder), api_url="", token="",
                                      embedder=lambda texts: [[1.0, 0.0] for _ in texts], fetcher=never, poster=never)
         self.assertEqual((result.status, result.chunks, result.embedded, result.error), ("dry_run", 1, 1, None))
@@ -228,7 +288,7 @@ class OrchestrationTests(unittest.TestCase):
             return {"status": "ingested", "document_id": payload["document"]["id"], "withdrawn_versions": ["old-id"]}
 
         result = ingest_document(entry(), job_id="job", dry_run=False, local_dir=None, api_url="http://api", token=TOKEN, embedder=None,
-                                 fetcher=lambda url: minimal_pdf(["Mahali"]), poster=poster)
+                                 fetcher=lambda url: minimal_pdf(["Mahali fruit rot appears on arecanut bunches in the monsoon"]), poster=poster)
         self.assertEqual(result.status, "ingested")
         self.assertEqual(len(posted), 1)
         self.assertIn("old-id", result.warnings[0])

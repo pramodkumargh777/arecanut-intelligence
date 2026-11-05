@@ -2,10 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyMigrations, LocalDatabase } from "../test-support/local-d1";
 import { app, type Env } from "../index";
 import { classifyQuestion, extractCalculationHints } from "./classify";
-import { composeAnswer, planToolsWithModel } from "./compose";
+import { composeAnswer, planToolsWithModel, quotePassage } from "./compose";
 import { checkGrounding, detectInjection, extractNumbers, sanitizeUntrusted } from "./grounding";
 import { detectLanguage, expandTerms } from "./language";
-import { chatProvider, providerStatus, stripThinking, type ChatProvider, type EmbeddingProvider } from "./providers";
+import { restrictedPesticides } from "./pesticides";
+import { chatProvider, providerStatus, stripThinking, withoutReasoning, type ChatProvider, type EmbeddingProvider } from "./providers";
 import { cosineQ8, decodeEmbedding, ftsExpression, quantizeEmbedding, searchDocuments } from "./retrieval";
 import { argumentsFor } from "./routes";
 import { validateToolArgs } from "./tools";
@@ -182,6 +183,166 @@ describe("prompt-injection protection and grounding", () => {
   });
 });
 
+describe("grounding of months and places", () => {
+  const facts = [
+    { label: "Karnataka monthly arrival-weighted modal price – Rashi", value: 47174.91, reporting_period: "2026-10" },
+    { label: "TSS Siddapur – RASHI branch average", value: 46068, reporting_period: "2026-11-03" },
+    { label: "TSS Sirsi – RASHI branch average", value: 46055, reporting_period: "2026-11-03" },
+    { label: "TSS Yellapur – RASHI branch average", value: 47995, reporting_period: "2026-11-02" },
+  ];
+  const evidence = [facts.map((fact) => `${fact.label}: ${fact.value}; period ${fact.reporting_period}`).join("\n")];
+  const check = (text: string) => checkGrounding(text, evidence, ["S1", "S2", "S3"], facts);
+
+  it("rejects the real answer that gave an October price as November, though November is elsewhere in the data", () => {
+    const result = check("The latest verified Rashi prices for November 2026 are 47,174.91 INR/quintal (Karnataka monthly average) [S1].");
+    expect(result.status).toBe("failed");
+    expect(result.wrong_periods.join()).toContain("2026-10");
+  });
+
+  it("accepts each value beside its own month or date, in any common format", () => {
+    for (const text of [
+      "The Karnataka average for October 2026 was 47,174.91 INR/quintal [S1].",
+      "The Karnataka average for Oct 2026 was 47,175 INR/quintal [S1].",
+      "The Karnataka average for 2026-10 was 47,174.91 [S1].",
+      "ಕರ್ನಾಟಕದ ಅಕ್ಟೋಬರ್ 2026 ಸರಾಸರಿ ಬೆಲೆ ೪೭,೧೭೪.೯೧ ರೂ./ಕ್ವಿಂಟಾಲ್ [S1].",
+      "TSS Siddapur reported 46,068 on 3 November 2026 [S2].",
+      "TSS Siddapur reported 46,068 on 03-11-2026 [S2].",
+      "In TSS Siddapur and Sirsi, averages were 46,068 and 46,055 INR/quintal [S2].",
+    ]) expect(check(text), text).toMatchObject({ status: "passed", wrong_periods: [], wrong_places: [] });
+  });
+
+  it("rejects a wrong day, a month absent from the data, and a Kannada month mismatch", () => {
+    expect(check("TSS Siddapur reported 46,068 on 9 November 2026 [S2].").status).toBe("failed");
+    expect(check("Prices were firm in March 2026 [S1].").wrong_periods).toHaveLength(1);
+    expect(check("ಕರ್ನಾಟಕದ ನವೆಂಬರ್ 2026 ಸರಾಸರಿ ಬೆಲೆ 47,174.91 ರೂ./ಕ್ವಿಂಟಾಲ್ [S1].").status).toBe("failed");
+  });
+
+  it("ties a date to the nearest value, so a true comparison passes and a false date is caught", () => {
+    const withPeak = [...facts, { label: "Highest monthly price", value: 58193.68, reporting_period: "2025-10" }];
+    const text = (sentence: string) => checkGrounding(sentence, [`${evidence[0]}\nHighest monthly price: 58193.68; period 2025-10`], ["S1", "S2", "S3"], withPeak);
+    expect(text("The monthly average was 47,174.91 INR/quintal, down from a peak of 58,193.68 INR/quintal in October 2025 [S1].").status).toBe("passed");
+    expect(text("TSS Yellapur was 47,995 INR/quintal in November 2025, above TSS Siddapur at 46,068 INR/quintal in November 2026 [S2].").wrong_periods.join()).toContain("2026-11-02");
+    expect(text("From 2025-10 to 2026-10 the monthly average reached 47,174.91 [S1].").status).toBe("passed");
+  });
+
+  it("does not read the English word may or a Kannada syllable as a month", () => {
+    expect(check("Prices may differ between branches [S1].").status).toBe("passed");
+    expect(check("ಮೇಲಿನ ದತ್ತಾಂಶ ನೋಡಿ [S1].").status).toBe("passed");
+  });
+
+  it("rejects the real answer that renamed Siddapur as Tulasipura", () => {
+    const result = check("ತುಳಸೀಪುರದಲ್ಲಿ 46,068 ರೂ./ಕ್ವಿಂಟಾಲ್ ಬೆಲೆ ದಾಖಲಾಗಿದೆ [S2].");
+    expect(result.status).toBe("failed");
+    expect(result.wrong_places.join()).toContain("ತುಳಸೀಪುರ");
+  });
+
+  it("accepts Kannada spellings of the right place, including inflected forms", () => {
+    expect(check("ಸಿದ್ದಾಪುರದಲ್ಲಿ 46,068 ರೂ./ಕ್ವಿಂಟಾಲ್ [S2].").status).toBe("passed");
+    expect(check("ಶಿರಸಿಯಲ್ಲಿ ರೂ. 46,055 ದಾಖಲಾಗಿದೆ [S2].").status).toBe("passed");
+    expect(check("ಯಲ್ಲಾಪುರದಲ್ಲಿ 47,995 ರೂ./ಕ್ವಿಂಟಾಲ್ [S3].").status).toBe("passed");
+  });
+
+  it("rejects a value pinned on another branch, and a place missing from the data", () => {
+    expect(check("Yellapur reported 46,068 INR/quintal [S2].").wrong_places.join()).toContain("Siddapur");
+    expect(check("The branch average was 46,068 INR/quintal [S2].").status).toBe("failed");
+    expect(check("Rashi was also traded in Mysuru [S1].").wrong_places.join()).toContain("Mysuru");
+    expect(check("Rashi was also traded in Madhupur [S1].").wrong_places.join()).toContain("Madhupur");
+  });
+
+  it("does not require a state name beside a state value", () => {
+    expect(check("The monthly average was 47,174.91 INR/quintal [S1].").status).toBe("passed");
+  });
+
+  it("accepts a place from a quoted document or from the question", () => {
+    expect(checkGrounding("Palms in Puttur were affected [D1].", ["Observed in Puttur taluk."], ["D1"], []).status).toBe("passed");
+    expect(checkGrounding("No Mysuru data is available.", ["Price data", "Mysuru price?"], [], []).status).toBe("passed");
+  });
+});
+
+describe("rule-based answers quote the documents", () => {
+  const passage = "Koleroga is the most dreaded disease. Spray 1 per cent Bordeaux mixture before the monsoon. Repeat after 40 days if rain continues. ".repeat(6);
+  const docResult = (): ToolResult => ({
+    tool: "search_agricultural_documents", status: "ok", title: "Agricultural documents", summary: "",
+    facts: [{ label: "CPCRI publication", value: "snippet", unit: null, basis: "keyword", reporting_period: null, source_key: "doc:1" }],
+    sources: [{ key: "doc:1", kind: "document", label: "Koleroga folder, p. 2", publisher: "CPCRI", url: "https://cpcri.gov.in/x.pdf", reporting_period: null, retrieved_at: null }],
+    excerpts: [{ source_key: "doc:1", text: passage }], assumptions: [], uncertainty: [], missing: [], limitations: [], reporting_period: null, args: {},
+  });
+
+  it("shows the real passage with its citation when the model text is rejected", async () => {
+    const answer = await composeAnswer({ question: "How to control koleroga with bordeaux?", language: "kn", results: [docResult()], chat: mockChat("ಸಿಂಪಡಣೆ 40000 [D1]."), injectionFlags: [] });
+    expect(answer.llm.status).toBe("grounding_failed");
+    expect(answer.interpretation.text).toContain("[D1] Koleroga folder, p. 2");
+    expect(answer.interpretation.text).toContain("1 per cent Bordeaux mixture");
+    expect(answer.interpretation.text).not.toContain("40000");
+    expect(answer.interpretation.text).not.toContain("ದತ್ತಾಂಶ ಲಭ್ಯವಿದೆ");
+  });
+
+  it("quotes word for word and marks only the cut ends", () => {
+    const quote = quotePassage(passage, ["bordeaux"]);
+    expect(quote.length).toBeLessThan(440);
+    expect(quote).toContain("Spray 1 per cent Bordeaux mixture before the monsoon.");
+    expect(quote.startsWith("… ")).toBe(true);
+    expect(quotePassage("Short passage.", [])).toBe("Short passage.");
+  });
+});
+
+describe("scanned digits and restricted pesticides", () => {
+  const scanned = (text: string): ToolResult => ({
+    tool: "search_agricultural_documents", status: "ok", title: "Agricultural documents", summary: "",
+    facts: [{ label: "CPCRI publication", value: "snippet", unit: null, basis: "keyword", reporting_period: null, source_key: "doc:1" }],
+    sources: [{ key: "doc:1", kind: "document", label: "Practices, p. 15", publisher: "CPCRI", url: "https://cpcri.gov.in/x.pdf", reporting_period: null, retrieved_at: null }],
+    excerpts: [{ source_key: "doc:1", text, scanned: true }], assumptions: [], uncertainty: [], missing: [], limitations: [], reporting_period: null, args: {},
+  });
+
+  it("rejects a number the model took only from a scanned passage, and quotes the passage instead", async () => {
+    const answer = await composeAnswer({ question: "How much potash?", language: "en", results: [scanned("Apply 1400 g potash per palm.")], chat: mockChat("Apply 1400 g potash [D1]."), injectionFlags: [] });
+    expect(answer.llm.status).toBe("grounding_failed");
+    expect(answer.interpretation.text).toContain("Apply 1400 g potash per palm.");
+  });
+
+  it("accepts a description that points to the page without repeating the scanned number", async () => {
+    const answer = await composeAnswer({ question: "How much potash?", language: "en", results: [scanned("Apply 1400 g potash per palm.")], chat: mockChat("The booklet gives a potash dose per palm; check the cited page [D1]."), injectionFlags: [] });
+    expect(answer.llm.status).toBe("used");
+  });
+
+  it("marks scanned passages in the prompt", async () => {
+    const chat = mockChat("Described [D1].");
+    let prompt = "";
+    const recording = { ...chat, chat: async (messages: { content: string }[]) => { prompt = messages.map((message) => message.content).join("\n"); return "Described [D1]."; } };
+    await composeAnswer({ question: "x", language: "en", results: [scanned("Apply 1400 g potash.")], chat: recording as ChatProvider, injectionFlags: [] });
+    expect(prompt).toContain("(SCANNED) [D1]");
+  });
+
+  it("rejects an English answer to a Kannada question but allows Latin names in a Kannada answer", async () => {
+    const rejected = await composeAnswer({ question: "ಬೆಲೆ?", language: "kn", results: [priceResult()], chat: mockChat("The Karnataka monthly price is reported in the table [S1]."), injectionFlags: [] });
+    expect(rejected.llm.status).toBe("grounding_failed");
+    const accepted = await composeAnswer({ question: "ಬೆಲೆ?", language: "kn", results: [priceResult()], chat: mockChat("Rashi ಬೆಲೆಯನ್ನು ಪರಿಶೀಲಿತ ದತ್ತಾಂಶ ಪಟ್ಟಿಯಲ್ಲಿ ನೋಡಿ [S1]."), injectionFlags: [] });
+    expect(accepted.llm.status).toBe("used");
+  });
+
+  it("rejects model text naming a banned or restricted pesticide", () => {
+    expect(checkGrounding("Apply Phorate around the palm [S1].", ["Phorate"], ["S1"]).reasons.join()).toContain("Phorate");
+    expect(checkGrounding("Apply Thimet granules [S1].", ["data"], ["S1"]).status).toBe("failed");
+    expect(checkGrounding("ಎಂಡೋಸಲ್ಫಾನ್ ಸಿಂಪಡಿಸಿ [S1].", ["data"], ["S1"]).status).toBe("failed");
+    expect(checkGrounding("Spray Bordeaux mixture [S1].", ["Bordeaux"], ["S1"]).status).toBe("passed");
+  });
+
+  it("recognises restricted names, including an OCR slip, but not permitted products", () => {
+    expect(restrictedPesticides("drench with Endosulfan 35 EC and Th1met")).toEqual(["Phorate", "Endosulfan"]);
+    expect(restrictedPesticides("drench with 0.3% Calixin")).toEqual(["Tridemorph"]);
+    expect(restrictedPesticides("Bordeaux mixture, Mancozeb and Imidacloprid")).toEqual([]);
+  });
+});
+
+describe("Workers AI reasoning", () => {
+  it("switches off Qwen3 reasoning on the last user message only", () => {
+    const messages = [{ role: "system" as const, content: "s" }, { role: "user" as const, content: "q" }];
+    expect(withoutReasoning(messages, "@cf/qwen/qwen3-30b-a3b-fp8")[1].content).toBe("q\n/no_think");
+    expect(withoutReasoning(messages, "@cf/qwen/qwen3-30b-a3b-fp8")[0].content).toBe("s");
+    expect(withoutReasoning(messages, "@cf/google/gemma-4-26b-a4b-it")[1].content).toBe("q");
+  });
+});
+
 describe("answer composition", () => {
   it("uses grounded model text and keeps facts deterministic", async () => {
     const chat = mockChat("The latest Karnataka monthly Rashi price is 47,174.91 INR/quintal [S1].");
@@ -249,6 +410,39 @@ describe("document retrieval", () => {
   it("quotes FTS terms so user text cannot inject operators", () => {
     expect(ftsExpression(['mahali"', "OR", "NEAR(x"])).toBe('"mahali" OR "OR" OR "NEAR(x"');
     expect(ftsExpression([])).toBeNull();
+  });
+
+  it("withholds a passage naming a restricted pesticide and says which one", async () => {
+    const insert = (id: string, text: string) => [
+      env.DB.prepare(`INSERT INTO document_chunks (id, document_id, chunk_index, text, text_sha256, language) VALUES (?, 'doc-safety', ?, ?, ?, 'en')`).bind(id, Number(id.slice(-1)), text, id.padEnd(64, "0")),
+      env.DB.prepare(`INSERT INTO document_chunks_fts (chunk_id, title, heading, text) VALUES (?, 'Safety', '', ?)`).bind(id, text),
+    ];
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO documents (id, title, publisher, document_type, language, source_url, mime_type, content_sha256, fetched_at, ingested_at, ingestion_job_id, status)
+        VALUES ('doc-safety', 'Safety', 'CPCRI', 'cpcri_publication', 'en', 'https://example.org/s.pdf', 'application/pdf', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 't', 't', 'j', 'active')`),
+      ...insert("safety:1", "Spindle bug control: apply Phorate granules in the leaf axils."),
+      ...insert("safety:2", "Spindle bug control: keep the garden clean and remove affected leaves."),
+    ]);
+    const result = await searchDocuments(env.DB, "spindle bug control");
+    expect(result.withheld_pesticides).toEqual(["Phorate"]);
+    expect(result.hits.map((hit) => hit.chunk_id)).toEqual(["safety:2"]);
+  });
+
+  it("gives an English reader English passages and a Kannada reader Kannada ones first", async () => {
+    const insert = (id: string, language: string, text: string) => [
+      env.DB.prepare(`INSERT INTO document_chunks (id, document_id, chunk_index, text, text_sha256, language) VALUES (?, 'doc-lang', ?, ?, ?, ?)`).bind(id, Number(id.slice(-1)), text, id.padEnd(64, "0"), language),
+      env.DB.prepare(`INSERT INTO document_chunks_fts (chunk_id, title, heading, text) VALUES (?, 'Lang', '', ?)`).bind(id, text),
+    ];
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO documents (id, title, publisher, document_type, language, source_url, mime_type, content_sha256, fetched_at, ingested_at, ingestion_job_id, status)
+        VALUES ('doc-lang', 'Lang', 'CPCRI', 'cpcri_publication', 'mixed', 'https://example.org/l.pdf', 'application/pdf', 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 't', 't', 'j', 'active')`),
+      ...insert("lang:1", "en", "Mahali management in English."),
+      ...insert("lang:2", "kn", "mahali ಮಹಾಳಿ ನಿರ್ವಹಣೆ"),
+    ]);
+    const english = await searchDocuments(env.DB, "mahali", { language: "en" });
+    expect(english.hits.map((hit) => hit.language)).toEqual(["en"]);
+    const kannada = await searchDocuments(env.DB, "mahali", { language: "kn" });
+    expect(kannada.hits[0].language).toBe("kn");
   });
 
   it("finds documents by keyword without an embedding provider", async () => {

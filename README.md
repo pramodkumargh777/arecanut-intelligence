@@ -573,6 +573,16 @@ python3 -m pytest -q tests/data
 
 Deployment is not configured until a real D1 database, Worker secrets, Pages project, account ID and API token are provided.
 
+To start production with your local data, load it into the new empty database instead of applying migrations first. `npm run db:backup` files are not suitable for this: they omit indexes, triggers and views.
+
+```bash
+npm run db:prepare-import
+npx wrangler d1 execute ani-market-data --remote --file backups/production-import.sql --config api/wrangler.toml
+npx wrangler d1 migrations apply ani-market-data --remote --config api/wrangler.toml   # should report nothing to apply
+# After the Worker is deployed, rebuild the search index:
+curl -X POST https://YOUR-WORKER/api/v1/admin/documents/reindex -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
 1. Create a D1 database: `npx wrangler d1 create ani-market-data --config api/wrangler.toml`. Set the returned `database_id` in `api/wrangler.toml`.
 2. Apply migrations: `npx wrangler d1 migrations apply ani-market-data --remote --config api/wrangler.toml`.
 3. Optionally take a backup first (`npm run db:backup -- --remote`) on later deployments; see [docs/DATA_RETENTION_AND_BACKUP.md](docs/DATA_RETENTION_AND_BACKUP.md). Configure API secrets with `npx wrangler secret put INGESTION_TOKEN --config api/wrangler.toml` and `npx wrangler secret put ADMIN_TOKEN --config api/wrangler.toml`. Configure `CORS_ORIGIN`, `MIN_INDEX_MARKETS`, and `REFERENCE_STATE` as Worker vars.

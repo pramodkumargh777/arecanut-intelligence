@@ -3,6 +3,7 @@
  * vectors stored in document_chunks, fused with reciprocal-rank fusion. No external vector database is required.
  */
 import { expandTerms } from "./language";
+import { restrictedPesticides } from "./pesticides";
 import { CANONICAL_EMBEDDING_MODEL, type EmbeddingProvider } from "./providers";
 
 export type RetrievalOptions = {
@@ -13,6 +14,8 @@ export type RetrievalOptions = {
   /** Maximum embedded chunks scanned per query. Above this, move to Vectorize (see docs). */
   semanticScanLimit?: number;
   embedder?: EmbeddingProvider | null;
+  /** Passages in the reader's language come first. An English reader gets Kannada passages only if nothing else matches. */
+  language?: "en" | "kn";
 };
 
 export type RetrievalHit = {
@@ -26,6 +29,7 @@ export type RetrievalHit = {
   publication_date: string | null;
   publication_date_basis: string | null;
   fetched_at: string;
+  reuse_note: string | null;
   page_from: number | null;
   page_to: number | null;
   heading: string | null;
@@ -38,6 +42,8 @@ export type RetrievalHit = {
 
 export type RetrievalResult = {
   hits: RetrievalHit[];
+  /** Relevant passages not shown because they name a pesticide India has banned or restricted. */
+  withheld_pesticides: string[];
   mode: "hybrid" | "keyword" | "semantic" | "none";
   semantic_status: "used" | "not_configured" | "no_vectors" | "failed";
   semantic_error: string | null;
@@ -124,7 +130,7 @@ function normalise(vector: number[]): Float32Array {
 type ChunkRow = Omit<RetrievalHit, "matched_by" | "keyword_rank" | "semantic_similarity" | "score">;
 
 const CHUNK_COLUMNS = `c.id AS chunk_id, c.document_id, d.title, d.publisher, d.document_type, c.language, d.source_url,
-  d.publication_date, d.publication_date_basis, d.fetched_at, c.page_from, c.page_to, c.heading, c.text`;
+  d.publication_date, d.publication_date_basis, d.fetched_at, d.reuse_note, c.page_from, c.page_to, c.heading, c.text`;
 
 function typeFilter(types: string[] | undefined, binds: unknown[]) {
   if (!types?.length) return "";
@@ -200,7 +206,7 @@ export async function searchDocuments(db: D1Database, question: string, options:
   const terms = queryTerms(question);
   const corpus = await corpusStats(db);
   const empty = (semantic_status: RetrievalResult["semantic_status"], semantic_error: string | null = null): RetrievalResult => ({
-    hits: [], mode: "none", semantic_status, semantic_error, query_terms: terms, corpus,
+    hits: [], withheld_pesticides: [], mode: "none", semantic_status, semantic_error, query_terms: terms, corpus,
   });
   if (!corpus.chunks) return empty(options.embedder ? "no_vectors" : "not_configured");
 
@@ -246,9 +252,19 @@ export async function searchDocuments(db: D1Database, question: string, options:
     }
   });
 
+  const ranked = [...fused.values()].sort((a, b) => b.score - a.score);
+  const inLanguage = options.language ? ranked.filter((hit) => hit.language === options.language) : ranked;
+  const otherLanguage = options.language ? ranked.filter((hit) => hit.language !== options.language) : [];
+  const preferred = options.language === "en" && inLanguage.length ? inLanguage : [...inLanguage, ...otherLanguage];
+  const withheld = new Set<string>();
+  const ordered = preferred.filter((hit) => {
+    const named = restrictedPesticides(`${hit.heading ?? ""} ${hit.text}`);
+    named.forEach((name) => withheld.add(name));
+    return !named.length;
+  });
+
   const perDocument = new Map<string, number>();
-  const hits = [...fused.values()]
-    .sort((a, b) => b.score - a.score)
+  const hits = ordered
     .filter((hit) => {
       const count = perDocument.get(hit.document_id) ?? 0;
       if (count >= MAX_CHUNKS_PER_DOCUMENT) return false;
@@ -259,7 +275,7 @@ export async function searchDocuments(db: D1Database, question: string, options:
     .map((hit) => ({ ...hit, score: Number(hit.score.toFixed(5)) }));
 
   const mode = keyword.length && semantic.length ? "hybrid" : keyword.length ? "keyword" : semantic.length ? "semantic" : "none";
-  return { hits, mode, semantic_status: semanticStatus, semantic_error: semanticError, query_terms: terms, corpus };
+  return { hits, withheld_pesticides: [...withheld], mode, semantic_status: semanticStatus, semantic_error: semanticError, query_terms: terms, corpus };
 }
 
 export function pageLabel(hit: Pick<RetrievalHit, "page_from" | "page_to">): string | null {

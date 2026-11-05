@@ -38,3 +38,4 @@ htmlcov/
 # Forecasting experiment run artefacts (reproducible from config + data version)
 data-platform/forecasting/runs/
 mlruns/
+data-platform/documents/.ocr-cache/
