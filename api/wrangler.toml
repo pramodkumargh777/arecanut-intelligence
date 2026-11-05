@@ -18,15 +18,17 @@ TEMP_RETENTION_DAYS = "7"
 # ARCHIVE_OFFLOAD_MIN_BYTES = "262144"
 # AI assistant (docs/AI_ASSISTANT.md). "none" = rule-based answers from verified data, no language model.
 # Options: none | ollama (local development) | workers_ai (requires the commented [ai] binding below).
-ASSISTANT_LLM_PROVIDER = "none"
-ASSISTANT_EMBEDDING_PROVIDER = "none"
+ASSISTANT_LLM_PROVIDER = "workers_ai"
+ASSISTANT_EMBEDDING_PROVIDER = "workers_ai"
 ASSISTANT_RATE_LIMIT_PER_HOUR = "30"
 ASSISTANT_LOG_QUESTIONS = "false"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "ani-market-data"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "d84a50a3-421f-4bee-a791-9636c94f4b93"
+# Keeps local development on its existing local database.
+preview_database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
 # Optional R2 evidence archive. Local development and tests work without it: archive endpoints
@@ -40,5 +42,5 @@ migrations_dir = "migrations"
 # Optional Workers AI binding for the assistant (free daily neuron allocation; paid beyond it).
 # Set ASSISTANT_LLM_PROVIDER / ASSISTANT_EMBEDDING_PROVIDER = "workers_ai" when enabled.
 # Steps are in docs/AI_ASSISTANT.md. Run `wrangler login` first: with this binding, `wrangler dev` connects to Cloudflare.
-# [ai]
-# binding = "AI"
+[ai]
+binding = "AI"
