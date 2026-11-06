@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "./index";
 import { calendarDateToTime, completedMonthIST, shiftCalendarMonth, timestampToTime } from "../../shared/dates";
+import { bearerMatches } from "./auth";
 
 export const FORECAST_VERSION = "monthly-baselines-v1";
 export const FORECAST_STATE = "Karnataka";
@@ -302,7 +303,7 @@ export async function refreshChangedForecasts(db: D1Database, now = new Date(), 
 
 forecastRoutes.post("/admin/forecasts/evaluate", async (c) => {
   const token = c.env.ADMIN_TOKEN;
-  if (!token || c.req.header("Authorization") !== `Bearer ${token}`) {
+  if (!bearerMatches(c.req.header("Authorization"), token)) {
     return c.json({ error: "A valid reviewer token is required." }, 401);
   }
   const parsed = requestSchema.safeParse(await c.req.json().catch(() => null));

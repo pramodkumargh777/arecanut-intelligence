@@ -1,6 +1,7 @@
 {
   "name": "arecanut-intelligence",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": "^22.18.0 || >=24.0.0"
   },

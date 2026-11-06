@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "./index";
+import { bearerMatches } from "./auth";
 
 const nonnegative = z.number().finite().min(0).max(1e12);
 export const calculationSchema = z.object({
@@ -92,7 +93,7 @@ decisionRoutes.post("/decisions/calculate", async (c) => {
   return c.json({ inputs: input.data, price: snapshot, results: calculateDecision(input.data, snapshot), formula_version: FORMULA_VERSION });
 });
 decisionRoutes.post("/admin/decisions", async (c) => {
-  if (!c.env.ADMIN_TOKEN || c.req.header("Authorization") !== `Bearer ${c.env.ADMIN_TOKEN}`) return c.json({ error: "A valid reviewer token is required to store private inputs." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required to store private inputs." }, 401);
   const input = calculationSchema.safeParse(await c.req.json().catch(() => null));
   if (!input.success) return c.json({ error: "Invalid calculation inputs." }, 400);
   const snapshot = await resolvePrice(c.env.DB, input.data.price, c.env.REFERENCE_STATE ?? "Karnataka");
@@ -104,7 +105,7 @@ decisionRoutes.post("/admin/decisions", async (c) => {
   return c.json({ id, name: input.data.name, created_at: created, inputs: input.data, price: snapshot, results, formula_version: FORMULA_VERSION }, 201);
 });
 decisionRoutes.get("/admin/decisions", async (c) => {
-  if (!c.env.ADMIN_TOKEN || c.req.header("Authorization") !== `Bearer ${c.env.ADMIN_TOKEN}`) return c.json({ error: "A valid reviewer token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   const result = await c.env.DB.prepare("SELECT * FROM decision_calculations ORDER BY created_at DESC LIMIT 100").all<{
     id: string; name: string; created_at: string; inputs_json: string; price_snapshot_json: string; results_json: string; formula_version: string;
   }>();

@@ -7,6 +7,7 @@ import {
 } from "./archive";
 import { rebuildSummaries } from "./summaries";
 import { resolveCommodity } from "./commodity-routes";
+import { bearerMatches } from "./auth";
 
 /** Reviewer-only operational endpoints: ingestion jobs, error log, storage/archive and reprocessing controls. */
 export const operationsRoutes = new Hono<Env>();
@@ -15,7 +16,7 @@ operationsRoutes.use("/admin/*", async (c, next) => {
   const path = new URL(c.req.url).pathname;
   const owned = ["/admin/ingestion/", "/admin/operations/", "/admin/storage/", "/admin/summaries/", "/admin/archive/", "/admin/retention/"]
     .some((prefix) => path.includes(prefix));
-  if (owned && (!c.env.ADMIN_TOKEN || c.req.header("Authorization") !== `Bearer ${c.env.ADMIN_TOKEN}`)) {
+  if (owned && (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN))) {
     return c.json({ error: "A valid reviewer token is required." }, 401);
   }
   await next();

@@ -9,6 +9,7 @@ import { cooperativeSourceStatus, permissionLabel, permissionUpdate, readCoopera
 import { publishableUnit } from "./cooperative-units";
 import { backfillTss, refreshTss, validTssDate } from "./tss";
 import { refreshTumcos } from "./tumcos";
+import { bearerMatches } from "./auth";
 
 export const cooperativeRoutes = new Hono<Env>();
 const COOPERATIVE_DEFAULT_WINDOW_DAYS = 366;
@@ -39,7 +40,7 @@ async function cooperativeWindow(db: D1Database, source: string, commodity: stri
 }
 const sourceSchema = z.enum(["mamcos", "tss", "tumcos"]);
 const commoditySchema = z.enum(["arecanut", "black_pepper"]);
-const authorized = (header: string | undefined, token: string | undefined) => Boolean(token && header === `Bearer ${token}`);
+const authorized = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
 const DEFAULT_VARIETY: Record<z.infer<typeof sourceSchema>, string> = { mamcos: "RASHI EDI", tss: "RASHI", tumcos: "areca" };
 
 cooperativeRoutes.get("/cooperative/prices", async (c) => {

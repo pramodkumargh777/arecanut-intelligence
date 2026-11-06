@@ -8,9 +8,10 @@ import {
   parseReportingYear, preferredDays, publishedRules, revisionHistory, ruleStatus, seasonalSummary, toTonnes,
   type EstimateRow, type FieldReport, type ReviewRow, type RuleRow, type WeatherDay,
 } from "./supply";
+import { bearerMatches } from "./auth";
 
 export const supplyRoutes = new Hono<Env>();
-const bearer = (header: string | undefined, token: string | undefined) => Boolean(token && header === `Bearer ${token}`);
+const bearer = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
 const COMMODITY = "arecanut";
 const sha256 = z.string().regex(/^[0-9a-f]{64}$/);
 const https = z.string().url().max(500).refine((value) => value.startsWith("https://"), "Must be an https URL.");
