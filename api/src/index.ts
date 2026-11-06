@@ -9,11 +9,12 @@ import { configuredAttempts } from "./cooperative-fetch";
 import { readCooperativeSource, recordBlockedFetch, schedulingDecision } from "./cooperative-sources";
 import { refreshTss } from "./tss";
 import { refreshTumcos, TUMCOS_URL } from "./tumcos";
-import { calendarTodayIST } from "../../shared/dates";
+import { calendarDateToTime, calendarTodayIST, DAY_MS } from "../../shared/dates";
 import { historyRoutes, monthRange } from "./history";
 import { decisionRoutes } from "./decisions";
 import { intelligenceRoutes, refreshSirsiWeather, refreshPib } from "./intelligence-routes";
-import { forecastRoutes } from "./forecast";
+import { autoPublishPending } from "./cooperative-auto-publish";
+import { forecastRoutes, refreshChangedForecasts } from "./forecast";
 import { commodityRoutes, resolveCommodity } from "./commodity-routes";
 import { priceBasisForSource } from "../../shared/commodities";
 import { sourceStatusRoutes } from "./source-status";
@@ -36,6 +37,8 @@ export type Env = {
     MAMCOS_SCHEDULE_ENABLED?: string;
     TSS_SCHEDULE_ENABLED?: string;
     TUMCOS_SCHEDULE_ENABLED?: string;
+    /** "true" publishes scheduled quotations that pass every check; the rest wait in the review queue. */
+    COOPERATIVE_AUTO_PUBLISH?: string;
     COOPERATIVE_FETCH_ATTEMPTS?: string;
     INTELLIGENCE_SCHEDULE_ENABLED?: string;
     /** Optional R2 evidence archive. Absent locally and on deployments without a bucket. */
@@ -706,12 +709,16 @@ app.post("/admin/observations/:id/review", async (c) => {
   return c.json({ success: true, status });
 });
 
+/** 20:00 IST, after the day's tenders. Collects cooperative rates only; the 09:00 IST run does everything else. */
+export const EVENING_CRON = "30 14 * * *";
+
 export default {
   fetch: app.fetch,
-  async scheduled(_event: ScheduledEvent, env: Env["Bindings"], _ctx: ExecutionContext) {
+  async scheduled(event: ScheduledEvent, env: Env["Bindings"], _ctx: ExecutionContext) {
     const now = new Date();
     const errors: unknown[] = [];
-    if (env.INTELLIGENCE_SCHEDULE_ENABLED === "true") {
+    const evening = event.cron === EVENING_CRON;
+    if (!evening && env.INTELLIGENCE_SCHEDULE_ENABLED === "true") {
       if (env.OPEN_METEO_ENABLED !== "false") {
         try { await refreshSirsiWeather(env.DB); }
         catch (error) { console.error("Scheduled Sirsi weather refresh failed", error); errors.push(error); }
@@ -722,10 +729,13 @@ export default {
       } catch (error) { console.error("Scheduled official bulletin refresh failed", error); errors.push(error); }
     }
     const attempts = configuredAttempts(env.COOPERATIVE_FETCH_ATTEMPTS);
+    // TSS is requested by date. At 09:00 IST today's tenders have not happened, so the morning run closes out yesterday.
+    const today = calendarTodayIST(now);
+    const tssDate = evening ? today : new Date(calendarDateToTime(today) - DAY_MS).toISOString().slice(0, 10);
     const cooperative = [
       { key: "mamcos" as const, flag: env.MAMCOS_SCHEDULE_ENABLED, url: MAMCOS_URL, run: () => refreshMamcos(env.DB, { mode: "scheduled", attempts }) },
       { key: "tss" as const, flag: env.TSS_SCHEDULE_ENABLED, url: "https://webapi.tssindia.in/getrateshomepage",
-        run: () => refreshTss(env.DB, calendarTodayIST(now), { mode: "scheduled", attempts }) },
+        run: () => refreshTss(env.DB, tssDate, { mode: "scheduled", attempts }) },
       { key: "tumcos" as const, flag: env.TUMCOS_SCHEDULE_ENABLED, url: TUMCOS_URL, run: () => refreshTumcos(env.DB, { mode: "scheduled", scope: "recent", attempts }) },
     ];
     for (const source of cooperative) {
@@ -739,6 +749,19 @@ export default {
         }
         await source.run();
       } catch (error) { console.error(`Scheduled ${source.key} refresh failed`, error); errors.push(error); }
+      if (env.COOPERATIVE_AUTO_PUBLISH !== "true") continue;
+      // Also runs after a partial failure, so rows from locations that succeeded still reach readers.
+      try {
+        const { published, held } = await autoPublishPending(env.DB, source.key, now);
+        if (published || held.length) console.log(`${source.key}: ${published} auto-published, ${held.length} held for review`, held.slice(0, 5));
+      } catch (error) { console.error(`Scheduled ${source.key} auto-publish failed`, error); errors.push(error); }
+    }
+    if (evening) {
+      try { await refreshAllDirtySummaries(env.DB); }
+      catch (error) { await logOperationalError(env.DB, "summary_cache", null, error instanceof Error ? error.message : String(error)); }
+      for (const error of errors) await logOperationalError(env.DB, "scheduled", null, error instanceof Error ? error.message : String(error));
+      if (errors.length) throw new AggregateError(errors, "Source refresh schedule failed.");
+      return;
     }
     for (const offset of [2, 1]) {
       try {
@@ -755,6 +778,9 @@ export default {
     } catch (error) { maintenance.push(["summary_cache", error]); }
     try {
       await reconcileForecastOutcomes(env.DB);
+    } catch (error) { maintenance.push(["forecasting", error]); }
+    try {
+      await refreshChangedForecasts(env.DB, now);
     } catch (error) { maintenance.push(["forecasting", error]); }
     if (env.ARCHIVE_SCHEDULE_ENABLED === "true") {
       try {

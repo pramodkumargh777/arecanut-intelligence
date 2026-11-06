@@ -28,6 +28,7 @@ User question (English or Kannada)
 | `api/src/assistant/grounding.ts` | Injection detection, untrusted-text sanitising, grounding check |
 | `api/src/assistant/places.ts` | Reviewed list of places with Kannada spellings, used by the grounding check |
 | `api/src/assistant/pesticides.ts` | Banned and restricted pesticides, withheld from retrieval and rejected in model text |
+| `api/src/assistant/diseases.ts` | Arecanut diseases and pests with Kannada names, used to keep advice with its disease. Have a Kannada-reading agronomist check it |
 | `api/src/assistant/compose.ts` | Evidence building, prompt, citation numbering, rule-based fallback |
 | `api/src/assistant/routes.ts` | HTTP endpoints, rate limiting, audit log |
 | `api/migrations/0019_assistant_documents.sql` | `documents`, `document_chunks`, `document_chunks_fts`, `assistant_interactions`, `assistant_rate_limits` |
@@ -49,7 +50,7 @@ User question (English or Kannada)
 | `get_weather` | `/supply/weather` (observations, forecasts and warnings, labelled by data type) |
 | `get_advisories` | `/supply/risk/advisories` (only expert-approved rules) |
 | `calculate_net_realization` | Deterministic calculator using the user's own inputs |
-| `calculate_sell_hold` | Deterministic hold scenario using the user's own assumptions; no probability is assigned |
+| `calculate_sell_hold` | What the Karnataka monthly price did after this calendar month in past years (`shared/hold-history.ts`), plus a deterministic hold scenario from the user's own assumptions; no probability is assigned |
 | `search_industry_news` | `/intelligence/news` (captured official notices and bulletins) |
 | `search_agricultural_documents` | CPCRI, DASD and government document passages |
 
@@ -65,9 +66,14 @@ When a calculator lacks inputs it returns `needs_input` and lists them. It never
   - names a place that is not in the evidence (`places.ts`, plus words shaped like a place name such as …ಪುರ or …halli), or states a branch price in a sentence that does not name that branch;
   - names a banned or restricted pesticide (`pesticides.ts`);
   - repeats a number found only in a scanned passage;
-  - answers a Kannada question in another language.
+  - answers a Kannada question in another language;
+  - calls a price today's, current or "now" when no price in the data is from today;
+  - ranks prices across sources. With several sources in the data, each sentence calling a price best, highest or lowest must name exactly one source, and every source needs its own ranking.
 
   Rejected text is replaced by the rule-based interpretation, and the UI says why. For document questions that interpretation quotes the best matching passages word for word, with their citations.
+- **Every price answer states its dates.** `interpretation.data_dates` is built by rules, never by the model, and gives each feed's reporting date and the age of daily prices (for example `TSS 3 Nov 2026 (3 days old)`).
+- **Advice stays with its disease.** A question naming a disease in `diseases.ts` only receives passages naming that disease, cut where the next disease starts. If none exists, the answer says so instead of offering another disease's advice. Questions that name no listed disease are not filtered. Grounding does not check that a sentence is supported by its citation, so this filter is what prevents those errors.
+- **Cooperative labels are matched to growers' words.** `COOPERATIVE_VARIETY_LABELS` in `tools.ts` shows MAMCOS `RASHI EDI` and `NEW RASHIEDI` for "Rashi". Each label keeps its own rows and name, nothing is averaged across labels, and the answer states the mapping. Official AGMARKNET calculations stay exact-variety. A question naming a place shows only that place's branches.
 - **Withdrawn pesticides are not quoted.** Older booklets recommend products India has since banned or restricted, such as Phorate, Endosulfan and Tridemorph (Calixin). Retrieval withholds any passage naming one, and the answer says which were withheld and where to get current advice. Review `pesticides.ts` against the current CIB&RC list.
 - **Scanned digits are not trusted.** OCR misreads digits in dose tables, and scanning at higher resolution did not fix this. Passages read by OCR are marked for the model, the model may not repeat their numbers, and readers are told to check any dose on the cited page.
 - **Works without an LLM.** With `ASSISTANT_LLM_PROVIDER=none` (the default), or when the model is down, times out or fails grounding, the answer is still built from facts, sources, assumptions and missing-data notes.

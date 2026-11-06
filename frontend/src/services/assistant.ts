@@ -44,6 +44,7 @@ export type AssistantAnswer = {
     generated_by: "llm" | "rules";
     note: string;
     grounding: { status: "passed" | "failed"; reasons: string[]; ungrounded_numbers: number[]; unknown_citations: string[] } | null;
+    data_dates: string | null;
   };
   assumptions: string[];
   uncertainty: string[];

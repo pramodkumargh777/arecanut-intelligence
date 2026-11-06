@@ -9,7 +9,10 @@ import { defaultGeography } from "../services/intelligence";
 import { formatTimestampIST } from "../../../shared/dates";
 const domains = ["production", "weather", "trade", "policy", "news", "quality"] as const;
 export function IntelligenceNavigation({ current }: { current: string }) {
-  return <nav className="module-navigation" aria-label="Intelligence modules">{domains.map((domain) => <Link key={domain} to={`/intelligence/${domain}`} aria-current={current === domain ? "page" : undefined}>{domain[0].toUpperCase() + domain.slice(1)}</Link>)}</nav>;
+  // No inspection report has been published yet, so the tab appears with the first one. Its page stays reachable by link.
+  const inspections = useQuery({ queryKey: ["quality-records-count"], queryFn: () => api.qualityInspections() });
+  const visible = domains.filter((domain) => domain !== "quality" || current === "quality" || Boolean(inspections.data?.data.length));
+  return <nav className="module-navigation" aria-label="Intelligence modules">{visible.map((domain) => <Link key={domain} to={`/intelligence/${domain}`} aria-current={current === domain ? "page" : undefined}>{domain[0].toUpperCase() + domain.slice(1)}</Link>)}</nav>;
 }
 const number = (value: number | null) => value === null ? "Not reported" : value.toLocaleString("en-IN", { maximumFractionDigits: 3 });
 export function exportModule(rows: (string | number | null)[][], name: string) {

@@ -135,7 +135,7 @@ export function createAssistantRoutes(caller: ApiCaller) {
       semanticThreshold: semanticThreshold(c.env), now,
     };
     const results: ToolResult[] = await Promise.all(plan.map((step) => runTool(step.tool, step.args, ctx)));
-    const answer = await composeAnswer({ question, language, results, chat, injectionFlags, llmDisabled: parsed.data.use_llm === false });
+    const answer = await composeAnswer({ question, language, results, chat, injectionFlags, llmDisabled: parsed.data.use_llm === false, now });
 
     const durationMs = Date.now() - started;
     const interactionId = crypto.randomUUID();

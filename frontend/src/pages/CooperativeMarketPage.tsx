@@ -20,7 +20,7 @@ const rupees = (value: number | null | undefined) => value == null ? "—" : `�
 const dateText = (value: string | null | undefined) => value ? formatCalendarDate(value) : "Unavailable";
 const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
 const modes: Record<string, { title: string; description: string }> = {
-  "/": { title: "Arecanut market overview", description: "Published cooperative branch quotations, with reporting dates and source evidence." },
+  "/overview": { title: "Arecanut market overview", description: "Published cooperative branch quotations, with reporting dates and source evidence." },
   "/prices": { title: "Market prices", description: "Explore reviewed cooperative minimum, maximum and reported average prices." },
   "/analytics": { title: "Price analytics", description: "Source-specific daily medians of branch averages. Never mixed with official modal prices." },
   "/compare": { title: "Market comparison", description: "Compare cooperative branches for the same variety and date. Branches are not APMC market mappings." },
@@ -36,9 +36,15 @@ export function MarketDataPage({ official }: { official: ReactNode }) {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const { commodity } = useCommodity();
-  const feeds = marketFeeds(commodity);
-  const feed = params.get("feed") ?? feeds[0] ?? "";
-  const supported = (feeds as string[]).includes(feed);
+  // The official daily feed is offered only once it has published prices; until then it would be an empty page.
+  const officialVarieties = useQuery({ queryKey: ["varieties", commodity?.code], queryFn: () => api.varieties(commodity?.code ?? ""), enabled: Boolean(commodity) });
+  const allFeeds = marketFeeds(commodity);
+  const withData = allFeeds.filter((value) => value !== "official" || !officialVarieties.isSuccess || officialVarieties.data.length > 0);
+  const feeds = officialVarieties.isLoading ? allFeeds.filter((value) => value !== "official") : withData.length ? withData : allFeeds;
+  const requestedFeed = params.get("feed");
+  const hiddenOfficial = requestedFeed === "official" && !officialVarieties.isLoading && !feeds.includes("official");
+  const feed = !requestedFeed || hiddenOfficial ? feeds[0] ?? "" : requestedFeed;
+  const supported = (feeds as string[]).includes(feed) || (feed === "official" && officialVarieties.isLoading);
   const name = commodity?.display_name ?? "the selected commodity";
   return <div className="page-stack">
     <section className="filter-bar source-bar" aria-label="Market data source"><label className="filter-control"><span>Data source / price type</span>
@@ -107,7 +113,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   // Only the observation table honours a custom range; the API keeps headline values anchored to the latest date.
   const range = location.pathname === "/prices" && !(from && to && from > to) ? { from, to } : {};
   const query = useQuery({ queryKey: ["cooperative", source, commodity, selected, range.from ?? "", range.to ?? ""], queryFn: () => api.cooperativePrices(source, selected || undefined, commodity, range), refetchInterval: 60_000 });
-  const mode = modes[location.pathname] ?? modes["/"];
+  const mode = modes[location.pathname] ?? modes["/overview"];
   const data = query.data;
   const coverage = data?.minimum_branch_coverage ?? 3;
   const rows = data?.data ?? [];
@@ -165,12 +171,12 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
       }}>{!data?.varieties.length && <option>No published varieties</option>}{data?.varieties.map((variety) => <option key={variety}>{variety}</option>)}</select></label>
     </section>
     <div className="data-disclosure"><span>{sourceName} reported averages{commodity === "black_pepper" ? " · black pepper" : ""} · {source === "tumcos" ? "INR / quintal — operator assumption (source page labels \"kg\")" : source === "tss" ? "INR / quintal — operator assumption (source publishes no unit)" : "INR / quintal"}. Not official APMC modal prices. Reporting dates are preserved per branch. No variety aliases are merged.{data?.permission ? ` Source permission: ${data.permission.label}.` : ""}</span></div>
-    {location.pathname === "/" && <IntelligenceScorecard feed={source} variety={selected} />}
+    {location.pathname === "/overview" && <IntelligenceScorecard feed={source} variety={selected} />}
     {query.isLoading ? <LoadingState label="Loading cooperative quotations" /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !rows.length ? <EmptyState title="No reviewed cooperative quotations published">
       {data?.publication.blocked_reason ? <>{data.publication.blocked_reason} {data.publication.latest_archived_reporting_date ? `Latest archived market reporting date: ${data.publication.latest_archived_reporting_date}.` : "No reporting dates archived yet."} </> : null}
       <Link to="/data-quality">Fetch and review {sourceName} quotations in Data quality</Link>. {pending > 0 ? `${pending} quotations await inspection.` : "Nothing is substituted for missing prices."}
     </EmptyState> : <>
-      {location.pathname === "/" && <>
+      {location.pathname === "/overview" && <>
         <section className="snapshot-grid" aria-label="Cooperative snapshot">
           <article className="snapshot-card featured-card"><div className="card-kicker">{singleLocation ? "LATEST REPORTED AVERAGE" : "BRANCH-AVERAGE BENCHMARK"} · {data?.variety}</div><div className="snapshot-value">{money(headlinePrice)}<small>/ quintal</small></div>{singleLocation ? <p>{dateText(data?.latest_reporting_date)} · {comparison[0]?.branch ?? "one location"}</p> : <p>{benchmark ? `${dateText(benchmark.reporting_date)} · ${plural(benchmark.branch_count, "branch", "branches")}` : "No date has enough branches yet"}</p>}{!singleLocation && benchmark && benchmark.reporting_date !== data?.latest_reporting_date && <p>Newer reports on {dateText(data?.latest_reporting_date)} come from {plural(comparison.length, "branch", "branches")}, below the {coverage}-branch rule.</p>}</article>
           <article className="snapshot-card"><div className="card-kicker">{singleLocation ? "REPORTED AVERAGES" : "BRANCHES REPORTING"}</div><div className="snapshot-value">{singleLocation ? rows.length : comparison.length}</div><p>{singleLocation ? `Published for ${data?.variety} so far` : `${dateText(data?.latest_reporting_date)} · ${coverage} needed for a benchmark`}</p></article>
@@ -219,7 +225,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
         <article className="snapshot-card"><div className="card-kicker">PERIOD HIGH / LOW</div><div className="snapshot-value">{rupees(benchmarkValues.length ? Math.max(...benchmarkValues) : null)}</div><p>Low: {rupees(benchmarkValues.length ? Math.min(...benchmarkValues) : null)}</p></article>
         <article className="snapshot-card"><div className="card-kicker">PRICE DISPERSION</div><div className="snapshot-value">{rupees(dispersion)}</div><p>Population standard deviation, not forecast uncertainty</p></article>
       </section>}
-      {(location.pathname === "/" || location.pathname === "/analytics") && <section className="panel"><div className="panel-heading"><div><h2>{sourceName} {singleLocation ? "reported-average history" : "branch-average benchmark"}</h2><p>{singleLocation ? "One location and exact variety. Not a benchmark or forecast." : `${plural(series.length, "qualifying reporting date")} · At least ${coverage} branches per date · Constituent coverage varies`}</p></div>
+      {(location.pathname === "/overview" || location.pathname === "/analytics") && <section className="panel"><div className="panel-heading"><div><h2>{sourceName} {singleLocation ? "reported-average history" : "branch-average benchmark"}</h2><p>{singleLocation ? "One location and exact variety. Not a benchmark or forecast." : `${plural(series.length, "qualifying reporting date")} · At least ${coverage} branches per date · Constituent coverage varies`}</p></div>
         {singleLocation && <label className="filter-control"><span>Chart location</span><select value={selectedChartBranch} onChange={(event) => setChartBranch(event.target.value)}>{branches.map((value) => <option key={value}>{value}</option>)}</select></label>}</div>
         {singleLocation ? <div className="monthly-details"><Suspense fallback={<LoadingState />}><PriceChart label={`${sourceName} · ${selectedChartBranch} · ${data?.variety} · Reported average`} quotePoints={quotePoints} unitNote={assumedUnit ? " — operator assumption" : undefined} /></Suspense></div>
           : !series.length ? <EmptyState title="Insufficient same-date branch coverage" /> : <div className="monthly-details"><Suspense fallback={<LoadingState />}><PriceChart label={`${sourceName} branch-average benchmark`} averagePoints={series} showStats={location.pathname !== "/analytics"} unitNote={assumedUnit ? " — operator assumption" : undefined} /></Suspense>
@@ -235,7 +241,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
           <div className="chart-foot"><SourceLabel>{sourceName} · {data?.window ? `${formatCalendarDate(data.window.from)} – ${formatCalendarDate(data.window.to)}` : "current window"}</SourceLabel></div></article>
         <article className="panel chart-wide"><div className="panel-heading"><div><h2>Seasonal and year-on-year analysis</h2><p>Requires multi-year history</p></div></div><div className="monthly-details">
           <p>{sourceName} snapshots cover {dates.length} reporting date{dates.length === 1 ? "" : "s"}{dates.length ? ` (${formatCalendarDate(dates.at(-1)!)} – ${formatCalendarDate(dates[0])})` : ""}. Seasonal indices and year-on-year comparisons are not computed from such a short span.</p>
-          <p>Multi-year seasonal, year-on-year and volatility analysis is available for the Karnataka monthly AGMARKNET series in <Link to="/analytics?feed=official">Official analytics</Link> and <Link to="/history">Historical analytics</Link>. Price bases are kept separate; those figures are arrival-weighted modal averages, not cooperative averages.</p>
+          <p>Multi-year seasonal, year-on-year and volatility analysis is available for the Karnataka monthly AGMARKNET series in <Link to="/history">Historical analytics</Link>. Price bases are kept separate; those figures are arrival-weighted modal averages, not cooperative averages.</p>
         </div></article>
       </section>}
       {location.pathname === "/prices" && <section className="filter-bar">

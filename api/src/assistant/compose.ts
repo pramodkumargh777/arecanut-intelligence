@@ -4,6 +4,7 @@
  * when it passes the grounding check; otherwise a rule-based interpretation is used.
  */
 import { checkGrounding, extractNumbers, sanitizeUntrusted, type GroundingResult } from "./grounding";
+import { calendarDateToTime, calendarTodayIST, DAY_MS, formatCalendarDate, formatCalendarMonth, formatPeriodKannada } from "../../../shared/dates";
 import { STRINGS, type Language } from "./language";
 import { ProviderError, type ChatProvider } from "./providers";
 import { queryTerms } from "./retrieval";
@@ -19,7 +20,8 @@ export type AssistantAnswer = {
   language: Language;
   tools: { tool: ToolName; status: ToolResult["status"]; title: string; summary: string; reporting_period: string | null; args: Record<string, unknown> }[];
   facts: (Fact & { citation: string; tool: ToolName })[];
-  interpretation: { text: string; generated_by: "llm" | "rules"; note: string; grounding: GroundingResult | null };
+  /** `data_dates` is built by rules, never by the model, so a price answer always says how old its prices are. */
+  interpretation: { text: string; generated_by: "llm" | "rules"; note: string; grounding: GroundingResult | null; data_dates: string | null };
   assumptions: string[];
   uncertainty: string[];
   missing: string[];
@@ -97,6 +99,38 @@ export function factLine(fact: Fact, label: string): string {
 
 const unique = (values: string[]) => [...new Set(values.filter(Boolean))];
 
+const DAILY_PERIOD = /^\d{4}-\d{2}-\d{2}$/;
+const MONTHLY_PERIOD = /^\d{4}-\d{2}$/;
+
+function periodText(period: string, language: Language): string {
+  if (language === "kn") return formatPeriodKannada(period);
+  return DAILY_PERIOD.test(period) ? formatCalendarDate(period) : formatCalendarMonth(period);
+}
+
+function ageText(date: string, today: string, language: Language): string {
+  const days = Math.round((calendarDateToTime(today) - calendarDateToTime(date)) / DAY_MS);
+  if (language === "kn") return days <= 0 ? "ಇಂದಿನದು" : days === 1 ? "ನಿನ್ನೆಯದು" : `${days} ದಿನಗಳ ಹಿಂದಿನದು`;
+  return days <= 0 ? "today" : days === 1 ? "1 day old" : `${days} days old`;
+}
+
+/** One line per feed saying which date its prices are from, and how old daily prices are. Null when no market price is shown. */
+export function dataDates(facts: Pick<Fact, "source_name" | "reporting_period">[], language: Language, today: string): string | null {
+  const periods = new Map<string, string[]>();
+  for (const fact of facts) {
+    const period = fact.reporting_period;
+    if (!fact.source_name || !period || !(DAILY_PERIOD.test(period) || MONTHLY_PERIOD.test(period))) continue;
+    periods.set(fact.source_name, [...(periods.get(fact.source_name) ?? []), period]);
+  }
+  if (!periods.size) return null;
+  const parts = [...periods].map(([source, values]) => {
+    const sorted = [...new Set(values)].sort();
+    const first = sorted[0], last = sorted.at(-1)!;
+    const range = first === last ? periodText(last, language) : `${periodText(first, language)} – ${periodText(last, language)}`;
+    return `${source} ${range}${DAILY_PERIOD.test(last) ? ` (${ageText(last, today, language)})` : ""}`;
+  });
+  return `${language === "kn" ? "ಬೆಲೆಗಳ ದಿನಾಂಕ" : "Price dates"}: ${parts.join("; ")}.`;
+}
+
 const QUOTE_LENGTH = 420;
 const QUOTED_PASSAGES = 3;
 const QUOTE_INTRO: Record<Language, string> = {
@@ -139,6 +173,7 @@ export function ruleInterpretation(results: ToolResult[], language: Language, ci
     } else {
       lines.push(`${result.title}: ${result.summary}`);
     }
+    lines.push(...(result.highlights ?? []));
   }
   return lines.join("\n");
 }
@@ -154,6 +189,7 @@ export function buildEvidence(results: ToolResult[], citations: Map<string, Cita
       if (result.tool === "search_agricultural_documents") return;
       lines.push(`- ${factLine(fact, citations.get(fact.source_key)?.ref ?? "?")}`);
     });
+    (result.highlights ?? []).forEach((item) => lines.push(`- ${item}`));
     result.assumptions.forEach((item) => lines.push(`- assumption: ${item}`));
     result.uncertainty.forEach((item) => lines.push(`- uncertainty: ${item}`));
     result.missing.forEach((item) => lines.push(`- missing: ${item}`));
@@ -189,7 +225,10 @@ Rules you must follow:
 6. If DATA says something is missing, say so plainly. Do not fill gaps from your own knowledge.
 7. Keep variety, market, geography and source names exactly as written. Do not merge different sources or price bases. Never attach a place named in the question to a value DATA reports for a different geography (for example, a Karnataka state value is not a Shivamogga value).
 8. A passage marked (SCANNED) was read from a scan and its digits may be wrong. Never restate a dose, quantity or other number from it; describe the practice and cite the label so the reader can check the page.
-9. Write at most 120 words of plain text in the requested language. No headings, no lists of all numbers – the user already sees the data table.`;
+9. Write at most 120 words of plain text in the requested language. No headings, no lists of all numbers – the user already sees the data table.
+10. Write each price's own reporting date or month beside it. Never call a price today's, current or "now", even if the question does; write "latest reported on" and the date, because the reader acts on how recent it is.
+11. Never call a price the best, highest or lowest across different sources; they are different measures. If asked for the best price, give one sentence per source, naming that source and only its own branches, and say that sources are not comparable.
+12. For a question about a disease or pest, use only passages about that disease or pest on arecanut. Advice for another disease or crop does not apply, so leave it out.`;
 
 export function buildPrompt(question: string, language: Language, evidence: { data: string; documents: string[] }, labels: string[] = []) {
   const languageName = language === "kn"
@@ -219,6 +258,8 @@ export type ComposeOptions = {
   maxTokens?: number;
   /** The client asked for a data-only answer. */
   llmDisabled?: boolean;
+  /** Override for tests. */
+  now?: Date;
 };
 
 export async function composeAnswer(options: ComposeOptions): Promise<AssistantAnswer> {
@@ -230,8 +271,12 @@ export async function composeAnswer(options: ComposeOptions): Promise<AssistantA
   const evidence = buildEvidence(results, citations);
   // Only citable evidence is worth explaining; "missing data" notes alone are already stated by the rule-based text.
   const hasData = results.some((result) => result.facts.length || result.excerpts?.length);
+  const today = calendarTodayIST(options.now ?? new Date());
+  const priceFacts = facts.filter((fact) => fact.source_name);
+  const noPriceFromToday = priceFacts.length > 0 && !priceFacts.some((fact) => fact.reporting_period === today);
+  const data_dates = dataDates(facts, language, today);
 
-  let interpretation: AssistantAnswer["interpretation"] = { text: ruleInterpretation(results, language, citations, question), generated_by: "rules", note: strings.interpretation_rules, grounding: null };
+  let interpretation: AssistantAnswer["interpretation"] = { text: ruleInterpretation(results, language, citations, question), generated_by: "rules", note: strings.interpretation_rules, grounding: null, data_dates };
   let llm: AssistantAnswer["llm"] = options.llmDisabled
     ? { status: "disabled", provider: null, model: null, reason: "The request asked for a data-only answer (use_llm=false)." }
     : { status: "not_configured", provider: chat?.name ?? null, model: chat?.model ?? null, reason: chat ? null : "No language-model provider is configured." };
@@ -246,13 +291,13 @@ export async function composeAnswer(options: ComposeOptions): Promise<AssistantA
       const text = raw.replace(/\s*\[(?:DATA|DOCUMENTS)\]/g, "").replace(/\*{1,2}([^*\n]+)\*{1,2}/g, "$1").replace(/\s+\n/g, "\n").trim().slice(0, 2000);
       // Scanned digits can be misread, so they may support a place or a month but never a number the model repeats.
       const evidenceTexts = [evidence.data, ...evidence.documents.filter((passage) => !passage.startsWith(SCANNED_MARK)), question];
-      const grounding = checkGrounding(text, evidenceTexts, [...citations.values()].map((citation) => citation.ref), facts, evidence.scannedDocuments);
+      const grounding = checkGrounding(text, evidenceTexts, [...citations.values()].map((citation) => citation.ref), facts, evidence.scannedDocuments, { noPriceFromToday });
       if (language === "kn" && text && kannadaShare(text) < MIN_KANNADA_SHARE_OF_ANSWER) {
         grounding.status = "failed";
         grounding.reasons.push("The question was in Kannada but the model answered in another language.");
       }
       if (grounding.status === "passed") {
-        interpretation = { text, generated_by: "llm", note: strings.interpretation_llm, grounding };
+        interpretation = { text, generated_by: "llm", note: strings.interpretation_llm, grounding, data_dates };
         llm = { ...llm, status: "used", reason: null };
       } else {
         interpretation = { ...interpretation, grounding };
@@ -291,6 +336,7 @@ export function renderText(answer: AssistantAnswer): string {
     answer.facts.forEach((fact) => out.push(`- ${factLine(fact, fact.citation)}`));
   }
   out.push(`${strings.interpretation} (${answer.interpretation.note}):`, answer.interpretation.text);
+  if (answer.interpretation.data_dates) out.push(answer.interpretation.data_dates);
   const section = (title: string, items: string[]) => { if (items.length) out.push(`${title}:`, ...items.map((item) => `- ${item}`)); };
   section(strings.assumptions, answer.assumptions);
   section(strings.uncertainty, answer.uncertainty);

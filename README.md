@@ -172,6 +172,8 @@ The endpoint/pagination pattern follows the official data.gov.in resource API fo
 > - Older text below about TSS benchmark exclusion and non-publication is history.
 > - TUMCOS (`?feed=tumcos`) adds Channagiri arecanut and black pepper. Black pepper never enters arecanut benchmarks, calculators or aggregates.
 > - Scheduled collection needs both `<SOURCE>_SCHEDULE_ENABLED=true` (`MAMCOS`, `TSS` or `TUMCOS`) **and** a permission grant recorded in Data quality → Cooperative source intelligence.
+> - **Collection runs twice a day (2026-11-06):** 09:00 IST closes out the previous day's TSS date and does all other refreshes; 20:00 IST collects that day's cooperative rates only.
+> - **Auto-publishing (2026-11-06):** with `COOPERATIVE_AUTO_PUBLISH=true`, scheduled quotations from the last 30 days publish without a person if they pass validation, have a publishable unit, carry no unaccepted review flag, do not conflict with a verified price, and sit within 20% of that variety's recent median (at least 3 recent quotes). Everything else stays in the review queue. Each approval is recorded in `cooperative_reviews` under the reviewer `auto-validation-v1`. Manual refreshes still go through review. Rules: `api/src/cooperative-auto-publish.ts`.
 
 The four daily market screens now default to **MAMCOS cooperative branch
 averages**. Their source selector also offers **TSS reported averages with
@@ -537,6 +539,10 @@ production, trade, weather, advisories and calculators) and cited document excer
 facts but never supplies numbers, and ungrounded answers fall back to a rule-based answer. It is off by default
 (`ASSISTANT_LLM_PROVIDER=none`), and the rest of ANI does not depend on it. Local setup with Ollama
 (`qwen3.5:4b`, `bge-m3`), document ingestion and limitations: [docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md).
+
+## Grower pages
+
+`/` (latest rates) and `/sell-or-hold` are written for growers on phones, in Kannada by default with an English toggle that each browser remembers. Other pages have translated navigation but English content. Rates stay separate by cooperative and only rates from the same date are ranked. Sell-or-hold shows what the Karnataka monthly price did after a chosen month in past years, and how many years would have covered the reader's own costs. It gives no recommendation, and `shared/hold-history.ts` leaves out one-month spikes such as Rashi in January 2024, naming them on the page. Sections with no data (official daily feed, arrivals, advisories, quality inspections) stay hidden until they have some. The former home page is now at `/overview`.
 
 ## Frontend overview
 

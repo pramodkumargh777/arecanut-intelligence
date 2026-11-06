@@ -104,3 +104,12 @@
   .fact-list > div { grid-template-columns: 1fr; gap: 2px; }
   th .sort-button { min-height: 32px; }
 }
+
+@media (max-width: 640px) {
+  .topbar-tools-grower { width: auto; margin-left: auto; }
+  .home-heading h1 { font-size: 25px; }
+  .home-actions { grid-template-columns: 1fr 1fr; }
+  .home-actions a { padding: 12px; column-gap: 6px; }
+  .home-actions strong { font-size: 15px; line-height: 1.35; }
+  .home-actions span { display: none; }
+}

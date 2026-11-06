@@ -13,6 +13,8 @@ REFERENCE_STATE=Karnataka
 MAMCOS_SCHEDULE_ENABLED=false
 TSS_SCHEDULE_ENABLED=false
 TUMCOS_SCHEDULE_ENABLED=false
+# Publish scheduled quotations that pass every check. The rest wait in the review queue.
+COOPERATIVE_AUTO_PUBLISH=false
 # Source fetch attempts (integer 1-5).
 COOPERATIVE_FETCH_ATTEMPTS=3
 INTELLIGENCE_SCHEDULE_ENABLED=false

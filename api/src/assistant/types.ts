@@ -42,6 +42,8 @@ export type Fact = {
   reporting_period: string | null;
   source_key: string;
   note?: string | null;
+  /** Set on market prices only: the feed the price came from (MAMCOS, TSS, "AGMARKNET daily", …). */
+  source_name?: string | null;
 };
 
 export type ToolStatus = "ok" | "empty" | "needs_input" | "unavailable" | "error";
@@ -59,6 +61,8 @@ export type ToolResult = {
   limitations: string[];
   reporting_period: string | null;
   args: Record<string, unknown>;
+  /** Plain statements built from this tool's facts, in the reader's language; shown when no model text is used. */
+  highlights?: string[];
   /** Untrusted document text passed to the language model as quoted evidence (documents/news only). */
   excerpts?: { source_key: string; text: string; scanned?: boolean }[];
 };

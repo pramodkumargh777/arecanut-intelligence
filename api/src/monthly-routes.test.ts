@@ -1,8 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import worker, { app, type Env } from "./index";
+import worker, { app, EVENING_CRON, type Env } from "./index";
 import { refreshMonthly } from "./monthly";
 import { refreshMamcos } from "./cooperative";
+import { autoPublishPending } from "./cooperative-auto-publish";
 import { readCooperativeSource, recordBlockedFetch, type CooperativeSourceRecord } from "./cooperative-sources";
+import { refreshChangedForecasts } from "./forecast";
+import { refreshTss } from "./tss";
+
+vi.mock("./tss", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./tss")>(),
+  refreshTss: vi.fn(),
+}));
+vi.mock("./cooperative-auto-publish", () => ({ autoPublishPending: vi.fn() }));
+vi.mock("./forecast", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./forecast")>(),
+  refreshChangedForecasts: vi.fn(),
+}));
 
 vi.mock("./monthly", async (importOriginal) => ({
   ...await importOriginal<typeof import("./monthly")>(),
@@ -79,6 +92,45 @@ describe("monthly scheduler", () => {
     await worker.scheduled({} as ScheduledEvent, { ...env, MAMCOS_SCHEDULE_ENABLED: "true" }, ctx);
     expect(refreshMamcos).toHaveBeenCalledWith(env.DB, { mode: "scheduled", attempts: 3 });
     expect(refreshMonthly).toHaveBeenCalledTimes(2);
+  });
+  it("asks TSS for yesterday in the morning, because today's tenders have not happened yet", async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-11-06T03:30:00Z"));
+    vi.mocked(readCooperativeSource).mockResolvedValueOnce({ ...granted, source_key: "tss" });
+    vi.mocked(refreshTss).mockResolvedValueOnce({} as never);
+    vi.mocked(refreshMonthly).mockResolvedValue({ reporting_month: "2026-10", record_count: 28 });
+    await worker.scheduled({ cron: "30 3 * * *" } as ScheduledEvent, { ...env, TSS_SCHEDULE_ENABLED: "true" }, ctx);
+    expect(refreshTss).toHaveBeenCalledWith(env.DB, "2026-11-05", { mode: "scheduled", attempts: 3 });
+    expect(refreshMonthly).toHaveBeenCalledTimes(2);
+  });
+  it("collects only cooperative rates in the evening, using that day's date", async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-11-06T14:30:00Z"));
+    vi.mocked(readCooperativeSource).mockResolvedValueOnce({ ...granted, source_key: "tss" });
+    vi.mocked(refreshTss).mockResolvedValueOnce({} as never);
+    await worker.scheduled({ cron: EVENING_CRON } as ScheduledEvent, { ...env, TSS_SCHEDULE_ENABLED: "true" }, ctx);
+    expect(refreshTss).toHaveBeenCalledWith(env.DB, "2026-11-06", { mode: "scheduled", attempts: 3 });
+    expect(refreshMonthly).not.toHaveBeenCalled();
+    expect(refreshChangedForecasts).not.toHaveBeenCalled();
+  });
+  it("auto-publishes only for a permitted source and only when switched on", async () => {
+    vi.mocked(refreshMonthly).mockResolvedValue({ reporting_month: "2026-10", record_count: 28 });
+    vi.mocked(refreshMamcos).mockResolvedValue({ fetch_id: "f", attempts: 1, received_count: 1, inserted_count: 1, duplicate_count: 0, invalid_count: 0 });
+    vi.mocked(autoPublishPending).mockResolvedValue({ published: 1, held: [] });
+
+    vi.mocked(readCooperativeSource).mockResolvedValueOnce(granted);
+    await worker.scheduled({} as ScheduledEvent, { ...env, MAMCOS_SCHEDULE_ENABLED: "true" }, ctx);
+    expect(autoPublishPending).not.toHaveBeenCalled();
+
+    vi.mocked(readCooperativeSource).mockResolvedValueOnce({ ...granted, permission_status: "not_requested", scheduled_collection_allowed: 0 });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await worker.scheduled({} as ScheduledEvent, { ...env, MAMCOS_SCHEDULE_ENABLED: "true", COOPERATIVE_AUTO_PUBLISH: "true" }, ctx);
+    expect(autoPublishPending).not.toHaveBeenCalled();
+    warn.mockRestore();
+
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(readCooperativeSource).mockResolvedValueOnce(granted);
+    await worker.scheduled({} as ScheduledEvent, { ...env, MAMCOS_SCHEDULE_ENABLED: "true", COOPERATIVE_AUTO_PUBLISH: "true" }, ctx);
+    expect(autoPublishPending).toHaveBeenCalledWith(env.DB, "mamcos", expect.any(Date));
+    log.mockRestore();
   });
   it("does not touch cooperative sources when no schedule flag is enabled", async () => {
     vi.mocked(refreshMonthly).mockResolvedValue({ reporting_month: "2026-10", record_count: 28 });

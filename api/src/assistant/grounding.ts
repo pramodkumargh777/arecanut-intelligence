@@ -87,7 +87,37 @@ export type GroundingResult = {
 };
 
 /** The parts of a verified fact the check needs in order to tie a value to its own period and place. */
-export type GroundingFact = { label: string; value: unknown; reporting_period: string | null };
+export type GroundingFact = { label: string; value: unknown; reporting_period: string | null; source_name?: string | null };
+
+// ------------------------------------------------------------------------------------------------
+// Claims a reader would act on: a price presented as today's, or a "best price" across different sources.
+
+const TODAY_CLAIMS: RegExp[] = [
+  /\b(today|tonight|right now|currently|at present|at the moment|as of now|this morning)\b/i,
+  /\bcurrent (price|rate|market|quotation)s?\b/i,
+  /(?<![ಀ-೿])(?:ಇಂದು|ಇಂದಿನ|ಈ ದಿನ|ಈಗಿನ|ಪ್ರಸ್ತುತ)/,
+];
+
+const RANKING_WORDS = /\b(best|highest|lowest|cheapest|higher than|lower than)\b|ಅತ್ಯುತ್ತಮ|ಉತ್ತಮ ಬೆಲೆ|ಗರಿಷ್ಠ|ಕನಿಷ್ಠ|ಅತಿ ಹೆಚ್ಚ|ಅತ್ಯಧಿಕ|ಹೆಚ್ಚಿನ ಬೆಲೆ|ಕಡಿಮೆ ಬೆಲೆ/i;
+
+/**
+ * Prices from different sources are different measures, so a ranking is only valid within one source. With several
+ * sources in the data, each ranking sentence must name exactly one source and every source must get its own ranking.
+ * Otherwise "the best price is at TSS Sirsi" quietly ranks TSS above MAMCOS.
+ */
+function rankingAcrossSources(text: string, facts: GroundingFact[]): boolean {
+  const sources = [...new Set(facts.flatMap((fact) => typeof fact.value === "number" && fact.source_name ? [fact.source_name.split(" ")[0]] : []))];
+  if (sources.length < 2) return false;
+  const rankings = splitSentences(text).filter((sentence) => RANKING_WORDS.test(sentence));
+  if (!rankings.length) return false;
+  const covered = new Set<string>();
+  for (const sentence of rankings) {
+    const named = sources.filter((source) => new RegExp(`\\b${source}\\b`, "i").test(sentence));
+    if (named.length !== 1) return true;
+    covered.add(named[0]);
+  }
+  return covered.size !== sources.length;
+}
 
 // ------------------------------------------------------------------------------------------------
 // Dates. Any calendar month written by the model must exist in the evidence and match the value beside it.
@@ -236,9 +266,9 @@ function checkDatesAndPlaces(text: string, evidence: string[], facts: GroundingF
 /**
  * Accept model prose only if every number it contains is present in the verified evidence, every citation label
  * exists, every month and place is real and sits beside its own value, and it makes no directional price promise or
- * recommendation.
+ * recommendation. `noPriceFromToday` rejects any wording that presents an older price as today's.
  */
-export function checkGrounding(text: string, evidence: string[], citationLabels: string[], facts: GroundingFact[] = [], scannedEvidence: string[] = []): GroundingResult {
+export function checkGrounding(text: string, evidence: string[], citationLabels: string[], facts: GroundingFact[] = [], scannedEvidence: string[] = [], options: { noPriceFromToday?: boolean } = {}): GroundingResult {
   const reasons: string[] = [];
   const allowed = allowedNumbers(evidence);
   const ungrounded = [...new Set(extractNumbers(text).filter((value) => !matchesAllowed(value, allowed)))];
@@ -256,5 +286,10 @@ export function checkGrounding(text: string, evidence: string[], citationLabels:
   const { wrongPeriods, wrongPlaces } = checkDatesAndPlaces(text, [...evidence, ...scannedEvidence], facts);
   if (wrongPeriods.length) reasons.push(`Wrong month or date: ${wrongPeriods.slice(0, 3).join("; ")}.`);
   if (wrongPlaces.length) reasons.push(`Wrong place: ${wrongPlaces.slice(0, 3).join("; ")}.`);
+  if (options.noPriceFromToday && TODAY_CLAIMS.some((pattern) => pattern.test(text))) {
+    wrongPeriods.push("the text speaks of today, but no price in the data is from today");
+    reasons.push("Presents an older price as today's.");
+  }
+  if (rankingAcrossSources(text, facts)) reasons.push("Ranks prices across different sources, which are not comparable.");
   return { status: reasons.length ? "failed" : "passed", reasons, ungrounded_numbers: ungrounded, unknown_citations: unknown, wrong_periods: wrongPeriods, wrong_places: wrongPlaces };
 }

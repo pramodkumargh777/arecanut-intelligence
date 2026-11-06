@@ -69,8 +69,8 @@ export const api = {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(input),
   }),
   savedCalculations: (token: string) => request<{ data: Calculation[] }>("/admin/decisions", { headers: { Authorization: `Bearer ${token}` } }),
-  cooperativePrices: (source: CooperativeSource, variety?: string, commodity?: CooperativeCommodity, range: { from?: string; to?: string } = {}) =>
-    request<CooperativeData>(`/cooperative/prices${queryString({ source, variety, commodity, from: range.from || undefined, to: range.to || undefined })}`),
+  cooperativePrices: (source: CooperativeSource, variety?: string, commodity?: CooperativeCommodity, range: { from?: string; to?: string } = {}, limit?: number) =>
+    request<CooperativeData>(`/cooperative/prices${queryString({ source, variety, commodity, from: range.from || undefined, to: range.to || undefined, limit: limit ? String(limit) : undefined })}`),
   cooperativeQuality: (token: string, source?: CooperativeSource, offset = 0, limit = QUEUE_PAGE_SIZE) => request<QueuePage<CooperativeQuote>>(`/admin/cooperative/quality${queryString({ source, limit: String(limit), offset: String(offset) })}`, { headers: { Authorization: `Bearer ${token}` } }),
   refreshMamcos: (token: string) => request<RefreshSummary>("/admin/cooperative/refresh", { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
   refreshTss: (token: string, date: string, includeLots = false) => request<RefreshSummary & { excluded_count: number }>("/admin/cooperative/tss/refresh", {

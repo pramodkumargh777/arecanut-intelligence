@@ -80,9 +80,10 @@ cooperativeRoutes.get("/cooperative/prices", async (c) => {
   const previous = headlineSeries.filter((point) => latestDate !== null && point.reporting_date < latestDate).at(-1);
   const latestByBranch = latestRows.results;
   const fetchStatus = await c.env.DB.prepare(`SELECT source_key,started_at,finished_at,status,error_message,received_count,inserted_count
-    FROM cooperative_fetches WHERE source_key=? ORDER BY started_at DESC LIMIT 1`).bind(source.data).first();
+    FROM cooperative_fetches WHERE source_key=? AND status!='blocked' ORDER BY started_at DESC LIMIT 1`).bind(source.data).first();
+  // A collection blocked by the permission gate is an operator matter, shown under Data quality rather than to readers.
   const recentFetches = await c.env.DB.prepare(`SELECT source_url,started_at,status,error_message,received_count,excluded_count
-    FROM cooperative_fetches WHERE source_key=? ORDER BY started_at DESC LIMIT ?`).bind(source.data, source.data === "tss" ? 3 : 1).all();
+    FROM cooperative_fetches WHERE source_key=? AND status!='blocked' ORDER BY started_at DESC LIMIT ?`).bind(source.data, source.data === "tss" ? 3 : 1).all();
   const counts = await c.env.DB.prepare(`SELECT status,COUNT(*) AS count FROM cooperative_quotes
     WHERE source_key=? AND commodity=? AND status!='superseded' GROUP BY status`).bind(source.data, commodity.data).all();
   const archived = await c.env.DB.prepare(`SELECT MAX(reporting_date) AS latest FROM cooperative_quotes

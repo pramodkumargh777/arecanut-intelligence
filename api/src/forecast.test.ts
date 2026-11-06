@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { applyMigrations, LocalDatabase } from "./test-support/local-d1";
 import {
   canonicalInputs, completedMonth, doesNotDeteriorate, empiricalRadius, evaluateForecast,
-  FORECAST_SCHEMA, FORECAST_VERSION, forecastRoutes, MIN_FORECAST_MONTHS, rollingOrigins,
+  FORECAST_SCHEMA, FORECAST_VERSION, forecastRoutes, MIN_FORECAST_MONTHS, refreshChangedForecasts, rollingOrigins,
   score, shiftMonth, snapshotStaleReasons, sourceFingerprint,
   type ForecastInputs, type MonthlyForecastInput,
 } from "./forecast";
@@ -125,6 +126,66 @@ describe("monthly forecast evaluation", () => {
     expect(constant.publishable).toBe(true);
     expect(constant.evaluation?.holdout.mae_skill_vs_naive).toBeNull();
     expect(constant.evaluation?.selected_model).toBe("last_value");
+  });
+});
+
+describe("daily re-evaluation of changed forecasts", () => {
+  const NOW = new Date("2026-11-06T03:30:00Z");
+  let db: LocalDatabase;
+  // A publisher revision as the monthly refresh records it: a new capture run, a new current price and a version row.
+  const revise = (variety: string, month: string, price: number) => {
+    const run = `revision-${variety}-${month}`;
+    db.sqlite.prepare("INSERT INTO monthly_refresh_runs(id,reporting_month,state,source_url,started_at,status) VALUES(?,?,'Karnataka','https://example.test','2026-11-05','succeeded')").run(run, month);
+    db.sqlite.prepare("UPDATE monthly_variety_prices SET weighted_price=?, refresh_run_id=?, fetched_at='2026-11-05T00:00:00Z' WHERE reporting_month=? AND variety_name=?").run(price, run, month, variety);
+    db.sqlite.prepare("INSERT INTO monthly_price_versions(reporting_month,state,variety_name,weighted_price,price_unit,source_url,fetched_at,refresh_run_id) VALUES(?,'Karnataka',?,?,'INR/quintal','https://example.test','2026-11-05T00:00:00Z',?)").run(month, variety, price, run);
+  };
+  const seedVariety = (variety: string, months = 70) => {
+    for (let i = 0; i < months; i += 1) {
+      const month = shiftMonth("2021-01", i), run = `run-${variety}-${month}`;
+      db.sqlite.prepare("INSERT INTO monthly_refresh_runs(id,reporting_month,state,source_url,started_at,status) VALUES(?,?,'Karnataka','https://example.test','2026-11-01','succeeded')").run(run, month);
+      db.sqlite.prepare("INSERT INTO monthly_variety_prices VALUES(?,'Karnataka',?,?,'INR/quintal','https://example.test','2026-11-01T00:00:00Z',?)").run(month, variety, 40000 + i * 100, run);
+      db.sqlite.prepare("INSERT INTO monthly_price_versions(reporting_month,state,variety_name,weighted_price,price_unit,source_url,fetched_at,refresh_run_id) VALUES(?,'Karnataka',?,?,'INR/quintal','https://example.test','2026-11-01T00:00:00Z',?)").run(month, variety, 40000 + i * 100, run);
+    }
+  };
+  const count = () => (db.sqlite.prepare("SELECT COUNT(*) AS n FROM forecast_snapshots").get() as { n: number }).n;
+  const request = (path: string, init?: RequestInit) => forecastRoutes.request(path, init, { DB: db, ADMIN_TOKEN: "review" } as never);
+  const evaluate = (variety: string) => request("/admin/forecasts/evaluate", { method: "POST", headers: { Authorization: "Bearer review", "Content-Type": "application/json" }, body: JSON.stringify({ variety }) });
+  beforeEach(() => { db = applyMigrations(new LocalDatabase()); vi.useFakeTimers(); vi.setSystemTime(NOW); });
+  afterEach(() => { vi.useRealTimers(); db.sqlite.close(); });
+
+  it("restores a forecast hidden by a source revision", async () => {
+    seedVariety("Rashi");
+    expect((await evaluate("Rashi")).status).toBe(201);
+    revise("Rashi", "2026-10", 46850);
+    expect(await (await request("/forecasts?variety=Rashi")).json()).toMatchObject({ status: "stale", forecast: null, stale_reasons: ["source_history_changed"] });
+    expect(await refreshChangedForecasts(db as never, NOW)).toEqual({ evaluated: ["Rashi"], remaining: 0 });
+    expect(await (await request("/forecasts?variety=Rashi")).json()).toMatchObject({ status: "published", stale: false, forecast: { point: 46850 } });
+  });
+
+  it("writes nothing when no price changed, and does not touch varieties never evaluated", async () => {
+    seedVariety("Rashi");
+    seedVariety("Chali");
+    await evaluate("Rashi");
+    expect(await refreshChangedForecasts(db as never, NOW)).toEqual({ evaluated: [], remaining: 0 });
+    expect(count()).toBe(1);
+  });
+
+  it("does not re-evaluate daily while waiting for the next month's report", async () => {
+    seedVariety("Rashi");
+    await evaluate("Rashi");
+    const nextMonth = new Date("2026-12-02T03:30:00Z");
+    vi.setSystemTime(nextMonth);
+    expect(await refreshChangedForecasts(db as never, nextMonth)).toEqual({ evaluated: [], remaining: 0 });
+    expect(await (await request("/forecasts?variety=Rashi")).json()).toMatchObject({ status: "stale", stale_reasons: ["stale_history"] });
+  });
+
+  it("caps each run and picks up the rest the next day, oldest first", async () => {
+    for (const variety of ["A", "B", "C"]) { seedVariety(variety); await evaluate(variety); vi.advanceTimersByTime(1000); }
+    for (const variety of ["A", "B", "C"]) revise(variety, "2026-10", 46850);
+    expect(await refreshChangedForecasts(db as never, new Date(), 2)).toEqual({ evaluated: ["A", "B"], remaining: 1 });
+    vi.advanceTimersByTime(86_400_000);
+    expect(await refreshChangedForecasts(db as never, new Date(), 2)).toEqual({ evaluated: ["C"], remaining: 0 });
+    expect(await refreshChangedForecasts(db as never, new Date(), 2)).toEqual({ evaluated: [], remaining: 0 });
   });
 });
 

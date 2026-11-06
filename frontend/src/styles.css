@@ -381,3 +381,72 @@ th.numeric .sort-button { justify-content: flex-end; width: 100%; }
 .workspace-links { display: flex; flex-wrap: wrap; gap: 8px; }
 .workspace-links a { padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; color: var(--ink); text-decoration: none; }
 .workspace-links a:hover { background: var(--surface-2); }
+
+/* Language toggle */
+.language-toggle { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); padding: 2px; gap: 2px; }
+.language-toggle button { border: 0; background: transparent; color: var(--muted); border-radius: 5px; min-height: 30px; padding: 2px 10px; font-size: 13px; cursor: pointer; }
+.language-toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.language-toggle button:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* Grower pages: larger type, because Kannada script needs it and these are read on phones */
+.home { max-width: 760px; margin-inline: auto; width: 100%; font-size: 16px; }
+.home-heading h1 { font-size: 28px; font-weight: 650; line-height: 1.25; margin: 0 0 6px; color: var(--ink); }
+.home-heading p { margin: 0; color: var(--ink-2); line-height: 1.6; }
+.home-heading .home-latest { margin-top: 10px; font-size: 14.5px; color: var(--muted); }
+.home-heading .home-latest strong { color: var(--ink); font-weight: 600; }
+.variety-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.variety-chips button { min-height: 44px; padding: 8px 16px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 16px; cursor: pointer; }
+.variety-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+.variety-chips button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.home-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.home-actions a { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; }
+.home-actions a:hover { border-color: var(--ink); }
+.home-actions strong { font-size: 16.5px; font-weight: 600; }
+.home-actions span { grid-column: 1; font-size: 14px; color: var(--muted); line-height: 1.45; }
+.home-actions svg { grid-column: 2; grid-row: 1 / span 2; color: var(--muted); }
+.rate-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; min-width: 0; }
+.rate-card > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rate-card h2 { margin: 0; font-size: 18px; font-weight: 650; color: var(--ink); }
+.rate-card > header a { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 13.5px; color: var(--muted); }
+.rate-caption { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.rate-empty { margin: 10px 0 0; color: var(--muted); line-height: 1.5; }
+.rate-card ul { list-style: none; margin: 10px 0 0; padding: 0; }
+.rate-row { display: flex; justify-content: space-between; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.rate-place { display: flex; flex-direction: column; gap: 2px; flex: 1 1 45%; min-width: 0; }
+.rate-place strong { font-size: 17px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.rate-date { font-size: 13.5px; color: var(--muted); }
+.rate-date-old { color: var(--warn-ink); }
+.rate-label { font-size: 12px; color: var(--muted); letter-spacing: .02em; }
+.rate-top-mark { align-self: flex-start; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 12.5px; }
+.rate-price { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: 0 1 55%; min-width: 0; text-align: right; }
+.rate-price strong { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink); }
+.rate-price span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.home-note { margin: 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.home-more { display: inline-flex; align-items: center; gap: 6px; justify-self: start; min-height: 44px; color: var(--ink); font-size: 15px; }
+.hold-controls, .hold-costs { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.hold-costs { margin-top: 12px; }
+.home .filter-control span { font-size: 14px; }
+.home .filter-control select, .home .filter-control input { min-height: 44px; font-size: 16px; }
+.hold-summary > li { padding: 12px 0; border-top: 1px solid var(--line); }
+.hold-summary h3 { margin: 0 0 8px; font-size: 16.5px; font-weight: 650; color: var(--ink); }
+.hold-summary dl { margin: 0; display: grid; gap: 6px; }
+.hold-summary dl > div { display: flex; justify-content: space-between; gap: 16px; font-size: 14.5px; }
+.hold-summary dt { color: var(--muted); }
+.hold-summary dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+.hold-up { color: #166534; }
+.hold-down { color: var(--bad-ink); }
+.home table { font-size: 14px; }
+
+/* Share-market style movement */
+.rate-price .rate-change { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 3px 4px; font-size: 13.5px; color: var(--muted); }
+.rate-price .rate-change.hold-up { color: #166534; }
+.rate-price .rate-change.hold-down { color: var(--bad-ink); }
+.rate-price .rate-change b { font-weight: 650; font-variant-numeric: tabular-nums; }
+.rate-price .rate-change small { flex-basis: 100%; text-align: right; font-size: 12px; color: var(--muted); }
+.market-breadth { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: 14px; color: var(--ink-2); }
+.market-breadth span { display: inline-flex; align-items: center; gap: 4px; }
+.market-breadth b { font-weight: 650; font-variant-numeric: tabular-nums; }
+.market-breadth-title { flex-basis: 100%; font-weight: 600; color: var(--ink); }
+.market-breadth .hold-up { color: #166534; }
+.market-breadth .hold-down { color: var(--bad-ink); }
+main .home-actions a { text-decoration: none; }

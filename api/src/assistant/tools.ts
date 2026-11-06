@@ -4,6 +4,9 @@
  * Tools are read-only; the only POST target is the stateless /decisions/calculate calculator.
  */
 import { z } from "zod";
+import { MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
+import { holdHistory } from "../../../shared/hold-history";
+import { namesPlace, placesIn } from "./places";
 import { searchDocuments, pageLabel, queryTerms } from "./retrieval";
 import type { EmbeddingProvider } from "./providers";
 import type { Language } from "./language";
@@ -157,11 +160,54 @@ async function monthlySnapshot(ctx: ToolContext): Promise<MonthlySnapshot> {
   return { reporting_month: body?.reporting_month ?? null, rows, varieties: rows.map((row) => String(row.variety_name)), methodology: body?.methodology ?? null };
 }
 
-/** Exact, case-insensitive match against the source's own variety terminology. Never maps between names. */
+/** Exact, case-insensitive match for the official monthly and daily data, whose calculations stay exact-variety. */
 function matchVariety(requested: string | undefined, available: string[]): string | undefined {
   if (!requested) return undefined;
   const wanted = requested.trim().toLowerCase();
   return available.find((name) => name.toLowerCase() === wanted);
+}
+
+/** Ignores case and spacing, so NEW RASHIEDI and NEWRASHIEDI are one label. */
+const varietyKey = (name: string) => name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+
+/**
+ * What a grower's word covers in cooperative feeds, most direct label first. MAMCOS quotes Rashi as RASHI EDI and
+ * new-crop Rashi as NEW RASHIEDI. Each label is still shown and priced separately; nothing is averaged across labels.
+ * Extend through review. TUMCOS's generic "areca" is deliberately not mapped to any grade.
+ */
+const COOPERATIVE_VARIETY_LABELS: Record<string, string[]> = {
+  rashi: ["rashi", "rashiedi", "newrashiedi"],
+  newrashi: ["newrashi", "newrashiedi"],
+};
+
+export function matchCooperativeVarieties(requested: string, available: string[]): string[] {
+  const key = varietyKey(requested);
+  const labels = COOPERATIVE_VARIETY_LABELS[key] ?? [key];
+  return labels.flatMap((label) => available.filter((name) => varietyKey(name) === label));
+}
+
+const rupeeText = (value: number) => value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+/**
+ * Highest and lowest within one source and label, among places reporting on the same latest date. Each source gets its
+ * own line because prices from different sources are different measures, and older quotes are not ranked against newer.
+ */
+function rankingLine(language: Language, source: string, variety: string, rows: { place: string; date: string; price: number }[]): string | null {
+  if (!rows.length) return null;
+  const date = rows.map((row) => row.date).sort().at(-1)!;
+  const sameDay = rows.filter((row) => row.date === date).sort((a, b) => b.price - a.price);
+  const high = sameDay[0], low = sameDay.at(-1)!;
+  const older = rows.length - sameDay.length;
+  if (language === "kn") {
+    const body = sameDay.length === 1
+      ? `ಆ ದಿನ ${high.place} ಮಾತ್ರ ವರದಿ ಮಾಡಿದೆ, ರೂ. ${rupeeText(high.price)}/ಕ್ವಿಂಟಾಲ್`
+      : `ಹೆಚ್ಚಿನ ಬೆಲೆ ${high.place} ರೂ. ${rupeeText(high.price)}/ಕ್ವಿಂಟಾಲ್, ಕಡಿಮೆ ಬೆಲೆ ${low.place} ರೂ. ${rupeeText(low.price)}/ಕ್ವಿಂಟಾಲ್ (${sameDay.length} ವರದಿಗಳು)`;
+    return `${source} ${variety}, ${date}: ${body}.${older ? ` ಹಿಂದಿನ ದಿನಾಂಕದ ${older} ವರದಿಗಳನ್ನು ಹೋಲಿಸಿಲ್ಲ.` : ""}`;
+  }
+  const body = sameDay.length === 1
+    ? `only ${high.place} reported that day, INR ${rupeeText(high.price)}/quintal`
+    : `highest ${high.place} at INR ${rupeeText(high.price)}/quintal, lowest ${low.place} at INR ${rupeeText(low.price)}/quintal (${sameDay.length} reporting that day)`;
+  return `${source} ${variety}, ${date}: ${body}.${older ? ` ${older} that last reported earlier are not ranked.` : ""}`;
 }
 
 function resolveVariety(target: ToolResult, requested: string | undefined, available: string[]): string | null {
@@ -187,45 +233,72 @@ function monthlySource(target: ToolResult, row: Json): string {
 // ------------------------------------------------------------------------------------------------
 // Price tools
 
-async function cooperativeLatest(ctx: ToolContext, target: ToolResult, sourceKey: "mamcos" | "tss" | "tumcos", requested: string, now: Date, maxBranches = 6) {
+type CooperativeView = {
+  maxBranches: number;
+  /** A price question about a named place shows only that place's branches. A comparison keeps every branch. */
+  onlyNamedPlaces: boolean;
+  /** Add the highest and lowest branch for each label. */
+  rank: boolean;
+};
+
+async function cooperativeLatest(ctx: ToolContext, target: ToolResult, sourceKey: "mamcos" | "tss" | "tumcos", requested: string, now: Date, view: CooperativeView) {
   const label = COOP_LABEL[sourceKey];
   const overview = await getJson(ctx, `/cooperative/prices?source=${sourceKey}`);
   const varieties: string[] = overview?.varieties ?? [];
-  const variety = matchVariety(requested, varieties);
-  if (!variety) {
+  const matches = matchCooperativeVarieties(requested, varieties);
+  if (!matches.length) {
     const blocked = overview?.publication?.blocked_reason;
     target.missing.push(varieties.length
       ? `${label}: no verified quotation uses the variety name "${requested}". ${label} reports: ${varieties.slice(0, 15).join(", ")}.`
       : `${label}: no verified quotations are published.${blocked ? ` ${blocked}` : ""}`);
     return;
   }
-  const body = variety === overview?.variety ? overview : await getJson(ctx, `/cooperative/prices?source=${sourceKey}&variety=${encodeURIComponent(variety)}`);
-  const rows: Json[] = (body?.latest_by_branch ?? []).slice(0, maxBranches);
-  if (!rows.length) {
-    target.missing.push(`${label}: no verified quotations for ${variety}.`);
-    return;
-  }
-  if (body?.permission?.label) target.limitations.push(`${label} reuse status: ${body.permission.label}.`);
-  if (rows.some((row) => row.unit_status === "assumed")) target.assumptions.push(`${label} prices are treated as INR/quintal by operator decision; the source does not confirm that unit.`);
-  for (const row of rows) {
-    const key = addSource(target, {
-      key: `${sourceKey}:${row.reporting_date}`, kind: "data", label: `${label} published market rates, ${row.reporting_date}`,
-      publisher: body?.permission?.operator ?? label, url: row.source_url ?? null, reporting_period: row.reporting_date, retrieved_at: row.fetched_at ?? null,
-    });
-    target.facts.push({
-      label: `${label} ${row.branch} – ${row.variety} branch average`, value: row.average_price, unit: row.price_unit ?? "INR/quintal",
-      basis: row.price_basis ?? "COOPERATIVE_AVERAGE", reporting_period: row.reporting_date, source_key: key,
-      note: row.minimum_price != null && row.maximum_price != null ? `range ${row.minimum_price}–${row.maximum_price}` : null,
-    });
-  }
-  const latest = rows.map((row) => row.reporting_date as string).sort().at(-1)!;
-  if (ageDays(latest, now) > STALE_DAYS) target.uncertainty.push(`${label} latest verified quotation is from ${latest} (${ageDays(latest, now)} days old).`);
-  if (body?.reference_price != null) {
-    target.facts.push({
-      label: `${label} median of branch averages – ${variety}`, value: body.reference_price, unit: "INR/quintal", basis: "COOPERATIVE_AVERAGE",
-      reporting_period: body.latest_reporting_date, source_key: target.sources.at(-1)!.key,
-      note: `Median across at least ${body.minimum_branch_coverage} branches; not an APMC modal price.`,
-    });
+  const namedPlaces = placesIn(ctx.question).filter((place) => place.level === "local");
+  for (const variety of matches) {
+    const body = variety === overview?.variety ? overview : await getJson(ctx, `/cooperative/prices?source=${sourceKey}&variety=${encodeURIComponent(variety)}`);
+    const all: Json[] = body?.latest_by_branch ?? [];
+    if (!all.length) {
+      target.missing.push(`${label}: no verified quotations for ${variety}.`);
+      continue;
+    }
+    const atNamed = all.filter((row) => namedPlaces.some((place) => namesPlace(String(row.branch), place)));
+    const others = all.filter((row) => !atNamed.includes(row));
+    const rows = view.onlyNamedPlaces && atNamed.length ? atNamed : [...atNamed, ...others].slice(0, view.maxBranches);
+    if (namedPlaces.length && !atNamed.length) target.missing.push(`${label} ${variety}: no quotation for ${namedPlaces.map((place) => place.name).join(", ")}. ${label} branches elsewhere are shown.`);
+    if (varietyKey(variety) !== varietyKey(requested)) target.assumptions.push(`${label} reports this as "${variety}", shown here for "${requested}".`);
+    if (body?.permission?.label) target.limitations.push(`${label} reuse status: ${body.permission.label}.`);
+    if (rows.some((row) => row.unit_status === "assumed")) target.assumptions.push(`${label} prices are treated as INR/quintal by operator decision; the source does not confirm that unit.`);
+    for (const row of rows) {
+      const key = addSource(target, {
+        key: `${sourceKey}:${row.reporting_date}`, kind: "data", label: `${label} published market rates, ${row.reporting_date}`,
+        publisher: body?.permission?.operator ?? label, url: row.source_url ?? null, reporting_period: row.reporting_date, retrieved_at: row.fetched_at ?? null,
+      });
+      target.facts.push({
+        label: `${label} ${row.branch} – ${row.variety} branch average`, value: row.average_price, unit: row.price_unit ?? "INR/quintal",
+        basis: row.price_basis ?? "COOPERATIVE_AVERAGE", reporting_period: row.reporting_date, source_key: key, source_name: label,
+        note: row.minimum_price != null && row.maximum_price != null ? `range ${row.minimum_price}–${row.maximum_price}` : null,
+      });
+    }
+    if (view.rank) {
+      const line = rankingLine(ctx.language, label, variety, rows.flatMap((row) => typeof row.average_price === "number" ? [{ place: String(row.branch), date: String(row.reporting_date), price: row.average_price as number }] : []));
+      if (line) (target.highlights ??= []).push(line);
+    } else {
+      for (const row of atNamed) {
+        if (typeof row.average_price !== "number") continue;
+        (target.highlights ??= []).push(ctx.language === "kn"
+          ? `${label} ${row.branch} ${row.variety}, ${row.reporting_date}: ರೂ. ${rupeeText(row.average_price)}/ಕ್ವಿಂಟಾಲ್ (ಶಾಖೆಯ ಸರಾಸರಿ).`
+          : `${label} ${row.branch} ${row.variety}, ${row.reporting_date}: INR ${rupeeText(row.average_price)}/quintal (branch average).`);
+      }
+    }
+    const latest = rows.map((row) => row.reporting_date as string).sort().at(-1)!;
+    if (ageDays(latest, now) > STALE_DAYS) target.uncertainty.push(`${label} latest verified quotation is from ${latest} (${ageDays(latest, now)} days old).`);
+    if (body?.reference_price != null && !(view.onlyNamedPlaces && atNamed.length)) {
+      target.facts.push({
+        label: `${label} median of branch averages – ${variety}`, value: body.reference_price, unit: "INR/quintal", basis: "COOPERATIVE_AVERAGE",
+        reporting_period: body.latest_reporting_date, source_key: target.sources.at(-1)!.key, source_name: label,
+        note: `Median across at least ${body.minimum_branch_coverage} branches; not an APMC modal price.`,
+      });
+    }
   }
 }
 
@@ -251,7 +324,7 @@ async function getCurrentPrices(ctx: ToolContext, args: ToolArgs<"get_current_pr
       });
       target.facts.push({
         label: `${row.market_name}${row.district ? ` (${row.district})` : ""} – ${row.variety_name} modal price`, value: row.modal_price,
-        unit: row.price_unit ?? "INR/quintal", basis: row.price_basis ?? "APMC_MODAL", reporting_period: row.reporting_date, source_key: key,
+        unit: row.price_unit ?? "INR/quintal", basis: row.price_basis ?? "APMC_MODAL", reporting_period: row.reporting_date, source_key: key, source_name: "AGMARKNET daily",
         note: row.minimum_price != null && row.maximum_price != null ? `range ${row.minimum_price}–${row.maximum_price}` : null,
       });
     }
@@ -262,14 +335,14 @@ async function getCurrentPrices(ctx: ToolContext, args: ToolArgs<"get_current_pr
     if (row && row.weighted_price != null) {
       target.facts.push({
         label: `Karnataka monthly arrival-weighted modal price – ${variety}`, value: row.weighted_price, unit: row.price_unit ?? "INR/quintal",
-        basis: MONTHLY_BASIS, reporting_period: row.reporting_month, source_key: monthlySource(target, row),
+        basis: MONTHLY_BASIS, reporting_period: row.reporting_month, source_key: monthlySource(target, row), source_name: "AGMARKNET monthly",
         note: args.district ? `State monthly average for all Karnataka, not a ${args.district} or daily market quotation.` : "State monthly average, not a daily market quotation.",
       });
       if (args.district && !latestRows.length) target.assumptions.push(`No ${args.district}-specific daily quotation was available, so the Karnataka state monthly average is shown; it is not a ${args.district} price.`);
     } else target.missing.push(`AGMARKNET monthly: no ${monthly.reporting_month ?? "recent"} Karnataka value for "${variety}".`);
   }
   for (const key of sources) {
-    if (key !== "agmarknet") await cooperativeLatest(ctx, target, key, args.variety ?? variety, now);
+    if (key !== "agmarknet") await cooperativeLatest(ctx, target, key, args.variety ?? variety, now, { maxBranches: 6, onlyNamedPlaces: true, rank: false });
   }
   target.limitations.push("Each value keeps its source and price basis. APMC modal prices, state monthly averages and cooperative branch averages are different measures and are never combined or averaged together.");
   target.reporting_period = target.facts.map((fact) => fact.reporting_period).filter(Boolean).sort().at(-1) ?? null;
@@ -348,14 +421,16 @@ async function compareMarkets(ctx: ToolContext, args: ToolArgs<"compare_markets"
         reporting_period: row.reporting_date, retrieved_at: row.platform_fetch_timestamp ?? null,
       });
       target.facts.push({ label: `AGMARKNET ${row.market_name} – ${row.variety_name} latest modal price`, value: row.modal_price, unit: row.price_unit ?? "INR/quintal",
-        basis: row.price_basis ?? "APMC_MODAL", reporting_period: row.reporting_date, source_key: key });
+        basis: row.price_basis ?? "APMC_MODAL", reporting_period: row.reporting_date, source_key: key, source_name: "AGMARKNET daily" });
     }
+    const dailyLine = rankingLine(ctx.language, "AGMARKNET", variety, rows.flatMap((row) => typeof row.modal_price === "number" ? [{ place: String(row.market_name), date: String(row.reporting_date), price: row.modal_price as number }] : []));
+    if (dailyLine) (target.highlights ??= []).push(dailyLine);
     const dates = new Set(rows.map((row) => row.reporting_date));
     if (dates.size > 1) target.uncertainty.push(`AGMARKNET markets reported on different dates (${[...dates].sort().join(", ")}); each value is that market's latest verified day.`);
     if (!rows.length) target.missing.push(`AGMARKNET daily: no verified market observations for "${variety}" in Karnataka.`);
   }
   const coop = args.source && args.source !== "agmarknet" ? [args.source] : args.source ? [] : (["mamcos", "tss", "tumcos"] as const);
-  for (const key of coop) await cooperativeLatest(ctx, target, key, args.variety ?? variety, now, 15);
+  for (const key of coop) await cooperativeLatest(ctx, target, key, args.variety ?? variety, now, { maxBranches: 15, onlyNamedPlaces: false, rank: true });
   target.limitations.push("Markets are compared only within the same source and price basis. AGMARKNET modal prices and cooperative branch averages are not ranked against each other.");
   target.reporting_period = target.facts.map((fact) => fact.reporting_period).filter(Boolean).sort().at(-1) ?? null;
   target.summary = target.facts.length ? `${target.facts.length} market/branch value(s) for ${variety}, grouped by source.` : `No comparable market values exist for ${variety}.`;
@@ -373,7 +448,7 @@ async function getMarketIndex(ctx: ToolContext, args: ToolArgs<"get_market_index
     publisher: "ArecaNut Intelligence (derived from AGMARKNET)", url: null, reporting_period: rows.at(-1)?.reporting_date ?? null, retrieved_at: null });
   for (const row of rows.slice(-2).reverse()) {
     target.facts.push({ label: `Reference index – ${variety}`, value: row.median_modal_price, unit: "INR/quintal", basis: "APMC_MODAL_MEDIAN",
-      reporting_period: row.reporting_date, source_key: key, note: `${row.market_count} verified markets` });
+      reporting_period: row.reporting_date, source_key: key, source_name: "ANI reference index", note: `${row.market_count} verified markets` });
   }
   if (!rows.length) {
     target.sources = [];
@@ -617,6 +692,36 @@ async function getAdvisories(ctx: ToolContext, args: ToolArgs<"get_advisories">)
 
 type CalculationArgs = ToolArgs<"calculate_sell_hold">;
 
+const signedPercent = (value: number) => `${value > 0 ? "+" : ""}${value}%`;
+
+/** What happened in past years after this calendar month, so a sell-or-hold question gets an answer before any costs are entered. */
+async function addHoldHistory(ctx: ToolContext, target: ToolResult, requested: string | undefined) {
+  const now = ctx.now ?? new Date();
+  const monthly = await monthlySnapshot(ctx);
+  const variety = matchVariety(requested ?? DEFAULT_VARIETY, monthly.varieties);
+  if (!variety) return;
+  const body = await getJson(ctx, `/history/monthly?${new URLSearchParams({ variety, from: "2021-01" })}`);
+  const startMonth = Number(istToday(now).slice(5, 7));
+  const history = holdHistory(body?.points ?? [], startMonth, [3, 6]);
+  const summaries = history.summaries.filter((summary) => summary.median_percent !== null);
+  if (!summaries.length || !history.first_month || !history.last_month) return;
+  const period = `${history.first_month} to ${history.last_month}`;
+  const key = addSource(target, {
+    key: `agmarknet-hold-history:${variety}:${startMonth}`, kind: "data", label: `AGMARKNET monthly variety-wise prices, Karnataka, ${variety}, ${period}`,
+    publisher: AGMARKNET, url: "https://agmarknet.gov.in", reporting_period: period, retrieved_at: null,
+  });
+  const monthName = MONTH_NAMES_EN[startMonth - 1];
+  for (const summary of summaries) {
+    target.facts.push({ label: `${variety} Karnataka monthly average: median change ${summary.months} months after ${monthName}`, value: summary.median_percent, unit: "%", basis: "PAST_YEARS_CHANGE",
+      reporting_period: period, source_key: key, note: `higher in ${summary.rose} of ${summary.years} years; range ${summary.lowest_percent}% to ${summary.highest_percent}%` });
+  }
+  (target.highlights ??= []).push(ctx.language === "kn"
+    ? `${variety}, ಕರ್ನಾಟಕದ ತಿಂಗಳ ಸರಾಸರಿ, ${MONTH_NAMES_KN[startMonth - 1]} ತಿಂಗಳಿನಿಂದ: ${summaries.map((summary) => `${summary.months} ತಿಂಗಳ ನಂತರ ${summary.years} ವರ್ಷಗಳಲ್ಲಿ ${summary.rose} ಬಾರಿ ಬೆಲೆ ಹೆಚ್ಚಿತ್ತು (ಮಧ್ಯಮ ಬದಲಾವಣೆ ${signedPercent(summary.median_percent!)})`).join("; ")}. ಇದು ಸಂಗ್ರಹ, ಬಡ್ಡಿ ಮತ್ತು ತೂಕ ನಷ್ಟದ ಖರ್ಚಿಗೆ ಮೊದಲಿನ ಲೆಕ್ಕ.`
+    : `${variety}, Karnataka monthly average, from ${monthName}: ${summaries.map((summary) => `${summary.months} months later it was higher in ${summary.rose} of ${summary.years} years (median change ${signedPercent(summary.median_percent!)})`).join("; ")}. This is before storage, interest and weight loss.`);
+  target.uncertainty.push("Past years do not show what the price will do this year. These are state monthly averages, not a branch price, and the years shown are few.");
+  if (history.excluded_months.length) target.uncertainty.push(`Left out because the price moved more than 20% for one month and straight back, which may be a data problem: ${history.excluded_months.join(", ")}.`);
+}
+
 async function calculate(ctx: ToolContext, tool: "calculate_net_realization" | "calculate_sell_hold", args: CalculationArgs): Promise<ToolResult> {
   const target = result(tool, args, tool === "calculate_sell_hold" ? "Sell now or hold" : "Net realization");
   const required: [keyof CalculationArgs, string][] = [
@@ -641,6 +746,7 @@ async function calculate(ctx: ToolContext, tool: "calculate_net_realization" | "
       target.assumptions.push(`Sale price: the latest AGMARKNET Karnataka monthly arrival-weighted price for ${row.variety_name} (${row.reporting_month}), because no price was stated. A specific market or day can differ.`);
     } else missing.push(`a sale price (no monthly price exists for "${args.variety}")`);
   } else missing.push("a sale price per quintal or a variety name");
+  if (tool === "calculate_sell_hold") await addHoldHistory(ctx, target, args.variety);
   if (missing.length || !price) {
     target.status = "needs_input";
     target.missing.push(`To calculate, state: ${missing.join(", ")}. ANI does not assume costs you have not given.`);
@@ -748,7 +854,9 @@ async function searchAgriculturalDocuments(ctx: ToolContext, args: ToolArgs<"sea
     target.excerpts.push({ source_key: key, text: hit.text, scanned: isScanned(hit) });
   }
   if (!retrieval.corpus.chunks) target.missing.push("No agricultural documents have been ingested yet (see data-platform/documents).");
-  else if (!retrieval.hits.length) target.missing.push(`No passage in ${retrieval.corpus.documents} ingested document(s) is relevant to the question.`);
+  else if (!retrieval.hits.length) target.missing.push(retrieval.diseases.length
+    ? `No passage in ${retrieval.corpus.documents} ingested document(s) discusses ${retrieval.diseases.join(" or ")}. Passages about other diseases are not shown, because their advice does not apply.`
+    : `No passage in ${retrieval.corpus.documents} ingested document(s) is relevant to the question.`);
   if (retrieval.semantic_status === "failed") target.uncertainty.push(`Semantic search was unavailable (${retrieval.semantic_error}); keyword matches only.`);
   else if (retrieval.semantic_status !== "used") target.limitations.push("Semantic (BGE-M3) search is not active; results use keyword matching only.");
   if (ctx.language === "kn" && retrieval.hits.some((hit) => hit.language !== "kn")) target.limitations.push("ಕೆಲವು ಭಾಗಗಳು ಮೂಲ ಇಂಗ್ಲಿಷ್ ದಾಖಲೆಗಳಿಂದ ಬಂದಿವೆ ಮತ್ತು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲೇ ಉಲ್ಲೇಖಿಸಲಾಗಿದೆ.");

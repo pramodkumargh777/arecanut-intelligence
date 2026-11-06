@@ -24,6 +24,8 @@ const RULES: IntentRule[] = [
 
 /** Verified variety names used by ANI sources, with Kannada spellings. Matching is case-insensitive. */
 const VARIETY_ALIASES: [canonical: string, patterns: RegExp[]][] = [
+  // Checked before Rashi: new-crop Rashi is quoted and priced separately.
+  ["New Rashi", [/\bnew ?rashi\b/i, /ಹೊಸ ?ರಾಶಿ/]],
   ["Rashi", [/\brashi\b/i, /\brasi\b/i, /ರಾಶಿ/]],
   ["Chali", [/\bchali\b/i, /ಚಾಲಿ/]],
   ["Bette", [/\bbette\b/i, /ಬೆಟ್ಟೆ/]],
@@ -31,6 +33,9 @@ const VARIETY_ALIASES: [canonical: string, patterns: RegExp[]][] = [
   ["Kempugotu", [/\bkempu ?gotu\b/i, /ಕೆಂಪು ?ಗೋಟು/]],
   ["Saraku", [/\bsaraku\b/i, /\bsarakku\b/i, /ಸರಕು/]],
   ["Gorabalu", [/\bgorabalu\b/i, /ಗೊರಬಲು/]],
+  ["Sippegotu", [/\bsippe ?gotu\b/i, /ಸಿಪ್ಪೆ ?ಗೋಟು/]],
+  ["Hasa", [/\bhasa\b/i]],
+  ["Handaedi", [/\bhanda ?edi\b/i]],
   ["Api", [/\bapi\b(?! key)/i, /ಅಪಿ/]],
   ["Edi", [/\bedi\b/i, /ಇಡಿ/]],
 ];

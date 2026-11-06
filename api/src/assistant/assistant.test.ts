@@ -2,14 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyMigrations, LocalDatabase } from "../test-support/local-d1";
 import { app, type Env } from "../index";
 import { classifyQuestion, extractCalculationHints } from "./classify";
-import { composeAnswer, planToolsWithModel, quotePassage } from "./compose";
+import { composeAnswer, dataDates, planToolsWithModel, quotePassage } from "./compose";
+import { diseasesNamed, focusOnDisease } from "./diseases";
 import { checkGrounding, detectInjection, extractNumbers, sanitizeUntrusted } from "./grounding";
 import { detectLanguage, expandTerms } from "./language";
 import { restrictedPesticides } from "./pesticides";
 import { chatProvider, providerStatus, stripThinking, withoutReasoning, type ChatProvider, type EmbeddingProvider } from "./providers";
 import { cosineQ8, decodeEmbedding, ftsExpression, quantizeEmbedding, searchDocuments } from "./retrieval";
 import { argumentsFor } from "./routes";
-import { validateToolArgs } from "./tools";
+import { matchCooperativeVarieties, validateToolArgs } from "./tools";
 import type { ToolResult } from "./types";
 
 // Every record below is synthetic and exists only in this isolated in-memory database; none reaches production data.
@@ -331,6 +332,255 @@ describe("scanned digits and restricted pesticides", () => {
     expect(restrictedPesticides("drench with Endosulfan 35 EC and Th1met")).toEqual(["Phorate", "Endosulfan"]);
     expect(restrictedPesticides("drench with 0.3% Calixin")).toEqual(["Tridemorph"]);
     expect(restrictedPesticides("Bordeaux mixture, Mancozeb and Imidacloprid")).toEqual([]);
+  });
+});
+
+describe("answers about one disease use only that disease's passages", () => {
+  // Text from real CPCRI booklets that produced a wrong koleroga answer in production on 2026-11-06.
+  const footRot = "ರೋಗದ ತೀವ್ರತೆ ಹೆಚ್ಚಿರುವ ಮರದ ಬುಡ ಭಾಗದಲ್ಲಿ ಅಣಬೆಯು ಬೆಳೆಯುತ್ತವೆ. ಬೇರುಗಳು ಮತ್ತು ಕಾಂಡದ ಬುಡದ ಒಳ ಭಾಗ ಕೊಳೆಯುತ್ತದೆ. ನಿರ್ವಹಣೆ ತೀವ್ರ ರೋಗಗ್ರಸ್ಥ ಮತ್ತು ಸತ್ತ ಮರಗಳನ್ನು ಬೇರು ಸಮೇತ ಕಿತ್ತು ಸುಟ್ಟು ಹಾಕಬೇಕು.";
+  // Ends in the next cocoa heading, "charcoal pod rot", which looks like arecanut's ಕಾಯಿ ಕೊಳೆ. Found by running the filter on the live corpus.
+  const cocoaPods = "ರೋಗಬಾಧಿತ ಕಾಯಿಗಳು ಉಳಿದ ಆರೋಗ್ಯವಂತ ಕಾಯಿಗಳಿಗೂ ರೋಗ ತಗುಲಿಸುವ ಸಾಧ್ಯತೆ ಇರುವುದರಿಂದ ರೋಗ ಬಾಧಿತ ಕಾಯಿಗಳನ್ನು ವಾರಕ್ಕೊಮ್ಮೆ ಕಿತ್ತು ಹಾಕಬೇಕು. ಚಾರ್ಕೋಲ್‌ ಕಾಯಿ ಕೊಳೆತ:";
+  const koleroga = "ಅಡಿಕೆ ಕಾಯಿ ಕೊಳೆಯುವ ರೋಗ/ಕೊಳೆ ರೋಗ/ಮಹಾಳಿ ಲಕ್ಷಣಗಳು ಮಳೆಗಾಲದಲ್ಲಿ ಅಡಿಕೆ ಕಾಯಿಗಳು ಕೊಳೆತು ಉದುರುತ್ತವೆ. ನಿರ್ವಹಣೆ ಮುಂಗಾರು ಪ್ರಾರಂಭವಾಗುವ ಮುಂಚಿತವಾಗಿ ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಿಸಬೇಕು.";
+  const budRot = "ಸುಳಿ (ತಿರಿ) ಕೊಳೆಯುವ ರೋಗ ಬಂದರೆ ಮೊದಲಿಗೆ ಸುಳಿ ಎಲೆ ಹಳದಿ ಬಣ್ಣಕ್ಕೆ ತಿರುಗುತ್ತದೆ ಮತ್ತು ಬೆಳೆಯುತ್ತಿರುವ ತಿರಿ ಕೊಳೆತು ಹೋಗುತ್ತದೆ.";
+  const koleTargets = diseasesNamed("ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?");
+
+  it("recognises koleroga by each of its names but not the other rots", () => {
+    for (const question of ["ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", "ಕೊಳೆರೋಗದ ಲಕ್ಷಣ", "ಮಹಾಳಿ ರೋಗ", "How to manage Mahali?", "koleroga spray", "kole roga control", "fruit rot of areca"]) {
+      expect(diseasesNamed(question).map((disease) => disease.name), question).toEqual(["koleroga (fruit rot)"]);
+    }
+    expect(diseasesNamed("ಸುಳಿ ಕೊಳೆ ರೋಗ").map((disease) => disease.name)).toEqual(["bud rot"]);
+    expect(diseasesNamed("ಬುಡ ಕೊಳೆ ರೋಗ").map((disease) => disease.name)).toEqual(["foot rot (anabe)"]);
+    expect(diseasesNamed("What fertilizer for young palms?")).toEqual([]);
+  });
+
+  it("rejects the foot-rot and cocoa passages behind the wrong answer, and keeps the koleroga one", () => {
+    expect(focusOnDisease(footRot, null, koleTargets)).toBeNull();
+    expect(focusOnDisease(cocoaPods, null, koleTargets)).toBeNull();
+    expect(focusOnDisease(budRot, null, koleTargets)).toBeNull();
+    expect(focusOnDisease(koleroga, null, koleTargets)).toBe(koleroga);
+  });
+
+  it("cuts a passage where the next disease starts, and marks the cuts", () => {
+    expect(focusOnDisease(`${koleroga} ${footRot}`, null, koleTargets)).toBe(`${koleroga} ರೋಗದ ತೀವ್ರತೆ ಹೆಚ್ಚಿರುವ ಮರದ ಬುಡ ಭಾಗದಲ್ಲಿ …`);
+    expect(focusOnDisease(`${budRot} ${koleroga}`, null, koleTargets)).toBe(`… ${koleroga}`);
+  });
+
+  it("drops the end of the previous disease's advice, even when that disease is not named in the passage", () => {
+    // Real bud-rot passage: its opening sentence is the foot-rot treatment, whose name fell in the previous chunk.
+    const passage = `ಶೇಕಡಾ 1 ರ ಬೋರ್ಡೋ ದ್ರಾವಣವನ್ನು ಪ್ರತೀ ಮರದ ಬುಡಕ್ಕೆ ಸುರಿಯಬೇಕು. ${budRot}`;
+    expect(focusOnDisease(passage, null, diseasesNamed("ಸುಳಿ ಕೊಳೆ ರೋಗ"))).toBe(`… ${budRot}`);
+    const intro = "ಅಡಿಕೆ ಮರಗಳಿಗೆ ಬರುವ ರೋಗಗಳು : ";
+    expect(focusOnDisease(`${intro}${koleroga}`, null, koleTargets)).toBe(`${intro}${koleroga}`);
+  });
+
+  it("ends a koleroga passage where a cocoa section starts, and starts after a cocoa introduction", () => {
+    const intro = "ಅಡಿಕೆ ತೋಟದೊಂದಿಗೆ ಕೊಕ್ಕೋ ಕೂಡಾ ಮಿಶ್ರ ಬೆಳೆಯಾಗಿ ಕೃಷಿಯಲ್ಲಿದೆ.";
+    const kole = "ಕೊಳೆರೋಗ:- ಇದು ಅಡಿಕೆಯ ಗೊಂಚಲುಗಳಲ್ಲಿ ಹಬ್ಬಿ ಉತ್ಪಾದನಾ ಭಂಗವೊಡ್ಡುತ್ತದೆ ಮತ್ತು ಕಾಯಿಗಳು ಉದುರುತ್ತವೆ.";
+    expect(focusOnDisease(`${intro} ${kole}`, null, koleTargets)).toBe(`… ${kole}`);
+    expect(focusOnDisease(`${kole} ಕೊಕ್ಕೋ ಕಾಯಿ ಕೊಳೆ ರೋಗ`, null, koleTargets)).toBe(`${kole} …`);
+  });
+
+  it("keeps a passage under a matching heading, and drops a passing mention", () => {
+    expect(focusOnDisease("Spray before the monsoon and repeat after forty days.", "Koleroga management", diseasesNamed("koleroga"))).toBe("Spray before the monsoon and repeat after forty days.");
+    expect(focusOnDisease(`Foot rot is managed by removing badly affected palms, unlike mahali. ${"x".repeat(10)} bud rot`, null, diseasesNamed("mahali"))).toBeNull();
+  });
+
+  it("does not return a closer-scoring passage about another disease", async () => {
+    const question = "How to manage koleroga?";
+    const payload = documentPayload("mixed", "e".repeat(64), [
+      { text: "Foot rot management: uproot and burn badly affected palms, and isolate them with trenches.", vector: unit(0), page: 1 },
+      { text: "Koleroga management: spray Bordeaux mixture before the monsoon and again after forty days.", vector: similarTo0(0.6), page: 2 },
+    ]);
+    expect((await post("/admin/documents", payload, "review")).status).toBe(201);
+    const result = await searchDocuments(env.DB, question, { embedder: mockEmbedder({ [question]: unit(0) }) });
+    expect(result.diseases).toEqual(["koleroga (fruit rot)"]);
+    expect(result.hits.map((hit) => hit.page_from)).toEqual([2]);
+  });
+
+  it("says so when no passage covers the disease, rather than offering another disease's advice", async () => {
+    const payload = documentPayload("foot", "f".repeat(64), [{ text: "Foot rot management: uproot and burn badly affected palms, and isolate them with trenches." }]);
+    expect((await post("/admin/documents", payload, "review")).status).toBe(201);
+    const { body } = await ask({ question: "How to manage koleroga disease? uproot palms" });
+    expect(body.excerpts).toEqual([]);
+    expect(body.missing.join()).toContain("koleroga (fruit rot)");
+  });
+});
+
+describe("cooperative variety labels", () => {
+  const mamcos = ["BETTE", "CHALI", "NEW RASHIEDI", "NEWRASHIEDI", "RASHI EDI", "SIPPE GOTU"];
+  it("finds what a grower calls Rashi under MAMCOS labels, most direct label first", () => {
+    expect(matchCooperativeVarieties("Rashi", mamcos)).toEqual(["RASHI EDI", "NEW RASHIEDI", "NEWRASHIEDI"]);
+    expect(matchCooperativeVarieties("Rashi", ["RASHI", "BETTE"])).toEqual(["RASHI"]);
+  });
+  it("keeps new-crop Rashi apart when asked for by name", () => {
+    expect(matchCooperativeVarieties("New Rashi", mamcos)).toEqual(["NEW RASHIEDI", "NEWRASHIEDI"]);
+    expect(classifyQuestion("New Rashi price in Sagara").entities.variety).toBe("New Rashi");
+    expect(classifyQuestion("ಹೊಸ ರಾಶಿ ಬೆಲೆ").entities.variety).toBe("New Rashi");
+  });
+  it("ignores spacing and case, and never maps the generic TUMCOS label to a grade", () => {
+    expect(matchCooperativeVarieties("Sippegotu", mamcos)).toEqual(["SIPPE GOTU"]);
+    expect(classifyQuestion("sippe gotu rate").entities.variety).toBe("Sippegotu");
+    expect(matchCooperativeVarieties("Rashi", ["areca"])).toEqual([]);
+  });
+});
+
+describe("price answers state their dates", () => {
+  const facts = [
+    { label: "TSS Sirsi – RASHI branch average", value: 46055, reporting_period: "2026-11-03", source_name: "TSS" },
+    { label: "MAMCOS SAGARA – CHALI branch average", value: 38412, reporting_period: "2026-11-02", source_name: "MAMCOS" },
+  ];
+  const evidence = [facts.map((fact) => `${fact.label}: ${fact.value}; period ${fact.reporting_period}`).join("\n")];
+  const check = (text: string, noPriceFromToday = true) => checkGrounding(text, evidence, ["S1", "S2"], facts, [], { noPriceFromToday });
+
+  it("rejects the real Kannada answer that gave a 3 November price as today's", () => {
+    const result = check("ಶಿರಸಿಯಲ್ಲಿ ಇಂದಿನ ರಾಶಿ ಅಡಿಕೆ ಬೆಲೆ 46,055 ರೂ./ಕ್ವಿಂಟಾಲ್ ಆಗಿದೆ [S1].");
+    expect(result.status).toBe("failed");
+    expect(result.reasons.join()).toContain("today");
+  });
+
+  it("rejects English claims of today, and accepts the same price with its date", () => {
+    for (const text of ["TSS Sirsi is 46,055 INR/quintal today [S1].", "The current price at TSS Sirsi is 46,055 [S1].", "TSS Sirsi is currently 46,055 [S1]."]) {
+      expect(check(text).status, text).toBe("failed");
+    }
+    expect(check("TSS Sirsi was latest reported at 46,055 INR/quintal on 3 November 2026 [S1].").status).toBe("passed");
+    expect(check("ಶಿರಸಿಯಲ್ಲಿ 3 ನವೆಂಬರ್ 2026 ರಂದು 46,055 ರೂ./ಕ್ವಿಂಟಾಲ್ [S1].").status).toBe("passed");
+  });
+
+  it("allows today when a price really is from today", () => {
+    expect(check("TSS Sirsi is 46,055 INR/quintal today [S1].", false).status).toBe("passed");
+  });
+
+  it("writes each feed's dates and age, in both languages", () => {
+    const rows = [
+      { source_name: "TSS", reporting_period: "2026-11-02" }, { source_name: "TSS", reporting_period: "2026-11-03" },
+      { source_name: "AGMARKNET monthly", reporting_period: "2026-10" }, { source_name: null, reporting_period: "2026-11-01" },
+    ];
+    expect(dataDates(rows, "en", "2026-11-06")).toBe("Price dates: TSS 2 Nov 2026 – 3 Nov 2026 (3 days old); AGMARKNET monthly Oct 2026.");
+    expect(dataDates(rows, "kn", "2026-11-06")).toBe("ಬೆಲೆಗಳ ದಿನಾಂಕ: TSS 2 ನವೆಂಬರ್ 2026 – 3 ನವೆಂಬರ್ 2026 (3 ದಿನಗಳ ಹಿಂದಿನದು); AGMARKNET monthly ಅಕ್ಟೋಬರ್ 2026.");
+    expect(dataDates([{ source_name: "TSS", reporting_period: "2026-11-06" }], "en", "2026-11-06")).toContain("(today)");
+    expect(dataDates([{ source_name: "TSS", reporting_period: "2026-11-05" }], "en", "2026-11-06")).toContain("(1 day old)");
+    expect(dataDates([{ source_name: null, reporting_period: "2026-11-05" }], "en", "2026-11-06")).toBeNull();
+  });
+});
+
+describe("rankings stay within one source", () => {
+  const facts = [
+    { label: "TSS Sirsi – CHALI branch average", value: 42033, reporting_period: "2026-11-03", source_name: "TSS" },
+    { label: "TSS Siddapur – CHALI branch average", value: 40604, reporting_period: "2026-11-03", source_name: "TSS" },
+    { label: "MAMCOS SAGARA – CHALI branch average", value: 38412, reporting_period: "2026-11-02", source_name: "MAMCOS" },
+  ];
+  const evidence = [facts.map((fact) => `${fact.label}: ${fact.value}; period ${fact.reporting_period}`).join("\n")];
+  const check = (text: string) => checkGrounding(text, evidence, ["S1", "S2"], facts);
+
+  it("rejects the real answer that named TSS Sirsi the best price across sources", () => {
+    expect(check("The best price for Chali was at TSS Sirsi with 42,033 INR/quintal [S2]. MAMCOS Sagara offered 38,412 [S1].").reasons.join()).toContain("across different sources");
+    expect(check("TSS Sirsi at 42,033 is higher than MAMCOS Sagara at 38,412 [S1].").status).toBe("failed");
+  });
+
+  it("accepts a separate ranking for each source, and plain listings", () => {
+    expect(check("Among TSS branches, the highest was Sirsi at 42,033 [S2]. Among MAMCOS branches, the highest was Sagara at 38,412 [S1].").status).toBe("passed");
+    expect(check("TSS Sirsi reported 42,033 and MAMCOS Sagara reported 38,412 [S1].").status).toBe("passed");
+  });
+
+  it("allows a ranking when only one source has data", () => {
+    const one = facts.filter((fact) => fact.source_name === "TSS");
+    expect(checkGrounding("The highest was TSS Sirsi at 42,033 [S1].", evidence, ["S1"], one).status).toBe("passed");
+  });
+});
+
+describe("price questions end to end", () => {
+  function seedQuotes() {
+    db.sqlite.prepare("INSERT INTO cooperative_fetches (id, source_key, source_url, started_at, status) VALUES ('f-m', 'mamcos', 'https://example.org/m', '2026-11-03T00:00:00Z', 'succeeded'), ('f-t', 'tss', 'https://example.org/t', '2026-11-03T00:00:00Z', 'succeeded')").run();
+    const quote = (id: string, source: "mamcos" | "tss", branch: string, date: string, variety: string, average: number) => db.sqlite.prepare(`INSERT INTO cooperative_quotes (id, source_key, commodity, branch, reporting_date, variety, minimum_price, maximum_price, average_price,
+        price_type, price_unit, source_unit_label, unit_status, source_url, fetched_at, fetch_id, raw_record, status, source_record_id, price_basis)
+      VALUES (?, ?, 'arecanut', ?, ?, ?, ?, ?, ?, 'reported_average', 'INR/quintal', NULL, ?, 'https://example.org/source', '2026-11-03T12:00:00Z', ?, ?, 'verified', '', ?)`)
+      .run(id, source, branch, date, variety, average - 100, average + 100, average, source === "mamcos" ? "source_confirmed" : "assumed", source === "mamcos" ? "f-m" : "f-t", JSON.stringify({ id }), source === "tss" ? "COOPERATIVE_TENDER_AVERAGE" : "COOPERATIVE_AVERAGE");
+    quote("m1", "mamcos", "SHIVAMOGGA", "2026-11-02", "RASHI EDI", 48089);
+    quote("m2", "mamcos", "SAGARA", "2026-11-02", "RASHI EDI", 46448);
+    quote("m3", "mamcos", "KOPPA", "2026-10-31", "RASHI EDI", 48899);
+    quote("m4", "mamcos", "SAGARA", "2026-11-02", "CHALI", 38412);
+    quote("t1", "tss", "Sirsi", "2026-11-03", "RASHI", 46055);
+    quote("t2", "tss", "Sirsi", "2026-11-03", "CHALI", 42033);
+    quote("t3", "tss", "Siddapur", "2026-11-03", "CHALI", 40604);
+  }
+
+  it("answers Rashi in Shivamogga from MAMCOS RASHI EDI, the case that used to return nothing", async () => {
+    seedQuotes();
+    const { body } = await ask({ question: "What is the latest Rashi price in Shivamogga?" });
+    const mamcos = body.facts.filter((fact: any) => fact.source_name === "MAMCOS");
+    expect(mamcos.map((fact: any) => [fact.label, fact.value])).toEqual([["MAMCOS SHIVAMOGGA – RASHI EDI branch average", 48089]]);
+    expect(body.assumptions.join()).toContain('MAMCOS reports this as "RASHI EDI", shown here for "Rashi"');
+    expect(body.interpretation.text).toContain("MAMCOS SHIVAMOGGA RASHI EDI, 2026-11-02: INR 48,089/quintal");
+    expect(body.interpretation.data_dates).toContain("MAMCOS 2 Nov 2026");
+    expect(body.answer_text).toContain("Price dates:");
+  });
+
+  it("gives a Kannada reader the price and its date without the model", async () => {
+    seedQuotes();
+    const { body } = await ask({ question: "ಶಿರಸಿಯಲ್ಲಿ ಇಂದಿನ ರಾಶಿ ಅಡಿಕೆ ಬೆಲೆ ಎಷ್ಟು?" });
+    expect(body.interpretation.text).toContain("TSS Sirsi RASHI, 2026-11-03: ರೂ. 46,055/ಕ್ವಿಂಟಾಲ್");
+    expect(body.interpretation.data_dates).toContain("3 ನವೆಂಬರ್ 2026");
+  });
+
+  it("falls back to dated rules when the model calls an older price today's", async () => {
+    seedQuotes();
+    env.ASSISTANT_LLM_PROVIDER = "ollama";
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ message: { content: "Today TSS Sirsi Rashi is 46,055 INR/quintal [S1]." } }))));
+    const { body } = await ask({ question: "Rashi price in Sirsi today?" });
+    expect(body.llm.status).toBe("grounding_failed");
+    expect(body.interpretation.generated_by).toBe("rules");
+    expect(body.interpretation.data_dates).toContain("TSS 3 Nov 2026");
+  });
+
+  it("ranks the best price separately for each source, among branches reporting that day", async () => {
+    seedQuotes();
+    const { body } = await ask({ question: "Where can I get the best price for Rashi this week?" });
+    const lines = body.interpretation.text.split("\n");
+    expect(lines).toContain("MAMCOS RASHI EDI, 2026-11-02: highest SHIVAMOGGA at INR 48,089/quintal, lowest SAGARA at INR 46,448/quintal (2 reporting that day). 1 that last reported earlier are not ranked.");
+    expect(lines).toContain("TSS RASHI, 2026-11-03: only Sirsi reported that day, INR 46,055/quintal.");
+  });
+});
+
+describe("sell-or-hold questions", () => {
+  function seedMonths(month: string) {
+    // Falling for three months after the asked month, every year, so the record is easy to check.
+    db.sqlite.prepare("INSERT INTO monthly_refresh_runs(id,reporting_month,state,source_url,started_at,status) VALUES('run','2021-01','Karnataka','https://example.org','2026-11-01','succeeded')").run();
+    const insert = db.sqlite.prepare("INSERT INTO monthly_variety_prices VALUES(?,'Karnataka','Rashi',?,'INR/quintal','https://example.org','2026-11-01T00:00:00Z','run')");
+    const startMonth = Number(month);
+    for (let year = 2021; year <= 2025; year += 1) {
+      for (let offset = 0; offset <= 6; offset += 1) {
+        const index = year * 12 + startMonth - 1 + offset;
+        const value = offset === 3 ? 45000 : offset === 6 ? 52000 : 46000 + year;
+        insert.run(`${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`, value);
+      }
+    }
+  }
+
+  it("answers from past years straight away, and still asks for costs to work out the user's own figures", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-06T06:00:00Z"));
+    seedMonths("11");
+    const { body } = await ask({ question: "Should I sell my rashi now or wait a month?" });
+    expect(body.tools).toEqual([expect.objectContaining({ tool: "calculate_sell_hold", status: "needs_input" })]);
+    expect(body.interpretation.text).toContain("Rashi, Karnataka monthly average, from November: 3 months later it was higher in 0 of 5 years");
+    expect(body.interpretation.text).toContain("before storage, interest and weight loss");
+    expect(body.facts.map((fact: any) => fact.label)).toContain("Rashi Karnataka monthly average: median change 3 months after November");
+    expect(body.citations[0]).toMatchObject({ ref: "S1", publisher: expect.stringContaining("AGMARKNET") });
+    expect(body.missing.join()).toContain("ANI does not assume costs");
+    expect(body.uncertainty.join()).toContain("Past years do not show what the price will do");
+    vi.useRealTimers();
+  });
+
+  it("gives the record in Kannada, and rejects a model telling the reader to wait", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-06T06:00:00Z"));
+    seedMonths("11");
+    const kannada = await ask({ question: "ರಾಶಿ ಈಗ ಮಾರಬೇಕೇ ಅಥವಾ ಕಾಯಬೇಕೇ?" });
+    expect(kannada.body.interpretation.text).toContain("ನವೆಂಬರ್ ತಿಂಗಳಿನಿಂದ: 3 ತಿಂಗಳ ನಂತರ 5 ವರ್ಷಗಳಲ್ಲಿ 0 ಬಾರಿ");
+    env.ASSISTANT_LLM_PROVIDER = "ollama";
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ message: { content: "You should hold your stock [S1]." } }))));
+    const { body } = await ask({ question: "Should I sell my rashi now or wait a month?" });
+    expect(body.llm.status).toBe("grounding_failed");
+    expect(body.interpretation.generated_by).toBe("rules");
+    vi.useRealTimers();
   });
 });
 

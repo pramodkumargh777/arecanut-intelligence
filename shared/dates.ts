@@ -23,6 +23,15 @@ export function formatCalendarMonth(value: string): string {
   return `${MONTH_NAMES[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
+export const MONTH_NAMES_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+export const MONTH_NAMES_KN = ["ಜನವರಿ", "ಫೆಬ್ರವರಿ", "ಮಾರ್ಚ್", "ಏಪ್ರಿಲ್", "ಮೇ", "ಜೂನ್", "ಜುಲೈ", "ಆಗಸ್ಟ್", "ಸೆಪ್ಟೆಂಬರ್", "ಅಕ್ಟೋಬರ್", "ನವೆಂಬರ್", "ಡಿಸೆಂಬರ್"];
+
+/** A YYYY-MM-DD or YYYY-MM period for a Kannada reader, e.g. "3 ನವೆಂಬರ್ 2026". */
+export function formatPeriodKannada(period: string): string {
+  const [year, month, day] = period.split("-").map(Number);
+  return `${day ? `${day} ` : ""}${MONTH_NAMES_KN[month - 1]} ${year}`;
+}
+
 export function formatChartDate(time: number): string {
   if (!Number.isFinite(time)) throw new Error("Invalid chart time");
   return formatCalendarDate(new Date(time).toISOString().slice(0, 10));

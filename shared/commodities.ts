@@ -141,8 +141,8 @@ export function marketFeeds(commodity: CommodityDef | undefined): MarketFeed[] {
 
 /** Capability required to render a route for the selected commodity; null when the route is commodity-independent. */
 export function routeCapability(pathname: string): Capability | "market_data" | null {
-  if (["/", "/prices", "/analytics", "/compare"].includes(pathname)) return "market_data";
-  if (pathname === "/monthly-trends" || pathname === "/history") return "monthly_history";
+  if (["/", "/overview", "/prices", "/analytics", "/compare"].includes(pathname)) return "market_data";
+  if (pathname === "/monthly-trends" || pathname === "/history" || pathname === "/sell-or-hold") return "monthly_history";
   if (pathname === "/forecasts" || pathname === "/forecasts/evaluation") return "forecast";
   if (pathname === "/decision-tools") return "calculators";
   if (pathname === "/supply") return "production";

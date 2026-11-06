@@ -2,6 +2,7 @@
  * Hybrid document retrieval over D1: SQLite FTS5 keyword search plus optional BGE-M3 semantic search on int8
  * vectors stored in document_chunks, fused with reciprocal-rank fusion. No external vector database is required.
  */
+import { diseasesNamed, focusOnDisease } from "./diseases";
 import { expandTerms } from "./language";
 import { restrictedPesticides } from "./pesticides";
 import { CANONICAL_EMBEDDING_MODEL, type EmbeddingProvider } from "./providers";
@@ -44,6 +45,8 @@ export type RetrievalResult = {
   hits: RetrievalHit[];
   /** Relevant passages not shown because they name a pesticide India has banned or restricted. */
   withheld_pesticides: string[];
+  /** Diseases the question names. When present, every hit is about one of them. */
+  diseases: string[];
   mode: "hybrid" | "keyword" | "semantic" | "none";
   semantic_status: "used" | "not_configured" | "no_vectors" | "failed";
   semantic_error: string | null;
@@ -205,8 +208,10 @@ export async function searchDocuments(db: D1Database, question: string, options:
   const threshold = (options.semanticThreshold ?? DEFAULT_SEMANTIC_THRESHOLD) + (/[\u0C80-\u0CFF]/.test(question) ? KANNADA_THRESHOLD_MARGIN : 0);
   const terms = queryTerms(question);
   const corpus = await corpusStats(db);
+  const targets = diseasesNamed(question);
+  const diseases = targets.map((target) => target.name);
   const empty = (semantic_status: RetrievalResult["semantic_status"], semantic_error: string | null = null): RetrievalResult => ({
-    hits: [], withheld_pesticides: [], mode: "none", semantic_status, semantic_error, query_terms: terms, corpus,
+    hits: [], withheld_pesticides: [], diseases, mode: "none", semantic_status, semantic_error, query_terms: terms, corpus,
   });
   if (!corpus.chunks) return empty(options.embedder ? "no_vectors" : "not_configured");
 
@@ -252,7 +257,13 @@ export async function searchDocuments(db: D1Database, question: string, options:
     }
   });
 
-  const ranked = [...fused.values()].sort((a, b) => b.score - a.score);
+  const fusedRanked = [...fused.values()].sort((a, b) => b.score - a.score);
+  const ranked = targets.length
+    ? fusedRanked.flatMap((hit) => {
+      const text = focusOnDisease(hit.text, hit.heading, targets);
+      return text ? [{ ...hit, text }] : [];
+    })
+    : fusedRanked;
   const inLanguage = options.language ? ranked.filter((hit) => hit.language === options.language) : ranked;
   const otherLanguage = options.language ? ranked.filter((hit) => hit.language !== options.language) : [];
   const preferred = options.language === "en" && inLanguage.length ? inLanguage : [...inLanguage, ...otherLanguage];
@@ -275,7 +286,7 @@ export async function searchDocuments(db: D1Database, question: string, options:
     .map((hit) => ({ ...hit, score: Number(hit.score.toFixed(5)) }));
 
   const mode = keyword.length && semantic.length ? "hybrid" : keyword.length ? "keyword" : semantic.length ? "semantic" : "none";
-  return { hits, withheld_pesticides: [...withheld], mode, semantic_status: semanticStatus, semantic_error: semanticError, query_terms: terms, corpus };
+  return { hits, withheld_pesticides: [...withheld], diseases, mode, semantic_status: semanticStatus, semantic_error: semanticError, query_terms: terms, corpus };
 }
 
 export function pageLabel(hit: Pick<RetrievalHit, "page_from" | "page_to">): string | null {

@@ -118,6 +118,7 @@ function AnswerView({ answer }: { answer: AssistantAnswer }) {
       <div className="panel-heading"><div><h2>{answer.interpretation.generated_by === "llm" ? "Interpretation · language model" : "Interpretation · rule-based"}</h2>
         <p>{LLM_STATUS[answer.llm.status]}{answer.llm.model ? ` · ${answer.llm.provider} ${answer.llm.model}` : ""}{grounding ? ` · grounding ${grounding.status}` : ""} · {answer.duration_ms.toLocaleString("en-IN")} ms</p></div></div>
       <div style={{ lineHeight: 1.65, overflowWrap: "anywhere" }}>
+        {answer.interpretation.data_dates && <p lang={answer.language}><strong>{answer.interpretation.data_dates}</strong></p>}
         <p lang={answer.language} style={{ whiteSpace: "pre-wrap" }}>{answer.interpretation.text}</p>
         <p className="card-hint">{answer.interpretation.note}</p>
         {answer.llm.reason && answer.llm.status !== "used" && <p className="card-hint">Reason: {answer.llm.reason}</p>}

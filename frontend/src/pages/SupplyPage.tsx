@@ -15,7 +15,8 @@ function Provenance({ sources, period }: { sources: SupplySource[]; period: stri
 }
 
 function ForecastNotice({ gate, subject }: { gate: ForecastGate; subject: string }) {
-  return <p className="data-disclosure">{subject} forecast: {gate.status === "suppressed" ? `suppressed. ${gate.reason}` : `${gate.points} points available; eligible for evaluation only, not published.`}</p>;
+  if (gate.status === "suppressed") return null;
+  return <p className="data-disclosure">{subject} forecast: {gate.points} points available; eligible for evaluation only, not published.</p>;
 }
 
 function ProductionSection() {
@@ -60,6 +61,8 @@ function ArrivalsSection() {
   const [granularity, setGranularity] = useState<Granularity>("monthly");
   const arrivals = useQuery({ queryKey: ["supply-arrivals", granularity], queryFn: () => api.supplyArrivals({ granularity }) });
   const data = arrivals.data, rows = data ? arrivalRows(data.measures) : [];
+  // Nothing has been imported yet, so there is nothing to show at any period.
+  if (data && !data.sources.length && !rows.length) return null;
   return <section className="panel table-panel" aria-labelledby="supply-arrivals">
     <div className="panel-heading"><div><h2 id="supply-arrivals">Market arrivals and traded quantity</h2><p>Arrival and traded quantities are separate measures and are never added together.</p></div>
       <label className="filter-control"><span>Period</span><select value={granularity} onChange={(event) => setGranularity(event.target.value as Granularity)}>
@@ -96,14 +99,12 @@ function WeatherSection({ district, districts, setDistrict }: { district: string
         <div className="table-scroll" tabIndex={0} role="region" aria-label="Recent daily weather"><table><thead><tr><th>Date</th><th>Data type</th><th>Rain (mm)</th><th>Max °C</th><th>Min °C</th><th>Humidity (%)</th></tr></thead><tbody>
           {recent.map((row) => <tr key={`${row.day}-${row.data_type}`}><td>{row.day}</td><td>{label(row.data_type)}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{num(row.relative_humidity_pct)}</td></tr>)}
         </tbody></table></div></>}
-      <h3>Forecasts</h3>
-      {data.forecasts.official.length ? <p>{data.forecasts.official.length} official forecast days imported.</p> : <p>No official (IMD) forecast imported for {district}.</p>}
+      {(data.forecasts.official.length > 0 || data.forecasts.model.length > 0) && <h3>Forecasts</h3>}
+      {data.forecasts.official.length > 0 && <p>{data.forecasts.official.length} official forecast days imported.</p>}
       {data.forecasts.model.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="Model forecast"><table><thead><tr><th>Target date</th><th>Type</th><th>Rain (mm)</th><th>Max °C</th><th>Min °C</th><th>Issued</th></tr></thead><tbody>
         {data.forecasts.model.map((row) => <tr key={`${row.target_date}-${row.provider}`}><td>{row.target_date}</td><td>{label(row.data_type)} forecast</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{formatTimestampIST(row.issued_at)}</td></tr>)}
       </tbody></table></div> : null}
-      <h3>District warnings</h3>
-      {data.warnings.length ? <ul>{data.warnings.map((row) => <li key={`${row.issued_at}-${row.valid_from}-${row.phenomena}`}>{row.valid_from} to {row.valid_to}: {row.warning_level} · {row.phenomena} ({row.provider}, issued {formatTimestampIST(row.issued_at)})</li>)}</ul>
-        : <p>No current official district warnings imported. ANI does not generate warnings.</p>}
+      {data.warnings.length > 0 && <><h3>District warnings</h3><ul>{data.warnings.map((row) => <li key={`${row.issued_at}-${row.valid_from}-${row.phenomena}`}>{row.valid_from} to {row.valid_to}: {row.warning_level} · {row.phenomena} ({row.provider}, issued {formatTimestampIST(row.issued_at)})</li>)}</ul></>}
       <ul>{data.notes.map((note) => <li key={note}>{note}</li>)}</ul>
     </>}
   </section>;
@@ -113,6 +114,8 @@ function RiskSection({ district }: { district: string }) {
   const rules = useQuery({ queryKey: ["supply-risk-rules"], queryFn: () => api.supplyRiskRules() });
   const advisories = useQuery({ queryKey: ["supply-advisories", district], queryFn: () => api.supplyAdvisories(district) });
   const latest = (rules.data?.rules ?? []).filter((rule) => rule.latest_version);
+  // Rules stay unpublished until an expert approves them; readers see this section once there is an advisory to read.
+  if (!advisories.data?.advisories.length) return null;
   return <section className="panel table-panel" aria-labelledby="supply-risk">
     <div className="panel-heading"><div><h2 id="supply-risk">Arecanut crop-risk advisories</h2><p>Rule-based watch levels from expert-approved ICAR-CPCRI criteria. Never a diagnosis.</p></div></div>
     {advisories.isLoading ? <LoadingState /> : advisories.error ? <ErrorState error={advisories.error} onRetry={() => void advisories.refetch()} /> : advisories.data ? <>
@@ -134,8 +137,8 @@ export function SupplyPage() {
   const [district, setDistrict] = useState("Uttara Kannada");
   const weatherDistricts = useQuery({ queryKey: ["supply-weather", district], queryFn: () => api.supplyWeather({ district }) });
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow">SUPPLY · PRODUCTION · AGRICULTURAL RISK</div><h1>Supply and crop risk</h1>
-      <p>Government production estimates, authorized arrival imports, weather datasets and expert-reviewed crop-risk rules. Every table states its source and reporting period; missing data is shown as missing, never estimated.</p></div></section>
+    <section className="page-heading"><div><div className="eyebrow">SUPPLY · PRODUCTION · AGRICULTURAL RISK</div><h1>Supply and weather</h1>
+      <p>Government production estimates and weather datasets. Every table states its source and reporting period.</p></div></section>
     <ProductionSection />
     <ArrivalsSection />
     <WeatherSection district={district} districts={weatherDistricts.data?.districts ?? []} setDistrict={setDistrict} />
