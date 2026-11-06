@@ -87,6 +87,11 @@ Backfills also write `backfill_summary.json`. Exit code 2 means the run failed.
 - Reports and raw pages are uploaded as 90-day artifacts. Copy them to durable storage if they are needed as long-term replay evidence.
 - The resource's refresh cadence is not documented. Days on which no run happens while that day is current cannot be recovered from this resource.
 
+**Relay.** data.gov.in timed out from GitHub's runners on 6 Nov 2026 and returned HTTP 523 to a Worker running in Marseille, but answered from Mumbai. So the scheduled job reaches it through a small Worker pinned to Mumbai (`api/src/agmarknet-relay.ts`, `api/wrangler.relay.toml`).
+- Set the repository variable `AGMARKNET_API_BASE_URL` to `https://ani-agmarknet-relay.arecanut.workers.dev/resource`. Without it, the connector calls data.gov.in directly, which works from a machine in India.
+- The relay serves GET requests for this one resource only and needs `INGESTION_TOKEN` in the `X-ANI-Relay-Token` header, so that secret must match on the relay, the main API and GitHub. The token is never sent to data.gov.in.
+- Deploy it with `npx wrangler deploy --config api/wrangler.relay.toml`. Keep its logging off, because the data.gov.in key is in the request URL.
+
 **Status.** `GET /api/v1/admin/source-status` (ADMIN_TOKEN) and the
 *Data-source status* panel in Data quality show the latest Karnataka market
 date, observation counts by review status, platform fetch time (IST), recent
