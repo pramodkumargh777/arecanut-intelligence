@@ -17,6 +17,9 @@ TSS_SCHEDULE_ENABLED = "true"
 TUMCOS_SCHEDULE_ENABLED = "true"
 # Publish scheduled quotations that pass every check (src/cooperative-auto-publish.ts). The rest wait for review.
 COOPERATIVE_AUTO_PUBLISH = "true"
+# Daily weather and official-news capture at 09:00 IST. Open-Meteo's free endpoint is non-commercial: get its paid
+# plan before charging users, or set OPEN_METEO_ENABLED = "false".
+INTELLIGENCE_SCHEDULE_ENABLED = "true"
 # Archive maintenance in the daily cron (R2 sync + temporary-object purge). Off by default.
 ARCHIVE_SCHEDULE_ENABLED = "false"
 # Days before archive objects classified as temporary expire (1-365). Evidence never expires.

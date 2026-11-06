@@ -16,8 +16,11 @@ export const AUTO_PUBLISH_MIN_REFERENCE = 3;
 export const AUTO_PUBLISH_LOOKBACK_DAYS = 30;
 const MAX_ROWS_PER_RUN = 200;
 const STATEMENTS_PER_BATCH = 100;
-/** These record the operator's unit decision (migration 0020). Every other flag needs a person. */
-const ACCEPTED_FLAGS = new Set(["declared_unit_conflicts_with_magnitude", "unit_operator_assumed"]);
+/**
+ * The first two record the operator's unit decision (migration 0020). TUMCOS never reports a variety, so that flag is on
+ * all its rows, and readers are told so wherever its rate appears. Every other flag needs a person.
+ */
+const ACCEPTED_FLAGS = new Set(["declared_unit_conflicts_with_magnitude", "unit_operator_assumed", "variety_not_reported"]);
 
 export type PendingQuote = {
   id: string; commodity: string; branch: string; reporting_date: string; variety: string;

@@ -70,7 +70,7 @@ code { font-family: var(--mono); font-size: .88em; }
 
   <figure>
     <div class="scroll">
-    <svg id="system" viewBox="0 0 1200 680" role="img" aria-label="Public sources and off-platform jobs write through a Cloudflare Worker into a D1 database. Readers load the React app from Cloudflare Pages and call the Worker's public API, which reads from D1. Cooperative collection, the AGMARKNET daily job and the R2 archive are built but blocked or off.">
+    <svg id="system" viewBox="0 0 1200 680" role="img" aria-label="Public sources and off-platform jobs write through a Cloudflare Worker into a D1 database. Readers load the React app from Cloudflare Pages and call the Worker's public API, which reads from D1. The AGMARKNET daily job and the R2 archive are built but not running.">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m" d="M0 0 10 5 0 10z"/></marker>
         <marker id="arrow-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m-b" d="M0 0 10 5 0 10z"/></marker>
@@ -116,20 +116,20 @@ code { font-family: var(--mono); font-size: .88em; }
 
       <!-- Public sources, left column -->
       <text class="g" x="20" y="222">Public sources</text>
-      <rect class="box-b" x="20" y="235" width="205" height="38" rx="6"/>
-      <text class="h" x="32" y="250">MAMCOS</text><text class="t" x="32" y="265">HTML, needs permission</text>
-      <rect class="box-b" x="20" y="281" width="205" height="38" rx="6"/>
-      <text class="h" x="32" y="296">TSS</text><text class="t" x="32" y="311">JSON, needs permission</text>
-      <rect class="box-b" x="20" y="327" width="205" height="38" rx="6"/>
-      <text class="h" x="32" y="342">TUMCOS</text><text class="t" x="32" y="357">HTML, needs permission</text>
+      <rect class="box" x="20" y="235" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="250">MAMCOS</text><text class="t" x="32" y="265">HTML, twice daily</text>
+      <rect class="box" x="20" y="281" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="296">TSS</text><text class="t" x="32" y="311">JSON, twice daily</text>
+      <rect class="box" x="20" y="327" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="342">TUMCOS</text><text class="t" x="32" y="357">HTML, twice daily</text>
       <rect class="box" x="20" y="373" width="205" height="38" rx="6"/>
       <text class="h" x="32" y="388">AGMARKNET monthly</text><text class="t" x="32" y="403">CSV, 09:00 IST</text>
-      <rect class="box-b" x="20" y="419" width="205" height="38" rx="6"/>
-      <text class="h" x="32" y="434">Open-Meteo, PIB</text><text class="t" x="32" y="449">flag off</text>
+      <rect class="box" x="20" y="419" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="434">Open-Meteo, PIB, DASD</text><text class="t" x="32" y="449">weather, news, 09:00 IST</text>
 
-      <path class="a-b" d="M225 254H250M225 300H250M225 346H250M225 438H250"/>
+      <path class="a" d="M225 254H250M225 300H250M225 346H250M225 438H250"/>
       <path class="a" d="M225 392H250V300H304" marker-end="url(#arrow)"/>
-      <path class="a-b" d="M250 254V300M250 392V438"/>
+      <path class="a" d="M250 254V300M250 392V438"/>
       <text class="e e-band" x="266" y="292" text-anchor="middle">fetch</text>
 
       <!-- Worker -->
@@ -233,9 +233,9 @@ code { font-family: var(--mono); font-size: .88em; }
         <tr><td>Website, public API and assistant</td><td><span class="pill pill-live">Running</span></td><td>Nothing. Assistant: Qwen3 and BGE-M3, 258 of 258 passages embedded.</td></tr>
         <tr><td>AGMARKNET monthly refresh</td><td><span class="pill pill-live">Running</span></td><td>Nothing. It ran at 09:00 IST on 6 Nov.</td></tr>
         <tr><td>Forecast re-evaluation</td><td><span class="pill pill-live">Deployed</span></td><td>Its first run is 09:00 IST on 7 Nov. Rashi shows <code>stale</code> until then.</td></tr>
-        <tr><td>MAMCOS, TSS and TUMCOS collection</td><td><span class="pill pill-b">Blocked</span></td><td>A permission grant for each, recorded in Data quality. All three show <code>not_requested</code>.</td></tr>
-        <tr><td>AGMARKNET daily feed</td><td><span class="pill pill-b">No data</span></td><td>Matching <code>INGESTION_TOKEN</code> in Cloudflare and GitHub, then a reviewer's approval of each import. The GitHub setup has not been checked.</td></tr>
-        <tr><td>Weather and news refresh</td><td><span class="pill pill-b">Off</span></td><td><code>INTELLIGENCE_SCHEDULE_ENABLED</code>. PIB blocks automated requests, and the free Open-Meteo tier is non-commercial.</td></tr>
+        <tr><td>MAMCOS, TSS and TUMCOS collection</td><td><span class="pill pill-live">Enabled</span></td><td>Tested from the live Worker on 6 Nov. Scheduled publishing first runs at 20:00 IST that day. Written permission references and redistribution status are still to be recorded.</td></tr>
+        <tr><td>AGMARKNET daily feed</td><td><span class="pill pill-b">Skipped</span></td><td>GitHub repository variables and secrets. The Cloudflare <code>INGESTION_TOKEN</code> is set. Each import then needs a reviewer's approval.</td></tr>
+        <tr><td>Weather and news refresh</td><td><span class="pill pill-live">Enabled</span></td><td>Tested from the live Worker on 6 Nov. Weather covers the Sirsi point only. News re-reads three fixed pages, so it does not find new releases. Open-Meteo's free tier is non-commercial.</td></tr>
         <tr><td>R2 evidence archive</td><td><span class="pill pill-b">Not set up</span></td><td>Optional. Create the bucket and uncomment the binding when D1 size becomes a concern.</td></tr>
       </tbody>
     </table></div>

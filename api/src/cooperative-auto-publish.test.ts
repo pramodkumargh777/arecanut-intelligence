@@ -48,8 +48,9 @@ describe("which quotations wait for a person", () => {
   ])("holds %s", (_name, change, reference, expected) => {
     expect(holdReason({ ...row, ...change }, reference, TODAY)).toContain(expected);
   });
-  it("accepts the flag that records the operator's TUMCOS unit decision", () => {
-    expect(holdReason({ ...row, unit_status: "assumed", review_flags: JSON.stringify(["declared_unit_conflicts_with_magnitude"]) }, 46000, TODAY)).toBeNull();
+  it("accepts the flags every TUMCOS row carries: the unit decision, and no variety reported", () => {
+    expect(holdReason({ ...row, unit_status: "assumed", review_flags: JSON.stringify(["declared_unit_conflicts_with_magnitude", "variety_not_reported"]) }, 46000, TODAY)).toBeNull();
+    expect(holdReason({ ...row, unit_status: "assumed", review_flags: JSON.stringify(["variety_not_reported", "multiple_source_records_same_date"]) }, 46000, TODAY)).toContain("multiple_source_records_same_date");
   });
 });
 
