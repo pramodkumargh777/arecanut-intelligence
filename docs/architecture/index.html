@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>ANI System Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one wide engineering drawing, then the publication states, then what is and is not running. */
+:root {
+  --bg: #f6f7f2; --surface: #ffffff; --band: #edf0e6; --fg: #1f2a22; --muted: #5d6a60; --line: #c9d0c1;
+  --live: #1f6b45; --blocked: #a55a08; --blocked-bg: #fbf1e1;
+  --sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #151a16; --surface: #1e2520; --band: #1a201b; --fg: #e8ede6; --muted: #a3afa5; --line: #3b463d;
+  --live: #6ccf9c; --blocked: #eaa95a; --blocked-bg: #33281a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #151a16; --surface: #1e2520; --band: #1a201b; --fg: #e8ede6; --muted: #a3afa5; --line: #3b463d;
+  --live: #6ccf9c; --blocked: #eaa95a; --blocked-bg: #33281a; color-scheme: dark }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+.page { max-width: 1240px; margin: 0 auto; padding-block: 32px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 32px; }
+.page > * { min-width: 0; }
+h1 { font-size: 30px; line-height: 1.2; font-weight: 700; margin: 0 0 8px; text-wrap: balance; }
+h2 { font-size: 20px; line-height: 1.3; font-weight: 600; margin: 0 0 12px; text-wrap: balance; }
+p { margin: 0; max-width: 72ch; }
+.lede { color: var(--muted); }
+figure { margin: 0; }
+.scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+figcaption { margin-top: 10px; color: var(--muted); font-size: 14.5px; max-width: 80ch; }
+svg { display: block; color: var(--fg); max-width: 100%; height: auto; }
+#system { min-width: 1040px; } #states { min-width: 780px; }
+.t { font-family: var(--sans); font-size: 12.5px; fill: var(--muted); }
+.h { font-family: var(--sans); font-size: 14px; font-weight: 600; fill: var(--fg); }
+.g { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--muted); }
+.e { font-family: var(--mono); font-size: 11.5px; fill: var(--fg); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.e-band { stroke: var(--band); }
+.e-b { fill: var(--blocked); }
+.box { fill: var(--surface); stroke: var(--line); stroke-width: 1.25; }
+.box-on-page { fill: var(--band); stroke: var(--line); stroke-width: 1.25; }
+.box-b { fill: var(--blocked-bg); stroke: var(--blocked); stroke-width: 1.25; stroke-dasharray: 5 4; }
+.zone { fill: var(--band); stroke: var(--line); stroke-width: 1.25; }
+.group { fill: none; stroke: var(--muted); stroke-width: 1.25; }
+.a { fill: none; stroke: var(--fg); stroke-width: 1.5; }
+.a-b { fill: none; stroke: var(--blocked); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.m { fill: var(--fg); } .m-b { fill: var(--blocked); }
+.live-state { fill: var(--surface); stroke: var(--live); stroke-width: 2; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; background: var(--surface); }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 13px; font-weight: 600; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+.pill { display: inline-block; white-space: nowrap; font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 4px; }
+.pill-live { color: var(--live); border: 1px solid var(--live); }
+.pill-b { color: var(--blocked); border: 1px dashed var(--blocked); }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.tablewrap table { min-width: 620px; }
+code { font-family: var(--mono); font-size: .88em; }
+.note { color: var(--muted); font-size: 14.5px; margin-top: 10px; }
+</style>
+
+<main class="page">
+  <header>
+    <h1>ANI system map</h1>
+    <p class="lede">How Arecanut Intelligence collects, checks, stores and serves its data, as deployed from commit <code>238b2e0</code>. Status was read from the live API on 6 Nov 2026.</p>
+  </header>
+
+  <figure>
+    <div class="scroll">
+    <svg id="system" viewBox="0 0 1200 680" role="img" aria-label="Public sources and off-platform jobs write through a Cloudflare Worker into a D1 database. Readers load the React app from Cloudflare Pages and call the Worker's public API, which reads from D1. Cooperative collection, the AGMARKNET daily job and the R2 archive are built but blocked or off.">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m" d="M0 0 10 5 0 10z"/></marker>
+        <marker id="arrow-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m-b" d="M0 0 10 5 0 10z"/></marker>
+      </defs>
+
+      <!-- Cloudflare boundary -->
+      <rect class="zone" x="270" y="172" width="915" height="488" rx="10"/>
+      <text class="g" x="288" y="193">Cloudflare account</text>
+
+      <!-- Off-platform actors, top row -->
+      <text class="g" x="20" y="20">Off-platform jobs and people</text>
+      <text class="g" x="660" y="20">Readers</text>
+
+      <rect class="box-b" x="20" y="30" width="130" height="45" rx="6"/>
+      <text class="h" x="32" y="49">data.gov.in</text><text class="t" x="32" y="66">AGMARKNET daily</text>
+      <rect class="box-b" x="190" y="30" width="155" height="45" rx="6"/>
+      <text class="h" x="202" y="49">GitHub Actions</text><text class="t" x="202" y="66">twice daily, Python</text>
+      <rect class="box" x="360" y="30" width="135" height="45" rx="6"/>
+      <text class="h" x="372" y="49">Laptop jobs</text><text class="t" x="372" y="66">docs, forecasting</text>
+      <rect class="box" x="510" y="30" width="135" height="45" rx="6"/>
+      <text class="h" x="522" y="49">Reviewer</text><text class="t" x="522" y="66">Data quality page</text>
+      <rect class="box" x="660" y="30" width="325" height="45" rx="6"/>
+      <text class="h" x="672" y="49">Browser: growers and traders</text><text class="t" x="672" y="66">React app, Kannada by default</text>
+
+      <path class="a-b" d="M150 52H189" marker-end="url(#arrow-b)"/>
+      <text class="e e-b" x="170" y="44" text-anchor="middle">fetch</text>
+
+      <!-- Writers into the admin API -->
+      <path class="a-b" d="M267 75V135H510V237" marker-end="url(#arrow-b)"/>
+      <text class="e e-b" x="282" y="128">POST /admin/import</text>
+      <path class="a" d="M427 75V108H565V237" marker-end="url(#arrow)"/>
+      <text class="e" x="435" y="102">documents, experiments</text>
+      <path class="a" d="M620 75V237" marker-end="url(#arrow)"/>
+      <text class="e" x="612" y="150" text-anchor="end">review</text>
+
+      <!-- Readers into the public API -->
+      <path class="a" d="M727 75V237" marker-end="url(#arrow)"/>
+      <text class="e" x="735" y="130">GET JSON</text>
+      <path class="a" d="M910 75V237" marker-end="url(#arrow)"/>
+      <text class="e" x="918" y="130">POST question</text>
+      <path class="a" d="M985 52H1102V204" marker-end="url(#arrow)"/>
+      <text class="e" x="1044" y="44" text-anchor="middle">loads app</text>
+
+      <!-- Public sources, left column -->
+      <text class="g" x="20" y="222">Public sources</text>
+      <rect class="box-b" x="20" y="235" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="250">MAMCOS</text><text class="t" x="32" y="265">HTML, needs permission</text>
+      <rect class="box-b" x="20" y="281" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="296">TSS</text><text class="t" x="32" y="311">JSON, needs permission</text>
+      <rect class="box-b" x="20" y="327" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="342">TUMCOS</text><text class="t" x="32" y="357">HTML, needs permission</text>
+      <rect class="box" x="20" y="373" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="388">AGMARKNET monthly</text><text class="t" x="32" y="403">CSV, 09:00 IST</text>
+      <rect class="box-b" x="20" y="419" width="205" height="38" rx="6"/>
+      <text class="h" x="32" y="434">Open-Meteo, PIB</text><text class="t" x="32" y="449">flag off</text>
+
+      <path class="a-b" d="M225 254H250M225 300H250M225 346H250M225 438H250"/>
+      <path class="a" d="M225 392H250V300H304" marker-end="url(#arrow)"/>
+      <path class="a-b" d="M250 254V300M250 392V438"/>
+      <text class="e e-band" x="266" y="292" text-anchor="middle">fetch</text>
+
+      <!-- Worker -->
+      <rect class="group" x="290" y="205" width="705" height="180" rx="8"/>
+      <text class="g" x="304" y="226">Worker: ani-market-api (Hono)</text>
+
+      <rect class="box" x="305" y="238" width="165" height="135" rx="6"/>
+      <text class="h" x="317" y="260">Scheduled run</text>
+      <text class="t" x="317" y="281">09:00 and 20:00 IST</text><text class="t" x="317" y="299">permission gate</text><text class="t" x="317" y="317">fetch and validate</text><text class="t" x="317" y="335">auto-publish checks</text><text class="t" x="317" y="353">re-evaluate forecasts</text>
+
+      <rect class="box" x="485" y="238" width="160" height="135" rx="6"/>
+      <text class="h" x="497" y="260">Admin API</text>
+      <text class="t" x="497" y="281">bearer token required</text><text class="t" x="497" y="299">imports, documents</text><text class="t" x="497" y="317">reviews, permissions</text><text class="t" x="497" y="335">manual refreshes</text>
+
+      <rect class="box" x="660" y="238" width="135" height="135" rx="6"/>
+      <text class="h" x="672" y="260">Public API</text>
+      <text class="t" x="672" y="281">rates, history</text><text class="t" x="672" y="299">forecasts, supply</text><text class="t" x="672" y="317">intelligence</text><text class="t" x="672" y="335">calculators</text>
+
+      <rect class="box" x="840" y="238" width="140" height="135" rx="6"/>
+      <text class="h" x="852" y="260">Assistant</text>
+      <text class="t" x="852" y="281">picks tools by rule</text><text class="t" x="852" y="299">finds passages</text><text class="t" x="852" y="317">grounding check</text><text class="t" x="852" y="335">rule-based fallback</text>
+
+      <path class="a" d="M840 300H796" marker-end="url(#arrow)"/>
+      <text class="e" x="818" y="292" text-anchor="middle">tools</text>
+
+      <!-- Other Cloudflare services -->
+      <rect class="box" x="1040" y="205" width="125" height="65" rx="6"/>
+      <text class="h" x="1052" y="228">Pages</text><text class="t" x="1052" y="248">static React build</text>
+      <rect class="box" x="1040" y="290" width="125" height="85" rx="6"/>
+      <text class="h" x="1052" y="313">Workers AI</text><text class="t" x="1052" y="333">Qwen3 prose</text><text class="t" x="1052" y="351">BGE-M3 vectors</text>
+      <path class="a" d="M980 330H1039" marker-end="url(#arrow)"/>
+      <text class="e e-band" x="1014" y="321" text-anchor="middle">explain</text>
+      <rect class="box-b" x="1040" y="520" width="125" height="70" rx="6"/>
+      <text class="h" x="1052" y="545">R2 archive</text><text class="t" x="1052" y="565">not set up</text>
+      <path class="a-b" d="M995 555H1039" marker-end="url(#arrow-b)"/>
+      <text class="e e-band e-b" x="1017" y="547" text-anchor="middle">copy</text>
+
+      <!-- Worker to database -->
+      <path class="a" d="M387 373V489" marker-end="url(#arrow)"/>
+      <text class="e e-band" x="395" y="425">writes pending,</text><text class="e e-band" x="395" y="441">publishes passing</text>
+      <path class="a" d="M565 373V489" marker-end="url(#arrow)"/>
+      <text class="e e-band" x="573" y="425">writes imports,</text><text class="e e-band" x="573" y="441">approves rows</text>
+      <path class="a" d="M727 373V489" marker-end="url(#arrow)"/>
+      <text class="e e-band" x="735" y="433">reads published</text>
+      <path class="a" d="M910 373V489" marker-end="url(#arrow)"/>
+      <text class="e e-band" x="918" y="425">FTS and vector</text><text class="e e-band" x="918" y="441">search</text>
+
+      <!-- Database -->
+      <rect class="group" x="290" y="490" width="705" height="150" rx="8"/>
+      <text class="g" x="304" y="511">D1: ani-market-data, the system of record, 70 tables</text>
+      <rect class="box" x="305" y="525" width="165" height="100" rx="6"/>
+      <text class="h" x="317" y="548">Cooperative quotes</text><text class="t" x="317" y="568">pending, verified</text><text class="t" x="317" y="586">raw snapshots</text><text class="t" x="317" y="604">review log</text>
+      <rect class="box" x="485" y="525" width="160" height="100" rx="6"/>
+      <text class="h" x="497" y="548">APMC observations</text><text class="t" x="497" y="568">validated, verified</text><text class="t" x="497" y="586">source versions</text><text class="t" x="497" y="604">daily summary cache</text>
+      <rect class="box" x="660" y="525" width="160" height="100" rx="6"/>
+      <text class="h" x="672" y="548">Reference data</text><text class="t" x="672" y="568">monthly prices</text><text class="t" x="672" y="586">forecast snapshots</text><text class="t" x="672" y="604">supply, intelligence</text>
+      <rect class="box" x="835" y="525" width="145" height="100" rx="6"/>
+      <text class="h" x="847" y="548">Documents</text><text class="t" x="847" y="568">21 booklets</text><text class="t" x="847" y="586">258 passages</text><text class="t" x="847" y="604">int8 vectors</text>
+
+      <!-- Key -->
+      <text class="g" x="20" y="512">Key</text>
+      <path class="a" d="M20 534H70" marker-end="url(#arrow)"/><text class="t" x="80" y="538">running today</text>
+      <path class="a-b" d="M20 560H70" marker-end="url(#arrow-b)"/><text class="t" x="80" y="564">built, but blocked or off</text>
+    </svg>
+    </div>
+    <figcaption>Every write goes through the Worker into D1, and readers only receive published data: verified daily rates, and monthly reports that passed source validation. The dashed amber parts are built but are not carrying data today.</figcaption>
+  </figure>
+
+  <figure>
+    <h2>How a cooperative rate reaches a reader</h2>
+    <div class="scroll">
+    <svg id="states" viewBox="0 0 980 215" role="img" aria-label="A fetched quotation either becomes invalid or pending. Pending rows go through automatic checks. Rows that pass become verified and readers see them. Rows that fail are held for a reviewer, who can approve them to verified.">
+      <defs>
+        <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m" d="M0 0 10 5 0 10z"/></marker>
+      </defs>
+      <rect class="box-on-page" x="20" y="35" width="130" height="58" rx="6"/><text class="h" x="85" y="59" text-anchor="middle">Fetched</text><text class="t" x="85" y="77" text-anchor="middle">raw copy kept</text>
+      <rect class="box-on-page" x="225" y="35" width="130" height="58" rx="6"/><text class="h" x="290" y="59" text-anchor="middle">pending</text><text class="t" x="290" y="77" text-anchor="middle">not public</text>
+      <rect class="box-on-page" x="430" y="35" width="150" height="58" rx="6"/><text class="h" x="505" y="59" text-anchor="middle">Automatic checks</text><text class="t" x="505" y="77" text-anchor="middle">scheduled runs only</text>
+      <rect class="live-state" x="670" y="35" width="130" height="58" rx="6"/><text class="h" x="735" y="59" text-anchor="middle">verified</text><text class="t" x="735" y="77" text-anchor="middle">public</text>
+      <rect class="box-on-page" x="850" y="35" width="110" height="58" rx="6"/><text class="h" x="905" y="59" text-anchor="middle">Readers</text><text class="t" x="905" y="77" text-anchor="middle">Public API</text>
+      <rect class="box-on-page" x="20" y="145" width="130" height="50" rx="6"/><text class="h" x="85" y="166" text-anchor="middle">invalid</text><text class="t" x="85" y="183" text-anchor="middle">never published</text>
+      <rect class="box-on-page" x="430" y="145" width="150" height="50" rx="6"/><text class="h" x="505" y="166" text-anchor="middle">Held for review</text><text class="t" x="505" y="183" text-anchor="middle">Data quality queue</text>
+
+      <path class="a" d="M150 64H224" marker-end="url(#arrow2)"/><text class="e" x="187" y="56" text-anchor="middle">valid</text>
+      <path class="a" d="M85 93V144" marker-end="url(#arrow2)"/><text class="e" x="93" y="124">fails validation</text>
+      <path class="a" d="M355 64H429" marker-end="url(#arrow2)"/><text class="e" x="392" y="56" text-anchor="middle">run</text>
+      <path class="a" d="M580 64H669" marker-end="url(#arrow2)"/><text class="e" x="625" y="56" text-anchor="middle">all pass</text>
+      <path class="a" d="M800 64H849" marker-end="url(#arrow2)"/><text class="e" x="825" y="56" text-anchor="middle">GET</text>
+      <path class="a" d="M505 93V144" marker-end="url(#arrow2)"/><text class="e" x="513" y="124">any check fails</text>
+      <path class="a" d="M580 170H735V94" marker-end="url(#arrow2)"/><text class="e" x="745" y="140">reviewer approves</text>
+    </svg>
+    </div>
+    <figcaption>The checks are: passes validation, publishable unit, no unaccepted review flag, no clash with a verified price for that branch and date, and within 20% of the variety's median over the last 30 days, using at least 3 quotes. Every approval is logged, with automatic ones under <code>auto-validation-v1</code>.</figcaption>
+  </figure>
+
+  <section>
+    <h2>What is running today</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Part</th><th>Status</th><th>What it needs</th></tr></thead>
+      <tbody>
+        <tr><td>Website, public API and assistant</td><td><span class="pill pill-live">Running</span></td><td>Nothing. Assistant: Qwen3 and BGE-M3, 258 of 258 passages embedded.</td></tr>
+        <tr><td>AGMARKNET monthly refresh</td><td><span class="pill pill-live">Running</span></td><td>Nothing. It ran at 09:00 IST on 6 Nov.</td></tr>
+        <tr><td>Forecast re-evaluation</td><td><span class="pill pill-live">Deployed</span></td><td>Its first run is 09:00 IST on 7 Nov. Rashi shows <code>stale</code> until then.</td></tr>
+        <tr><td>MAMCOS, TSS and TUMCOS collection</td><td><span class="pill pill-b">Blocked</span></td><td>A permission grant for each, recorded in Data quality. All three show <code>not_requested</code>.</td></tr>
+        <tr><td>AGMARKNET daily feed</td><td><span class="pill pill-b">No data</span></td><td>Matching <code>INGESTION_TOKEN</code> in Cloudflare and GitHub, then a reviewer's approval of each import. The GitHub setup has not been checked.</td></tr>
+        <tr><td>Weather and news refresh</td><td><span class="pill pill-b">Off</span></td><td><code>INTELLIGENCE_SCHEDULE_ENABLED</code>. PIB blocks automated requests, and the free Open-Meteo tier is non-commercial.</td></tr>
+        <tr><td>R2 evidence archive</td><td><span class="pill pill-b">Not set up</span></td><td>Optional. Create the bucket and uncomment the binding when D1 size becomes a concern.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Laptop jobs are run by hand. The document ingester posts passages and vectors from CPCRI, DASD and government PDFs. The forecasting engine reads a local copy of D1 and posts experiments; models never train inside the Worker.</p>
+  </section>
+</main>
+
+</body>
+</html>

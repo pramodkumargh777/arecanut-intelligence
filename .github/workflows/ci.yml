@@ -28,5 +28,5 @@ jobs:
       - run: npm run db:migrate:local
       - run: npm run build
       - run: npm test
-      - run: python -m pip install -r data-platform/requirements.txt
+      - run: python -m pip install -r data-platform/requirements-forecasting.txt -r data-platform/requirements-documents.txt
       - run: python -m pytest -q tests/data
