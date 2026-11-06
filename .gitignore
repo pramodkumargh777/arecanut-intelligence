@@ -17,6 +17,8 @@ __pycache__/
 *.tsbuildinfo
 data/raw/
 data/processed/
+data/tmp/
+backups/
 .DS_Store
 *.log
 coverage/
@@ -32,3 +34,8 @@ htmlcov/
 *.db-*
 *.pem
 *.key
+
+# Forecasting experiment run artefacts (reproducible from config + data version)
+data-platform/forecasting/runs/
+mlruns/
+data-platform/documents/.ocr-cache/

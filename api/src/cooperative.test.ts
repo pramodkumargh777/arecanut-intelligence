@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cooperativeSeries, parseMamcos } from "./cooperative";
+import { cooperativeConflicts, cooperativeSeries, parseMamcos } from "./cooperative";
 
 const row = { itemname: "RASHI EDI", minprice: "39089", maxprice: "49389", avgprice: "48089", branch: "SHIVAMOGGA", Date: "02-November-2026" };
 function html(rows: typeof row[]) {
@@ -48,5 +48,24 @@ describe("MAMCOS published snapshot parser", () => {
     expect(cooperativeSeries(quotes, 3)).toEqual([{
       reporting_date: "2026-11-02", median_average_price: 46448, branch_count: 3, branches: ["SAGARA", "SHIVAMOGGA", "Tarikere"],
     }]);
+  });
+  it("counts branches once, withholds sparse dates, and never blends source or variety", async () => {
+    const quotes = await parseMamcos(html([row, { ...row, branch: "SAGARA" }, { ...row, branch: "Tarikere" }]), "2026-11-04T00:00:00Z");
+    const later = { ...quotes[0], reporting_date: "2026-11-03" };
+    expect(cooperativeSeries([...quotes, quotes[0], later], 3)).toHaveLength(1);
+    expect(cooperativeSeries([...quotes, quotes[0]], 3)[0].branch_count).toBe(3);
+    expect(cooperativeSeries(quotes.map((quote) => ({ ...quote, unit_status: "assumed" })), 3)).toHaveLength(1);
+    expect(cooperativeSeries(quotes.map((quote) => ({ ...quote, unit_status: "source_conflict" })), 3)).toEqual([]);
+    expect(cooperativeSeries(quotes.map((quote) => ({ ...quote, unit_status: "assumed", price_unit: "unconfirmed" })), 3)).toEqual([]);
+    expect(() => cooperativeSeries([...quotes, { ...later, source_key: "tss" }], 3)).toThrow("one source");
+    expect(() => cooperativeSeries([...quotes, { ...later, variety: "BETTE" }], 3)).toThrow("exact variety");
+  });
+  it("withholds a branch whose verified prices conflict on a date and reports it", async () => {
+    const quotes = await parseMamcos(html([row, { ...row, branch: "SAGARA" }, { ...row, branch: "Tarikere" }, { ...row, branch: "Sirsi" }]), "2026-11-04T00:00:00Z");
+    const conflicted = [...quotes, { ...quotes[0], average_price: 99000 }];
+    expect(cooperativeSeries(conflicted, 3)[0]).toMatchObject({ branch_count: 3, branches: ["SAGARA", "Sirsi", "Tarikere"] });
+    expect(cooperativeSeries(conflicted, 4)).toEqual([]);
+    expect(cooperativeConflicts(conflicted)).toEqual([{ reporting_date: "2026-11-02", branch: "SHIVAMOGGA", prices: [quotes[0].average_price, 99000] }]);
+    expect(cooperativeConflicts([...quotes, quotes[0]])).toEqual([]);
   });
 });

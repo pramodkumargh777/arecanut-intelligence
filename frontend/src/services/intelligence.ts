@@ -2,13 +2,21 @@ export type HistoryPoint = {
   reporting_month: string; weighted_price: number | null; status: string; fetched_at: string | null;
   source_url: string | null; refresh_run_id: string | null; rolling_3: number | null; rolling_12: number | null;
   yoy_percent: number | null; volatility_percent: number | null;
+  price_unit: string; review_flags: { code: string; explanation: string }[];
   latest_attempt: { status: string; error_message: string | null; started_at: string } | null;
 };
 export type MonthlyHistory = {
   points: HistoryPoint[]; varieties: string[]; variety: string; state: string; from: string; to: string;
   expected_months: number; observed_months: number; reporting_months: number; methodology: string;
+  flagged_months: number; review_method: string; anomaly_threshold_percent: number;
   seasonal: { month: number; index: number | null; complete_years: number }[]; seasonal_years: string[];
   versions: { reporting_month: string; weighted_price: number | null; fetched_at: string; source_url: string; refresh_run_id: string; variety_present: number }[];
+};
+export type MonthlyEvidence = {
+  reporting_month: string; state: string; variety: string; source_url: string; fetched_at: string;
+  source_publication_timestamp: null; source_value: string; raw_imported_value: string; source_unit: string;
+  source_columns: string[]; reparsed_value: number | null; normalized_value: number | null; normalized_unit: string | null;
+  review_flags: { code: string; explanation: string }[]; explanation: string;
 };
 export type Aggregates = {
   data: { period: string; from: string; to: string; mean_average_price: number | null; minimum_average: number | null;
@@ -36,3 +44,4 @@ export type DecisionPrices = {
   cooperative: { id: string; source_key: string; branch: string; reporting_date: string; variety: string; average_price: number; unit_status: string; fetched_at: string }[];
   monthly: { reporting_month: string; variety_name: string; weighted_price: number; refresh_run_id: string; fetched_at: string }[];
 };
+export const defaultGeography = (domain: string) => domain === "production" ? "Karnataka" : "";

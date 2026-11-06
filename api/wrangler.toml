@@ -3,15 +3,55 @@ main = "src/index.ts"
 compatibility_date = "2025-01-09"
 
 [triggers]
-crons = ["30 3 * * *"]
+# 09:00 IST: all refreshes. 20:00 IST: cooperative rates only, after the day's tenders (EVENING_CRON in src/index.ts).
+crons = ["30 3 * * *", "30 14 * * *"]
 
 [vars]
-CORS_ORIGIN = "http://localhost:5173,http://127.0.0.1:5173"
+CORS_ORIGIN = "https://arecanut-intel.pages.dev,http://localhost:5173,http://127.0.0.1:5173"
 MIN_INDEX_MARKETS = "3"
 REFERENCE_STATE = "Karnataka"
+# Daily cooperative collection. Each source also needs a permission grant recorded in
+# Data quality -> Cooperative source intelligence; without one, its run is blocked and logged.
+MAMCOS_SCHEDULE_ENABLED = "true"
+TSS_SCHEDULE_ENABLED = "true"
+TUMCOS_SCHEDULE_ENABLED = "true"
+# Publish scheduled quotations that pass every check (src/cooperative-auto-publish.ts). The rest wait for review.
+COOPERATIVE_AUTO_PUBLISH = "true"
+# Daily weather and official-news capture at 09:00 IST. Open-Meteo's free endpoint is non-commercial: get its paid
+# plan before charging users, or set OPEN_METEO_ENABLED = "false".
+INTELLIGENCE_SCHEDULE_ENABLED = "true"
+# Archive maintenance in the daily cron (R2 sync + temporary-object purge). Off by default.
+ARCHIVE_SCHEDULE_ENABLED = "false"
+# Days before archive objects classified as temporary expire (1-365). Evidence never expires.
+TEMP_RETENTION_DAYS = "7"
+# Optional: offload inline D1 evidence copies >= this many bytes to R2 after verified upload.
+# Leave unset to keep every inline copy in D1 (the default).
+# ARCHIVE_OFFLOAD_MIN_BYTES = "262144"
+# AI assistant (docs/AI_ASSISTANT.md). "none" = rule-based answers from verified data, no language model.
+# Options: none | ollama (local development) | workers_ai (requires the commented [ai] binding below).
+ASSISTANT_LLM_PROVIDER = "workers_ai"
+ASSISTANT_EMBEDDING_PROVIDER = "workers_ai"
+ASSISTANT_RATE_LIMIT_PER_HOUR = "30"
+ASSISTANT_LOG_QUESTIONS = "false"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "ani-market-data"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "d84a50a3-421f-4bee-a791-9636c94f4b93"
+# Keeps local development on its existing local database.
+preview_database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
+
+# Optional R2 evidence archive. Local development and tests work without it: archive endpoints
+# return 503 and evidence stays inline in D1. To enable (R2 free tier: 10 GB-month storage):
+#   npx wrangler r2 bucket create ani-evidence-archive
+# then uncomment:
+# [[r2_buckets]]
+# binding = "ARCHIVE"
+# bucket_name = "ani-evidence-archive"
+
+# Optional Workers AI binding for the assistant (free daily neuron allocation; paid beyond it).
+# Set ASSISTANT_LLM_PROVIDER / ASSISTANT_EMBEDDING_PROVIDER = "workers_ai" when enabled.
+# Steps are in docs/AI_ASSISTANT.md. Run `wrangler login` first: with this binding, `wrangler dev` connects to Cloudflare.
+[ai]
+binding = "AI"

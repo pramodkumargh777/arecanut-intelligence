@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "./index";
+import { calendarDateToTime, completedMonthIST, shiftCalendarMonth, timestampToTime } from "../../shared/dates";
 
 export const FORECAST_VERSION = "monthly-baselines-v1";
 export const FORECAST_STATE = "Karnataka";
@@ -45,6 +46,7 @@ const INITIAL_HISTORY = 24;
 export const MIN_FORECAST_MONTHS = INITIAL_HISTORY + BLOCK * 3;
 export const INTERVAL_LEVEL = 0.8;
 export const FORECAST_LIMITATIONS = [
+  "Experimental reference baselines, not proven predictive models. Last value repeats the latest observed monthly price; seasonal naive repeats the same month last year. No prospective predictive advantage is established.",
   "Rolling-origin backtests use current revised history, not as-of source vintages; vintage leakage is not ruled out.",
   "Monthly Karnataka exact-variety weighted prices only; no official daily, assumed-unit or TSS blending.",
   "Only the next reporting month is evaluated; this is not a multi-step or daily forecast.",
@@ -57,9 +59,11 @@ export function shiftMonth(month: string, offset: number): string {
   return new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)) - 1 + offset, 1)).toISOString().slice(0, 7);
 }
 export function completedMonth(asOf: string): string {
-  const date = new Date(asOf);
-  if (!Number.isFinite(date.valueOf())) throw new Error("Invalid evaluation time");
-  return shiftMonth(date.toISOString().slice(0, 7), -1);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
+    calendarDateToTime(asOf);
+    return shiftCalendarMonth(asOf.slice(0, 7), -1);
+  }
+  return completedMonthIST(new Date(timestampToTime(asOf)));
 }
 
 function normalizedRow(row: MonthlyForecastInput): MonthlyForecastInput {
@@ -74,8 +78,16 @@ export function canonicalInputs(inputs: ForecastInputs): string {
     .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b), "en"));
   return JSON.stringify({ prices: sorted(inputs.prices), versions: sorted(inputs.versions) });
 }
+/**
+ * Hashes only what the forecast is computed from: month, scope, price and unit. Capture lineage (run id, fetch time,
+ * version rows) stays in the stored snapshot as evidence but is excluded here, because the daily monthly refresh
+ * writes a new capture even when the report is unchanged, and that must not suppress a still-valid forecast.
+ */
 export async function sourceFingerprint(inputs: ForecastInputs): Promise<string> {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalInputs(inputs)));
+  const values = inputs.prices
+    .map((row) => JSON.stringify([row.reporting_month, row.state, row.variety_name, row.weighted_price, row.price_unit]))
+    .sort();
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`[${values.join(",")}]`));
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
@@ -173,7 +185,7 @@ export function evaluateForecast(inputs: ForecastInputs, variety: string, asOf: 
     evaluation: {
       selection_rule: "Lowest pre-test validation MAE; ties choose last_value. Calibration and holdout never select the model.",
       initial_training_months: n - 36, selected_model: selected,
-      label: selected === "last_value" ? "Last-value baseline; no demonstrated predictive edge" : "Seasonal-naive monthly baseline",
+      label: selected === "last_value" ? "Experimental last-value reference; no demonstrated predictive edge" : "Experimental seasonal-naive monthly reference",
       validation: { points: validation, metrics: validationScores },
       calibration: { points: calibration, count: calibration.length, absolute_residual_radius: radius,
         nominal_coverage: INTERVAL_LEVEL, quantile_rank: Math.ceil((calibration.length + 1) * INTERVAL_LEVEL) },
@@ -243,6 +255,51 @@ forecastRoutes.get("/forecasts", async (c) => {
     stale: reasons.length > 0, stale_reasons: reasons, forecast: reasons.length ? null : results.forecast,
   });
 });
+async function storeEvaluation(db: D1Database, variety: string, evaluatedAt: string) {
+  const inputs = await loadInputs(db, variety, evaluatedAt);
+  const fingerprint = await sourceFingerprint(inputs);
+  const results = evaluateForecast(inputs, variety, evaluatedAt);
+  const id = crypto.randomUUID();
+  await db.prepare(`INSERT INTO forecast_snapshots
+    (id,state,variety_name,evaluated_at,formula_version,source_fingerprint,inputs_json,results_json)
+    VALUES (?,?,?,?,?,?,?,?)`).bind(id, FORECAST_STATE, variety, evaluatedAt, FORECAST_VERSION,
+    fingerprint, canonicalInputs(inputs), JSON.stringify(results)).run();
+  return { id, inputs, fingerprint, results };
+}
+
+/** Each re-evaluation costs two D1 queries, and the cron shares one invocation's query allowance with the source refreshes. */
+const MAX_DAILY_FORECAST_REFRESHES = 8;
+
+/**
+ * Re-evaluates varieties whose stored forecast no longer matches its source prices, as when the publisher revises a
+ * month. The same publication gates apply. Without this a revision hides the forecast until someone runs it by hand.
+ * Only varieties already evaluated are considered, oldest first, so any left over are picked up the next day. A
+ * forecast waiting for a month's report is left alone: its prices have not changed, and it stays withheld until they do.
+ */
+export async function refreshChangedForecasts(db: D1Database, now = new Date(), limit = MAX_DAILY_FORECAST_REFRESHES) {
+  const asOf = now.toISOString();
+  const { results: snapshots } = await db.prepare(`SELECT variety_name, source_fingerprint, formula_version, evaluated_at FROM (
+      SELECT variety_name, source_fingerprint, formula_version, evaluated_at,
+        ROW_NUMBER() OVER (PARTITION BY variety_name ORDER BY evaluated_at DESC, rowid DESC) AS position
+      FROM forecast_snapshots WHERE state=?) WHERE position = 1 ORDER BY evaluated_at`)
+    .bind(FORECAST_STATE).all<Pick<SnapshotRow, "variety_name" | "source_fingerprint" | "formula_version" | "evaluated_at">>();
+  const { results: prices } = await db.prepare(`SELECT reporting_month, state, variety_name, weighted_price, price_unit
+      FROM monthly_variety_prices WHERE state=? AND reporting_month BETWEEN ? AND ?`)
+    .bind(FORECAST_STATE, FORECAST_START, completedMonth(asOf)).all<MonthlyForecastInput>();
+  const byVariety = new Map<string, MonthlyForecastInput[]>();
+  for (const row of prices) byVariety.set(row.variety_name, [...(byVariety.get(row.variety_name) ?? []), row]);
+  const changed: string[] = [];
+  for (const snapshot of snapshots) {
+    const rows = byVariety.get(snapshot.variety_name);
+    if (!rows) continue;
+    const fingerprint = await sourceFingerprint({ prices: rows, versions: [] });
+    if (fingerprint !== snapshot.source_fingerprint || snapshot.formula_version !== FORECAST_VERSION) changed.push(snapshot.variety_name);
+  }
+  const selected = changed.slice(0, limit);
+  for (const variety of selected) await storeEvaluation(db, variety, asOf);
+  return { evaluated: selected, remaining: changed.length - selected.length };
+}
+
 forecastRoutes.post("/admin/forecasts/evaluate", async (c) => {
   const token = c.env.ADMIN_TOKEN;
   if (!token || c.req.header("Authorization") !== `Bearer ${token}`) {
@@ -251,14 +308,7 @@ forecastRoutes.post("/admin/forecasts/evaluate", async (c) => {
   const parsed = requestSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Provide only an exact variety name (maximum 160 characters)." }, 400);
   const evaluatedAt = new Date().toISOString();
-  const inputs = await loadInputs(c.env.DB, parsed.data.variety, evaluatedAt);
-  const fingerprint = await sourceFingerprint(inputs);
-  const results = evaluateForecast(inputs, parsed.data.variety, evaluatedAt);
-  const id = crypto.randomUUID();
-  await c.env.DB.prepare(`INSERT INTO forecast_snapshots
-    (id,state,variety_name,evaluated_at,formula_version,source_fingerprint,inputs_json,results_json)
-    VALUES (?,?,?,?,?,?,?,?)`).bind(id, FORECAST_STATE, parsed.data.variety, evaluatedAt, FORECAST_VERSION,
-    fingerprint, canonicalInputs(inputs), JSON.stringify(results)).run();
+  const { id, inputs, fingerprint, results } = await storeEvaluation(c.env.DB, parsed.data.variety, evaluatedAt);
   return c.json({ status: results.publishable ? "published" : "withheld",
     snapshot: { id, state: FORECAST_STATE, variety: parsed.data.variety, evaluated_at: evaluatedAt,
       formula_version: FORECAST_VERSION, source_fingerprint: fingerprint,

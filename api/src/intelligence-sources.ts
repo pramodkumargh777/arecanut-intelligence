@@ -91,13 +91,13 @@ export function parseDasd(source: keyof typeof DASD_SOURCES, items: PdfItem[]) {
   return { domain: "trade" as const, rows, publication_period: null };
 }
 
-export const SIRSI_WEATHER_URL = "https://api.open-meteo.com/v1/forecast?latitude=14.6195&longitude=74.8354&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%2FKolkata&forecast_days=7&past_days=7";
+export const SIRSI_WEATHER_URL = "https://api.open-meteo.com/v1/forecast?latitude=14.6195&longitude=74.8354&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,relative_humidity_2m_mean&timezone=Asia%2FKolkata&forecast_days=7&past_days=7";
 const measurement = z.number().finite().nullable();
 export const weatherSchema = z.object({
   latitude: z.number().finite(), longitude: z.number().finite(), elevation: z.number().finite(),
   timezone: z.literal("Asia/Kolkata"),
-  daily_units: z.object({ time: z.literal("iso8601"), temperature_2m_max: z.literal("°C"), temperature_2m_min: z.literal("°C"), precipitation_sum: z.literal("mm") }),
-  daily: z.object({ time: z.array(z.string()), temperature_2m_max: z.array(measurement), temperature_2m_min: z.array(measurement), precipitation_sum: z.array(measurement) }),
+  daily_units: z.object({ time: z.literal("iso8601"), temperature_2m_max: z.literal("°C"), temperature_2m_min: z.literal("°C"), precipitation_sum: z.literal("mm"), relative_humidity_2m_mean: z.literal("%").optional() }),
+  daily: z.object({ time: z.array(z.string()), temperature_2m_max: z.array(measurement), temperature_2m_min: z.array(measurement), precipitation_sum: z.array(measurement), relative_humidity_2m_mean: z.array(measurement).optional() }),
 });
 export function validDay(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
@@ -108,12 +108,14 @@ export function parseWeather(body: unknown, fetchedAt: string) {
   const firstDay = new Date(Date.parse(today) - 7 * 86_400_000).toISOString().slice(0, 10);
   if (Math.abs(value.latitude - 14.6195) > 0.15 || Math.abs(value.longitude - 74.8354) > 0.15) throw new Error("Weather grid no longer represents Sirsi.");
   if (daily.time.length !== 14 || new Set(daily.time).size !== 14 || daily.time[0] !== firstDay || !daily.time.includes(today)
-    || [daily.temperature_2m_max, daily.temperature_2m_min, daily.precipitation_sum].some((values) => values.length !== daily.time.length)) throw new Error("Incomplete or stale Sirsi weather response.");
+    || [daily.temperature_2m_max, daily.temperature_2m_min, daily.precipitation_sum, ...(daily.relative_humidity_2m_mean ? [daily.relative_humidity_2m_mean] : [])].some((values) => values.length !== daily.time.length)
+    || (daily.relative_humidity_2m_mean !== undefined) !== (value.daily_units.relative_humidity_2m_mean !== undefined)) throw new Error("Incomplete or stale Sirsi weather response.");
   return { latitude: value.latitude, longitude: value.longitude, elevation: value.elevation, rows: daily.time.map((date, index) => {
     if (!validDay(date) || (index > 0 && Date.parse(date) - Date.parse(daily.time[index - 1]) !== 86_400_000)) throw new Error("Nonconsecutive weather dates.");
     const maximum = daily.temperature_2m_max[index], minimum = daily.temperature_2m_min[index], rain = daily.precipitation_sum[index];
-    if ((maximum !== null && minimum !== null && minimum > maximum) || (rain !== null && rain < 0)) throw new Error("Invalid weather measurements.");
-    return { date, maximum, minimum, rain, kind: date < today ? "recent_model" : "forecast_model" };
+    const humidity = daily.relative_humidity_2m_mean?.[index] ?? null;
+    if ((maximum !== null && minimum !== null && minimum > maximum) || (rain !== null && rain < 0) || (humidity !== null && (humidity < 0 || humidity > 100))) throw new Error("Invalid weather measurements.");
+    return { date, maximum, minimum, rain, humidity, kind: date < today ? "recent_model" : "forecast_model" };
   }) };
 }
 

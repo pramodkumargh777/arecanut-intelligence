@@ -3,6 +3,31 @@ import { aggregateDaily, monthRange, monthlyAnalytics } from "./history";
 const row = (month: string, value: number | null) => ({ reporting_month: month, weighted_price: value,
   fetched_at: "2026-11-03T00:00:00Z", source_url: "https://api.agmarknet.gov.in/report", refresh_run_id: `run-${month}` });
 describe("calendar monthly historical analytics", () => {
+  it("flags a drop and rebound at the exact 20% threshold without changing prices or means", () => {
+    const prices = [row("2024-01", 50000), row("2024-02", 40000), row("2024-03", 50000)];
+    const before = structuredClone(prices);
+    const data = monthlyAnalytics("2024-01", "2024-03", prices, prices.map((price) => price.reporting_month), []);
+    expect(data.points[1].review_flags.map((flag) => flag.code)).toEqual(["large_change_from_previous", "large_change_to_next"]);
+    expect(data.points[1].review_flags[0].explanation).toContain("-20.00%");
+    expect(data.points[1].review_flags[1].explanation).toContain("25.00%");
+    expect(data.points[2].rolling_3).toBeCloseTo(140000 / 3);
+    expect(data.points.map((point) => point.weighted_price)).toEqual([50000, 40000, 50000]);
+    expect(prices).toEqual(before);
+  });
+  it("does not compare across missing months and includes adjacent evidence outside the visible window", () => {
+    const data = monthlyAnalytics("2024-02", "2024-02", [row("2024-01", 50000), row("2024-02", 40000), row("2024-03", 50000)], [], []);
+    expect(data.points[0].review_flags).toHaveLength(2);
+    const gaps = monthlyAnalytics("2024-01", "2024-04", [row("2024-01", 50000), row("2024-03", 10000), row("2024-04", null)], [], []);
+    expect(gaps.points.every((point) => point.review_flags.length === 0)).toBe(true);
+  });
+  it("flags non-positive prices and unit mismatches explicitly, preserving the source value", () => {
+    const data = monthlyAnalytics("2024-01", "2024-01", [{ ...row("2024-01", 0), price_unit: "INR/kg" }], [], []);
+    expect(data.points[0].weighted_price).toBe(0);
+    expect(data.points[0].review_flags.map((flag) => flag.code)).toEqual(["unexpected_unit", "nonpositive_price"]);
+    const mixed = monthlyAnalytics("2024-01", "2024-02", [{ ...row("2024-01", 50000), price_unit: "INR/quintal" }, { ...row("2024-02", 400), price_unit: "INR/kg" }], [], []);
+    expect(mixed.points[0].review_flags).toEqual([]);
+    expect(mixed.points[1].review_flags.map((flag) => flag.code)).toEqual(["unexpected_unit"]);
+  });
   it("preserves calendar gaps, missing varieties and null prices separately", () => {
     const data = monthlyAnalytics("2025-01", "2025-04", [row("2025-01", 100), row("2025-03", null)],
       ["2025-01", "2025-02", "2025-03"], [{ reporting_month: "2025-04", status: "failed", error_message: "HTTP 503", started_at: "now" }]);

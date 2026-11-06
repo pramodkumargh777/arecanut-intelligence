@@ -1,0 +1,9 @@
+# Optional experimental benchmark: Chronos-2 zero-shot (CPU). Licences verified 2026-11-05:
+#   chronos-forecasting 2.3.2 Apache-2.0; checkpoint amazon/chronos-2 Apache-2.0,
+#   pinned revision 29ec3766d36d6f73f0696f85560a422f50e8498c (see forecasting/config.py).
+# MLflow is optional too; the engine uses file-based tracking unless ANI_MLFLOW_TRACKING_URI is set
+# and mlflow is installed separately.
+-r requirements-forecasting.txt
+chronos-forecasting==2.3.2
+torch==2.15.0
+transformers==5.22.1

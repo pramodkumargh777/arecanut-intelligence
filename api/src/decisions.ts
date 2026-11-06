@@ -60,7 +60,7 @@ async function resolvePrice(db: D1Database, ref: CalculationInputs["price"], sta
   if (ref.kind === "manual") return { value: ref.value, source: "User-entered scenario", reporting_period: null, fetched_at: null,
     source_url: null, variety: null, branch: null, state: null, unit_status: "user_entered", price_type: "user_price", reference_id: null };
   if (ref.kind === "cooperative") {
-    const row = await db.prepare(`SELECT * FROM cooperative_quotes WHERE id=? AND status='verified' AND average_price>0`).bind(ref.id)
+    const row = await db.prepare(`SELECT * FROM cooperative_quotes WHERE id=? AND status='verified' AND commodity='arecanut' AND average_price>0`).bind(ref.id)
       .first<{ average_price: number; source_key: string; reporting_date: string; fetched_at: string; source_url: string; variety: string; branch: string; unit_status: string; id: string }>();
     return row ? { value: row.average_price, source: row.source_key.toUpperCase(), reporting_period: row.reporting_date,
       fetched_at: row.fetched_at, source_url: row.source_url, variety: row.variety, branch: row.branch, state: null, unit_status: row.unit_status, price_type: "reported_average", reference_id: row.id } : null;
@@ -78,7 +78,7 @@ decisionRoutes.onError((error, c) => {
 });
 decisionRoutes.get("/decisions/prices", async (c) => {
   const cooperative = await c.env.DB.prepare(`SELECT id,source_key,branch,reporting_date,variety,average_price,unit_status,fetched_at
-    FROM cooperative_quotes WHERE status='verified' AND average_price>0 ORDER BY source_key,reporting_date DESC,branch,variety`).all();
+    FROM cooperative_quotes WHERE status='verified' AND commodity='arecanut' AND average_price>0 ORDER BY source_key,reporting_date DESC,branch,variety`).all();
   const monthly = await c.env.DB.prepare(`SELECT reporting_month,variety_name,weighted_price,refresh_run_id,fetched_at
     FROM monthly_variety_prices WHERE state=? AND reporting_month=(SELECT MAX(reporting_month) FROM monthly_variety_prices WHERE state=?)
     AND weighted_price>0 ORDER BY variety_name`).bind(c.env.REFERENCE_STATE ?? "Karnataka", c.env.REFERENCE_STATE ?? "Karnataka").all();

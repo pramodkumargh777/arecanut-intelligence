@@ -1,5 +1,7 @@
+/** Spreadsheet formula prefixes are neutralized so downloaded source text cannot execute as a formula. */
 export function csvCell(value: unknown): string {
-  const text = value == null ? "" : String(value);
+  const raw = value == null ? "" : String(value);
+  const text = /^[=+\-@\t\r]/.test(raw) && !/^-?\d+(\.\d+)?(e[+-]?\d+)?$/i.test(raw) ? `'${raw}` : raw;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

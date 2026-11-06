@@ -13,6 +13,9 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from connectors.agmarknet.normalize import RowError, normalize_record
+from ingestion.idempotency import batch_idempotency_key, sha256_file
+
+BATCH_SIZE = 200
 
 
 def import_csv(
@@ -41,24 +44,51 @@ def import_csv(
     return records, errors
 
 
-def send_records(api_url: str, token: str, records: list[dict[str, Any]], source_key: str) -> dict[str, Any]:
+def send_records(
+    api_url: str,
+    token: str,
+    records: list[dict[str, Any]],
+    source_key: str,
+    *,
+    content_sha256: str | None = None,
+    source_file_name: str | None = None,
+    reprocess: bool = False,
+    opener: Any = urllib.request.urlopen,
+) -> dict[str, Any]:
+    """Send records in idempotent batches; a retried batch replays its completed job instead of re-importing."""
     endpoint = api_url.rstrip("/") + "/admin/import"
     results: list[dict[str, Any]] = []
-    for offset in range(0, len(records), 200):
-        body = json.dumps({"source_key": source_key, "records": records[offset : offset + 200]}).encode()
+    for batch_index, offset in enumerate(range(0, len(records), BATCH_SIZE)):
+        batch = records[offset : offset + BATCH_SIZE]
+        payload: dict[str, Any] = {
+            "source_key": source_key,
+            "records": batch,
+            "idempotency_key": batch_idempotency_key("csv", batch_index, batch, content_sha256),
+        }
+        if content_sha256:
+            payload["content_sha256"] = content_sha256
+        if source_file_name:
+            payload["source_file_name"] = source_file_name[:260]
+        if reprocess:
+            payload["reprocess"] = True
         request = urllib.request.Request(
             endpoint,
-            data=body,
+            data=json.dumps(payload).encode(),
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with opener(request, timeout=30) as response:
                 results.append(json.loads(response.read().decode("utf-8")))
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as error:
             detail = error.read().decode("utf-8", errors="replace") if isinstance(error, urllib.error.HTTPError) else str(error)
-            raise RuntimeError(f"Import API request failed: {detail}") from error
-    return {"batches": results}
+            raise RuntimeError(f"Import API request failed on batch {batch_index}: {detail}") from error
+    return {
+        "content_sha256": content_sha256,
+        "job_ids": [result.get("job_id") for result in results],
+        "replayed_batches": sum(1 for result in results if result.get("replayed")),
+        "batches": results,
+    }
 
 
 def main() -> int:
@@ -83,7 +113,9 @@ def main() -> int:
         elif not args.api_url:
             print(serialized)
         if args.api_url and args.token and records and not errors:
-            result = send_records(args.api_url, args.token, records, args.source)
+            result = send_records(args.api_url, args.token, records, args.source,
+                                  content_sha256=sha256_file(args.csv_file), source_file_name=args.csv_file.name,
+                                  reprocess=args.reprocess)
             print(json.dumps(result), file=sys.stderr)
         if args.api_url and errors:
             print("No rows were sent: correct all CSV validation errors before importing.", file=sys.stderr)

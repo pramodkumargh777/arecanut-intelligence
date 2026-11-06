@@ -8,5 +8,39 @@ MIN_INDEX_MARKETS=3
 REFERENCE_STATE=Karnataka
 
 # Enable collection only after confirming publisher/service permissions.
+# Cooperative schedules also require a recorded permission grant in
+# Data quality -> Cooperative source intelligence (see docs/COOPERATIVE_SOURCES.md).
 MAMCOS_SCHEDULE_ENABLED=false
+TSS_SCHEDULE_ENABLED=false
+TUMCOS_SCHEDULE_ENABLED=false
+# Publish scheduled quotations that pass every check. The rest wait in the review queue.
+COOPERATIVE_AUTO_PUBLISH=false
+# Source fetch attempts (integer 1-5).
+COOPERATIVE_FETCH_ATTEMPTS=3
 INTELLIGENCE_SCHEDULE_ENABLED=false
+# Open-Meteo is a development weather source (CC BY 4.0, non-commercial). Set false to stop
+# the scheduled Sirsi capture. IMD data needs an authorized import (see docs/SUPPLY_AND_RISK.md).
+# OPEN_METEO_ENABLED=false
+
+# Optional R2 archive maintenance (requires the commented [[r2_buckets]] ARCHIVE binding in wrangler.toml).
+# Without the binding, archive endpoints return 503 and all evidence stays inline in D1.
+ARCHIVE_SCHEDULE_ENABLED=false
+TEMP_RETENTION_DAYS=7
+# ARCHIVE_OFFLOAD_MIN_BYTES=262144
+
+# AI assistant (see docs/AI_ASSISTANT.md). ANI works fully with "none": answers are rule-based from verified data.
+# ollama: local Ollama with `ollama pull qwen3.5:4b` and `ollama pull bge-m3:567m`.
+ASSISTANT_LLM_PROVIDER=none
+ASSISTANT_EMBEDDING_PROVIDER=none
+# ASSISTANT_LLM_MODEL=qwen3.5:4b
+# ASSISTANT_EMBEDDING_MODEL=bge-m3:567m
+# OLLAMA_BASE_URL=http://127.0.0.1:11434
+# CPU inference of a 4B model can take 30-60 s on first load.
+# ASSISTANT_LLM_TIMEOUT_MS=60000
+ASSISTANT_RATE_LIMIT_PER_HOUR=30
+# Cosine similarity floor for semantic document hits (calibrated for BGE-M3; Kannada queries add 0.05).
+# ASSISTANT_SEMANTIC_THRESHOLD=0.45
+# Questions are stored as "[not retained]" unless this is true.
+ASSISTANT_LOG_QUESTIONS=false
+# Salt for hashing client IPs in the rate limiter and audit log. Set a random value in production.
+ASSISTANT_CLIENT_SALT=

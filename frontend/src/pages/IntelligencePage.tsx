@@ -5,9 +5,14 @@ import { api } from "../services/api";
 import { toCsv } from "../services/csv";
 import type { Production, Trade, Weather, Bulletin, Evidence, ModuleDomain } from "../services/modules";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
+import { defaultGeography } from "../services/intelligence";
+import { formatTimestampIST } from "../../../shared/dates";
 const domains = ["production", "weather", "trade", "policy", "news", "quality"] as const;
 export function IntelligenceNavigation({ current }: { current: string }) {
-  return <nav className="module-navigation" aria-label="Intelligence modules">{domains.map((domain) => <Link key={domain} to={`/intelligence/${domain}`} aria-current={current === domain ? "page" : undefined}>{domain[0].toUpperCase() + domain.slice(1)}</Link>)}</nav>;
+  // No inspection report has been published yet, so the tab appears with the first one. Its page stays reachable by link.
+  const inspections = useQuery({ queryKey: ["quality-records-count"], queryFn: () => api.qualityInspections() });
+  const visible = domains.filter((domain) => domain !== "quality" || current === "quality" || Boolean(inspections.data?.data.length));
+  return <nav className="module-navigation" aria-label="Intelligence modules">{visible.map((domain) => <Link key={domain} to={`/intelligence/${domain}`} aria-current={current === domain ? "page" : undefined}>{domain[0].toUpperCase() + domain.slice(1)}</Link>)}</nav>;
 }
 const number = (value: number | null) => value === null ? "Not reported" : value.toLocaleString("en-IN", { maximumFractionDigits: 3 });
 export function exportModule(rows: (string | number | null)[][], name: string) {
@@ -15,20 +20,20 @@ export function exportModule(rows: (string | number | null)[][], name: string) {
   const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url);
 }
 function EvidenceCell({ row }: { row: Evidence }) {
-  return <><a href={row.source_url} target="_blank" rel="noreferrer">Publisher</a>{" · "}<a href={api.sourceCaptureUrl(row.capture_id)}>Archived capture</a><small className="quote-fetch">Fetched {new Date(row.fetched_at).toLocaleString("en-IN")}</small>{row.publication_period && <small className="quote-fetch">Document publication: {row.publication_period}</small>}</>;
+  return <><a href={row.source_url} target="_blank" rel="noreferrer">Publisher</a>{" · "}<a href={api.sourceCaptureUrl(row.capture_id)}>Archived capture</a><small className="quote-fetch">Platform fetched {formatTimestampIST(row.fetched_at)}</small>{row.publication_period && <small className="quote-fetch">Document publication: {row.publication_period}</small>}</>;
 }
 type ModuleRow = Production | Trade | Weather | Bulletin;
 export function IntelligencePage() {
   const domain = useParams().domain ?? "production";
   const supported = domains.some((value) => value === domain) && domain !== "quality";
-  const [period, setPeriod] = useState(""), [geography, setGeography] = useState(""), [token, setToken] = useState("");
+  const [period, setPeriod] = useState(""), [geography, setGeography] = useState(() => defaultGeography(domain)), [token, setToken] = useState("");
   const [notice, setNotice] = useState("");
   const client = useQueryClient();
   const query = useQuery({ queryKey: ["intelligence", domain], queryFn: () => api.intelligence<ModuleRow>(domain as ModuleDomain), enabled: supported, refetchInterval: 60_000 });
   const refresh = useMutation({ mutationFn: () => api.refreshIntelligence(domain === "weather" ? "weather" : "news", token),
     onSuccess: async () => { setNotice("Source capture refreshed."); await client.invalidateQueries({ queryKey: ["intelligence"] }); },
     onSettled: async () => { await client.invalidateQueries({ queryKey: ["intelligence"] }); } });
-  useEffect(() => { setPeriod(""); setGeography(""); setToken(""); setNotice(""); refresh.reset(); }, [domain]);
+  useEffect(() => { setPeriod(""); setGeography(defaultGeography(domain)); setToken(""); setNotice(""); refresh.reset(); }, [domain]);
   if (!supported) return <ErrorState error={new Error("Select an available intelligence module.")} />;
   const data = query.data;
   const rows = data?.data ?? [];
@@ -59,14 +64,14 @@ export function IntelligencePage() {
       <div className="data-disclosure">{data.coverage}</div>
       {staleWeather && <div role="alert" className="data-disclosure">Weather capture is more than 24 hours old. Refresh before relying on its dates; a forecast at capture is not necessarily a current forecast.</div>}
       <section className="snapshot-grid">
-        <article className="snapshot-card"><div className="card-kicker">STORED RECORDS</div><div className="snapshot-value">{rows.length}</div><p>{new Set(rows.map((row) => row.capture_id)).size} current source captures; older captures retained</p></article>
-        <article className="snapshot-card"><div className="card-kicker">LATEST FETCH</div><div className="snapshot-value snapshot-date">{latest ? new Date(latest).toLocaleDateString("en-IN") : "Never"}</div><p>{latest ? new Date(latest).toLocaleTimeString("en-IN") : "Source not captured"} · Not the reporting period</p></article>
-        <article className="snapshot-card"><div className="card-kicker">SOURCE COVERAGE</div><div className="snapshot-value">{domain === "weather" ? "Sirsi" : "India"}</div><p>{domain === "weather" ? "Open-Meteo gridded model; recent and future model days" : domain === "trade" ? "Annual imports; one annual export aggregate" : domain === "production" ? "DASD annual estimates; state and national" : "Curated PIB / DASD publications"}</p></article>
+        <article className="snapshot-card"><div className="card-kicker">SELECTED RECORDS</div><div className="snapshot-value">{filtered.length}</div><p>{new Set(filtered.map((row) => row.capture_id)).size} current source captures; older captures retained</p></article>
+        <article className="snapshot-card"><div className="card-kicker">LATEST PLATFORM FETCH</div><div className="snapshot-value snapshot-date">{latest ? formatTimestampIST(latest) : "Never"}</div><p>Not the reporting period or source publication time</p></article>
+        <article className="snapshot-card"><div className="card-kicker">SOURCE COVERAGE</div><div className="snapshot-value">{domain === "weather" ? "Sirsi" : domain === "production" ? geography || "India-wide" : "India"}</div><p>{domain === "weather" ? "Open-Meteo gridded model; recent and future model days" : domain === "trade" ? "Annual imports; one annual export aggregate" : domain === "production" ? "Karnataka default; select All India or All available for national comparison. DASD annual estimates." : "Curated PIB / DASD publications"}</p></article>
       </section>
       {(periods.length > 0 || places.length > 0) && <section className="filter-bar">
         <label className="filter-control"><span>Reporting year</span><select value={period} onChange={(event) => setPeriod(event.target.value)}><option value="">All available years</option>{periods.map((value) => <option key={value}>{value}</option>)}</select></label>
-        <label className="filter-control"><span>{domain === "trade" ? "Trading partner" : "Geography"}</span><select value={geography} onChange={(event) => setGeography(event.target.value)}><option value="">All available</option>{places.map((value) => <option key={value}>{value}</option>)}</select></label>
-        <button className="button-secondary" onClick={() => { setPeriod(""); setGeography(""); }}>Reset filters</button>
+        <label className="filter-control"><span>{domain === "trade" ? "Trading partner" : "Geography"}</span><select value={geography} onChange={(event) => setGeography(event.target.value)}><option value="">All available</option>{[...new Set([...places, ...(domain === "production" ? ["Karnataka"] : [])])].sort().map((value) => <option key={value}>{value}</option>)}</select></label>
+        <button className="button-secondary" onClick={() => { setPeriod(""); setGeography(defaultGeography(domain)); }}>Reset filters</button>
       </section>}
       <section className="panel table-panel"><div className="panel-heading"><div><h2>Source records</h2><p>{filtered.length} displayed · {domain === "production" || domain === "trade" ? "Financial/agricultural year labels are preserved exactly as published." : "Publication dates and fetch timestamps are independent."}</p></div><button className="button-secondary" disabled={!filtered.length} onClick={exportRows}>Export {domain} CSV</button></div>
         {!filtered.length ? <EmptyState title={rows.length ? "No records match these filters" : "No captured source records"}>{rows.length ? "Reset the filters to see available source periods." : "Use the authenticated source refresh below. Missing data is not estimated."}</EmptyState> :
@@ -88,7 +93,7 @@ export function IntelligencePage() {
         {domain === "production" || domain === "trade" ? <p>Refresh verified official PDF tables locally with <code>npm run refresh:intelligence</code>. This archives the original PDFs and validates positioned columns, units and reporting years. Layout changes fail explicitly.</p>
           : <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); setNotice(""); refresh.mutate(); }}><label className="filter-control"><span>Source refresh reviewer token</span><input type="password" autoComplete="off" required disabled={refresh.isPending} value={token} onChange={(event) => setToken(event.target.value)} /></label><button className="button-secondary" disabled={refresh.isPending}>{refresh.isPending ? "Capturing..." : domain === "weather" ? "Refresh Sirsi weather" : "Refresh official releases"}</button><button type="button" className="button-secondary" disabled={refresh.isPending} onClick={() => { setToken(""); setNotice(""); refresh.reset(); }}>Clear token</button></form>}
         {refresh.error && <ErrorState error={refresh.error} />}{notice && <p role="status">{notice}</p>}
-        <details><summary>Recent capture attempts</summary><ul>{data.attempts.map((attempt) => <li key={attempt.id}>{attempt.source_key} · {attempt.status} · {new Date(attempt.started_at).toLocaleString("en-IN")}{attempt.error_message && ` · ${attempt.error_message}`}</li>)}</ul>{!data.attempts.length && <p>No attempts recorded.</p>}</details>
+        <details><summary>Recent capture attempts</summary><ul>{data.attempts.map((attempt) => <li key={attempt.id}>{attempt.source_key} · {attempt.status} · {formatTimestampIST(attempt.started_at)}{attempt.error_message && ` · ${attempt.error_message}`}</li>)}</ul>{!data.attempts.length && <p>No attempts recorded.</p>}</details>
       </div></section>
     </>}
   </div>;

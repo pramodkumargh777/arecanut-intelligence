@@ -1,0 +1,7 @@
+# Document ingestion for the ANI assistant retrieval corpus (PDF text extraction).
+# Install: uv pip install --python .venv/bin/python -r data-platform/requirements-documents.txt
+# Scanned PDFs also need OCRmyPDF and Tesseract on the machine that runs the ingester (no pip package is used):
+#   macOS: brew install ocrmypdf tesseract-lang
+#   Linux: apt-get install ocrmypdf tesseract-ocr-kan
+-r requirements.txt
+pypdf==6.1.3

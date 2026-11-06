@@ -1,30 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { IntelligenceScorecard } from "../components/Scorecard";
 import { lazy, Suspense } from "react";
 import { ArrowDownRight, ArrowUpRight, ArrowUpRightFromSquare, CalendarDays, ChartNoAxesCombined, MapPin, ShieldCheck, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
+import { useCommodity } from "../services/commodity";
 import { ErrorState, LoadingState } from "../components/State";
+import { calendarTodayIST, calendarDateToTime, DAY_MS, formatCalendarDate } from "../../../shared/dates";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
 
 const money = (value: number | null | undefined) => value == null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
-const niceDate = (date: string | null) => date ? new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "No verified reports";
+const niceDate = (date: string | null) => date ? formatCalendarDate(date) : "No verified reports";
 
 export function OverviewPage() {
   const [variety, setVariety] = useState("");
-  const varieties = useQuery({ queryKey: ["varieties"], queryFn: api.varieties });
+  const { code: commodity } = useCommodity();
+  const varieties = useQuery({ queryKey: ["varieties", commodity], queryFn: () => api.varieties(commodity) });
   useEffect(() => {
     if (!variety && varieties.data?.length) setVariety(varieties.data[0]);
   }, [variety, varieties.data]);
-  const overview = useQuery({ queryKey: ["overview", variety], queryFn: () => api.overview(variety), enabled: Boolean(variety) });
-  const prices = useQuery({ queryKey: ["latest-prices", variety], queryFn: () => api.prices({ variety, limit: "8" }), enabled: Boolean(variety) });
+  const overview = useQuery({ queryKey: ["overview", commodity, variety], queryFn: () => api.overview(variety, commodity), enabled: Boolean(variety) });
+  const prices = useQuery({ queryKey: ["latest-prices", commodity, variety], queryFn: () => api.prices({ commodity, variety, limit: "8" }), enabled: Boolean(variety) });
   const index = useQuery({
-    queryKey: ["reference-index", "90d", variety],
+    queryKey: ["reference-index", "90d", commodity, variety],
     queryFn: () => {
-      const from = new Date();
-      from.setDate(from.getDate() - 90);
-      return api.referenceIndex({ from: from.toISOString().slice(0, 10), variety });
+      const from = new Date(calendarDateToTime(calendarTodayIST()) - 90 * DAY_MS).toISOString().slice(0, 10);
+      return api.referenceIndex({ commodity, from, variety });
     },
     enabled: Boolean(variety),
   });
@@ -34,6 +37,7 @@ export function OverviewPage() {
   if (overview.error) return <ErrorState error={overview.error} onRetry={() => void overview.refetch()} />;
   const data = overview.data ?? {
     latest_reporting_date: null,
+    benchmark_reporting_date: null,
     reference_price: null,
     previous_reference_price: null,
     absolute_change: null,
@@ -64,12 +68,15 @@ export function OverviewPage() {
         <div className="updated-chip"><CalendarDays size={13} /> Latest report <b>{niceDate(data.latest_reporting_date)}</b></div>
       </section>
 
+      <IntelligenceScorecard feed="official" variety={variety} />
+
       <section className="snapshot-grid" aria-label="Market snapshot">
         <article className="snapshot-card featured-card">
           <div className="card-kicker"><span>REFERENCE INDEX · {variety || "NO VARIETY SELECTED"}</span><TrendingUp size={17} /></div>
           <div className="snapshot-value">{data.index_status === "available" ? money(data.reference_price) : "—"}<small>/ quintal</small></div>
           {data.index_status === "available" && data.absolute_change != null ? <div className={`change-line ${changePositive ? "positive" : "negative"}`}>{changePositive ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}{money(Math.abs(data.absolute_change))} <span>({Math.abs(data.percent_change ?? 0).toFixed(2)}%) vs previous report</span></div> : <div className="card-hint">Reference value appears after sufficient verified market coverage.</div>}
           <div className="feature-foot"><ShieldCheck size={14} /> Exact reported variety · {data.reporting_markets} market{data.reporting_markets === 1 ? "" : "s"}</div>
+          <p>Latest qualifying benchmark: {data.benchmark_reporting_date ? niceDate(data.benchmark_reporting_date) : "Unavailable"}. {data.latest_reporting_date !== data.benchmark_reporting_date && "The latest market report does not meet benchmark coverage; an older chart point is not today's price."}</p>
         </article>
         <article className="snapshot-card">
           <div className="card-kicker"><span>REPORTING MARKETS</span><MapPin size={16} /></div>

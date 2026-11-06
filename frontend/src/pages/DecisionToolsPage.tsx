@@ -4,6 +4,7 @@ import { api } from "../services/api";
 import { toCsv } from "../services/csv";
 import type { Calculation, CalculationInputs, PriceReference } from "../services/intelligence";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
+import { formatTimestampIST } from "../../../shared/dates";
 
 type NumericKey = Exclude<keyof CalculationInputs, "name" | "price">;
 const fields: { key: NumericKey; label: string; min: number; max?: number; step?: string; section: string }[] = [
@@ -34,7 +35,7 @@ export function DecisionToolsPage() {
   const options = [
     ...(prices.data?.cooperative.map((row) => ({ key: `cooperative:${row.id}`,
       reference: { kind: "cooperative", id: row.id } satisfies PriceReference,
-      label: `${row.source_key.toUpperCase()} · ${row.branch} · ${row.variety} · ${row.reporting_date} · ${money(row.average_price)} / qtl${row.unit_status === "assumed" ? " — unit assumed" : ""}` })) ?? []),
+      label: `${row.source_key.toUpperCase()} · ${row.branch} · ${row.variety} · ${row.reporting_date} · ${money(row.average_price)} / qtl${row.unit_status === "assumed" ? " — unit by operator assumption" : ""}` })) ?? []),
     ...(prices.data?.monthly.map((row) => ({ key: `monthly:${row.refresh_run_id}:${row.variety_name}`,
       reference: { kind: "monthly", month: row.reporting_month, variety: row.variety_name, refresh_run_id: row.refresh_run_id } satisfies PriceReference,
       label: `AGMARKNET monthly · ${row.variety_name} · ${row.reporting_month} · ${money(row.weighted_price)} / qtl — state aggregate` })) ?? []),
@@ -96,14 +97,14 @@ export function DecisionToolsPage() {
       <button className="button-primary" disabled={busy}>{calculate.isPending ? "Calculating..." : "Calculate actual-input scenario"}</button>
     </form>}
     {error && <ErrorState error={error} />}
-    {result && <section className="panel" aria-label="Calculation results"><div className="panel-heading"><div><h2>{result.inputs.name} · Results</h2><p>{result.created_at ? `Saved snapshot: ${new Date(result.created_at).toLocaleString("en-IN")}. Retained independently of later source corrections.` : "Calculated but not stored. Save with reviewer access below."} · {result.formula_version}</p></div><button className="button-secondary" onClick={() => exportResult(result)}>Export scenario CSV</button></div>
+    {result && <section className="panel" aria-label="Calculation results"><div className="panel-heading"><div><h2>{result.inputs.name} · Results</h2><p>{result.created_at ? `Saved snapshot: ${formatTimestampIST(result.created_at)}. Retained independently of later source corrections.` : "Calculated but not stored. Save with reviewer access below."} · {result.formula_version}</p></div><button className="button-secondary" onClick={() => exportResult(result)}>Export scenario CSV</button></div>
       <div className="monthly-details">
         <p><strong>Price: {money(result.price.value)} / quintal · {result.price.source} · {result.price.unit_status.replace(/_/g, " ")}</strong></p>
-        <p>{result.price.branch} · {result.price.variety} · Reporting: {result.price.reporting_period ?? "User entered; no reporting date"} · Fetched: {result.price.fetched_at ? new Date(result.price.fetched_at).toLocaleString("en-IN") : "Not sourced"} · {result.price.price_type.replace(/_/g, " ")} {result.price.source_url && <a href={result.price.source_url} target="_blank" rel="noreferrer">Source evidence</a>}</p>
+        <p>{result.price.branch} · {result.price.variety} · Market reporting period: {result.price.reporting_period ?? "User entered; no reporting date"} · Platform fetched: {result.price.fetched_at ? formatTimestampIST(result.price.fetched_at) : "Not sourced"} · {result.price.price_type.replace(/_/g, " ")} {result.price.source_url && <a href={result.price.source_url} target="_blank" rel="noreferrer">Source evidence</a>}</p>
         {result.price.state && <p>Source reporting state: {result.price.state}</p>}
         {result.price.price_type === "monthly_weighted_modal" && result.price.reference_id && <p><a href={api.monthlySnapshotUrl(result.price.reference_id)} target="_blank" rel="noreferrer">Download the archived report used for this calculation</a> (unchanged by later source refreshes).</p>}
-        {result.price.unit_status === "assumed" && <p role="note">INR/quintal is assumed, not source-confirmed. All monetary results inherit this assumption.</p>}
-        <div className="table-scroll" tabIndex={0} role="region" aria-label="Decision calculation outputs"><table><caption>Scenario arithmetic, not forecasts or personalized investment advice</caption><thead><tr><th>Measure</th><th>Value</th></tr></thead><tbody>
+        {result.price.unit_status === "assumed" && <p role="note">INR/quintal is an operator assumption for this source. All monetary results inherit it.</p>}
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Decision calculation outputs"><table><caption>Scenario arithmetic, not forecasts or personalized investment advice</caption><thead><tr><th>Measure</th><th className="numeric">Value</th></tr></thead><tbody>
           {([
             ["Gross realization", result.results.gross_realization], ["Selling costs", result.results.selling_costs],
             ["Net realization now", result.results.net_realization], ["Net per quintal", result.results.net_per_quintal],
@@ -112,9 +113,9 @@ export function DecisionToolsPage() {
             ["Hold finance / opportunity cost", result.results.finance_cost], ["Hold net realization at your scenario price", result.results.hold_net_realization],
             ["Hold advantage vs selling now", result.results.hold_advantage], ["Hold break-even price / remaining quintal", result.results.break_even_hold_price],
           ] as [string, number][]).map(([label, value]) => <tr key={label}><td>{label}</td><td className="numeric">{money(value)}</td></tr>)}
-          <tr><td>Return on production cost</td><td>{result.results.roi_percent === null ? "Unavailable: production cost is zero" : `${result.results.roi_percent.toFixed(2)}%`}</td></tr>
-          <tr><td>Saleable quantity after holding</td><td>{result.results.remaining_quintals.toFixed(4)} quintals</td></tr>
-          <tr><td>Required increase to hold break-even</td><td>{result.results.break_even_increase_percent.toFixed(2)}%</td></tr>
+          <tr><td>Return on production cost</td><td className="numeric">{result.results.roi_percent === null ? "Unavailable: production cost is zero" : `${result.results.roi_percent.toFixed(2)}%`}</td></tr>
+          <tr><td>Saleable quantity after holding</td><td className="numeric">{result.results.remaining_quintals.toFixed(4)} quintals</td></tr>
+          <tr><td>Required increase to hold break-even</td><td className="numeric">{result.results.break_even_increase_percent.toFixed(2)}%</td></tr>
         </tbody></table></div>
         <div className="table-scroll" tabIndex={0} role="region" aria-label="Hold scenarios"><table><caption>Deterministic hold scenarios — no probabilities or predicted outcomes</caption><thead><tr><th>Scenario</th><th>Future price / quintal</th><th>Hold net proceeds</th><th>Advantage vs sell now</th></tr></thead><tbody>
           <tr><td>Price unchanged from reference</td><td>{money(result.price.value)}</td><td>{money(result.results.hold_unchanged_net_realization)}</td><td>{money(result.results.hold_unchanged_advantage)}</td></tr>
@@ -130,7 +131,7 @@ export function DecisionToolsPage() {
       {!unlocked ? <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); setUnlocked(true); }}><label className="filter-control"><span>Scenario storage reviewer token</span><input type="password" autoComplete="off" value={token} required onChange={(event) => setToken(event.target.value)} /></label><button className="button-secondary">Unlock saved scenarios</button></form> : <>
         <div className="monthly-refresh"><button className="button-secondary" disabled={busy} onClick={() => { client.removeQueries({ queryKey: ["saved-calculations"] }); setToken(""); setUnlocked(false); setResult(null); setValues(emptyValues()); setName(""); setSelection(""); setManualPrice(""); setError(null); save.reset(); }}>Lock and clear private inputs</button>
           <button className="button-primary" disabled={busy || !result || Boolean(result.id) || !saved.isSuccess} onClick={() => { if (result) { setError(null); save.mutate(result.inputs); } }}>Save calculated scenario</button></div>
-        {saved.isLoading ? <LoadingState /> : saved.error ? <ErrorState error={saved.error} onRetry={() => void saved.refetch()} /> : !saved.data?.data.length ? <EmptyState title="No saved scenarios">No example costs or fictitious farm inputs are stored.</EmptyState> : <ul>{saved.data.data.map((value) => <li key={value.id}><button className="text-button" disabled={busy} onClick={() => load(value)}>{value.inputs.name} · {value.created_at ? new Date(value.created_at).toLocaleString("en-IN") : ""}</button></li>)}</ul>}
+        {saved.isLoading ? <LoadingState /> : saved.error ? <ErrorState error={saved.error} onRetry={() => void saved.refetch()} /> : !saved.data?.data.length ? <EmptyState title="No saved scenarios">No example costs or fictitious farm inputs are stored.</EmptyState> : <ul>{saved.data.data.map((value) => <li key={value.id}><button className="text-button" disabled={busy} onClick={() => load(value)}>{value.inputs.name} · {value.created_at ? formatTimestampIST(value.created_at) : ""}</button></li>)}</ul>}
       </>}
     </div></section>
   </div>;

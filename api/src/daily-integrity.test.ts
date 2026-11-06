@@ -1,58 +1,18 @@
-import { DatabaseSync, type SQLInputValue } from "node:sqlite";
-import { readFileSync, readdirSync } from "node:fs";
+import type { SQLInputValue } from "node:sqlite";
+import { readFileSync } from "node:fs";
+import { applyMigrations, LocalDatabase } from "./test-support/local-d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app, type Env } from "./index";
 import { parseCsv } from "./monthly";
 import { toCsv } from "../../frontend/src/services/csv";
 import { refreshMonthly } from "./monthly";
 
-class LocalStatement {
-  constructor(private db: LocalDatabase, private sql: string, private args: SQLInputValue[] = []) {}
-  bind(...args: SQLInputValue[]) { return new LocalStatement(this.db, this.sql, args); }
-  execute() {
-    const rows = this.db.sqlite.prepare(this.sql).all(...this.args);
-    const changes = Number(this.db.sqlite.prepare("SELECT changes() AS count").get()?.count ?? 0);
-    return { results: rows, success: true, meta: { changes } };
-  }
-  async all() { return this.execute(); }
-  async run() { return this.execute(); }
-  async first() {
-    const row = this.execute().results[0] ?? null;
-    if (this.sql.startsWith("SELECT * FROM market_price_observations") && this.db.afterObservationRead) {
-      const callback = this.db.afterObservationRead;
-      this.db.afterObservationRead = undefined;
-      await callback();
-    }
-    return row;
-  }
-}
-
-class LocalDatabase {
-  sqlite = new DatabaseSync(":memory:");
-  afterObservationRead?: () => Promise<void>;
-  prepare(sql: string) { return new LocalStatement(this, sql); }
-  async batch(statements: LocalStatement[]) {
-    this.sqlite.exec("BEGIN");
-    try {
-      const results = statements.map((statement) => statement.execute());
-      this.sqlite.exec("COMMIT");
-      return results;
-    } catch (error) {
-      this.sqlite.exec("ROLLBACK");
-      throw error;
-    }
-  }
-}
-
 let db: LocalDatabase;
 let env: Env["Bindings"];
 beforeEach(() => {
-  db = new LocalDatabase();
-  for (const file of readdirSync("migrations").filter((file) => file.endsWith(".sql")).sort()) {
-    db.sqlite.exec(readFileSync(`migrations/${file}`, "utf8"));
-  }
+  db = applyMigrations(new LocalDatabase());
   // The adapter implements the D1 methods exercised by the actual HTTP handlers.
-  env = { DB: db as unknown as D1Database, INGESTION_TOKEN: "import", ADMIN_TOKEN: "review", MIN_INDEX_MARKETS: "3" };
+  env = { DB: db as unknown as D1Database, INGESTION_TOKEN: "import", ADMIN_TOKEN: "review", MIN_INDEX_MARKETS: "3", COOPERATIVE_FETCH_ATTEMPTS: "1" };
 });
 afterEach(() => { db.sqlite.close(); vi.unstubAllGlobals(); });
 
@@ -150,6 +110,29 @@ describe("actual daily handlers with migrated SQLite", () => {
       data: [{ market_name: "Market 3", modal_price: 45100 }, { market_name: "Market 2", modal_price: 44100 }, { market_name: "Market 1", modal_price: 43100 }],
     });
   });
+  it("separates the latest market calendar date from an older qualifying benchmark and retains publication provenance", async () => {
+    const prior = [1, 2, 3].map((market) => ({
+      ...record(`prior-${market}`, 42000 + market * 1000), market_id: `market-${market}`,
+      market_name: `Market ${market}`, source_record_id: `prior-${market}`, reporting_date: "2026-10-29",
+      publication_date: "2026-10-30",
+    }));
+    const latest = { ...record("latest", 44000), source_record_id: "latest", publication_date: "2026-10-31" };
+    await ingest([...prior, latest]);
+    for (const row of [...prior, latest]) await review(row.id);
+    const read = (path: string) => app.request(`/api/v1${path}`, {}, env);
+    expect(await (await read("/overview?variety=Rashi")).json()).toMatchObject({
+      data: { latest_reporting_date: "2026-10-30", benchmark_reporting_date: "2026-10-29", reference_price: null, index_status: "insufficient_coverage" },
+    });
+    expect(await (await read("/analytics/reference-index?variety=Rashi")).json()).toMatchObject({
+      data: [{ reporting_date: "2026-10-29", median_modal_price: 44000, market_count: 3 }],
+    });
+    expect(await (await read("/prices")).json()).toMatchObject({
+      data: expect.arrayContaining([expect.objectContaining({
+        reporting_date: "2026-10-30", publication_date: "2026-10-31", original_unit: "Rs./Quintal",
+        source_publication_timestamp: null, platform_fetch_timestamp: null,
+      })]),
+    });
+  });
   it("serializes concurrent corrections with a single active version", async () => {
     await ingest();
     const responses = await Promise.all([ingest([record("b", 45000)]), ingest([record("c", 46000)])]);
@@ -166,7 +149,8 @@ describe("actual daily handlers with migrated SQLite", () => {
       const row = { ...base, id: `row-${i}`, source_record_id: `src-${i}`, market_id: market, reporting_date: date, modal_price: price, minimum_price: 0, maximum_price: 100000 };
       insert.run(...columns.map((column) => row[column as keyof typeof row] as SQLInputValue));
     };
-    db.sqlite.exec("DELETE FROM observation_reviews; DELETE FROM market_price_observations");
+    // Observations are undeletable evidence (migration 0015); withdraw the fixture row from publication instead.
+    db.sqlite.exec("UPDATE market_price_observations SET validation_status = 'rejected'");
     for (let i = 1; i < 4; i++) db.sqlite.prepare("INSERT INTO markets(id,name,district,state,mapping_status) VALUES(?,?, 'Shivamogga','Karnataka','verified')").run(`market-${i + 1}`, `Market ${i}`);
     for (let i = 0; i < 4; i++) add(i, "2026-10-01", [100, 200, 1000, 2000][i], `market-${i + 1}`);
     for (let i = 4; i < 10002; i++) add(i, "2026-10-02", 40000, `market-${i % 4 + 1}`);
@@ -247,14 +231,14 @@ describe("cooperative source publication and provenance", () => {
 
 describe("TSS source routes with migrated storage", () => {
   const row = { date1: "2026-11-03", iname: "RASHI", iname_en: "RASHI", itemcode: 1, mnrate: 44099, mxrate: 47299, avgrate: 46055, norrate: 45699 };
-  const refresh = (body: unknown = { date: "2026-11-03", accept_assumed_unit: true }) => post("/admin/cooperative/tss/refresh", body, "review");
-  it("requires authentication and explicit assumed-unit acknowledgement; rejects invalid dates", async () => {
+  const refresh = (body: unknown = { date: "2026-11-03" }) => post("/admin/cooperative/tss/refresh", body, "review");
+  it("requires authentication; rejects invalid dates", async () => {
     expect((await post("/admin/cooperative/tss/refresh", {})).status).toBe(401);
-    for (const body of [{ date: "2026-11-03" }, { date: "2026-02-31", accept_assumed_unit: true }, { date: "9999-01-01", accept_assumed_unit: true }]) {
+    for (const body of [{}, { date: "2026-02-31" }, { date: "9999-01-01" }]) {
       expect((await refresh(body)).status).toBe(400);
     }
   });
-  it("publishes only reviewed supported items with assumed units and no benchmark contamination", async () => {
+  it("publishes TSS only after review, labelled as an operator-assumed INR/quintal unit", async () => {
     let average = 46055;
     vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({
       success: true, data: [{ ...row, avgrate: average }, { ...row, iname_en: "PEPPER" }],
@@ -264,13 +248,21 @@ describe("TSS source routes with migrated storage", () => {
     const read = () => app.request("/api/v1/cooperative/prices?source=tss", {}, env);
     expect(await (await read()).json()).toMatchObject({ data: [], series: [] });
     const quotes = db.sqlite.prepare("SELECT id FROM cooperative_quotes WHERE source_key='tss'").all();
-    for (const quote of quotes) expect((await post(`/admin/cooperative/${quote.id}/review`, { action: "approve" }, "review")).status).toBe(200);
-    const published = await (await read()).json();
-    expect(published).toMatchObject({ variety: "RASHI", series: [], reference_price: null,
-      data: expect.arrayContaining([expect.objectContaining({ unit_status: "assumed", normal_price: 45699, average_price: 46055 })]) });
+    for (const quote of quotes) {
+      const review = await post(`/admin/cooperative/${quote.id}/review`, { action: "approve" }, "review");
+      expect(await review.json()).toMatchObject({ status: "verified", published: true });
+    }
+    const published = await (await read()).json() as { data: unknown[] };
+    expect(published).toMatchObject({ reference_price: 46055, series: [expect.objectContaining({ branch_count: 3 })],
+      publication: { published: true, blocked_reason: null, latest_archived_reporting_date: "2026-11-03" },
+      availability: expect.stringContaining("operator assumption"),
+      permission: { status: "not_requested", label: "Permission not confirmed" } });
+    expect(published.data).toHaveLength(3);
+    expect(published.data[0]).toMatchObject({ unit_status: "assumed", price_unit: "INR/quintal" });
     expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes WHERE status='verified'").get()?.count).toBe(3);
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_reviews WHERE new_status='verified'").get()?.count).toBe(3);
     expect(() => db.sqlite.prepare("UPDATE cooperative_quotes SET unit_status='source_confirmed' WHERE source_key='tss'").run()).toThrow("explicitly assumed");
-    expect(await (await refresh()).json()).toMatchObject({ inserted_count: 0 });
+    expect(await (await refresh()).json()).toMatchObject({ inserted_count: 0, duplicate_count: 3 });
     expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes WHERE status='verified'").get()?.count).toBe(3);
     average = 46500;
     expect(await (await refresh()).json()).toMatchObject({ inserted_count: 3 });
@@ -302,6 +294,39 @@ ${includeRashi ? `Rashi,${value},-,-,-,-\n` : ""}Other,100,-,-,-,-
 Note:
 Weighted Average Price = ∑(arrival quantity * modal price) / ∑arrival quantity
 `;
+  it("compares archived source tokens, normalized values and units without changing retained records", async () => {
+    const text = monthlyReport("47174.91");
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(text, { headers: { "content-type": "text/csv" } })));
+    await refreshMonthly(env.DB, "2026-10", "Karnataka");
+    const id = db.sqlite.prepare("SELECT id FROM monthly_refresh_runs").get()?.id;
+    const before = db.sqlite.prepare("SELECT * FROM monthly_price_versions").all();
+    const read = (variety = "Rashi") => app.request(`/api/v1/history/monthly/snapshots/${id}/evidence?variety=${variety}`, {}, env);
+    const response = await read();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reporting_month: "2026-10", state: "Karnataka", variety: "Rashi",
+      source_value: "47174.91", raw_imported_value: "47174.91", source_unit: "Rs./Quintal",
+      normalized_value: 47174.91, reparsed_value: 47174.91, normalized_unit: "INR/quintal",
+      source_publication_timestamp: null, review_flags: [],
+    });
+    expect(db.sqlite.prepare("SELECT * FROM monthly_price_versions").all()).toEqual(before);
+    expect((await read("rashi")).status).toBe(404);
+    expect((await app.request(`/api/v1/history/monthly/snapshots/${id}/evidence`, {}, env)).status).toBe(400);
+    // Isolated malformed historical fixture: a discrepancy must be explained, never repaired by a read.
+    // Simulates legacy rows written before the 0015 immutability guards existed.
+    db.sqlite.exec("DROP TRIGGER monthly_price_versions_immutable; DROP TRIGGER monthly_report_offload_guard");
+    db.sqlite.prepare("UPDATE monthly_price_versions SET weighted_price=471.7491").run();
+    expect(await (await read()).json()).toMatchObject({
+      source_value: "47174.91", normalized_value: 471.7491,
+      review_flags: [{ code: "source_import_mismatch" }],
+    });
+    expect(db.sqlite.prepare("SELECT weighted_price FROM monthly_price_versions WHERE variety_name='Rashi'").get()?.weighted_price).toBe(471.7491);
+    db.sqlite.prepare("UPDATE monthly_refresh_runs SET raw_report='invalid CSV'").run();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await read()).status).toBe(422);
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
   it("retains corrected, repeated, null and removed-variety monthly snapshots without filling calendar gaps", async () => {
     let text = monthlyReport("47174.91");
     vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(text, { headers: { "content-type": "text/csv" } })));
@@ -452,5 +477,145 @@ describe("independent intelligence handlers and evaluated forecasts", () => {
       expect(await (await app.request("/api/v1/forecasts?variety=Rashi", {}, env)).json()).toMatchObject({ status: "stale", stale: true, forecast: null, stale_reasons: ["source_history_changed"] });
       expect(() => db.sqlite.exec("UPDATE forecast_snapshots SET formula_version='tampered'")).toThrow("immutable");
     } finally { vi.useRealTimers(); }
+  });
+});
+
+describe("AGMARKNET daily connector provenance and source status", () => {
+  const daily = (id = "d1") => ({
+    ...record(id), source_record_id: `datagovin:9ef84268-d588-465a-a308-a864a43d0070:${id}`, reporting_date: "2026-11-04",
+    grade: "Local", source_resource_id: "9ef84268-d588-465a-a308-a864a43d0070", platform_fetched_at: "2026-11-04T17:09:24Z",
+  });
+  const run = {
+    source_key: "agmarknet", resource_id: "9ef84268-d588-465a-a308-a864a43d0070", mode: "daily", status: "completed_with_rejections",
+    started_at: "2026-11-04T17:09:20Z", completed_at: "2026-11-04T17:09:24Z", source_updated_at: "2026-11-04T17:00:54Z",
+    request_filters: { "state.keyword": "Karnataka", commodity: "Arecanut(Betelnut/Supari)" }, source_total: 2,
+    fetched_count: 2, out_of_scope_count: 0, accepted_count: 1, review_required_count: 0, rejected_count: 1,
+    inserted_count: 1, duplicate_count: 0, corrected_count: 0, market_count: 1, reporting_dates: ["2026-11-04"],
+    import_job_ids: [], error_message: null,
+    rejected_sample: [{ source_record_id: "x", reasons: [{ code: "invalid_price", message: "modal_price '' is not a finite number.", severity: "reject" }] }],
+  };
+  const status = () => app.request("/api/v1/admin/source-status", { headers: { Authorization: "Bearer review" } }, env);
+
+  it("stores grade, resource ID and platform fetch timestamp separately from ingestion time and reporting date", async () => {
+    const response = await post("/admin/import", { source_key: "agmarknet", records: [daily()] });
+    expect(response.status).toBe(201);
+    expect(db.sqlite.prepare("SELECT grade, source_resource_id, platform_fetched_at, reporting_date, publication_date FROM market_price_observations").get())
+      .toEqual({ grade: "Local", source_resource_id: "9ef84268-d588-465a-a308-a864a43d0070", platform_fetched_at: "2026-11-04T17:09:24Z", reporting_date: "2026-11-04", publication_date: null });
+    expect(await (await post("/admin/import", { source_key: "agmarknet", records: [daily()] })).json()).toMatchObject({ inserted_count: 0, duplicate_count: 1 });
+    expect((await post("/admin/import", { source_key: "agmarknet", records: [{ ...daily(), platform_fetched_at: "04/11/2026" }] })).status).toBe(400);
+  });
+
+  it("records connector runs with the ingestion token only and reports coverage to reviewers only", async () => {
+    expect((await post("/admin/source-runs", run, "review")).status).toBe(401);
+    expect((await post("/admin/source-runs", { ...run, status: "succeeded" })).status).toBe(400);
+    expect((await post("/admin/source-runs", { ...run, completed_at: "2026-11-04T17:00:00Z" })).status).toBe(400);
+    expect((await post("/admin/source-runs", run)).status).toBe(201);
+    await post("/admin/import", { source_key: "agmarknet", records: [daily()] });
+    expect((await app.request("/api/v1/admin/source-status", { headers: { Authorization: "Bearer import" } }, env)).status).toBe(401);
+    const body = await (await status()).json() as { sources: { source_key: string; observation_counts: Record<string, number>; coverage: Record<string, unknown> | null; last_run: Record<string, unknown> | null }[]; limitations: string[] };
+    const agmarknet = body.sources.find((source) => source.source_key === "agmarknet")!;
+    expect(agmarknet.observation_counts).toEqual({ validated: 1 });
+    expect(agmarknet.coverage).toMatchObject({ latest_reporting_date: "2026-11-04", latest_date_observations: 1, latest_date_markets: 1, reporting_date_count: 1, latest_platform_fetch: "2026-11-04T17:09:24Z" });
+    expect(agmarknet.last_run).toMatchObject({ status: "completed_with_rejections", rejected_count: 1, request_filters: run.request_filters, rejected_sample: run.rejected_sample });
+    expect(body.sources.find((source) => source.source_key === "agmarknet_csv")).toMatchObject({ coverage: null, last_run: null });
+    expect(body.limitations.join(" ")).toContain("only the latest arrival date");
+  });
+});
+
+describe("TUMCOS, CSV import, replay and permission records with migrated storage", () => {
+  const tumcosHtml = readFileSync(new URL("./fixtures/tumcos-market-rates.html", import.meta.url), "utf8");
+  const serveTumcos = () => vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(tumcosHtml, { headers: { "content-type": "text/html; charset=UTF-8" } })));
+  const auth = { Authorization: "Bearer review" };
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-04T12:00:00Z")); });
+  afterEach(() => vi.useRealTimers());
+
+  it("keeps TUMCOS arecanut and pepper separate, publishes them only after review, and is idempotent", async () => {
+    serveTumcos();
+    expect((await post("/admin/cooperative/tumcos/refresh", {})).status).toBe(401);
+    const first = await (await post("/admin/cooperative/tumcos/refresh", { scope: "full_history" }, "review")).json();
+    expect(first).toMatchObject({ received_count: 8, inserted_count: 8, invalid_count: 3, unit_conflict_count: 8,
+      commodities: { arecanut: 6, black_pepper: 2 }, stale_page_metadata: true, latest_record_date: "2026-11-04" });
+    expect(await (await post("/admin/cooperative/tumcos/refresh", { scope: "full_history" }, "review")).json()).toMatchObject({ inserted_count: 0, duplicate_count: 8 });
+    const fetchRow = db.sqlite.prepare("SELECT notes, snapshot_sha256, ingest_mode FROM cooperative_fetches WHERE source_key='tumcos' ORDER BY started_at LIMIT 1").get();
+    expect(fetchRow).toMatchObject({ ingest_mode: "backfill" });
+    expect(JSON.parse(String(fetchRow?.notes))).toMatchObject({ page_last_updated: { label: "03 Apr 2026" }, stale_page_metadata: true });
+    const latest = db.sqlite.prepare("SELECT id FROM cooperative_quotes WHERE source_key='tumcos' AND source_record_id='1131'").get();
+    expect(await (await post(`/admin/cooperative/${latest?.id}/review`, { action: "approve" }, "review")).json())
+      .toMatchObject({ status: "verified", published: true });
+    const pepper = await (await app.request("/api/v1/cooperative/prices?source=tumcos&commodity=black_pepper", {}, env)).json();
+    expect(pepper).toMatchObject({ commodity: "black_pepper", data: [], publication: { published: false, blocked_reason: expect.stringContaining("reviewer approval"), latest_archived_reporting_date: "2026-10-26" } });
+    const areca = await (await app.request("/api/v1/cooperative/prices?source=tumcos", {}, env)).json();
+    expect(areca).toMatchObject({ data: [expect.objectContaining({ unit_status: "assumed", price_unit: "INR/quintal", source_url: expect.any(String) })], publication: { published: true, blocked_reason: null, latest_archived_reporting_date: "2026-11-04" } });
+    expect((await app.request("/api/v1/cooperative/prices?source=mamcos&commodity=black_pepper", {}, env)).status).toBe(400);
+    expect(() => db.sqlite.prepare("UPDATE cooperative_quotes SET average_price=1 WHERE source_key='tumcos'").run()).toThrow();
+    expect(() => db.sqlite.prepare("UPDATE cooperative_fetches SET raw_snapshot='x' WHERE source_key='tumcos'").run()).toThrow();
+  });
+
+  it("replays a stored snapshot without duplicating or superseding existing observations", async () => {
+    serveTumcos();
+    await post("/admin/cooperative/tumcos/refresh", {}, "review");
+    const stored = db.sqlite.prepare("SELECT id FROM cooperative_fetches WHERE source_key='tumcos'").get();
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network must not be used")));
+    const replay = await (await post(`/admin/cooperative/replay/${stored?.id}`, {}, "review")).json() as { fetch_id: string };
+    expect(replay).toMatchObject({ replay_of: stored?.id, parsed_count: 3, inserted_count: 0, duplicate_count: 3 });
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes WHERE status='superseded'").get()?.count).toBe(0);
+    expect(db.sqlite.prepare("SELECT ingest_mode, replay_of FROM cooperative_fetches WHERE id=?").get(replay.fetch_id)).toMatchObject({ ingest_mode: "snapshot_replay", replay_of: stored?.id });
+    expect((await post("/admin/cooperative/replay/missing", {}, "review")).status).toBe(422);
+  });
+
+  it("imports authorized CSV rows into the review queue with attestation and a rejected-records report", async () => {
+    const csv = ["branch,reporting_date,commodity,variety,minimum_price,maximum_price,average_price,declared_unit,unit_evidence,source_reference",
+      "SHIVAMOGGA,2026-11-02,arecanut,RASHI EDI,39089,49389,48089,INR/quintal,Rate sheet states per quintal,sheet-1",
+      "SHIVAMOGGA,2026-11-09,arecanut,RASHI EDI,39089,49389,48089,INR/quintal,Rate sheet states per quintal,sheet-1"].join("\n");
+    const body = { source: "mamcos", csv, authorized_by: "Reviewer", permission_reference: "MAMCOS letter 2026-11", attestation: true };
+    expect((await post("/admin/cooperative/import", { ...body, attestation: false }, "review")).status).toBe(400);
+    expect(await (await post("/admin/cooperative/import", { ...body, dry_run: true }, "review")).json()).toMatchObject({ dry_run: true, pending_count: 1, invalid_count: 1, inserted_count: 0 });
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes").get()?.count).toBe(0);
+    const imported = await (await post("/admin/cooperative/import", body, "review")).json();
+    expect(imported).toMatchObject({ inserted_count: 2, rejected: [expect.objectContaining({ reporting_date: "2026-11-09", reason: "Future reporting date." })] });
+    expect(await (await post("/admin/cooperative/import", body, "review")).json()).toMatchObject({ inserted_count: 0, duplicate_count: 2 });
+    expect(db.sqlite.prepare("SELECT ingest_mode, unit_status, status FROM cooperative_quotes WHERE reporting_date='2026-11-02'").get())
+      .toMatchObject({ ingest_mode: "manual_csv", unit_status: "source_confirmed", status: "pending" });
+    const tss = await (await post("/admin/cooperative/import", { ...body, source: "tss", csv: csv.replaceAll("SHIVAMOGGA", "Sirsi").replaceAll("RASHI EDI", "RASHI") }, "review")).json();
+    expect(tss).toMatchObject({ inserted_count: 2 });
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM cooperative_quotes WHERE source_key='tss' AND unit_status!='assumed'").get()?.count).toBe(0);
+  });
+
+  it("keeps verified black pepper out of arecanut calculators and arecanut price feeds", async () => {
+    const csv = ["branch,reporting_date,commodity,variety,minimum_price,maximum_price,average_price,declared_unit,unit_evidence,source_reference",
+      "Channagiri,2026-11-02,black_pepper,pepper,60000,70000,65000,INR/quintal,Signed rate sheet states per quintal,sheet-7"].join("\n");
+    const imported = await (await post("/admin/cooperative/import", { source: "tumcos", csv, authorized_by: "Reviewer", permission_reference: "TUMCOS letter", attestation: true }, "review")).json() as { inserted_count: number };
+    expect(imported.inserted_count).toBe(1);
+    const row = db.sqlite.prepare("SELECT id FROM cooperative_quotes WHERE commodity='black_pepper'").get() as { id: string };
+    expect(await (await post(`/admin/cooperative/${row.id}/review`, { action: "approve" }, "review")).json()).toMatchObject({ status: "verified", published: true });
+    const decisions = await (await app.request("/api/v1/decisions/prices", {}, env)).json() as { cooperative: unknown[] };
+    expect(decisions.cooperative).toEqual([]);
+    const arecanut = await (await app.request("/api/v1/cooperative/prices?source=tumcos", {}, env)).json() as { data: unknown[] };
+    expect(arecanut.data).toEqual([]);
+    const pepper = await (await app.request("/api/v1/cooperative/prices?source=tumcos&commodity=black_pepper", {}, env)).json() as { data: { average_price: number }[] };
+    expect(pepper.data).toMatchObject([{ average_price: 65000 }]);
+    expect((await app.request("/api/v1/cooperative/prices?source=mamcos&commodity=black_pepper", {}, env)).status).toBe(400);
+  });
+
+  it("reports availability, freshness, permission and failure reasons, and records permission evidence", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Forbidden", { status: 403 })));
+    expect((await post("/admin/cooperative/tumcos/refresh", {}, "review")).status).toBe(502);
+    vi.setSystemTime(new Date("2026-11-04T12:05:00Z"));
+    serveTumcos();
+    await post("/admin/cooperative/tumcos/refresh", {}, "review");
+    expect((await app.request("/api/v1/admin/cooperative/sources", {}, env)).status).toBe(401);
+    const status = await (await app.request("/api/v1/admin/cooperative/sources", { headers: auth }, env)).json() as { sources: { source_key: string; availability: { state: string } }[] };
+    const tumcos = status.sources.find((source: { source_key: string }) => source.source_key === "tumcos");
+    expect(tumcos).toMatchObject({
+      availability: { state: "available", http_status: 200 },
+      permission: { status: "not_requested", label: "Permission not confirmed", scheduled_collection_allowed: false },
+      recent_failures: [expect.objectContaining({ status: "failed", http_status: 403, reason: "Source returned HTTP 403." })],
+      commodity_status: expect.arrayContaining([expect.objectContaining({ commodity: "black_pepper", freshness: expect.objectContaining({ latest_reporting_date: "2026-10-26", state: "stale" }) }),
+        expect.objectContaining({ commodity: "arecanut", freshness: expect.objectContaining({ latest_reporting_date: "2026-11-04", state: "fresh" }) })]),
+    });
+    expect(status.sources.find((source: { source_key: string }) => source.source_key === "mamcos")?.availability.state).toBe("never_fetched");
+    const update = { permission_status: "granted", scheduled_collection_allowed: true, redistribution_allowed: false, permission_reference: "TUMCOS email 2026-11-10" };
+    expect((await post("/admin/cooperative/sources/tumcos/permission", { ...update, permission_reference: null }, "review")).status).toBe(400);
+    expect(await (await post("/admin/cooperative/sources/tumcos/permission", update, "review")).json()).toMatchObject({ permission_status: "granted", scheduled_collection_allowed: 1 });
   });
 });
