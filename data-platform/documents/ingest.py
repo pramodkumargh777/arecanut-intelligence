@@ -502,7 +502,7 @@ def post_document(payload: dict[str, Any], *, api_url: str, token: str, timeout:
         raise IngestError("ANI_API_URL and ANI_ADMIN_TOKEN are required to store documents (use --dry-run otherwise).")
     request = urllib.request.Request(api_url.rstrip("/") + "/admin/documents", method="POST",
                                      data=json.dumps(payload).encode("utf-8"),
-                                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+                                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": USER_AGENT})
     try:
         with opener(request, timeout=timeout) as response:
             return json.loads(response.read())

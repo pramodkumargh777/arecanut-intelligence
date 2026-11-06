@@ -1,0 +1,14 @@
+# Relay for the AGMARKNET daily connector (src/agmarknet-relay.ts). Separate from the main API so that only this Worker
+# is pinned to Mumbai. Deploy: npx wrangler deploy --config api/wrangler.relay.toml
+# Secret: INGESTION_TOKEN, the same value as the main API and the GitHub repository secret.
+name = "ani-agmarknet-relay"
+main = "src/agmarknet-relay.ts"
+compatibility_date = "2025-01-09"
+
+# data.gov.in answered from Mumbai in testing, and was unreachable from a Worker that ran in Marseille.
+[placement]
+region = "aws:ap-south-1"
+
+# The data.gov.in key is in the request URL, so request logging stays off.
+[observability]
+enabled = false

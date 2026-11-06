@@ -241,5 +241,46 @@ class BackfillTests(unittest.TestCase):
                 read_csv_records(path)
 
 
+class RelayTests(unittest.TestCase):
+    def headers_for(self, **overrides):
+        seen = {}
+
+        def opener(request, timeout):
+            seen["url"] = request.full_url
+            seen["token"] = request.get_header("X-ani-relay-token")
+            return FakeResponse(json.dumps({"total": 0, "records": [], "field": FIELDS}).encode())
+
+        fetch_agmarknet_daily(config(relay_token="relay-secret", **overrides), opener=opener, sleep=lambda _: None)
+        return seen
+
+    def test_sends_the_token_to_the_relay(self):
+        seen = self.headers_for(base_url="https://ani-agmarknet-relay.example.dev/resource")
+        self.assertEqual(seen["token"], "relay-secret")
+        self.assertTrue(seen["url"].startswith("https://ani-agmarknet-relay.example.dev/resource/"))
+
+    def test_never_sends_the_token_to_data_gov_in(self):
+        seen = self.headers_for()
+        self.assertTrue(seen["url"].startswith("https://api.data.gov.in/"))
+        self.assertIsNone(seen["token"])
+
+    def test_reads_the_token_from_the_ingestion_secret(self):
+        built = ConnectorConfig.from_env({"DATA_GOV_IN_API_KEY": "k", "INGESTION_TOKEN": "relay-secret"})
+        self.assertEqual(built.relay_token, "relay-secret")
+
+
+class ApiRequestTests(unittest.TestCase):
+    def test_posts_name_the_client_because_cloudflare_blocks_the_python_default(self):
+        seen = {}
+
+        def opener(request, timeout):
+            seen["agent"] = request.get_header("User-agent")
+            return FakeResponse(b"{}")
+
+        with patch.object(daily.urllib.request, "urlopen", opener):
+            daily._post_json("https://example.test/api/v1/admin/import", "token", {}, 5)
+        self.assertEqual(seen["agent"], daily.API_USER_AGENT)
+        self.assertNotIn("python-urllib", seen["agent"].lower())
+
+
 if __name__ == "__main__":
     unittest.main()

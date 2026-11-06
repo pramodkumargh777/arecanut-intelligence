@@ -73,6 +73,7 @@ class ConnectorConfig:
     max_retries: int = 3
     backoff_seconds: float = 2.0
     page_delay_seconds: float = 0.5
+    relay_token: str | None = None
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None, **overrides: Any) -> "ConnectorConfig":
@@ -83,6 +84,7 @@ class ConnectorConfig:
             "base_url": env.get("AGMARKNET_API_BASE_URL") or DEFAULT_BASE_URL,
             "state": env.get("AGMARKNET_STATE") or DEFAULT_STATE,
             "price_unit": env.get("AGMARKNET_PRICE_UNIT") or None,
+            "relay_token": env.get("INGESTION_TOKEN") or None,
         }
         for name, kind in (("page_size", int), ("max_pages", int), ("max_retries", int),
                            ("timeout_seconds", float), ("backoff_seconds", float), ("page_delay_seconds", float)):
@@ -146,7 +148,11 @@ def _request_page(
     url = f"{config.base_url.rstrip('/')}/{urllib.parse.quote(config.resource_id, safe='')}?{urllib.parse.urlencode(params)}"
     last_error = "unknown error"
     for attempt in range(config.max_retries + 1):
-        request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "ANI-agmarknet-connector/1.0"})
+        headers = {"Accept": "application/json", "User-Agent": "ANI-agmarknet-connector/1.0"}
+        # Only our own relay gets the token (api/src/agmarknet-relay.ts); data.gov.in itself never sees it.
+        if config.relay_token and urllib.parse.urlsplit(config.base_url).hostname != urllib.parse.urlsplit(DEFAULT_BASE_URL).hostname:
+            headers["X-ANI-Relay-Token"] = config.relay_token
+        request = urllib.request.Request(url, headers=headers)
         try:
             with opener(request, timeout=config.timeout_seconds) as response:
                 body = response.read().decode("utf-8")
@@ -416,10 +422,14 @@ def prepare_records(
     return PreparedBatch(accepted, sorted(rejected, key=lambda item: item["index"]), duplicates, excluded)
 
 
+# Cloudflare answers Python's default "Python-urllib" signature with HTTP 403 (error code 1010).
+API_USER_AGENT = "ANI-data-platform/1.0"
+
+
 def _post_json(url: str, token: str, body: dict[str, Any], timeout: float) -> dict[str, Any]:
     request = urllib.request.Request(
         url, data=json.dumps(body).encode("utf-8"), method="POST",
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": API_USER_AGENT},
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:

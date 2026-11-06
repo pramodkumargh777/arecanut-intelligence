@@ -120,7 +120,8 @@ def post_payload(payload: dict[str, Any], api_url: str | None = None, token: str
         raise RuntimeError("Set ANI_API_URL and INGESTION_TOKEN to publish (or use --dry-run).")
     url = f"{api_url}/admin/forecasting/experiments"
     request = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST",
-                                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+                                     # Cloudflare answers Python's default user agent with HTTP 403 (error code 1010).
+                                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": "ANI-data-platform/1.0"})
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8"))

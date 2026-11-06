@@ -74,7 +74,8 @@ def send_records(
         request = urllib.request.Request(
             endpoint,
             data=json.dumps(payload).encode(),
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            # Cloudflare answers Python's default user agent with HTTP 403 (error code 1010).
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": "ANI-data-platform/1.0"},
             method="POST",
         )
         try:
