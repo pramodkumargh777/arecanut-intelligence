@@ -25,6 +25,7 @@ import { forecastingRoutes, reconcileForecastOutcomes } from "./forecasting";
 import { supplyRoutes } from "./supply-routes";
 import { createAssistantRoutes } from "./assistant/routes";
 import type { AssistantConfig } from "./assistant/providers";
+import { bearerMatches } from "./auth";
 
 export type Env = {
   Bindings: {
@@ -138,7 +139,7 @@ const importSchema = z.object({
 });
 
 function isAuthorized(header: string | undefined, token: string | undefined): boolean {
-  return Boolean(token && header === `Bearer ${token}`);
+  return bearerMatches(header, token);
 }
 
 const UNKNOWN_COMMODITY = { error: "Unknown commodity. Use a code from GET /commodities." } as const;

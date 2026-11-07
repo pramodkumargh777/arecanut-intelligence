@@ -1,6 +1,7 @@
 {
   "name": "arecanut-intelligence",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": "^22.18.0 || >=24.0.0"
   },
@@ -14,7 +15,8 @@
     "dev:frontend": "npm --workspace frontend run dev",
     "db:migrate:local": "npm --workspace api run db:migrate:local",
     "build": "npm --workspace frontend run build && npm --workspace api run typecheck",
-    "test": "npm --workspace api run test",
+    "test": "npm --workspace api run test && npm run test:frontend",
+    "test:frontend": "vitest run --config api/vitest.config.ts frontend/src/pages/product-experience.test.tsx",
     "backfill:monthly": "node scripts/backfill-monthly.mjs",
     "refresh:intelligence": "node scripts/refresh-intelligence.mjs",
     "evaluate:forecasts": "node scripts/evaluate-forecasts.mjs",

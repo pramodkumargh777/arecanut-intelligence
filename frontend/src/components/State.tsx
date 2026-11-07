@@ -5,11 +5,11 @@ export function LoadingState({ label = "Loading market data" }: { label?: string
   return <div className="state-card" role="status"><LoaderCircle className="spin" size={19} /><span>{label}…</span></div>;
 }
 
-export function ErrorState({ error, onRetry }: { error: Error; onRetry?: () => void }) {
+export function ErrorState({ error, onRetry, retryLabel = "Retry" }: { error: Error; onRetry?: () => void; retryLabel?: string }) {
   return (
     <div className="state-card state-error" role="alert">
       <AlertCircle size={19} /><span>{error.message}</span>
-      {onRetry && <button className="text-button" onClick={onRetry}>Retry</button>}
+      {onRetry && <button className="text-button" onClick={onRetry}>{retryLabel}</button>}
     </div>
   );
 }

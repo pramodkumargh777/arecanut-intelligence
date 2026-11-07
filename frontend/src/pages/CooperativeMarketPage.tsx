@@ -36,22 +36,17 @@ export function MarketDataPage({ official }: { official: ReactNode }) {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const { commodity } = useCommodity();
-  // The official daily feed is offered only once it has published prices; until then it would be an empty page.
-  const officialVarieties = useQuery({ queryKey: ["varieties", commodity?.code], queryFn: () => api.varieties(commodity?.code ?? ""), enabled: Boolean(commodity) });
-  const allFeeds = marketFeeds(commodity);
-  const withData = allFeeds.filter((value) => value !== "official" || !officialVarieties.isSuccess || officialVarieties.data.length > 0);
-  const feeds = officialVarieties.isLoading ? allFeeds.filter((value) => value !== "official") : withData.length ? withData : allFeeds;
+  const feeds = marketFeeds(commodity);
   const requestedFeed = params.get("feed");
-  const hiddenOfficial = requestedFeed === "official" && !officialVarieties.isLoading && !feeds.includes("official");
-  const feed = !requestedFeed || hiddenOfficial ? feeds[0] ?? "" : requestedFeed;
-  const supported = (feeds as string[]).includes(feed) || (feed === "official" && officialVarieties.isLoading);
+  const feed = requestedFeed || feeds[0] || "";
+  const supported = (feeds as string[]).includes(feed);
   const name = commodity?.display_name ?? "the selected commodity";
   return <div className="page-stack">
     <section className="filter-bar source-bar" aria-label="Market data source"><label className="filter-control"><span>Data source / price type</span>
       <select value={supported ? feed : ""} onChange={(event) => {
         const next = new URLSearchParams(params); next.set("feed", event.target.value); next.delete("variety"); setParams(next);
       }}><option value="" disabled>Select a supported source</option>{feeds.map((value) => <option key={value} value={value}>{feedLabels[value]}{capabilityStatus(commodity, feedCapability[value]) === "unpublished" ? " · unpublished" : ""}</option>)}</select>
-    </label><span>Separate sources, varieties and benchmark methodologies.</span></section>
+    </label><span>Supported sources are listed even when no prices are published. Each source uses its own price method.</span></section>
     {!supported ? <ErrorState error={new Error(`Unsupported market-data source for ${name}. Select one of: ${feeds.map((value) => feedLabels[value].split(" · ")[0]).join(", ")}.`)} /> : feed === "official" ? official : <CooperativeMarketPage key={`${location.pathname}:${feed}:${commodity?.code}`} source={feed === "tss" || feed === "tumcos" ? feed : "mamcos"} />}
   </div>;
 }
@@ -149,7 +144,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   const previous = series.filter((point) => point.reporting_date < (data?.latest_reporting_date ?? "")).at(-1);
   const sameBranches = Boolean(current && previous && JSON.stringify(current.branches) === JSON.stringify(previous.branches));
   const delta = sameBranches && current && previous ? current.median_average_price - previous.median_average_price : null;
-  const pending = data?.counts.filter((row) => row.status === "pending" || row.status === "invalid").reduce((sum, row) => sum + row.count, 0) ?? 0;
+  const awaitingReview = data?.publication.awaiting_review_count ?? 0;
   const benchmarkValues = series.map((point) => point.median_average_price);
   // A source with fewer locations than the coverage rule (TUMCOS reports one) cannot form a benchmark, so its own series is charted.
   const singleLocation = (data?.branches.length ?? 0) < coverage;
@@ -172,9 +167,13 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
     </section>
     <div className="data-disclosure"><span>{sourceName} reported averages{commodity === "black_pepper" ? " · black pepper" : ""} · {source === "tumcos" ? "INR / quintal — operator assumption (source page labels \"kg\")" : source === "tss" ? "INR / quintal — operator assumption (source publishes no unit)" : "INR / quintal"}. Not official APMC modal prices. Reporting dates are preserved per branch. No variety aliases are merged.{data?.permission ? ` Source permission: ${data.permission.label}.` : ""}</span></div>
     {location.pathname === "/overview" && <IntelligenceScorecard feed={source} variety={selected} />}
-    {query.isLoading ? <LoadingState label="Loading cooperative quotations" /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !rows.length ? <EmptyState title="No reviewed cooperative quotations published">
+    {data && <details className="data-disclosure source-details"><summary>Source and publication status</summary>
+      <p>Source supported · {data.last_fetch ? `Last retrieval: ${data.last_fetch.status} (${formatTimestampIST(data.last_fetch.started_at)})` : "No retrieval recorded"} · {awaitingReview} awaiting review across this source and commodity.</p>
+      <p>{rows.length ? "Published observations are available for this selection." : "No published observations in this selection and reporting window."}{data.publication.latest_archived_reporting_date ? ` Latest archived reporting date: ${formatCalendarDate(data.publication.latest_archived_reporting_date)}.` : ""}</p>
+    </details>}
+    {query.isPending ? <LoadingState label="Loading cooperative quotations" /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !rows.length ? <EmptyState title="No reviewed cooperative quotations in this selection">
       {data?.publication.blocked_reason ? <>{data.publication.blocked_reason} {data.publication.latest_archived_reporting_date ? `Latest archived market reporting date: ${data.publication.latest_archived_reporting_date}.` : "No reporting dates archived yet."} </> : null}
-      <Link to="/data-quality">Fetch and review {sourceName} quotations in Data quality</Link>. {pending > 0 ? `${pending} quotations await inspection.` : "Nothing is substituted for missing prices."}
+      <Link to="/data-quality">Fetch and review {sourceName} quotations in Data quality</Link>. {awaitingReview > 0 ? `${awaitingReview} quotations for this source and commodity await review.` : "Nothing is substituted for missing prices."}
     </EmptyState> : <>
       {location.pathname === "/overview" && <>
         <section className="snapshot-grid" aria-label="Cooperative snapshot">

@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "./index";
+import { bearerMatches } from "./auth";
 
 export const sourceStatusRoutes = new Hono<Env>();
 const STATUS_SOURCES = ["agmarknet", "agmarknet_csv"] as const;
-const authorized = (header: string | undefined, token: string | undefined) => Boolean(token && header === `Bearer ${token}`);
+const authorized = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
 const count = z.number().int().nonnegative().max(10_000_000);
 const isoTimestamp = z.string().datetime({ offset: true });
 const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

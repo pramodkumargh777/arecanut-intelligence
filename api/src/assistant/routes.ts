@@ -13,6 +13,7 @@ import { CANONICAL_EMBEDDING_MODEL, chatProvider, embeddingProvider, providerSta
 import { corpusStats, DEFAULT_SEMANTIC_THRESHOLD, pageLabel, quantizeEmbedding, rebuildFtsIndex, searchDocuments } from "./retrieval";
 import { runTool, TOOL_DESCRIPTIONS, TOOL_SCHEMAS, type ToolContext } from "./tools";
 import { TOOL_NAMES, type ToolName, type ToolResult } from "./types";
+import { bearerMatches } from "../auth";
 
 export type ApiCaller = (path: string, init: RequestInit | undefined, env: Env["Bindings"]) => Promise<Response>;
 
@@ -21,7 +22,7 @@ const MAX_CHUNKS_PER_DOCUMENT = 400;
 const STATEMENTS_PER_BATCH = 50;
 
 function isAuthorized(header: string | undefined, token: string | undefined): boolean {
-  return Boolean(token && header === `Bearer ${token}`);
+  return bearerMatches(header, token);
 }
 
 async function sha256Hex(text: string): Promise<string> {

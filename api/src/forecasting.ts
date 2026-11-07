@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "./index";
+import { bearerMatches } from "./auth";
 
 // Experimental forecasting engine (data-platform/forecasting). The monthly-baselines-v1 snapshots in
 // forecast.ts remain the published reference; nothing here modifies them.
@@ -282,7 +283,7 @@ export async function reconcileForecastOutcomes(db: D1Database) {
 // ---------- Routes ----------
 
 export const forecastingRoutes = new Hono<Env>();
-const bearer = (header: string | undefined, token: string | undefined) => Boolean(token && header === `Bearer ${token}`);
+const bearer = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
 
 forecastingRoutes.post("/admin/forecasting/experiments", async (c) => {
   if (!bearer(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) return c.json({ error: "A valid ingestion token is required." }, 401);

@@ -655,3 +655,7 @@ databases to make a demonstration portable.
 - Split the initial Worker module into route and explicit repository interfaces as additional backend domains are added.
 - The JavaScript entry bundle is approximately 260 KB minified (82 KB gzip); the accessible ECharts line-chart bundle is lazy-loaded at 539 KB minified (183 KB gzip) and should be revisited before production.
 - Python unit tests use the standard library. Pandas, DuckDB and forecasting dependencies are not needed for this first ingestion slice.
+
+## Licence
+
+Copyright (c) 2026 Pramod Kumar. All rights reserved. See [LICENSE](LICENSE).

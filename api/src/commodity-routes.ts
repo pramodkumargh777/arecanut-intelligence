@@ -4,6 +4,7 @@ import {
   type Capability, type CommodityCatalog, type CommodityDef, type GradeDef, type PriceBasis, type UnitDef, type VarietyDef,
 } from "../../shared/commodities";
 import type { Env } from "./index";
+import { bearerMatches } from "./auth";
 
 export const commodityRoutes = new Hono<Env>();
 
@@ -162,6 +163,6 @@ export async function validateCommodityModel(db: D1Database): Promise<CommodityV
 
 commodityRoutes.get("/admin/commodities/validation", async (c) => {
   const token = c.env.ADMIN_TOKEN;
-  if (!token || c.req.header("Authorization") !== `Bearer ${token}`) return c.json({ error: "Unauthorized" }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), token)) return c.json({ error: "Unauthorized" }, 401);
   return c.json(await validateCommodityModel(c.env.DB));
 });

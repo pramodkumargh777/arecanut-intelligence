@@ -2,10 +2,11 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "./index";
 import { DASD_SOURCES, SIRSI_WEATHER_URL, PIB_RELEASES, DASD_NEWS_URL, parseDasd, pdfItemSchema, parseWeather, parsePib, parsePibExport, parseDasdNews, validDay } from "./intelligence-sources";
+import { bearerMatches } from "./auth";
 
 const routes = new Hono<Env>();
 routes.use("/admin/intelligence/*", async (c, next) => {
-  if (!c.env.ADMIN_TOKEN || c.req.header("Authorization") !== `Bearer ${c.env.ADMIN_TOKEN}`) return c.json({ error: "A valid reviewer token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   await next();
 });
 const latestCapture = "c.id=(SELECT id FROM intelligence_captures newer WHERE newer.source_key=c.source_key ORDER BY newer.fetched_at DESC,newer.rowid DESC LIMIT 1)";

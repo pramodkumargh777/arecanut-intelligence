@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { Check, ClipboardCheck, KeyRound, LockKeyhole, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
@@ -10,13 +10,24 @@ import { SourceStatusPanel } from "../components/SourceStatusPanel";
 import { CooperativeSourceStatusPanel } from "../components/CooperativeSourceStatusPanel";
 import { formatCalendarDate, formatTimestampIST } from "../../../shared/dates";
 
+function clearReviewerQueries(queryClient: QueryClient) {
+  for (const key of ["quality", "source-status", "cooperative-sources", "cooperative-quality"]) queryClient.removeQueries({ queryKey: [key] });
+}
+
 export function DataQualityPage() {
-  const [token, setToken] = useState(() => sessionStorage.getItem("ani-admin-token") ?? "");
-  const [draftToken, setDraftToken] = useState(token);
+  // Held in memory only, so it is gone when you leave this page or reload it.
+  const [token, setToken] = useState("");
+  const [draftToken, setDraftToken] = useState("");
   const [message, setMessage] = useState("");
   const [messageError, setMessageError] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  useEffect(() => {
+    // Removes a token saved by an earlier version of this page.
+    try { sessionStorage.removeItem("ani-admin-token"); } catch { /* Nothing to remove when storage is blocked. */ }
+    // Query keys contain the token, so cached queries go too.
+    return () => { clearReviewerQueries(queryClient); };
+  }, [queryClient]);
   const [queueOffset, setQueueOffset] = useState(0);
   const quality = useQuery({ queryKey: ["quality", token, queueOffset], queryFn: () => api.qualityQueue(token, queueOffset), enabled: Boolean(token) });
   const queueTotal = quality.data?.total;
@@ -33,20 +44,16 @@ export function DataQualityPage() {
     event.preventDefault();
     const value = draftToken.trim();
     if (!value) return;
-    sessionStorage.setItem("ani-admin-token", value);
     setToken(value);
     setMessage("");
     setMessageError(false);
   }
   function lockReview() {
-    sessionStorage.removeItem("ani-admin-token");
     setToken("");
     setDraftToken("");
     setMessage("");
     setMessageError(false);
-    queryClient.removeQueries({ queryKey: ["quality"] });
-    queryClient.removeQueries({ queryKey: ["source-status"] });
-    queryClient.removeQueries({ queryKey: ["cooperative-sources"] });
+    clearReviewerQueries(queryClient);
   }
   async function review(id: string, action: "approve" | "reject") {
     setMessage("");
