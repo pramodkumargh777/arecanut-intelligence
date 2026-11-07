@@ -6,24 +6,20 @@ import { LanguageToggle, useLanguage } from "../services/language";
 import { CommodityGate } from "./CommodityGate";
 import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, Leaf, MapPin, Menu, MessageSquareText, Search, TableProperties, X } from "lucide-react";
 
-const navigationGroups = [
-  { label: "For growers", kn: "ಬೆಳೆಗಾರರಿಗೆ", items: [
+const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
+    { to: "/prices", label: "Explore prices", kn: "ಮಾರುಕಟ್ಟೆ ದರಗಳು", icon: TableProperties },
+    { to: "/analytics", label: "Price trends", kn: "ದರ ಪ್ರವೃತ್ತಿ", icon: ChartNoAxesCombined },
+    { to: "/compare", label: "Compare markets", kn: "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ", icon: ArrowLeftRight },
+    { to: "/intelligence", label: "Market intelligence", kn: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ", icon: BookOpenText },
     { to: "/sell-or-hold", label: "Sell or wait", kn: "ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ", icon: Hourglass },
     { to: "/assistant", label: "Ask a question", kn: "ಪ್ರಶ್ನೆ ಕೇಳಿ", icon: MessageSquareText },
-  ] },
-  { label: "Markets", kn: "ಮಾರುಕಟ್ಟೆ", items: [
-    { to: "/overview", label: "Overview", kn: "ಸಮಗ್ರ ನೋಟ", icon: Activity },
-    { to: "/prices", label: "Market prices", kn: "ಮಾರುಕಟ್ಟೆ ದರಗಳು", icon: TableProperties },
-    { to: "/analytics", label: "Price analytics", kn: "ದರ ವಿಶ್ಲೇಷಣೆ", icon: ChartNoAxesCombined },
-    { to: "/compare", label: "Market comparison", kn: "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ", icon: ArrowLeftRight },
-  ] },
-  { label: "History", kn: "ಇತಿಹಾಸ", items: [
+];
+const advancedGroups = [
+  { label: "Market detail", kn: "ಮಾರುಕಟ್ಟೆ ವಿವರ", items: [
+    { to: "/overview", label: "Market overview", kn: "ಸಮಗ್ರ ನೋಟ", icon: Activity },
     { to: "/monthly-trends", label: "Monthly trends", kn: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", icon: CalendarRange },
     { to: "/history", label: "Historical analytics", kn: "ಐತಿಹಾಸಿಕ ವಿಶ್ಲೇಷಣೆ", icon: History },
-  ] },
-  { label: "Intelligence", kn: "ಮಾಹಿತಿ", items: [
-    { to: "/intelligence", label: "Source intelligence", kn: "ಮೂಲ ಮಾಹಿತಿ", icon: BookOpenText },
     { to: "/supply", label: "Supply & weather", kn: "ಉತ್ಪಾದನೆ ಮತ್ತು ಹವಾಮಾನ", icon: MapPin },
   ] },
   { label: "Forecasting", kn: "ಮುನ್ಸೂಚನೆ", items: [
@@ -36,7 +32,7 @@ const navigationGroups = [
     { to: "/data-quality", label: "Data quality", kn: "ದತ್ತಾಂಶ ಗುಣಮಟ್ಟ", icon: ClipboardCheck },
   ] },
 ];
-const navigation: { to: string; label: string; kn: string; icon: typeof Activity; end?: boolean }[] = navigationGroups.flatMap((group) => group.items);
+const navigation: { to: string; label: string; kn: string; icon: typeof Activity; end?: boolean }[] = [...primaryNavigation, ...advancedGroups.flatMap((group) => group.items)];
 /** Grower pages are arecanut-only and short, so they leave out the commodity and market-search controls. */
 const GROWER_PAGES = ["/", "/sell-or-hold"];
 
@@ -92,7 +88,10 @@ export function AppShell() {
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") setMenuOpen(false);
       if (event.key !== "Tab") return;
-      const controls = sidebar.current?.querySelectorAll<HTMLElement>("a[href], button");
+      const controls = Array.from(sidebar.current?.querySelectorAll<HTMLElement>("a[href], button, summary") ?? [])
+        .filter((control) => control.getClientRects().length > 0
+          && getComputedStyle(control).visibility !== "hidden"
+          && (control.tagName === "SUMMARY" || !control.closest("details:not([open])")));
       if (!controls?.length) return;
       const first = controls[0];
       const last = controls[controls.length - 1];
@@ -124,15 +123,24 @@ export function AppShell() {
           <button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={19} /></button>
         </div>
         <nav className="main-nav" aria-label="Main navigation">
-          {navigationGroups.map((group) => <div key={group.label} role="group" aria-label={group.label}>
-            <div className="nav-group" aria-hidden="true">{language === "kn" ? group.kn : group.label}</div>
-            {(group.items as typeof navigation).map(({ to, label, kn, icon: Icon, end }) => {
+          {(() => {
+            const links = (items: typeof navigation) => items.map(({ to, label, kn, icon: Icon, end }) => {
               const available = routeAvailable(commodity, to);
               return <NavLink key={to} to={["/overview", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)} title={available ? undefined : `No integrated source for ${commodity?.display_name ?? commodityCode}`} className={({ isActive }) => `nav-link ${isActive ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
                 <Icon size={15} strokeWidth={1.8} /><span lang={language}>{language === "kn" ? kn : label}</span>
               </NavLink>;
-            })}
-          </div>)}
+            });
+            return <>
+              {links(primaryNavigation)}
+              <details className="nav-advanced" open={advancedGroups.some((group) => group.items.some((item) => item.to === location.pathname)) || undefined}>
+                <summary>{language === "kn" ? "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು" : "More tools"}</summary>
+                {advancedGroups.map((group) => <div key={group.label} role="group" aria-label={language === "kn" ? group.kn : group.label}>
+                  <div className="nav-group" aria-hidden="true">{language === "kn" ? group.kn : group.label}</div>
+                  {links(group.items)}
+                </div>)}
+              </details>
+            </>;
+          })()}
         </nav>
         <div className="sidebar-bottom">
           <div className="source-note"><span className="source-note-icon"><CircleHelp size={15} /></span><span><b>Reviewed source records</b><small>Every quote has a source and date.</small></span></div>
