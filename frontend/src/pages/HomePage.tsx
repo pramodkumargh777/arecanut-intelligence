@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowRight, ArrowUp, ExternalLink, Minus } from "lucide-react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { calendarDateToTime, calendarTodayIST, DAY_MS, formatCalendarDate, formatPeriodKannada } from "../../../shared/dates";
@@ -33,9 +33,9 @@ const BRANCH_NAMES_KN: Record<string, string> = {
 const COPY = {
   kn: {
     title: "ಇತ್ತೀಚಿನ ಅಡಿಕೆ ಧಾರಣೆ",
-    intro: "ಸಹಕಾರಿ ಸಂಘಗಳು ಪ್ರಕಟಿಸಿದ ದರಗಳು. ಪ್ರತಿ ದರದ ಪಕ್ಕ ಅದರ ದಿನಾಂಕ ಇದೆ.",
+    intro: "ಸಹಕಾರಿ ಸಂಘ ಮತ್ತು ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳ ಪ್ರಕಟಿತ ದರಗಳು. ಪ್ರತಿ ದರದ ಪಕ್ಕ ಅದರ ದಿನಾಂಕ ಇದೆ.",
     choose: "ತಳಿ ಆಯ್ಕೆ ಮಾಡಿ",
-    latest: "ಇತ್ತೀಚಿನ ವರದಿ",
+    latest: "ಸಹಕಾರಿ ಸಂಘಗಳ ಇತ್ತೀಚಿನ ವರದಿ",
     sellOrHold: "ಈಗ ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ?",
     sellOrHoldHint: "ಹಿಂದಿನ ವರ್ಷಗಳಲ್ಲಿ ಏನಾಯಿತು ನೋಡಿ",
     ask: "ಪ್ರಶ್ನೆ ಕೇಳಿ",
@@ -45,12 +45,11 @@ const COPY = {
     highest: "ಈ ದಿನದ ಹೆಚ್ಚಿನ ದರ",
     source: "ಮೂಲ",
     noRows: "ಈ ತಳಿಗೆ ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
-    noVariety: "ಈ ಸಂಸ್ಥೆ ಈ ತಳಿಯ ದರ ಪ್ರಕಟಿಸುವುದಿಲ್ಲ.",
+    noVariety: "ಈ ತಳಿಗೆ ಈ ಸಂಸ್ಥೆಯ ಹೊಂದಾಣಿಕೆಯ ಹೆಸರು ಇಲ್ಲಿ ಪಟ್ಟಿ ಮಾಡಿಲ್ಲ.",
     assumedUnit: "ಮೂಲವು ಘಟಕವನ್ನು ತಿಳಿಸಿಲ್ಲ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ",
     tumcos: "ಚನ್ನಗಿರಿ — ತುಮ್ಕೋಸ್ (TUMCOS)",
     tumcosNote: "ತುಮ್ಕೋಸ್ ತಳಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ, ಆದ್ದರಿಂದ ಇದು ಯಾವ ತಳಿಯ ದರ ಎಂದು ಹೇಳಲಾಗದು. ಮೂಲದ ಪುಟದಲ್ಲಿ “kg” ಎಂದಿದೆ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ.",
     notComparable: "ಪ್ರತಿ ಸಂಸ್ಥೆಯ ದರವನ್ನು ಬೇರೆ ರೀತಿಯಲ್ಲಿ ಲೆಕ್ಕ ಮಾಡಲಾಗುತ್ತದೆ, ಆದ್ದರಿಂದ ಬೇರೆ ಬೇರೆ ಸಂಸ್ಥೆಗಳ ದರಗಳನ್ನು ನೇರವಾಗಿ ಹೋಲಿಸಬೇಡಿ. ಇವು ಸರಾಸರಿ ದರಗಳು; ನಿಮ್ಮ ಮಾಲಿಗೆ ಸಿಗುವ ದರ ಬೇರೆ ಇರಬಹುದು.",
-    allPrices: "ಎಲ್ಲಾ ದರಗಳು ಮತ್ತು ವಿವರಗಳು",
     loading: "ದರಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ",
     failed: "ದರಗಳನ್ನು ತರಲು ಆಗಲಿಲ್ಲ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಪ್ರಯತ್ನಿಸಿ.",
     retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
@@ -62,12 +61,21 @@ const COPY = {
     marketOn: (date: string) => `${date} ರ ಮಾರುಕಟ್ಟೆ`,
     typical: "ಮಧ್ಯಮ ಬದಲಾವಣೆ",
     changeNote: "ಪ್ರತಿ ಶಾಖೆಯನ್ನು ಅದರದೇ ಹಿಂದಿನ ವರದಿಗೆ ಹೋಲಿಸಲಾಗಿದೆ.",
+    cooperativeRates: "ಸಹಕಾರಿ ಸಂಘಗಳ ದರಗಳು",
+    officialRates: "ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆ ದರಗಳು",
+    officialCaption: "ಇತ್ತೀಚಿನ ವರದಿಗಳು · ಎಲ್ಲಾ ತಳಿಗಳು · ಮೋಡಲ್ ದರ, ₹/ಕ್ವಿಂಟಾಲ್ · AGMARKNET",
+    officialEmpty: "ಪರಿಶೀಲಿಸಿದ ಎಪಿಎಂಸಿ ದರಗಳು ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ.",
+    officialMore: "ಎಲ್ಲಾ ಎಪಿಎಂಸಿ ದರಗಳನ್ನು ನೋಡಿ",
+    grade: "ದರ್ಜೆ",
+    otherTools: "ಇನ್ನಷ್ಟು ಮಾಹಿತಿ",
+    moreFrom: (source: string) => `${source} ದರಗಳನ್ನು ನೋಡಿ`,
+    tumcosEmpty: "ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
   },
   en: {
     title: "Latest arecanut rates",
-    intro: "Rates published by the cooperatives. Every rate has its date beside it.",
+    intro: "Published cooperative and APMC market rates, with the reporting date beside each price.",
     choose: "Choose a variety",
-    latest: "Latest report",
+    latest: "Latest cooperative report",
     sellOrHold: "Sell now or wait?",
     sellOrHoldHint: "See what happened in past years",
     ask: "Ask a question",
@@ -77,12 +85,11 @@ const COPY = {
     highest: "Highest that day",
     source: "Source",
     noRows: "No published rate for this variety.",
-    noVariety: "This cooperative does not publish this variety.",
+    noVariety: "No matching label is listed here for this cooperative.",
     assumedUnit: "The source states no unit; treated as per quintal",
     tumcos: "Channagiri — TUMCOS",
     tumcosNote: "TUMCOS does not state the variety, so this cannot be matched to a grade. Its page says “kg”; treated as per quintal.",
     notComparable: "Each cooperative works out its rate differently, so don't compare rates directly between cooperatives. These are averages; the rate for your lot can differ.",
-    allPrices: "All rates and details",
     loading: "Loading rates",
     failed: "Could not load the rates. Please try again shortly.",
     retry: "Try again",
@@ -94,6 +101,15 @@ const COPY = {
     marketOn: (date: string) => `Market on ${date}`,
     typical: "Median change",
     changeNote: "Each branch is compared with its own previous report.",
+    cooperativeRates: "Cooperative rates",
+    officialRates: "APMC market rates",
+    officialCaption: "Latest reports · all varieties · modal price, ₹/quintal · AGMARKNET",
+    officialEmpty: "No verified APMC prices are available yet.",
+    officialMore: "Explore all APMC prices",
+    grade: "Grade",
+    otherTools: "Explore further",
+    moreFrom: (source: string) => `Explore ${source} prices`,
+    tumcosEmpty: "No published rates available.",
   },
 } as const;
 
@@ -165,10 +181,14 @@ export function HomePage() {
     queryFn: () => api.cooperativePrices(source, label, "arecanut", { from: historyFrom }),
     refetchInterval: 300_000,
   })) });
+  const official = useQuery({
+    queryKey: ["home-official-prices"],
+    queryFn: () => api.prices({ commodity: DEFAULT_COMMODITY, limit: "5", sort: "reporting_date", order: "desc" }),
+    enabled: code === DEFAULT_COMMODITY,
+    refetchInterval: 300_000,
+  });
   // The rates here are arecanut's, so another commodity goes to the page that handles it.
   if (code !== DEFAULT_COMMODITY) return <Navigate to={`/overview?commodity=${encodeURIComponent(code)}`} replace />;
-  const loading = queries.some((query) => query.isLoading);
-  const failed = queries.length > 0 && queries.every((query) => query.error);
   const rowsFor = (source: CooperativeSource) => {
     const labels = variety.labels[source] ?? [];
     return labels.flatMap((label) => queries[requests.findIndex((request) => request.source === source && request.label === label)]?.data?.latest_by_branch ?? []);
@@ -193,14 +213,10 @@ export function HomePage() {
         onClick={() => { const next = new URLSearchParams(params); next.set("v", item.key); setParams(next, { replace: true }); }}>{language === "kn" ? item.kn : item.en}</button>)}
     </div>
 
-    <nav className="home-actions" aria-label={copy.sellOrHold}>
-      <Link to="/sell-or-hold"><strong>{copy.sellOrHold}</strong><span>{copy.sellOrHoldHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
-      <Link to="/assistant"><strong>{copy.ask}</strong><span>{copy.askHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
-    </nav>
-
-    {loading ? <LoadingState label={copy.loading} /> : failed ? <ErrorState error={new Error(copy.failed)} onRetry={() => queries.forEach((query) => void query.refetch())} /> : <>
+    <div className="home-section-heading"><h2>{copy.cooperativeRates}</h2></div>
       {SOURCES.map((source) => {
         const published = variety.labels[source.key];
+        const sourceQueries = requests.flatMap((request, index) => request.source === source.key ? [queries[index]] : []);
         const { latest, rows } = orderRows(rowsFor(source.key));
         const sameDay = rows.filter((row) => row.reporting_date === latest);
         const history = historyFor(source.key);
@@ -210,7 +226,10 @@ export function HomePage() {
             <h2 id={`rates-${source.key}`}>{language === "kn" ? source.kn : source.en}</h2>
             {rows[0] && <a href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source} <ExternalLink size={13} aria-hidden="true" /></a>}
           </header>
-          {!published ? <p className="rate-empty">{copy.noVariety}</p> : !rows.length ? <p className="rate-empty">{copy.noRows}</p> : <>
+          {!published ? <p className="rate-empty">{copy.noVariety}</p> : sourceQueries.some((query) => query.isPending) ? <LoadingState label={copy.loading} /> : <>
+            {sourceQueries.some((query) => query.isError) && <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => sourceQueries.filter((query) => query.isError).forEach((query) => void query.refetch())} />}
+            {!rows.length && !sourceQueries.some((query) => query.isError) && <p className="rate-empty">{copy.noRows}</p>}
+            {rows.length > 0 && <>
             {latest && breadth.median_percent !== null && <div className="market-breadth">
               <span className="market-breadth-title">{copy.marketOn(dateText(latest, language))}</span>
               <span className="hold-up"><ArrowUp size={14} aria-hidden="true" /><b>{breadth.up}</b> {copy.up}</span>
@@ -221,19 +240,36 @@ export function HomePage() {
             <p className="rate-caption">{copy.perQuintal} · {copy.range}{source.assumedUnit ? ` · ${copy.assumedUnit}` : ""}. {rows.some((row) => priceChange(row, history)) ? copy.changeNote : copy.noComparison}</p>
             <ul>{rows.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={published.length > 1 || language === "en"}
               highest={sameDay.length > 1 && row === sameDay[0]} change={priceChange(row, history)} />)}</ul>
+            </>}
           </>}
+          <Link className="home-more" to={`/prices?feed=${source.key}`}>{copy.moreFrom(source.en)} <ArrowRight size={15} aria-hidden="true" /></Link>
         </section>;
       })}
-      {tumcos.length > 0 && <section className="rate-card" aria-labelledby="rates-tumcos">
+      <section className="rate-card" aria-labelledby="rates-tumcos">
         <header>
           <h2 id="rates-tumcos">{copy.tumcos}</h2>
-          <a href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source} <ExternalLink size={13} aria-hidden="true" /></a>
+          {tumcos[0] && <a href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source} <ExternalLink size={13} aria-hidden="true" /></a>}
         </header>
-        <p className="rate-caption">{copy.tumcosNote}</p>
-        <ul>{tumcos.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul>
-      </section>}
+        <p className="rate-caption">{copy.perQuintal} · {copy.range}. {copy.tumcosNote}</p>
+        {queries.at(-1)?.isPending ? <LoadingState label={copy.loading} /> : queries.at(-1)?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void queries.at(-1)?.refetch()} /> : tumcos.length ? <ul>{tumcos.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
+        <Link className="home-more" to="/prices?feed=tumcos">{copy.moreFrom("TUMCOS")} <ArrowRight size={15} aria-hidden="true" /></Link>
+      </section>
       <p className="home-note">{copy.notComparable}</p>
-      <Link className="home-more" to="/overview">{copy.allPrices} <ArrowRight size={15} aria-hidden="true" /></Link>
-    </>}
+
+    <section className="rate-card" aria-labelledby="rates-official">
+      <header><h2 id="rates-official">{copy.officialRates}</h2></header>
+      <p className="rate-caption">{copy.officialCaption}</p>
+      {official.isPending ? <LoadingState label={copy.loading} /> : official.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void official.refetch()} /> : !official.data?.data.length ? <p className="rate-empty">{copy.officialEmpty}</p> :
+        <ul className="home-market-list">{official.data.data.map((row) => <li key={row.id}>
+          <div><strong>{row.market_name} · {row.district}</strong><span>{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""} · {row.source_name}</span><span>{dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span></div>
+          <strong>{rupees(row.modal_price)}</strong>
+        </li>)}</ul>}
+      <Link className="home-more" to="/prices?feed=official">{copy.officialMore} <ArrowRight size={15} aria-hidden="true" /></Link>
+    </section>
+    <div className="home-section-heading"><h2>{copy.otherTools}</h2></div>
+    <nav className="home-actions" aria-label={copy.otherTools}>
+      <Link to="/sell-or-hold"><strong>{copy.sellOrHold}</strong><span>{copy.sellOrHoldHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
+      <Link to="/assistant"><strong>{copy.ask}</strong><span>{copy.askHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
+    </nav>
   </div>;
 }
