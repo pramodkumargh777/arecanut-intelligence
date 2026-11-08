@@ -63,6 +63,7 @@ export function priceBasisForSource(sourceKey: string): PriceBasis {
   switch (sourceKey) {
     case "agmarknet":
     case "agmarknet_csv":
+    case "agmarknet_history":
       return "APMC_MODAL";
     case "tss":
       return "COOPERATIVE_TENDER_AVERAGE";

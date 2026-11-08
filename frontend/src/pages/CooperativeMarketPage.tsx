@@ -1,3 +1,4 @@
+import { MarketSearch } from "../components/MarketSearch";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
@@ -475,7 +476,8 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
       </section>}
       {location.pathname === "/prices" && <section className="filter-bar">
         <label className="filter-control"><span>{c.branch}</span><select value={branch} onChange={(event) => update({ branch: event.target.value })}><option value="">{c.allBranches}</option>{(data?.branches ?? [...new Set(rows.map((row) => row.branch))].sort()).map((value) => <option key={value}>{value}</option>)}</select></label>
-        <label className="filter-control"><span>{t.searchBranch}</span><input type="search" value={searchDraft} placeholder={t.searchExample} onChange={(event) => setSearchDraft(event.target.value)} /></label>
+        <label className="filter-control"><span>{t.searchBranch}</span><MarketSearch feeds={[source]} ariaLabel={t.searchBranch} value={searchDraft} placeholder={t.searchExample} onChange={setSearchDraft}
+          onSelect={(suggestion) => { setSearchDraft(""); update({ branch: suggestion.name, search: null }); }} /></label>
         <button className="button-secondary" onClick={() => setParams(withoutFilters(params), { replace: true })}>{c.resetFilters}</button>
         <details className="advanced-filters">
         <summary>{c.moreFilters}{from || to ? ` · ${c.active}` : ""}</summary>

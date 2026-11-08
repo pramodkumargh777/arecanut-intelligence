@@ -47,7 +47,12 @@ The earlier generic connector (`fetch_api.py`) and CSV importer
 - Changed source values supersede the old row, with history kept in `source_record_versions`.
 - Within a run, identical rows are counted as duplicates. Rows with the same natural key but different prices are all rejected as `conflicting_duplicate`.
 
-**Publication.** Imported observations are `validated`, not published. A reviewer must verify them in Data quality before they enter published prices and the reference index.
+**Publication.** With `AGMARKNET_DAILY_AUTO_VERIFY = "true"` (wrangler.toml, the default since 8 Nov 2026), rows that passed every check are verified at import ([`src/auto-verify.ts`](../api/src/auto-verify.ts)).
+- Each approval is written to `observation_reviews` under the reviewer `auto-validation-daily-v1`, and the market is verified as a manual approval would.
+- Rows flagged `review_required`, rows a reviewer rejected, future dates, and slots that already hold a verified price are never auto-verified. Flagged rows wait in Data quality.
+- It is one set-based pass per import request (three D1 statements, whatever the record count), and it never fails an import.
+- The 09:00 IST cron runs the same pass over rows still waiting, for example rows imported before the switch was on. `POST /api/v1/admin/agmarknet/auto-verify` (ADMIN_TOKEN) runs it immediately. Repeating it is safe.
+- Set the switch to `"false"` to return to reviewing every row. Manual CSV imports (`agmarknet_csv`) are always reviewed by a person.
 
 **Free-tier compatibility.**
 - Each imported record costs about 4 D1 statements. The default batch of 10 keeps an import request below the 50-query Workers Free limit.
@@ -112,7 +117,7 @@ runs, rejected records and source limitations.
 
 ## Limitations
 
-- **History.** Only the current day is available from this resource. History accumulates only through daily runs, archived replays or official CSV exports. CAPTCHA-protected AGMARKNET pages and private endpoints are not used.
+- **History.** Only the current day is available from this resource. Past dates come from a separate data.gov.in resource through the [AGMARKNET history add-on](AGMARKNET_HISTORY.md), or from archived replays and official CSV exports. CAPTCHA-protected AGMARKNET pages and private endpoints are not used.
 - **Unit.** The unit is an evidence-based operator confirmation, not a publisher declaration. Confirm it with the publisher.
 - **Grade and the reference index.** The reference index (`buildReferenceSeries`) groups by exact variety, not grade, and keeps one observation per market and date, choosing the latest ingestion time.
   - If a market reported two grades of one variety on one date, the choice between them would depend on order.

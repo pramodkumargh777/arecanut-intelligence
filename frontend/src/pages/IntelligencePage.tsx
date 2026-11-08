@@ -169,7 +169,8 @@ export function IntelligencePage() {
       <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.records}</h2><p>{t.displayed(filtered.length)} · {domain === "production" || domain === "trade" ? t.yearLabels : t.independent}</p></div><button className="button-secondary" disabled={!filtered.length} onClick={exportRows}>{t.exportDomain(t.tabs[domain as Domain] ?? domain)}</button></div>
         {!filtered.length ? <EmptyState title={rows.length ? t.noMatch : t.noCaptured}>{rows.length ? t.resetHint : t.refreshHint}</EmptyState> :
           <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recordsAria(title)}><table className={columnType === "bulletin" ? "bulletin-table" : undefined}>
-            <caption>{domain === "weather" ? t.weatherCaption : title}</caption>
+            {/* The weather caption says what the numbers are; elsewhere it would only repeat the page title, so only screen readers get it. */}
+            {domain === "weather" ? <caption>{t.weatherCaption}</caption> : <caption className="sr-only">{title}</caption>}
             <thead><tr>{columns.map((label, index) => <th scope="col" key={label} className={index >= numericFrom ? "numeric" : undefined}>{label}</th>)}<th scope="col" className="evidence-column">{t.sourceFreshness}</th></tr></thead>
             <tbody>{filtered.map((row) => <tr key={`${row.capture_id}:${"geography" in row ? `${row.geography}:${row.period}` : "partner" in row ? `${row.partner}:${row.period}` : "date" in row ? row.date : row.release_id}`}>
               {"geography" in row ? <><td>{row.geography}</td><td>{row.period}</td><td>{row.estimate_status}</td><td className="numeric">{num(row.area_thousand_hectares)}</td><td className="numeric">{num(row.production_thousand_tonnes)}</td><td className="numeric">{num(row.yield_kg_hectare)}</td></>

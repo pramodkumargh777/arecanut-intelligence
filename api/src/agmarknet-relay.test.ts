@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleRelay, RELAY_RESOURCE_ID, RELAY_TOKEN_HEADER } from "./agmarknet-relay";
+import { handleRelay, RELAY_HISTORY_RESOURCE_ID, RELAY_RESOURCE_ID, RELAY_TOKEN_HEADER } from "./agmarknet-relay";
 
 const env = { INGESTION_TOKEN: "relay-test-token" };
 const path = `https://relay.test/resource/${RELAY_RESOURCE_ID}`;
@@ -18,6 +18,14 @@ describe("AGMARKNET relay", () => {
     expect(url).toBe(`https://api.data.gov.in/resource/${RELAY_RESOURCE_ID}?api-key=secret-key&limit=1`);
   });
 
+  it("also forwards the daily-history dataset", async () => {
+    const fetcher = upstream();
+    const response = await handleRelay(request(`https://relay.test/resource/${RELAY_HISTORY_RESOURCE_ID}?limit=1`), env, fetcher as never);
+    expect(response.status).toBe(200);
+    const [url] = fetcher.mock.calls[0] as unknown as [string];
+    expect(url).toBe(`https://api.data.gov.in/resource/${RELAY_HISTORY_RESOURCE_ID}?limit=1`);
+  });
+
   it("does not send the relay token to data.gov.in", async () => {
     const fetcher = upstream();
     await handleRelay(request(), env, fetcher as never);
@@ -29,6 +37,8 @@ describe("AGMARKNET relay", () => {
     ["no token", request(undefined, {}, null), 401],
     ["a wrong token", request(undefined, {}, "wrong"), 401],
     ["another dataset", request("https://relay.test/resource/other?api-key=x"), 404],
+    ["another well-formed dataset id", request("https://relay.test/resource/00000000-0000-0000-0000-000000000000?api-key=x"), 404],
+    ["a dataset id with a trailing path", request(`https://relay.test/resource/${RELAY_RESOURCE_ID}/extra`), 404],
     ["another site's path", request("https://relay.test/https://example.org/"), 404],
     ["a POST", request(undefined, { method: "POST" }), 405],
   ])("refuses %s without calling data.gov.in", async (_name, incoming, status) => {

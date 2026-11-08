@@ -13,6 +13,7 @@ import { api } from "../services/api";
 import { useCommodity } from "../services/commodity";
 import type { CooperativeQuote, CooperativeSource } from "../services/cooperative";
 import { ageText, defineCopy, type Language, useLanguage } from "../services/language";
+import { placeName } from "../services/places";
 import { shareMessage } from "../services/share";
 import { VARIETIES, VARIETY_GROUPS } from "../services/varieties";
 
@@ -20,12 +21,6 @@ const SOURCES: { key: CooperativeSource; kn: string; en: string; assumedUnit: bo
   { key: "mamcos", kn: "ಮ್ಯಾಮ್ಕೋಸ್ (MAMCOS)", en: "MAMCOS", assumedUnit: false },
   { key: "tss", kn: "ಟಿಎಸ್ಎಸ್ (TSS)", en: "TSS", assumedUnit: true },
 ];
-
-const BRANCH_NAMES_KN: Record<string, string> = {
-  BHADRAVATHI: "ಭದ್ರಾವತಿ", BIRUR: "ಬೀರೂರು", CHANNAGIRI: "ಚನ್ನಗಿರಿ", HOSANAGARA: "ಹೊಸನಗರ", JAYAPURA: "ಜಯಪುರ", KOPPA: "ಕೊಪ್ಪ", SAGARA: "ಸಾಗರ",
-  SHIKARIPURA: "ಶಿಕಾರಿಪುರ", SHIVAMOGGA: "ಶಿವಮೊಗ್ಗ", SIDDAPUR: "ಸಿದ್ದಾಪುರ", SIRSI: "ಶಿರಸಿ", SORABA: "ಸೊರಬ", SRINGERI: "ಶೃಂಗೇರಿ",
-  TARIKERE: "ತರೀಕೆರೆ", THIRTHAHALLI: "ತೀರ್ಥಹಳ್ಳಿ", YELLAPUR: "ಯಲ್ಲಾಪುರ",
-};
 
 const COPY = defineCopy({
   kn: {
@@ -76,6 +71,12 @@ const COPY = defineCopy({
     officialSub: "AGMARKNET · ಮಾದರಿ ದರ · ಎಲ್ಲಾ ತಳಿಗಳು",
     explore: "ಎಲ್ಲಾ ದರಗಳು",
     about: "ಈ ದರಗಳ ಬಗ್ಗೆ",
+    glanceTitle: (variety: string) => `${variety} — ಒಂದು ನೋಟ`,
+    glanceHint: "ಪ್ರತಿ ಸಂಸ್ಥೆಯ ಇತ್ತೀಚಿನ ವರದಿಯ ಶಾಖಾ ಸರಾಸರಿಗಳ ವ್ಯಾಪ್ತಿ",
+    glanceBranches: (count: number) => `${count} ಶಾಖೆಗಳು`, perQuintal: "/ ಕ್ವಿಂಟಾಲ್", to: "ರಿಂದ",
+    noCompare: "ಹೋಲಿಸಲು ಹಿಂದಿನ ವರದಿ ಇಲ್ಲ",
+    mostlyUp: "ಹೆಚ್ಚಿನ ಶಾಖೆಗಳಲ್ಲಿ ಏರಿಕೆ", mostlyDown: "ಹೆಚ್ಚಿನ ಶಾಖೆಗಳಲ್ಲಿ ಇಳಿಕೆ", mixed: "ಏರಿಳಿತ ಮಿಶ್ರ", unchanged: "ಬದಲಾವಣೆ ಇಲ್ಲ",
+    medianShort: (percent: string) => `ಮಧ್ಯಮ ${percent}`,
     share: "ಹಂಚಿಕೊಳ್ಳಿ", shareOpening: "ತೆರೆಯಲಾಗುತ್ತಿದೆ…", shareDone: "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ", shareWhatsapp: "ವಾಟ್ಸ್‌ಆ್ಯಪ್ ತೆರೆಯಲಾಗಿದೆ",
     shareAria: (source: string) => `${source} ದರಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ`,
     shareTitle: (variety: string, source: string) => `${variety} ಅಡಿಕೆ ಧಾರಣೆ · ${source}`,
@@ -136,6 +137,12 @@ const COPY = defineCopy({
     officialSub: "AGMARKNET · modal price, ₹/quintal · all varieties",
     explore: "All rates",
     about: "About these rates",
+    glanceTitle: (variety: string) => `${variety} at a glance`,
+    glanceHint: "Range of branch averages in each cooperative's latest report",
+    glanceBranches: (count: number) => `${count} branch${count === 1 ? "" : "es"}`, perQuintal: "/ quintal", to: "to",
+    noCompare: "No earlier report to compare",
+    mostlyUp: "mostly up", mostlyDown: "mostly down", mixed: "mixed", unchanged: "unchanged",
+    medianShort: (percent: string) => `median ${percent}`,
     share: "Share", shareOpening: "Opening…", shareDone: "Shared", shareWhatsapp: "WhatsApp opened",
     shareAria: (source: string) => `Share ${source} rates`,
     shareTitle: (variety: string, source: string) => `${variety} arecanut rates · ${source}`,
@@ -153,7 +160,7 @@ const COPY = defineCopy({
 const rupees = (value: number | null) => value === null ? "—" : `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const dateText = (date: string, language: Language) => language === "kn" ? formatPeriodKannada(date) : formatCalendarDate(date);
 const ageDays = (date: string, today: string) => Math.round((calendarDateToTime(today) - calendarDateToTime(date)) / DAY_MS);
-const branchName = (branch: string, language: Language) => language === "kn" ? BRANCH_NAMES_KN[branch.toUpperCase()] ?? branch : branch;
+const branchName = placeName;
 
 /** Shared links point at this site, so a friend who opens one sees the same variety's rates. */
 const shareUrl = (path: string) => `${window.location.origin}${path}`;
@@ -276,6 +283,15 @@ export function HomePage() {
       setTimeout(() => { setExpanded((current) => ({ ...current, [key]: false })); setCollapsing(null); }, COLLAPSE_MS);
     }}>
     {expanded[key] ? copy.showFewer : copy.showAll(total)}<ChevronDown size={15} aria-hidden="true" /></button>;
+  // One line per cooperative from its latest report. Sources stay separate because each works out its average differently.
+  const glance = publishing.flatMap((source) => {
+    const { latest, rows } = orderRows(rowsFor(source.key));
+    const sameDay = rows.filter((row) => row.reporting_date === latest);
+    if (!latest || !sameDay.length) return [];
+    const prices = sameDay.map((row) => row.average_price!);
+    const history = historyFor(source.key);
+    return [{ source, latest, low: Math.min(...prices), high: Math.max(...prices), count: sameDay.length, breadth: marketBreadth(sameDay.map((row) => priceChange(row, history))) }];
+  });
   const shareLabels = { share: copy.share, opening: copy.shareOpening, shared: copy.shareDone, whatsapp: copy.shareWhatsapp };
   // Rows outside the collapsed set animate in when the card is expanded and out when it is collapsed.
   const reveal = (key: string, row: CooperativeQuote, collapsed: CooperativeQuote[]) => collapsed.includes(row) ? undefined : collapsing === key ? "out" as const : "in" as const;
@@ -306,6 +322,34 @@ export function HomePage() {
     </div>
     </div>
     {variety.note && <p className="home-note home-note-callout">{variety.note[language]}</p>}
+
+    {glance.length > 0 && <section className="glance" aria-labelledby="glance-heading">
+      <header className="glance-head"><h2 id="glance-heading">{copy.glanceTitle(varietyName(variety))}</h2><p>{copy.glanceHint}</p></header>
+      {/* One tile per cooperative, never merged: each works out its average differently. */}
+      <ul className="glance-tiles">{glance.map(({ source, latest, low, high, count, breadth }) => {
+        const trend = breadth.median_percent === null ? null
+          : breadth.up > breadth.down ? { text: copy.mostlyUp, className: "hold-up", Icon: ArrowUp }
+          : breadth.down > breadth.up ? { text: copy.mostlyDown, className: "hold-down", Icon: ArrowDown }
+          : { text: breadth.up ? copy.mixed : copy.unchanged, className: "", Icon: Minus };
+        const age = ageDays(latest, today);
+        return <li key={source.key} className="glance-tile">
+          <div className="glance-tile-top">
+            <a className="glance-source" href={`#rates-${source.key}`}>{source.en}</a>
+            <span className={`glance-date${age > 2 ? " glance-date-old" : ""}`}>{dateText(latest, language)} · {ageText(age, language)}</span>
+          </div>
+          <p className="glance-range">
+            <span>{rupees(low)}</span>
+            {low !== high && <><span className="glance-dash" aria-hidden="true">–</span><span className="sr-only"> {copy.to} </span><span>{rupees(high)}</span></>}
+            <small>{copy.perQuintal}</small>
+          </p>
+          <div className="glance-tile-foot">
+            {trend ? <span className={`glance-trend ${trend.className}`}><trend.Icon size={13} aria-hidden="true" />{trend.text} · {copy.medianShort(signedPercent(breadth.median_percent!).replace("-", "−"))}</span>
+              : <span className="glance-trend">{copy.noCompare}</span>}
+            <span className="glance-branches">{copy.glanceBranches(count)}</span>
+          </div>
+        </li>;
+      })}</ul>
+    </section>}
 
     <nav className="home-sections" aria-label={language === "kn" ? "ದರಗಳ ವಿಭಾಗಗಳು" : "Price sections"}>
       {publishing.map((source) => <a key={source.key} href={`#rates-${source.key}`}>{source.en}</a>)}
