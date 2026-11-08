@@ -213,14 +213,17 @@ class BackfillTests(unittest.TestCase):
 
 
 class AutomaticBackfillTests(unittest.TestCase):
-    def test_windows_walk_back_a_year_at_a_time_and_stop_at_the_start_date(self):
+    def test_windows_end_at_the_oldest_stored_date_and_stop_near_the_start_date(self):
         start, latest = date(2021, 1, 1), date(2026, 11, 6)
         self.assertEqual(history.next_backfill_window(None, start, latest, 12), (date(2025, 12, 1), date(2026, 11, 6)))
-        self.assertEqual(history.next_backfill_window(date(2026, 10, 25), start, latest, 12), (date(2025, 11, 1), date(2026, 10, 24)))
-        self.assertEqual(history.next_backfill_window(date(2025, 11, 1), start, latest, 12), (date(2024, 11, 1), date(2025, 10, 31)))
-        self.assertEqual(history.next_backfill_window(date(2021, 6, 1), start, latest, 12), (date(2021, 1, 1), date(2021, 5, 31)))
+        # The oldest stored date is included, so a date an interrupted run stored in part is completed.
+        self.assertEqual(history.next_backfill_window(date(2026, 10, 24), start, latest, 12), (date(2025, 11, 1), date(2026, 10, 24)))
+        self.assertEqual(history.next_backfill_window(date(2025, 11, 1), start, latest, 12), (date(2024, 12, 1), date(2025, 11, 1)))
+        self.assertEqual(history.next_backfill_window(date(2021, 6, 1), start, latest, 12), (date(2021, 1, 1), date(2021, 6, 1)))
+        self.assertEqual(history.next_backfill_window(date(2021, 2, 1), start, latest, 1), (date(2021, 2, 1), date(2021, 2, 1)))
+        # Within a week of the start (New Year holidays may have no data) the backfill is complete.
+        self.assertIsNone(history.next_backfill_window(date(2021, 1, 4), start, latest, 12))
         self.assertIsNone(history.next_backfill_window(date(2021, 1, 1), start, latest, 12))
-        self.assertEqual(history.next_backfill_window(date(2021, 2, 1), start, latest, 1), (date(2021, 1, 1), date(2021, 1, 31)))
 
     def test_cli_fills_recent_days_then_the_next_older_window(self):
         from connectors.agmarknet import run_history
@@ -240,7 +243,7 @@ class AutomaticBackfillTests(unittest.TestCase):
             code = run_history.main(["--recent-days", "14", "--backfill-from", "2021-01-01", "--env-file", "/dev/null",
                                      "--report-dir", folder])
         self.assertEqual(code, 0)
-        self.assertEqual(calls, [(date(2026, 10, 24), date(2026, 11, 6)), (date(2025, 11, 1), date(2026, 10, 23))])
+        self.assertEqual(calls, [(date(2026, 10, 24), date(2026, 11, 6)), (date(2025, 11, 1), date(2026, 10, 24))])
 
     def test_cli_reports_a_finished_backfill_and_a_coverage_failure(self):
         from connectors.agmarknet import run_history
@@ -256,6 +259,60 @@ class AutomaticBackfillTests(unittest.TestCase):
             self.assertEqual(code, expected)
             backfill.assert_not_called()
             self.assertIn('"part": "backfill"', stdout.getvalue())
+
+
+class GapFreeBackfillTests(unittest.TestCase):
+    """The backfill stores whole months, newest first, so the history it leaves never has holes."""
+
+    def setUp(self):
+        # Three months with 2, 3 and 1 records: 15 Aug, 10 and 20 Sep (+ a third), 5 Oct.
+        self.rows = {"15/08/2026": [row(Arrival_Date="15/08/2026")],
+                     "10/09/2026": [row(Arrival_Date="10/09/2026"), row(Arrival_Date="10/09/2026", Variety="Bette")],
+                     "20/09/2026": [row(Arrival_Date="20/09/2026")], "05/10/2026": [row(Arrival_Date="05/10/2026")]}
+        self.fail_dates: set[str] = set()
+
+        def answer(q):
+            if q["filters[Arrival_Date]"] in self.fail_dates:
+                return {"error": "temporarily unavailable"}
+            records = self.rows.get(q["filters[Arrival_Date]"], [])
+            return page(records, len(records))
+        self.opener = Opener(answer)
+        self.posted: list[list[str]] = []
+
+    def run_backfill(self, **kwargs):
+        def fake_post(url, token, body, timeout):
+            if url.endswith("/admin/source-runs"):
+                return {"id": "run"}
+            self.posted.append([record["reporting_date"] for record in body["records"]])
+            return {"job_id": "job", "inserted_count": len(body["records"])}
+        with patch.object(history, "_post_json", side_effect=fake_post):
+            return backfill_history(config(max_retries=0), date(2026, 8, 1), date(2026, 10, 31), dry_run=False,
+                                    api_url="https://api.test/api/v1", token="t", batch_size=1, opener=self.opener,
+                                    sleep=lambda _: None, today=TODAY, backfill=True, **kwargs)
+
+    def test_months_go_newest_first_and_records_newest_date_first(self):
+        result = self.run_backfill()
+        self.assertEqual([dates[0] for dates in self.posted],
+                         ["2026-10-05", "2026-09-20", "2026-09-10", "2026-09-10", "2026-08-15"])
+        self.assertEqual(result["inserted_count"], 5)
+
+    def test_a_month_over_the_daily_budget_waits_whole_for_the_next_run(self):
+        result = self.run_backfill(max_records=3)
+        # October (1) runs; September (3) would exceed the remaining budget of 2, so it and everything older waits.
+        self.assertEqual([dates[0] for dates in self.posted], ["2026-10-05"])
+        self.assertEqual(result["deferred"], [{"month": "2026-09", "reason": "daily_record_budget", "records": 3}])
+
+    def test_the_first_month_always_runs_so_a_large_month_cannot_stall(self):
+        self.run_backfill(max_records=0)
+        self.assertEqual(self.posted, [["2026-10-05"]])
+
+    def test_a_month_with_a_failed_date_stores_nothing_and_stops_the_run(self):
+        self.fail_dates = {"20/09/2026"}
+        result = self.run_backfill()
+        # September is not stored at all (not even 10 Sep), and August is not reached, so no gap can form.
+        self.assertEqual([dates[0] for dates in self.posted], ["2026-10-05"])
+        self.assertEqual(result["deferred"], [{"month": "2026-09", "reason": "fetch_failed", "records": 0}])
+        self.assertIn("2026-09-20", result["failed_dates"])
 
 if __name__ == "__main__":
     unittest.main()

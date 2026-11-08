@@ -33,7 +33,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--recent-days", type=int, help="Instead of --start/--end: the last N allowed dates.")
     parser.add_argument("--backfill-from", type=date.fromisoformat,
                         help="Also fill the next window older than the stored history, back to this date; stops once reached.")
-    parser.add_argument("--backfill-months", type=int, default=12, help="Months per --backfill-from window (default 12).")
+    parser.add_argument("--backfill-months", type=int, default=12, help="Most months per --backfill-from run (default 12).")
+    parser.add_argument("--backfill-max-records", type=int,
+                        help="Stop the --backfill-from part before storing more than this many records (D1 daily write budget).")
     parser.add_argument("--lag-days", type=int, default=DEFAULT_LAG_DAYS,
                         help="Leave the most recent N days to the current-daily connector (default 2).")
     parser.add_argument("--dry-run", action="store_true", help="Fetch and validate, write reports, persist nothing.")
@@ -71,6 +73,10 @@ def main(argv: list[str] | None = None) -> int:
     report_dir = args.report_dir or ROOT / "data" / "processed" / "agmarknet-history" / f"{stamp}{'-dry-run' if args.dry_run else ''}"
 
     def progress(month: dict) -> None:
+        if month["status"] == "deferred":
+            print(f"{month['start'][:7]}: deferred to the next run ({month['deferred_reason']}, {month['deferred_count']} records, "
+                  f"failed dates {len(month['failed_dates'])})", file=sys.stderr, flush=True)
+            return
         print(f"{month['start'][:7]}: {month['status']}, fetched {month['fetched_count']}, accepted {month['accepted_count']}, "
               f"inserted {month['inserted_count']}, auto-verified {month['auto_verified_count']}, "
               f"flagged for review {month['review_required_count']}, "
@@ -78,10 +84,12 @@ def main(argv: list[str] | None = None) -> int:
               f"failed dates {len(month['failed_dates'])}", file=sys.stderr, flush=True)
 
     def run(label: str, start: date, end: date) -> dict:
+        backfill = label == "backfill"
         try:
             result = backfill_history(config, start, end, dry_run=args.dry_run, api_url=api_url, token=token,
                                       batch_size=args.batch_size, lag_days=args.lag_days, report_dir=report_dir / label,
-                                      on_month=progress)
+                                      on_month=progress, backfill=backfill,
+                                      max_records=args.backfill_max_records if backfill else None)
         except ValueError as error:
             parser.error(str(error))
         return {"part": label, **result}
