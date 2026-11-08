@@ -128,3 +128,13 @@ describe("AGMARKNET history import", () => {
     expect(status.sources.find((source) => source.source_key === "agmarknet_history")?.observation_counts).toEqual({ verified: 1 });
   });
 });
+
+describe("GET /admin/agmarknet-history/coverage", () => {
+  const coverage = (token = "import") => app.request("/api/v1/admin/agmarknet-history/coverage", { headers: { Authorization: `Bearer ${token}` } }, env);
+  it("reports the stored history range for the ingestion token only", async () => {
+    expect(await (await coverage()).json()).toEqual({ earliest_reporting_date: null, latest_reporting_date: null, observation_count: 0 });
+    await importHistory([record(), record({ id: hex("b"), source_record_id: "b", reporting_date: "2026-09-01" })]);
+    expect(await (await coverage()).json()).toEqual({ earliest_reporting_date: "2026-09-01", latest_reporting_date: "2026-10-15", observation_count: 2 });
+    expect((await coverage("review")).status).toBe(401);
+  });
+});

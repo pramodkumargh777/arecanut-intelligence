@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from connectors.agmarknet.daily import (
-    DEFAULT_BASE_URL, RETRYABLE_HTTP, ConnectorConfig, SourceAccessError, SchemaMismatchError, _post_json, _redact,
+    API_USER_AGENT, DEFAULT_BASE_URL, RETRYABLE_HTTP, ConnectorConfig, SourceAccessError, SchemaMismatchError, _post_json, _redact,
     canonical_price_unit, normalize_agmarknet_record, source_record_id, today_ist, utc_now_iso, validate_agmarknet_record,
 )
 from ingestion.idempotency import batch_idempotency_key
@@ -427,3 +427,31 @@ def backfill_history(config: ConnectorConfig, start: date, end: date, *, dry_run
     if report_dir:
         _write_json(report_dir / "backfill_summary.json", result)
     return result
+
+
+def fetch_history_coverage(api_url: str, token: str, timeout: float = 60.0) -> dict[str, Any]:
+    """The stored history range from GET /admin/agmarknet-history/coverage."""
+    request = urllib.request.Request(f"{api_url.rstrip('/')}/admin/agmarknet-history/coverage",
+                                     headers={"Authorization": f"Bearer {token}", "User-Agent": API_USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        raise RuntimeError(f"ANI API coverage request returned HTTP {error.code}.") from None
+    except (urllib.error.URLError, TimeoutError) as error:
+        raise RuntimeError(f"ANI API coverage request failed: {getattr(error, 'reason', error)}") from None
+
+
+def next_backfill_window(earliest: date | None, backfill_from: date, latest: date, months: int) -> tuple[date, date] | None:
+    """The next whole-month window older than the stored history, or None once ``backfill_from`` is reached.
+
+    Each scheduled run fills one window, so the backfill advances by ``months`` per run and stops by itself.
+    """
+    if months < 1:
+        raise ValueError("months must be at least 1.")
+    end = earliest - timedelta(days=1) if earliest else latest
+    if end < backfill_from:
+        return None
+    month_index = end.year * 12 + end.month - 1 - (months - 1)
+    start = date(month_index // 12, month_index % 12 + 1, 1)
+    return max(start, backfill_from), end

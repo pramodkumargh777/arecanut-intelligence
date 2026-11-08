@@ -90,14 +90,21 @@ count. `LEGACY_DISTRICTS` and `LEGACY_MARKETS` in `history.py` map every old nam
 - Re-running any range is safe. Completed batches are replayed, not re-imported, so an interrupted run can simply be
   started again.
 - Exit code 2 means a date could not be fetched or an import failed; re-run that range.
-- Cloudflare D1 Free allows about 100,000 rows written per day. Backfill about one year per day (roughly
-  15,000–20,000 records). The full range from 2021 takes about six runs.
+- Cloudflare D1 Free allows about 100,000 rows written per day for the whole database, and each record costs several
+  writes. For a manual run, stay at about 3 months per day (see Schedule).
 
-**Schedule.** `agmarknet-history.yml` runs daily at 07:00 IST with `--recent-days 14`, after data.gov.in's nightly
-refresh, and fills any date the daily runs missed. Dispatch it manually with `start` and `end` for a backfill. It
-uses the same repository variables and secrets as `agmarknet-ingestion.yml`, and the same Mumbai relay
-(`AGMARKNET_API_BASE_URL`), which now also forwards this resource. Redeploy the relay with
-`npx wrangler deploy --config api/wrangler.relay.toml` before the first scheduled run.
+**Schedule.** Nothing needs starting by hand. `agmarknet-history.yml` runs daily at 07:00 IST, after data.gov.in's
+nightly refresh:
+
+1. `--recent-days 14` fills any recent date the daily runs missed.
+2. `--backfill-from 2021-01-01 --backfill-months 3` reads the oldest stored history date
+   (`GET /admin/agmarknet-history/coverage`, INGESTION_TOKEN) and fills the 3 months before it. Each day goes 3 months
+   further back; once 2021-01-01 is reached it does nothing more. That takes about 3 weeks. 3 months is about 3,000
+   records, well inside D1 Free's 100,000 row writes per day, which the daily import and cooperative collection also
+   need. On the paid plan, raise `--backfill-months` to finish sooner.
+
+It uses the same repository variables and secrets as `agmarknet-ingestion.yml`, and the same Mumbai relay
+(`AGMARKNET_API_BASE_URL`). The deploy workflow deploys the relay.
 
 **Status.** `GET /api/v1/admin/source-status` and the Data-source status panel list `agmarknet_history` with its
 observation counts, coverage and recent runs.
