@@ -8,7 +8,7 @@ import { shiftCalendarMonth } from "../../../shared/dates";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { LazyBarChart, LazyLineChart } from "../components/LazyCharts";
 import { SourceLabel, StatusBadge } from "../components/Scorecard";
-import { INK } from "../components/chartPalette";
+import { useChartPalette } from "../components/chartPalette";
 import { AboutData } from "../components/AboutData";
 
 const percentOf = (value: number) => `${Math.round(value)}%`;
@@ -200,6 +200,7 @@ type Evaluation = NonNullable<NonNullable<NonNullable<import("../services/module
 
 /** Actual backtest results: every validation and holdout month, including months where the baseline did poorly. */
 function BacktestPanels({ evaluation, forecast, publishable, variety, inputs }: { evaluation: Evaluation; forecast: import("../services/modules").Forecast | null; publishable: boolean; variety: string; inputs: { reporting_month: string; weighted_price: number | null }[] }) {
+  const { INK } = useChartPalette();
   const t = useCopy(COPY);
   const format = useFormat();
   // Calibration months sit between validation and holdout. They stay on the axis, so a year is not silently squeezed out of the time scale.

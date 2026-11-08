@@ -3,7 +3,7 @@ import * as echarts from "echarts/core";
 import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-import { AXIS_LABEL, AXIS_LINE, BRAND, BRAND_AREA, CHART_FONT, CROSSHAIR, GRID_LINE, INK, monthAxisInterval, SERIES_COLORS, TOOLTIP, tooltipHtml } from "./chartPalette";
+import { CHART_FONT, monthAxisInterval, SERIES_COLORS, useChartPalette } from "./chartPalette";
 import { defineCopy, useCopy } from "../services/language";
 
 const CHART = defineCopy({
@@ -16,7 +16,7 @@ echarts.use([BarChart, LineChart, ScatterChart, GridComponent, LegendComponent, 
 export { SERIES_COLORS };
 const inr = (value: number | null | undefined, missing = CHART.en.notReported) => value == null || !Number.isFinite(value) ? missing : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const axisInr = (value: number) => `₹${Math.round(value).toLocaleString("en-IN")}`;
-const base = (description: string) => ({
+const base = (description: string, INK: ReturnType<typeof useChartPalette>["INK"]) => ({
   animation: false, useUTC: true, aria: { enabled: true, label: { description } }, textStyle: { fontFamily: CHART_FONT, color: INK[900] },
   legend: { top: 0, left: 0, itemWidth: 22, itemHeight: 8, itemGap: 16, itemStyle: { opacity: 0 }, textStyle: { color: INK[600], fontSize: 12, fontFamily: CHART_FONT } },
 });
@@ -34,6 +34,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
   valueFormat?: "inr" | "percent" | "index"; description: string; height?: number; referenceLine?: { value: number; label: string }; regions?: ChartRegion[]; endLabel?: boolean;
 }) {
   const t = useCopy(CHART);
+  const { AXIS_LABEL, AXIS_LINE, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, SERIES_COLORS, TOOLTIP, tooltipHtml, regionShade } = useChartPalette();
   const ISOLATED = t.isolated;
   const format = (value: number | null | undefined) => value == null ? t.notReported : valueFormat === "inr" ? inr(value) : valueFormat === "percent" ? `${value.toFixed(1)}%` : value.toFixed(1);
   const single = series.length === 1;
@@ -46,8 +47,8 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
   });
   const showEnd = endLabel && single && series[0].values.at(-1) != null;
   const option = {
-    ...base(description),
-    legend: { ...base(description).legend, show: !single, data: [...series.map((item) => item.name), ...(band ? [band.name] : [])] },
+    ...base(description, INK),
+    legend: { ...base(description, INK).legend, show: !single, data: [...series.map((item) => item.name), ...(band ? [band.name] : [])] },
     grid: { top: single ? 16 : series.length > 4 ? 68 : 40, right: showEnd ? 60 : 16, bottom: 4, left: 4, containLabel: true },
     tooltip: {
       ...TOOLTIP, trigger: "axis", axisPointer: CROSSHAIR,
@@ -74,7 +75,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
           lineStyle: { color, width: item.width ?? (index === 0 ? 2 : 1.5), type: item.dotted ? "dotted" : item.dashed ? "dashed" : "solid", cap: "round", join: "round" },
           ...(single ? { areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: BRAND_AREA[0] }, { offset: 1, color: BRAND_AREA[1] }]) } } : {}),
           ...(showEnd ? { endLabel: { show: true, color: INK[900], fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, distance: 6, formatter: ({ value }: { value: number }) => format(value) } } : {}),
-          ...(index === 0 && regions.length ? { markArea: { silent: true, itemStyle: { color: "rgba(24,24,27,.045)" }, label: { color: INK[500], fontSize: 11, position: "insideTop", distance: 6, fontFamily: CHART_FONT }, data: regions.map((region) => [{ xAxis: region.from, name: region.label }, { xAxis: region.to }]) } } : {}),
+          ...(index === 0 && regions.length ? { markArea: { silent: true, itemStyle: { color: regionShade }, label: { color: INK[500], fontSize: 11, position: "insideTop", distance: 6, fontFamily: CHART_FONT }, data: regions.map((region) => [{ xAxis: region.from, name: region.label }, { xAxis: region.to }]) } } : {}),
           ...(index === 0 && (referenceLine || whiskers.length) ? { markLine: { silent: true, symbol: "none", animation: false, data: [
             ...(referenceLine ? [{ yAxis: referenceLine.value, label: { formatter: referenceLine.label, color: INK[500], position: "insideEndTop" }, lineStyle: { color: INK[400], width: 1, type: "solid" } }] : []),
             ...whiskers.map((pair) => pair.map((point, position) => position ? point : { ...point, label: { show: false }, lineStyle: { color: INK[300], width: 6, type: "solid", cap: "round" } })),
@@ -89,20 +90,22 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
 }
 
 /** Vertical category bars (histograms, seasonal indices, error comparisons). Null bars are omitted, not zero-filled. */
-export function CategoryBarChart({ categories, values, name, color = BRAND, valueFormat = "inr", description, height = 280, referenceLine, horizontal = false, tooltipLabels }: {
+export function CategoryBarChart({ categories, values, name, color: givenColor, valueFormat = "inr", description, height = 280, referenceLine, horizontal = false, tooltipLabels }: {
   categories: string[]; values: (number | null)[]; name: string; color?: string | ((index: number) => string); valueFormat?: "inr" | "percent" | "count" | "index" | "ratio";
   description: string; height?: number; referenceLine?: { value: number; label?: string }; horizontal?: boolean; tooltipLabels?: string[];
 }) {
   const t = useCopy(CHART);
+  const { AXIS_LABEL, AXIS_LINE, BRAND, GRID_LINE, INK, TOOLTIP, tooltipHtml, shade } = useChartPalette();
+  const color = givenColor ?? BRAND;
   const format = (value: number | null | undefined) => value == null ? t.notAvailable : valueFormat === "inr" ? inr(value)
     : valueFormat === "percent" ? `${value.toFixed(1)}%` : valueFormat === "count" ? String(value) : valueFormat === "ratio" ? value.toFixed(2) : value.toFixed(1);
   const categoryAxis = { type: "category", data: categories, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, hideOverlap: !horizontal, interval: horizontal ? 0 : monthAxisInterval(categories), color: horizontal ? INK[700] : INK[500] }, axisLine: { ...AXIS_LINE, onZero: false }, inverse: horizontal };
   const valueAxis = { type: "value", scale: valueFormat === "index", splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: valueFormat === "inr" ? axisInr : valueFormat === "percent" ? (value: number) => `${value}%` : undefined }, splitLine: GRID_LINE };
   const labelled = Boolean(referenceLine?.label);
   const option = {
-    ...base(description), legend: { show: false },
+    ...base(description, INK), legend: { show: false },
     grid: { top: horizontal && labelled ? 28 : 12, right: !horizontal && labelled ? 84 : 24, bottom: 4, left: 4, containLabel: true },
-    tooltip: { ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(24,24,27,.04)" } }, formatter: (items: { name: string; value: number | null; dataIndex: number }[]) => tooltipHtml(tooltipLabels?.[items[0]?.dataIndex] ?? items[0]?.name ?? "", [{ label: name, value: format(items[0]?.value) }]) },
+    tooltip: { ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: shade } }, formatter: (items: { name: string; value: number | null; dataIndex: number }[]) => tooltipHtml(tooltipLabels?.[items[0]?.dataIndex] ?? items[0]?.name ?? "", [{ label: name, value: format(items[0]?.value) }]) },
     xAxis: horizontal ? valueAxis : categoryAxis, yAxis: horizontal ? categoryAxis : valueAxis,
     series: [{
       name, type: "bar", barMaxWidth: horizontal ? 14 : 22, barCategoryGap: "32%",
@@ -126,16 +129,17 @@ function niceBounds(lowest: number, highest: number) {
 /** Horizontal ranked chart: a min–max bar per row with the central value (modal or reported average) as a labelled marker. */
 export function RankedRangeChart({ rows, centralLabel, description }: { rows: RangeRow[]; centralLabel: string; description: string }) {
   const t = useCopy(CHART);
+  const { AXIS_LABEL, AXIS_LINE, BRAND, GRID_LINE, INK, TOOLTIP, tooltipHtml, shade } = useChartPalette();
   const labels = rows.map((row) => row.label);
   const hasRange = rows.map((row) => row.minimum !== null && row.maximum !== null && row.maximum >= row.minimum);
   const lowest = Math.min(...rows.flatMap((row) => [row.minimum ?? row.central, row.central]));
   const highest = Math.max(...rows.flatMap((row) => [row.maximum ?? row.central, row.central]));
   const option = {
-    ...base(description),
-    legend: { ...base(description).legend, icon: "roundRect", itemWidth: 14, itemHeight: 6, itemStyle: { opacity: 1 }, data: [t.range, centralLabel] },
+    ...base(description, INK),
+    legend: { ...base(description, INK).legend, icon: "roundRect", itemWidth: 14, itemHeight: 6, itemStyle: { opacity: 1 }, data: [t.range, centralLabel] },
     grid: { top: 36, right: 24, bottom: 4, left: 4, containLabel: true },
     tooltip: {
-      ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(24,24,27,.04)" } },
+      ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: shade } },
       formatter: (items: { dataIndex: number }[]) => {
         const row = rows[items[0]?.dataIndex ?? 0];
         return row ? tooltipHtml(row.label, [{ label: t.minimum, value: inr(row.minimum, t.notReported) }, { label: centralLabel, value: inr(row.central, t.notReported) }, { label: t.maximum, value: inr(row.maximum, t.notReported) }], row.detail) : "";

@@ -8,8 +8,7 @@
   .page-content { padding: 26px; }
   .topbar { padding-inline: 26px; gap: 12px; flex-wrap: wrap; }
   .breadcrumb { flex: 1 1 180px; min-width: 0; }
-  .topbar-tools { flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
-  .topbar-tools-grower { flex: 0 0 auto; }
+  .topbar-tools { order: 1; flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
   .topbar-tools form { flex: 1 1 180px; min-width: 0; }
   .search-field { width: 100%; }
   .site-footer { width: calc(100% - 52px); }
@@ -38,13 +37,15 @@
   .page-content { padding: 24px 18px; }
   .page-stack { gap: 18px; }
   .topbar { position: static; padding: 12px 18px; flex-wrap: wrap; }
+  .topbar-preferences { margin-left: auto; gap: 10px; }
   .topbar-tools { width: 100%; flex-wrap: wrap; gap: 10px; }
   .commodity-select { width: 100%; }
   .commodity-select select { flex: 1; height: 40px; font-size: 16px; }
   .topbar-tools form { width: 100%; }
   .search-field { width: 100%; }
   .search-field input { font-size: 16px; }
-  .breadcrumb { font-size: 12px; }
+  .breadcrumb { order: 1; flex: 1 1 100%; font-size: 12px; }
+  .topbar-tools { order: 2; }
   .page-heading { gap: 16px; }
   .page-heading > div:first-child { flex-basis: 100%; }
   .page-heading h1 { font-size: 24px; }
@@ -114,7 +115,6 @@
 }
 
 @media (max-width: 640px) {
-  .topbar-tools-grower { width: auto; margin-left: auto; }
   .home-heading h1, .home-hero h1 { font-size: 23px; }
   .home-date-pill { white-space: normal; }
   .home-price-section .home-section-heading { display: grid; gap: 3px; }

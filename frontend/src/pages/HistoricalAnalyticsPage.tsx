@@ -4,7 +4,7 @@ import { api } from "../services/api";
 import { toCsv } from "../services/csv";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { LazyBarChart } from "../components/LazyCharts";
-import { INK } from "../components/chartPalette";
+import { useChartPalette } from "../components/chartPalette";
 import { calendarDateToTime, calendarTodayIST, completedMonthIST, DAY_MS, MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { COMMON } from "../services/commonCopy";
@@ -123,6 +123,7 @@ const COPY = defineCopy({
 });
 
 export function HistoricalAnalyticsPage() {
+  const { INK } = useChartPalette();
   const t = useCopy(COPY);
   const c = useCopy(COMMON);
   const format = useFormat();

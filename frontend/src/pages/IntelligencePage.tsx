@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../services/api";
 import { toCsv } from "../services/csv";
 import type { Production, Trade, Weather, Bulletin, Evidence, ModuleDomain } from "../services/modules";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { defaultGeography } from "../services/intelligence";
 import { defineCopy, useCopy, useFormat } from "../services/language";
-import { COMMON, fetchStatusText } from "../services/commonCopy";
+import { COMMON } from "../services/commonCopy";
 import { AboutData } from "../components/AboutData";
 const domains = ["production", "weather", "trade", "policy", "news", "quality"] as const;
 type Domain = typeof domains[number];
@@ -18,14 +18,14 @@ const COPY = defineCopy({
     modules: "Intelligence modules",
     titles: { weather: "Sirsi weather", production: "Production & crop area", trade: "Arecanut trade", policy: "Policy notices", news: "Official source news" } as Record<string, string>,
     intro: "Source-specific reporting periods, original units and retained evidence. No inferred price impact.",
-    unavailable: "Select an available intelligence module.", refreshed: "Source capture refreshed.",
+    unavailable: "Select an available intelligence module.",
     coverage: {
       trade: "India imports: selected named partners plus published total including others (DASD/Department of Commerce). Exports: one annual aggregate from PIB, value converted from INR crore to lakh (×100); not a continuous export series. No HS-code split is supplied. Null partner cells are not zero; totals include unlisted partners.",
       weather: "Sirsi town reference 14.6195, 74.8354. Open-Meteo gridded model output, not a farm sensor or observed weather station. Historical model days are not verified observations. API fetch time is not a model issuance timestamp.",
       production: "Annual DASD state/national estimates; source units retained. Historical table does not specify estimate status. Latest table labels 2024-25 Final and 2025-26 Second advance. Missing cells remain null.",
       news: "Curated official PIB releases and DASD announcements only, not a comprehensive or live news feed. Historical policy notices describe the position on publication date, not necessarily today's law. No inferred sentiment, price impact or health endorsement.",
     } as Record<string, string>,
-    staleWeather: "Weather capture is more than 24 hours old. Refresh before relying on its dates; a forecast at capture is not necessarily a current forecast.",
+    staleWeather: "Weather capture is more than 24 hours old. A forecast at capture is not necessarily a current forecast.",
     selected: "SELECTED RECORDS", captures: (n: number) => `${n} current source captures; older captures retained`,
     latestFetch: "LATEST PLATFORM FETCH", notPeriod: "Not the reporting period or source publication time",
     sourceCoverage: "SOURCE COVERAGE", sirsi: "Sirsi", indiaWide: "India-wide", india: "India",
@@ -38,7 +38,7 @@ const COPY = defineCopy({
     yearLabels: "Financial/agricultural year labels are preserved exactly as published.", independent: "Publication dates and fetch timestamps are independent.",
     exportDomain: (domain: string) => `Export ${domain} CSV`,
     noMatch: "No records match these filters", noCaptured: "No captured source records",
-    resetHint: "Reset the filters to see available source periods.", refreshHint: "Use the authenticated source refresh below. Missing data is not estimated.",
+    resetHint: "Reset the filters to see available source periods.", refreshHint: "No source records are available yet. Missing data is not estimated.",
     recordsAria: (title: string) => `${title} records`, weatherCaption: "Daily model output in Asia/Kolkata · Not measured farm conditions",
     columns: {
       production: ["Geography", "Reporting year", "Estimate", "Area ('000 ha)", "Production ('000 tonnes)", "Yield (kg/ha)"],
@@ -50,10 +50,6 @@ const COPY = defineCopy({
     direction: { Import: "Import", Export: "Export" } as Record<string, string>,
     grid: (lat: number, lon: number, elevation: number) => `Returned model grid: ${lat}, ${lon} · Elevation ${elevation} m. Open-Meteo attribution:`,
     terms: "Terms", nonCommercial: "Free API is for non-commercial evaluation; commercial use requires the appropriate service terms.",
-    health: "Refresh & source health", healthHint: "Existing valid captures remain visible if a refresh fails. Re-fetching a historical release does not make it current news.",
-    pdfRefresh: "Refresh verified official PDF tables locally with", pdfAfter: "This archives the original PDFs and validates positioned columns, units and reporting years. Layout changes fail explicitly.",
-    token: "Source refresh reviewer token", capturing: "Capturing...", refreshWeather: "Refresh Sirsi weather", refreshReleases: "Refresh official releases", clearToken: "Clear token",
-    attempts: "Recent capture attempts", noAttempts: "No attempts recorded.",
     publisher: "Publisher", archived: "Archived capture", platformFetched: (time: string) => `Platform fetched ${time}`, documentPublication: (period: string) => `Document publication: ${period}`,
   },
   kn: {
@@ -61,14 +57,14 @@ const COPY = defineCopy({
     modules: "ಮಾಹಿತಿ ವಿಭಾಗಗಳು",
     titles: { weather: "ಶಿರಸಿ ಹವಾಮಾನ", production: "ಉತ್ಪಾದನೆ ಮತ್ತು ಬೆಳೆ ವಿಸ್ತೀರ್ಣ", trade: "ಅಡಿಕೆ ವ್ಯಾಪಾರ", policy: "ನೀತಿ ಪ್ರಕಟಣೆಗಳು", news: "ಅಧಿಕೃತ ಮೂಲದ ಸುದ್ದಿ" },
     intro: "ಪ್ರತಿ ಮೂಲದ ವರದಿ ಅವಧಿ, ಮೂಲ ಘಟಕಗಳು ಮತ್ತು ಉಳಿಸಿದ ಆಧಾರ. ದರದ ಮೇಲಿನ ಪರಿಣಾಮವನ್ನು ಊಹಿಸುವುದಿಲ್ಲ.",
-    unavailable: "ಲಭ್ಯವಿರುವ ಮಾಹಿತಿ ವಿಭಾಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ.", refreshed: "ಮೂಲ ಸಂಗ್ರಹ ನವೀಕರಿಸಲಾಗಿದೆ.",
+    unavailable: "ಲಭ್ಯವಿರುವ ಮಾಹಿತಿ ವಿಭಾಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
     coverage: {
       trade: "ಭಾರತದ ಆಮದು: ಆಯ್ದ ದೇಶಗಳು ಮತ್ತು ಇತರರನ್ನು ಸೇರಿಸಿದ ಪ್ರಕಟಿತ ಒಟ್ಟು (DASD/ವಾಣಿಜ್ಯ ಇಲಾಖೆ). ರಫ್ತು: PIB ಇಂದ ಒಂದು ವಾರ್ಷಿಕ ಒಟ್ಟು, ಮೌಲ್ಯವನ್ನು ಕೋಟಿಯಿಂದ ಲಕ್ಷಕ್ಕೆ (×100) ಪರಿವರ್ತಿಸಲಾಗಿದೆ; ನಿರಂತರ ರಫ್ತು ಸರಣಿ ಅಲ್ಲ. HS-ಕೋಡ್ ವಿಭಜನೆ ಇಲ್ಲ. ಖಾಲಿ ದೇಶದ ಕೋಶಗಳು ಸೊನ್ನೆಯಲ್ಲ; ಒಟ್ಟುಗಳಲ್ಲಿ ಪಟ್ಟಿ ಮಾಡದ ದೇಶಗಳೂ ಸೇರಿವೆ.",
       weather: "ಶಿರಸಿ ಪಟ್ಟಣದ ಉಲ್ಲೇಖ 14.6195, 74.8354. Open-Meteo ಗ್ರಿಡ್ ಮಾದರಿಯ ಅಂದಾಜು, ತೋಟದ ಸಂವೇದಕ ಅಥವಾ ಹವಾಮಾನ ಕೇಂದ್ರದ ಅಳತೆ ಅಲ್ಲ. ಹಿಂದಿನ ದಿನಗಳ ಮಾದರಿ ಮೌಲ್ಯಗಳು ಪರಿಶೀಲಿತ ಅಳತೆಗಳಲ್ಲ. ತಂದ ಸಮಯ ಮಾದರಿ ಬಿಡುಗಡೆಯ ಸಮಯವಲ್ಲ.",
       production: "DASD ವಾರ್ಷಿಕ ರಾಜ್ಯ/ರಾಷ್ಟ್ರೀಯ ಅಂದಾಜುಗಳು; ಮೂಲ ಘಟಕಗಳನ್ನು ಉಳಿಸಲಾಗಿದೆ. ಹಳೆಯ ಪಟ್ಟಿ ಅಂದಾಜಿನ ಸ್ಥಿತಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ. ಇತ್ತೀಚಿನ ಪಟ್ಟಿ 2024-25 ಅಂತಿಮ ಮತ್ತು 2025-26 ಎರಡನೇ ಮುಂಗಡ ಅಂದಾಜು ಎಂದು ಗುರುತಿಸುತ್ತದೆ. ಖಾಲಿ ಕೋಶಗಳು ಖಾಲಿಯಾಗಿಯೇ ಇರುತ್ತವೆ.",
       news: "ಆಯ್ದ ಅಧಿಕೃತ PIB ಪ್ರಕಟಣೆಗಳು ಮತ್ತು DASD ಘೋಷಣೆಗಳು ಮಾತ್ರ, ಸಮಗ್ರ ಅಥವಾ ನೇರ ಸುದ್ದಿ ಅಲ್ಲ. ಹಳೆಯ ನೀತಿ ಪ್ರಕಟಣೆಗಳು ಪ್ರಕಟಣೆ ದಿನದ ಸ್ಥಿತಿಯನ್ನು ವಿವರಿಸುತ್ತವೆ, ಇಂದಿನ ಕಾನೂನನ್ನು ಅಲ್ಲ. ಭಾವನೆ, ದರದ ಪರಿಣಾಮ ಅಥವಾ ಆರೋಗ್ಯ ಶಿಫಾರಸನ್ನು ಊಹಿಸುವುದಿಲ್ಲ.",
     },
-    staleWeather: "ಹವಾಮಾನ ಸಂಗ್ರಹ 24 ಗಂಟೆಗಿಂತ ಹಳೆಯದು. ಅದರ ದಿನಾಂಕಗಳನ್ನು ನಂಬುವ ಮೊದಲು ನವೀಕರಿಸಿ; ಸಂಗ್ರಹದ ಸಮಯದ ಮುನ್ಸೂಚನೆ ಈಗಿನ ಮುನ್ಸೂಚನೆಯಾಗಿರಬೇಕಿಲ್ಲ.",
+    staleWeather: "ಹವಾಮಾನ ಸಂಗ್ರಹ 24 ಗಂಟೆಗಿಂತ ಹಳೆಯದು. ಸಂಗ್ರಹದ ಸಮಯದ ಮುನ್ಸೂಚನೆ ಈಗಿನ ಮುನ್ಸೂಚನೆಯಾಗಿರಬೇಕಿಲ್ಲ.",
     selected: "ಆಯ್ದ ದಾಖಲೆಗಳು", captures: (n: number) => `${n} ಈಗಿನ ಮೂಲ ಸಂಗ್ರಹಗಳು; ಹಳೆಯವುಗಳನ್ನೂ ಉಳಿಸಲಾಗಿದೆ`,
     latestFetch: "ಕೊನೆಯ ಬಾರಿ ತಂದ ಸಮಯ", notPeriod: "ಇದು ವರದಿ ಅವಧಿ ಅಥವಾ ಮೂಲದ ಪ್ರಕಟಣೆ ಸಮಯವಲ್ಲ",
     sourceCoverage: "ಮೂಲದ ವ್ಯಾಪ್ತಿ", sirsi: "ಶಿರಸಿ", indiaWide: "ಭಾರತದಾದ್ಯಂತ", india: "ಭಾರತ",
@@ -81,7 +77,7 @@ const COPY = defineCopy({
     yearLabels: "ಆರ್ಥಿಕ/ಕೃಷಿ ವರ್ಷದ ಹೆಸರುಗಳನ್ನು ಪ್ರಕಟಿಸಿದಂತೆಯೇ ಉಳಿಸಲಾಗಿದೆ.", independent: "ಪ್ರಕಟಣೆ ದಿನಾಂಕ ಮತ್ತು ತಂದ ಸಮಯ ಬೇರೆ ಬೇರೆ.",
     exportDomain: (domain: string) => `${domain} CSV ಡೌನ್‌ಲೋಡ್`,
     noMatch: "ಈ ಫಿಲ್ಟರ್‌ಗಳಿಗೆ ಹೊಂದುವ ದಾಖಲೆಗಳಿಲ್ಲ", noCaptured: "ಸಂಗ್ರಹಿಸಿದ ಮೂಲ ದಾಖಲೆಗಳಿಲ್ಲ",
-    resetHint: "ಲಭ್ಯವಿರುವ ಅವಧಿಗಳನ್ನು ನೋಡಲು ಫಿಲ್ಟರ್ ತೆರವುಗೊಳಿಸಿ.", refreshHint: "ಕೆಳಗಿನ ಮೂಲ ನವೀಕರಣ ಬಳಸಿ. ಇಲ್ಲದ ದತ್ತಾಂಶವನ್ನು ಅಂದಾಜು ಮಾಡುವುದಿಲ್ಲ.",
+    resetHint: "ಲಭ್ಯವಿರುವ ಅವಧಿಗಳನ್ನು ನೋಡಲು ಫಿಲ್ಟರ್ ತೆರವುಗೊಳಿಸಿ.", refreshHint: "ಇನ್ನೂ ಯಾವುದೇ ಮೂಲ ದಾಖಲೆಗಳು ಲಭ್ಯವಿಲ್ಲ. ಇಲ್ಲದ ದತ್ತಾಂಶವನ್ನು ಅಂದಾಜು ಮಾಡುವುದಿಲ್ಲ.",
     recordsAria: (title: string) => `${title} ದಾಖಲೆಗಳು`, weatherCaption: "ದೈನಂದಿನ ಮಾದರಿ ಅಂದಾಜು (ಭಾರತೀಯ ಕಾಲಮಾನ) · ತೋಟದಲ್ಲಿ ಅಳೆದದ್ದಲ್ಲ",
     columns: {
       production: ["ಪ್ರದೇಶ", "ವರದಿ ವರ್ಷ", "ಅಂದಾಜು", "ವಿಸ್ತೀರ್ಣ ('000 ಹೆ)", "ಉತ್ಪಾದನೆ ('000 ಟನ್)", "ಇಳುವರಿ (ಕೆಜಿ/ಹೆ)"],
@@ -93,10 +89,6 @@ const COPY = defineCopy({
     direction: { Import: "ಆಮದು", Export: "ರಫ್ತು" },
     grid: (lat: number, lon: number, elevation: number) => `ಮಾದರಿ ಗ್ರಿಡ್: ${lat}, ${lon} · ಎತ್ತರ ${elevation} ಮೀ. Open-Meteo ಉಲ್ಲೇಖ:`,
     terms: "ನಿಯಮಗಳು", nonCommercial: "ಉಚಿತ API ವಾಣಿಜ್ಯೇತರ ಮೌಲ್ಯಮಾಪನಕ್ಕೆ ಮಾತ್ರ; ವಾಣಿಜ್ಯ ಬಳಕೆಗೆ ಸೂಕ್ತ ಸೇವಾ ನಿಯಮಗಳು ಬೇಕು.",
-    health: "ನವೀಕರಣ ಮತ್ತು ಮೂಲದ ಸ್ಥಿತಿ", healthHint: "ನವೀಕರಣ ವಿಫಲವಾದರೂ ಈಗಿನ ಮಾನ್ಯ ಸಂಗ್ರಹಗಳು ಕಾಣಿಸುತ್ತವೆ. ಹಳೆಯ ಪ್ರಕಟಣೆಯನ್ನು ಮತ್ತೆ ತಂದರೆ ಅದು ಹೊಸ ಸುದ್ದಿಯಾಗುವುದಿಲ್ಲ.",
-    pdfRefresh: "ಪರಿಶೀಲಿತ ಅಧಿಕೃತ PDF ಪಟ್ಟಿಗಳನ್ನು ಸ್ಥಳೀಯವಾಗಿ ನವೀಕರಿಸಲು:", pdfAfter: "ಇದು ಮೂಲ PDF ಗಳನ್ನು ಸಂಗ್ರಹಿಸಿ ಕಾಲಮ್, ಘಟಕ ಮತ್ತು ವರದಿ ವರ್ಷಗಳನ್ನು ಪರಿಶೀಲಿಸುತ್ತದೆ. ವಿನ್ಯಾಸ ಬದಲಾದರೆ ಸ್ಪಷ್ಟವಾಗಿ ವಿಫಲವಾಗುತ್ತದೆ.",
-    token: "ಮೂಲ ನವೀಕರಣ ಪರಿಶೀಲಕರ ಟೋಕನ್", capturing: "ಸಂಗ್ರಹಿಸಲಾಗುತ್ತಿದೆ...", refreshWeather: "ಶಿರಸಿ ಹವಾಮಾನ ನವೀಕರಿಸಿ", refreshReleases: "ಅಧಿಕೃತ ಪ್ರಕಟಣೆಗಳನ್ನು ನವೀಕರಿಸಿ", clearToken: "ಟೋಕನ್ ತೆರವುಗೊಳಿಸಿ",
-    attempts: "ಇತ್ತೀಚಿನ ಸಂಗ್ರಹ ಪ್ರಯತ್ನಗಳು", noAttempts: "ಯಾವುದೇ ಪ್ರಯತ್ನ ದಾಖಲಾಗಿಲ್ಲ.",
     publisher: "ಪ್ರಕಟಣಕಾರ", archived: "ಸಂಗ್ರಹಿಸಿದ ಪ್ರತಿ", platformFetched: (time: string) => `ತಂದ ಸಮಯ ${time}`, documentPublication: (period: string) => `ದಾಖಲೆಯ ಪ್ರಕಟಣೆ: ${period}`,
   },
 });
@@ -128,14 +120,9 @@ export function IntelligencePage() {
   const day = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? format.date(value) : value;
   const domain = useParams().domain ?? "production";
   const supported = domains.some((value) => value === domain) && domain !== "quality";
-  const [period, setPeriod] = useState(""), [geography, setGeography] = useState(() => defaultGeography(domain)), [token, setToken] = useState("");
-  const [notice, setNotice] = useState("");
-  const client = useQueryClient();
+  const [period, setPeriod] = useState(""), [geography, setGeography] = useState(() => defaultGeography(domain));
   const query = useQuery({ queryKey: ["intelligence", domain], queryFn: () => api.intelligence<ModuleRow>(domain as ModuleDomain), enabled: supported, refetchInterval: 60_000 });
-  const refresh = useMutation({ mutationFn: () => api.refreshIntelligence(domain === "weather" ? "weather" : "news", token),
-    onSuccess: async () => { setNotice(t.refreshed); await client.invalidateQueries({ queryKey: ["intelligence"] }); },
-    onSettled: async () => { await client.invalidateQueries({ queryKey: ["intelligence"] }); } });
-  useEffect(() => { setPeriod(""); setGeography(defaultGeography(domain)); setToken(""); setNotice(""); refresh.reset(); }, [domain]);
+  useEffect(() => { setPeriod(""); setGeography(defaultGeography(domain)); }, [domain]);
   if (!supported) return <ErrorState error={new Error(t.unavailable)} />;
   const data = query.data;
   const rows = data?.data ?? [];
@@ -193,12 +180,6 @@ export function IntelligencePage() {
             </tr>)}</tbody></table></div>}
       </section>
       {domain === "weather" && rows.length > 0 && "grid_latitude" in rows[0] && <p className="data-disclosure">{t.grid(rows[0].grid_latitude, rows[0].grid_longitude, rows[0].elevation_m)} <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · <a href="https://open-meteo.com/en/terms" target="_blank" rel="noreferrer">{t.terms}</a>. {t.nonCommercial}</p>}
-      <section className="panel"><div className="panel-heading"><div><h2>{t.health}</h2><p>{t.healthHint}</p></div></div><div className="monthly-details">
-        {domain === "production" || domain === "trade" ? <p>{t.pdfRefresh} <code>npm run refresh:intelligence</code>. {t.pdfAfter}</p>
-          : <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); setNotice(""); refresh.mutate(); }}><label className="filter-control"><span>{t.token}</span><input type="password" autoComplete="off" required disabled={refresh.isPending} value={token} onChange={(event) => setToken(event.target.value)} /></label><button className="button-secondary" disabled={refresh.isPending}>{refresh.isPending ? t.capturing : domain === "weather" ? t.refreshWeather : t.refreshReleases}</button><button type="button" className="button-secondary" disabled={refresh.isPending} onClick={() => { setToken(""); setNotice(""); refresh.reset(); }}>{t.clearToken}</button></form>}
-        {refresh.error && <ErrorState error={refresh.error} />}{notice && <p role="status">{notice}</p>}
-        <details><summary>{t.attempts}</summary><ul>{data.attempts.map((attempt) => <li key={attempt.id}>{attempt.source_key} · {fetchStatusText(c, attempt.status)} · {format.timestamp(attempt.started_at)}{attempt.error_message && ` · ${attempt.error_message}`}</li>)}</ul>{!data.attempts.length && <p>{t.noAttempts}</p>}</details>
-      </div></section>
     </>}
   </div>;
 }
