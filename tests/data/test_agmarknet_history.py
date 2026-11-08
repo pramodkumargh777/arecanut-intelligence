@@ -211,5 +211,51 @@ class BackfillTests(unittest.TestCase):
                              sleep=lambda _: None, today=TODAY)
 
 
+
+class AutomaticBackfillTests(unittest.TestCase):
+    def test_windows_walk_back_a_year_at_a_time_and_stop_at_the_start_date(self):
+        start, latest = date(2021, 1, 1), date(2026, 11, 6)
+        self.assertEqual(history.next_backfill_window(None, start, latest, 12), (date(2025, 12, 1), date(2026, 11, 6)))
+        self.assertEqual(history.next_backfill_window(date(2026, 10, 25), start, latest, 12), (date(2025, 11, 1), date(2026, 10, 24)))
+        self.assertEqual(history.next_backfill_window(date(2025, 11, 1), start, latest, 12), (date(2024, 11, 1), date(2025, 10, 31)))
+        self.assertEqual(history.next_backfill_window(date(2021, 6, 1), start, latest, 12), (date(2021, 1, 1), date(2021, 5, 31)))
+        self.assertIsNone(history.next_backfill_window(date(2021, 1, 1), start, latest, 12))
+        self.assertEqual(history.next_backfill_window(date(2021, 2, 1), start, latest, 1), (date(2021, 1, 1), date(2021, 1, 31)))
+
+    def test_cli_fills_recent_days_then_the_next_older_window(self):
+        from connectors.agmarknet import run_history
+        calls = []
+
+        def fake_backfill(config, start, end, **kwargs):
+            calls.append((start, end))
+            return {"status": "completed", "failed_dates": {}}
+
+        env = {"DATA_GOV_IN_API_KEY": "k", "AGMARKNET_PRICE_UNIT": "Rs./Quintal", "ANI_API_URL": "https://api.test/api/v1",
+               "INGESTION_TOKEN": "t"}
+        with tempfile.TemporaryDirectory() as folder, patch.dict("os.environ", env, clear=False), \
+                patch.object(run_history, "today_ist", return_value=TODAY), \
+                patch.object(run_history, "backfill_history", side_effect=fake_backfill), \
+                patch.object(run_history, "fetch_history_coverage", return_value={"earliest_reporting_date": "2026-10-24"}), \
+                patch("sys.stdout", new_callable=io.StringIO):
+            code = run_history.main(["--recent-days", "14", "--backfill-from", "2021-01-01", "--env-file", "/dev/null",
+                                     "--report-dir", folder])
+        self.assertEqual(code, 0)
+        self.assertEqual(calls, [(date(2026, 10, 24), date(2026, 11, 6)), (date(2025, 11, 1), date(2026, 10, 23))])
+
+    def test_cli_reports_a_finished_backfill_and_a_coverage_failure(self):
+        from connectors.agmarknet import run_history
+        env = {"DATA_GOV_IN_API_KEY": "k", "AGMARKNET_PRICE_UNIT": "Rs./Quintal", "ANI_API_URL": "https://api.test/api/v1",
+               "INGESTION_TOKEN": "t"}
+        for coverage, expected in (({"earliest_reporting_date": "2021-01-01"}, 0), (RuntimeError("HTTP 503"), 2)):
+            stdout = io.StringIO()
+            with tempfile.TemporaryDirectory() as folder, patch.dict("os.environ", env, clear=False), \
+                    patch.object(run_history, "today_ist", return_value=TODAY), \
+                    patch.object(run_history, "backfill_history", return_value={"status": "completed", "failed_dates": {}}) as backfill, \
+                    patch.object(run_history, "fetch_history_coverage", side_effect=[coverage]), patch("sys.stdout", stdout):
+                code = run_history.main(["--backfill-from", "2021-01-01", "--env-file", "/dev/null", "--report-dir", folder])
+            self.assertEqual(code, expected)
+            backfill.assert_not_called()
+            self.assertIn('"part": "backfill"', stdout.getvalue())
+
 if __name__ == "__main__":
     unittest.main()

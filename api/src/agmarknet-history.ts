@@ -136,6 +136,18 @@ function recordStatements(db: D1Database, sourceId: string, jobId: string, recor
 
 export const agmarknetHistoryRoutes = new Hono<Env>();
 
+/** Stored history range; the connector's scheduled backfill works back from earliest_reporting_date. */
+agmarknetHistoryRoutes.get("/admin/agmarknet-history/coverage", async (c) => {
+  if (!bearerMatches(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) {
+    return c.json({ error: "A valid ingestion token is required." }, 401);
+  }
+  const row = await c.env.DB.prepare(`SELECT MIN(o.reporting_date) AS earliest_reporting_date, MAX(o.reporting_date) AS latest_reporting_date,
+      COUNT(*) AS observation_count FROM market_price_observations o JOIN data_sources s ON s.id = o.source_id
+    WHERE s.source_key = ? AND o.validation_status != 'superseded'`).bind(AGMARKNET_HISTORY_SOURCE)
+    .first<{ earliest_reporting_date: string | null; latest_reporting_date: string | null; observation_count: number }>();
+  return c.json(row ?? { earliest_reporting_date: null, latest_reporting_date: null, observation_count: 0 });
+});
+
 agmarknetHistoryRoutes.post("/admin/agmarknet-history/import", async (c) => {
   if (!bearerMatches(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) {
     return c.json({ error: "A valid ingestion token is required." }, 401);
