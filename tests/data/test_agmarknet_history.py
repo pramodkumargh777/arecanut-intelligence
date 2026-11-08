@@ -124,7 +124,7 @@ class PrepareTests(unittest.TestCase):
             self.assertEqual(history.canonical_market(*source), expected)
 
     def test_every_mapped_target_is_a_current_name(self):
-        current_districts = set(history.LEGACY_DISTRICTS.values()) | {"Hassan", "Davangere", "Chitradurga", "Udupi", "Mandya",
+        current_districts = set(history.LEGACY_DISTRICTS.values()) | {"Hassan", "Davangere", "Chitradurga", "Udupi", "Mandya", "Haveri",
                                                                      "Bengaluru Rural", "Chikkaballapur"}
         for (district, _), (target_district, target_market) in history.LEGACY_MARKETS.items():
             self.assertIn(target_district, current_districts)
