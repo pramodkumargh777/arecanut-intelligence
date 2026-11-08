@@ -117,9 +117,9 @@ export function SellOrHoldPage() {
             <h3>{copy.months(months)}</h3>
             {summary.median_percent === null ? <p className="rate-empty">{copy.notEnough}</p> : <dl>
               <div><dt>{copy.rose}</dt><dd><strong>{copy.ofYears(summary.rose, summary.years)}</strong></dd></div>
-              <div><dt>{copy.typical}</dt><dd className={tone(summary.median_percent)}>{signed(summary.median_percent)}</dd></div>
+              <div><dt>{copy.typical}</dt><dd className={`hold-key-value ${tone(summary.median_percent)}`}>{signed(summary.median_percent)}</dd></div>
               <div><dt>{copy.range}</dt><dd>{signed(summary.lowest_percent)} / {signed(summary.highest_percent)}</dd></div>
-              <div><dt>{copy.needed}</dt><dd>{needed === null ? "—" : `${needed}%`}</dd></div>
+              <div><dt>{copy.needed}</dt><dd className="hold-key-value">{needed === null ? "—" : `${needed}%`}</dd></div>
               <div><dt>{copy.covered}</dt><dd><strong>{covered === null ? "—" : copy.ofYears(covered, summary.years)}</strong></dd></div>
             </dl>}
           </li>;

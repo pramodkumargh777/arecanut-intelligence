@@ -44,6 +44,10 @@ apply across routes. Favicon and iOS app icon use their existing branded assets 
 - Inter for Latin text (already bundled through `@fontsource-variable/inter`).
 - Noto Sans Kannada, or a tested system fallback, for Kannada.
 - Tabular numerals for prices and aligned data columns.
+- Shared hierarchy: 28px page titles, 20px section titles and 16px subheadings; page and section titles
+  reduce to 25px and 18px on phones. Supporting text stays smaller and muted without reducing contrast.
+- Key snapshot and forecast values use 30px numerals (26px on phones); latest market prices use 22px.
+  Sell or wait emphasizes typical movement and the break-even percentage, not every supporting statistic.
 
 ## Colour tokens
 
