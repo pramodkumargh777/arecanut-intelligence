@@ -5,7 +5,10 @@ import { useCommodity } from "../services/commodity";
 import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
 import { CommodityGate } from "./CommodityGate";
 import brandIcon from "../assets/areca-pulse-icon.svg";
-import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Search, TableProperties, X } from "lucide-react";
+import darkLogo from "../assets/areca-pulse-logo-dark.svg";
+import appIcon from "../assets/areca-pulse-app-icon.svg";
+import { setTheme, useTheme } from "../services/theme";
+import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Moon, Search, Sun, TableProperties, X } from "lucide-react";
 
 const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
@@ -44,6 +47,7 @@ const SHELL_COPY = defineCopy({
     region: "Karnataka", sourceTitle: "Reviewed source records", sourceHint: "Every quote has a source and date.",
     footerNote: "Market observations · Not financial advice", notFound: "Page not found", noSource: "No data",
     noSourceFor: (name: string) => `No integrated source for ${name}`, unknown: (code: string) => `Unknown: ${code}`, configured: "configured",
+    switchDark: "Switch to dark mode", switchLight: "Switch to light mode",
   },
   kn: {
     skip: "ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ", openMenu: "ಮೆನು ತೆರೆಯಿರಿ", closeMenu: "ಮೆನು ಮುಚ್ಚಿ", closeNavigation: "ಮೆನು ಮುಚ್ಚಿ", navigation: "ಮುಖ್ಯ ಮೆನು",
@@ -51,12 +55,14 @@ const SHELL_COPY = defineCopy({
     region: "ಕರ್ನಾಟಕ", sourceTitle: "ಪರಿಶೀಲಿಸಿದ ಮೂಲ ದಾಖಲೆಗಳು", sourceHint: "ಪ್ರತಿ ದರಕ್ಕೂ ಮೂಲ ಮತ್ತು ದಿನಾಂಕ ಇದೆ.",
     footerNote: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ · ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ", notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
     noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
+    switchDark: "ಡಾರ್ಕ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ", switchLight: "ಲೈಟ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ",
   },
 });
 
 
 export function AppShell() {
   const { language } = useLanguage();
+  const theme = useTheme();
   const copy = SHELL_COPY[language];
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
@@ -178,11 +184,10 @@ export function AppShell() {
       <div className="main-column" ref={mainColumn}>
         <header className="topbar">
           <button ref={menuButton} className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label={copy.openMenu} aria-expanded={menuOpen} aria-controls="main-navigation"><Menu size={21} /></button>
-          <Link to="/" className="topbar-brand" aria-label={BRAND_LABEL}><img src={brandIcon} alt="" width={36} height={28} /></Link>
+          <Link to="/" className="topbar-brand" aria-label={BRAND_LABEL}><img src={theme === "dark" ? appIcon : brandIcon} alt="" width={36} height={28} /></Link>
           <div className="breadcrumb"><span>{commodity?.display_name ?? commodityCode}</span><span className="breadcrumb-sep">/</span><strong>{currentPage}</strong></div>
-          <div className={`topbar-tools${growerPage ? " topbar-tools-grower" : ""}`}>
-            <LanguageToggle />
-            {!growerPage && <><label className="commodity-select"><span>{copy.commodity}</span><select aria-label={copy.commodity} value={commodity ? commodityCode : ""} onChange={(event) => selectCommodity(event.target.value)}>
+          {!growerPage && <div className="topbar-tools">
+            <label className="commodity-select"><span>{copy.commodity}</span><select aria-label={copy.commodity} value={commodity ? commodityCode : ""} onChange={(event) => selectCommodity(event.target.value)}>
               {!commodity && <option value="" disabled>{copy.unknown(commodityCode)}</option>}
               {catalog.commodities.map((item) => <option key={item.code} value={item.code}>{item.display_name}{item.status === "production" ? "" : ` · ${copy.configured}`}</option>)}
             </select></label>
@@ -192,7 +197,11 @@ export function AppShell() {
               if (search.trim()) next.set("search", search.trim());
               navigate(next.toString() ? `/prices?${next}` : "/prices");
             }}><label className="search-field"><Search size={16} /><input type="search" aria-label={copy.searchLabel} placeholder={copy.search} value={search} onChange={(event) => setSearch(event.target.value)} /></label></form>}
-            <span className="region-pill"><MapPin size={13} /> {copy.region}</span></>}
+            <span className="region-pill"><MapPin size={13} /> {copy.region}</span>
+          </div>}
+          <div className="topbar-preferences">
+            <LanguageToggle />
+            <button type="button" className="icon-button theme-toggle" aria-label={theme === "dark" ? copy.switchLight : copy.switchDark} title={theme === "dark" ? copy.switchLight : copy.switchDark} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}</button>
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><Outlet /></CommodityGate></main>
@@ -210,13 +219,15 @@ const BRAND_LABEL = "Areca Pulse · Market Intelligence";
  * renders in the app's own Inter, which an SVG loaded through <img> cannot use.
  */
 function BrandLockup() {
+  const theme = useTheme();
   return <Link to="/" className="brand-lockup" aria-label={BRAND_LABEL}>
+    {theme === "dark" ? <img className="brand-dark-logo" src={darkLogo} alt="" /> :
     <span className="brand-lockup-row">
       <img className="brand-icon" src={brandIcon} alt="" width={40} height={31} />
       <span className="brand-words" aria-hidden="true" lang="en">
         <span className="brand-name">Areca <span className="brand-name-accent">Pulse</span></span>
         <span className="brand-descriptor">Market Intelligence</span>
       </span>
-    </span>
+    </span>}
   </Link>;
 }

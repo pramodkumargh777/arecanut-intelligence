@@ -12,16 +12,24 @@ inspired by the arecanut palm landscape, without looking like a conventional agr
 
 | Asset | Used for | File in the app |
 |---|---|---|
-| `icon.svg` | Sidebar lockup and the mobile top-bar home link | `frontend/src/assets/areca-pulse-icon.svg` |
+| `icon.svg` | Light sidebar lockup and mobile home link | `frontend/src/assets/areca-pulse-icon.svg` |
+| `app-icon.svg` | Dark mobile home link | `frontend/src/assets/areca-pulse-app-icon.svg` |
 | `favicon.svg` | Browser tab | `frontend/public/favicon.svg` |
 | `app-icon` (PNG export) | iOS home-screen icon | `frontend/public/apple-touch-icon.png` |
 | `logo-horizontal-light.svg` | Not shown in the app; for wide placements on light backgrounds | `docs/brand/` |
-| `logo-horizontal-dark.svg`, `logo-stacked-light.svg` | Not used yet: the app has no dark brand surface or centred splash | `docs/brand/` |
+| `logo-horizontal-dark.svg` | Reversed sidebar lockup in dark mode | `frontend/src/assets/areca-pulse-logo-dark.svg` |
+| `logo-stacked-light.svg` | Not used in the app | `docs/brand/` |
 
-The sidebar does not shrink the full horizontal logo. At sidebar width its descriptor and tagline would be about
+In light mode the sidebar does not shrink the full horizontal logo. At sidebar width its descriptor and tagline would be about
 4px tall, and an SVG loaded through `<img>` cannot use the app's Inter font. The sidebar instead pairs `icon.svg`
 with a live-text wordmark in the logo's colours (`BrandLockup` in `frontend/src/components/AppShell.tsx`). The guide
 asks for exactly this at small sizes.
+
+The header theme control switches instantly between light and dark. Before the app renders, the external
+`frontend/public/theme-init.js` reads the `areca-pulse-theme` local storage preference; without a saved choice it
+uses the system colour scheme and follows system changes. A manually selected preference takes precedence.
+The dark tokens in `frontend/src/styles.css` and chart palette in `frontend/src/components/chartPalette.ts`
+apply across routes. Favicon and iOS app icon use their existing branded assets in both modes.
 
 ## Logo usage
 

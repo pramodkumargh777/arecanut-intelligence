@@ -7,7 +7,7 @@ import type { ReferencePoint } from "../types";
 import { buildChartData, connectShortGaps, missingPeriods } from "../services/chart";
 import { calendarDateToTime, DAY_MS } from "../../../shared/dates";
 import { defineCopy, formatDate, formatMonth, useCopy, useLanguage } from "../services/language";
-import { AXIS_LABEL, AXIS_LINE, BRAND, BRAND_AREA, CHART_FONT, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } from "./chartPalette";
+import { CHART_FONT, useChartPalette } from "./chartPalette";
 
 echarts.use([LineChart, ScatterChart, GridComponent, TooltipComponent, AriaComponent, CanvasRenderer]);
 
@@ -53,6 +53,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
   points?: ReferencePoint[]; averagePoints?: AveragePoint[]; quotePoints?: { reporting_date: string; average_price: number }[]; unitNote?: string; label?: string; calendarInterval?: "daily" | "monthly"; range?: { from: string; to: string }; showStats?: boolean;
 }) {
   const t = useCopy(COPY);
+  const { AXIS_LABEL, AXIS_LINE, BRAND, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
   const { language } = useLanguage();
   const label = givenLabel ?? t.defaultLabel;
   const chart = buildChartData(quotePoints

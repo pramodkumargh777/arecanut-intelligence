@@ -171,7 +171,10 @@ archives. Reporting periods are never replaced with fetch dates.
 | News | Three dated official PIB/DASD publications, latest 18 July 2026 | Curated announcements, not comprehensive breaking news, inferred sentiment or price-impact analysis |
 | Quality | Real-report submission, review and publication workflow | Empty until an actual inspection/lab report is supplied; no sample lot measurements are seeded |
 
-With the local API running:
+Customer intelligence pages show reporting periods, sources and platform fetch times. Operators can inspect
+capture attempts and refresh weather or official bulletins under **Data quality → Intelligence source health**;
+those refresh actions require the reviewer token. Production and trade PDF refreshes remain a local operator
+procedure. With the local API running:
 
 ```sh
 npm run refresh:intelligence
