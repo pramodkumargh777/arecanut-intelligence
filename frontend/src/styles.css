@@ -496,10 +496,13 @@ th.numeric .sort-button span { order: -1; }
 .hold-settings { display: grid; gap: 10px; }
 .home .filter-control span { font-size: 14px; }
 .home .filter-control select, .home .filter-control input { min-height: 44px; font-size: 16px; }
-/* Waiting periods side by side on wide screens, stacked on phones. */
-.rate-card ul.hold-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 0 24px; }
-.hold-summary > li { padding: 12px 0; border-top: 1px solid var(--line); }
-.hold-summary h3 { margin: 0 0 8px; font-size: 16.5px; font-weight: 650; color: var(--ink); }
+/* Five horizons: three across, then a centered pair on wide screens. */
+.rate-card ul.hold-summary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px 24px; }
+.hold-summary > li { grid-column: span 2; }
+.hold-summary > li:nth-last-child(2) { grid-column: 2 / span 2; }
+.hold-summary > li:last-child { grid-column: 4 / span 2; }
+.hold-summary > li { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
+.hold-summary h3 { margin: 0 0 8px; font-size: 16.5px; font-weight: 650; color: var(--ink); text-align: center; }
 .hold-summary dl { margin: 0; display: grid; gap: 6px; }
 .hold-summary dl > div { display: flex; justify-content: space-between; gap: 16px; font-size: 14.5px; }
 .hold-summary dt { color: var(--muted); }
