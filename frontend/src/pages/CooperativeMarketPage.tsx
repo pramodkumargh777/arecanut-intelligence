@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
@@ -329,6 +329,16 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   const branch = params.get("branch") ?? "";
   const from = params.get("from") ?? "";
   const to = params.get("to") ?? "";
+  const search = params.get("search") ?? "";
+  const [searchDraft, setSearchDraft] = useState(search);
+  useEffect(() => setSearchDraft(search), [search]);
+  useEffect(() => {
+    if (searchDraft === search) return;
+    const timeout = window.setTimeout(() => {
+      setParams(withParams(params, { page: null, search: searchDraft }), { replace: true });
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [params, search, searchDraft, setParams]);
   const comparisonDate = params.get("date") ?? "";
   const page = readPage(params);
   const sort: QuoteSort = readSort(params, QUOTE_SORT_KEYS, DEFAULT_QUOTE_SORT);
@@ -351,9 +361,9 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
     ? [{ reporting_date: row.reporting_date, average_price: row.average_price }] : []);
   const dates = [...new Set(rows.map((row) => row.reporting_date))].sort().reverse();
   const selectedDate = comparisonDate || data?.latest_reporting_date || "";
-  const search = params.get("search")?.trim().toLowerCase() ?? "";
+  const normalizedSearch = search.trim().toLowerCase();
   const filtered = sortRows(rows.filter((row) => (!branch || row.branch === branch) && (!from || row.reporting_date >= from)
-    && (!to || row.reporting_date <= to) && (!search || `${row.branch} ${row.variety}`.toLowerCase().includes(search))), (row) => row[sort.key], sort.direction);
+    && (!to || row.reporting_date <= to) && (!normalizedSearch || `${row.branch} ${row.variety}`.toLowerCase().includes(normalizedSearch))), (row) => row[sort.key], sort.direction);
   const activePage = Math.min(page, Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1));
   const comparison = rows.filter((row) => row.reporting_date === selectedDate).sort((a, b) => (b.average_price ?? 0) - (a.average_price ?? 0));
   const ranked = rankSameDate(rows, (row) => row.average_price === null ? null : { key: String(row.id), label: row.branch, detail: row.variety, reporting_date: row.reporting_date, minimum: row.minimum_price, central: row.average_price, maximum: row.maximum_price }, selectedDate);
@@ -463,7 +473,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
       </section>}
       {location.pathname === "/prices" && <section className="filter-bar">
         <label className="filter-control"><span>{c.branch}</span><select value={branch} onChange={(event) => update({ branch: event.target.value })}><option value="">{c.allBranches}</option>{(data?.branches ?? [...new Set(rows.map((row) => row.branch))].sort()).map((value) => <option key={value}>{value}</option>)}</select></label>
-        <label className="filter-control"><span>{t.searchBranch}</span><input type="search" value={params.get("search") ?? ""} placeholder={t.searchExample} onChange={(event) => update({ search: event.target.value })} /></label>
+        <label className="filter-control"><span>{t.searchBranch}</span><input type="search" value={searchDraft} placeholder={t.searchExample} onChange={(event) => setSearchDraft(event.target.value)} /></label>
         <button className="button-secondary" onClick={() => setParams(withoutFilters(params), { replace: true })}>{c.resetFilters}</button>
         <details className="advanced-filters">
         <summary>{c.moreFilters}{from || to ? ` · ${c.active}` : ""}</summary>

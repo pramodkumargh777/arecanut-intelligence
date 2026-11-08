@@ -104,10 +104,17 @@ describe("market experience", () => {
     expect(initial("invalid", true)).toBe("dark");
   });
 
-  it("uses readable dark chart colours without changing the light palette or tooltip escaping", () => {
+  it("keeps chart series readable in both themes and escapes tooltip content", () => {
     const light = chartPalette("light"), dark = chartPalette("dark");
     expect(light.BRAND).toBe("#0b3d2e");
     expect(dark.BRAND).not.toBe(light.BRAND);
+    const luminance = (hex: string) => {
+      const channels = hex.match(/[a-f\d]{2}/gi)!.map((channel) => parseInt(channel, 16) / 255)
+        .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    };
+    const contrastOnWhite = (hex: string) => 1.05 / (luminance(hex) + 0.05);
+    expect([...light.SERIES_COLORS, ...light.orderedRamp(10)].every((color) => contrastOnWhite(color) >= 3)).toBe(true);
     expect(dark.TOOLTIP.backgroundColor).toBe(dark.INK.surface);
     expect(dark.AXIS_LABEL.color).toBe(dark.INK[500]);
     expect(dark.tooltipHtml("<source>", [{ value: "<rate>" }])).toContain("&#60;source&#62;");

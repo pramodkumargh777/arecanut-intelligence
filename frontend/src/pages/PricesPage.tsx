@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, RotateCcw } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -102,6 +102,15 @@ export function PricesPage() {
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
   const search = searchParams.get("search") ?? "";
+  const [searchDraft, setSearchDraft] = useState(search);
+  useEffect(() => setSearchDraft(search), [search]);
+  useEffect(() => {
+    if (searchDraft === search) return;
+    const timeout = window.setTimeout(() => {
+      setSearchParams(withParams(searchParams, { page: null, search: searchDraft }), { replace: true });
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [search, searchDraft, searchParams, setSearchParams]);
   const page = readPage(searchParams);
   const preset = readPreset(searchParams);
   const sort = readSort(searchParams, PRICE_SORT_KEYS, DEFAULT_PRICE_SORT);
@@ -169,7 +178,7 @@ export function PricesPage() {
       <section className="page-heading"><div><h1>{t.title}</h1><p>{t.intro(commodityDef?.display_name.toLowerCase() ?? commodity)}</p></div><div className="heading-controls"><SourceSlot /><div className="heading-actions"><button className="button-secondary" onClick={exportPage} disabled={!prices.data?.data.length}><Download size={16} /> {c.exportPage}</button><button className="button-secondary" onClick={() => void exportAll()} disabled={!prices.data?.count || Boolean(exporting && !exporting.startsWith(t.exportFailed("")))}><Download size={16} /> {t.exportAll}{(prices.data?.count ?? 0) > EXPORT_ROW_CAP ? t.exportFirst(EXPORT_ROW_CAP.toLocaleString("en-IN")) : ""}</button></div></div></section>
       {exporting && <div className="filter-context" role="status">{exporting}</div>}
       <section className="filter-bar">
-        <label className="filter-control"><span>{t.searchLabel}</span><input type="search" value={search} placeholder={t.searchExample} onChange={(event) => update({ search: event.target.value })} /></label>
+        <label className="filter-control"><span>{t.searchLabel}</span><input type="search" value={searchDraft} placeholder={t.searchExample} onChange={(event) => setSearchDraft(event.target.value)} /></label>
         <label className="filter-control"><span>{c.market}</span><select value={marketId} onChange={(event) => update({ market: event.target.value })}><option value="">{c.allMarkets}</option>{(markets.data ?? []).filter((market) => !district || market.district === district).map((market) => <option key={market.id} value={market.id}>{market.name}</option>)}</select></label>
         <label className="filter-control"><span>{t.varietyExact}</span><input type="search" list="price-variety-options" value={variety} onChange={(event) => update({ variety: event.target.value })} placeholder={t.varietyPlaceholder} /><datalist id="price-variety-options">{(varietyOptions.data ?? []).map((value) => <option key={value} value={value} />)}</datalist></label>
         <button className="button-secondary clear-filters" disabled={!hasFilters} aria-label={t.clearAll} title={t.clearAll} onClick={clearFilters}><RotateCcw size={15} /> {c.reset}</button>

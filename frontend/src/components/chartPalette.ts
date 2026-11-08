@@ -15,12 +15,12 @@ export const BRAND_AREA = ["rgba(11,61,46,.14)", "rgba(11,61,46,0)"] as const;
 
 export const CHART_FONT = '"Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
-/** Default series order: strongest first. Further series also differ by dash pattern at the call site. */
-export const SERIES_COLORS = [BRAND, INK[500], INK[400], INK[300]];
+/** Default series order: strongest first. Every supporting line remains distinguishable against a white chart. */
+export const SERIES_COLORS = [BRAND, INK[500], "#767680", "#85858f"];
 
 /** Ordered lightness ramp for ordered data such as calendar years: the newest entry is the darkest. */
 export function orderedRamp(count: number): string[] {
-  const ramp = ["#a8a8b0", "#8a8a93", "#6b6b74", "#4f4f57", "#35353b", INK[900]];
+  const ramp = ["#777780", "#6b6b75", "#5f5f69", "#53535d", "#474751", INK[900]];
   return count >= ramp.length ? [...Array(count - ramp.length).fill(ramp[0]), ...ramp] : ramp.slice(ramp.length - count);
 }
 
