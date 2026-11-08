@@ -357,12 +357,21 @@ describe("market experience", () => {
     expect(html).toContain(encodeURIComponent("Page: /"));
   });
 
-  it("gives phones a variety dropdown that starts on the chosen variety", () => {
+  it("offers Rashi, Chali and Sippe gotu as picture pills and every other variety under More varieties", () => {
+    const html = render(<HomePage />);
+    const cards = html.slice(html.indexOf('class="variety-cards"'));
+    expect(cards).toContain('aria-labelledby="home-variety-label"');
+    expect([...cards.matchAll(/class="variety-card-name">([^<]+)</g)].map((match) => match[1])).toEqual(["Rashi", "Chali", "Sippe gotu"]);
+    expect(cards).toMatch(/aria-pressed="true"><span class="variety-card-photo"><img src="[^"]*rashi[^"]*\.webp"/);
+    expect(cards).toContain('<option value="new-rashi">New Rashi</option>');
+    expect(cards).toContain('<option value="bette">Bette</option>');
+  });
+
+  it("gives phones one variety dropdown that starts on Rashi", () => {
     const html = render(<HomePage />);
     const phone = html.slice(html.indexOf('class="variety-phone"'));
     expect(phone).toContain('aria-labelledby="home-variety-label"');
-    expect(phone).toMatch(/<option value="rashi" selected="">Rashi<\/option>/);
-    expect(phone).toContain('label="Everyday varieties"');
+    expect(phone).toMatch(/<optgroup label="Everyday varieties"><option value="rashi" selected="">Rashi<\/option><option value="chali">Chali<\/option><option value="sippe-gotu">Sippe gotu<\/option><\/optgroup>/);
   });
 
   it("offers a menu collapse button that starts expanded", () => {
@@ -505,7 +514,7 @@ describe("market experience", () => {
     expect(html).not.toContain('id="rates-tumcos"');
     expect(html).toContain("MAMCOS does not publish this variety.");
     expect(html).toContain('href="/prices?feed=tss&amp;variety=CHURU"');
-    expect(html).toContain("More varieties");
+    expect(html).toContain('class="variety-more variety-more-active"');
   });
 
   it("explains that fresh red arecanut is undried nut", () => {

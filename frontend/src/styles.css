@@ -516,28 +516,39 @@ th.numeric .sort-button span { order: -1; }
 .home-heading p { max-width: 680px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
 .home-heading .home-latest { margin-top: 8px; font-size: 14px; color: var(--muted); }
 .home-heading .home-latest strong { color: var(--ink); font-weight: 600; }
-.variety-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.variety-chips button { min-height: 34px; padding: 4px 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 14px; line-height: 1.3; cursor: pointer; }
-.variety-chips button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
-.variety-chips button:hover:not([aria-pressed="true"]) { border-color: var(--brand-leaf); background: var(--brand-tint); }
-.variety-chips button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-/* "More varieties" sits in the chip row as one more pill; it fills in when one of its varieties is chosen. */
-.variety-more { display: inline-flex; }
-/* Phones only (see responsive.css): one dropdown in place of the chips. */
-.variety-phone { display: none; min-width: 0; }
-.variety-phone select { appearance: none; width: 100%; height: 42px; padding: 0 36px 0 14px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer;
+/* Variety picker: a compact pill per everyday variety with a small cut-out photo of the dried nut, then "More varieties". */
+.variety-cards { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.variety-card { position: relative; display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 3px 16px 3px 3px; border: 1px solid var(--line-strong); border-radius: 999px;
+  background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: border-color .15s ease, box-shadow .2s ease, transform .1s ease, background-color .15s ease; }
+.variety-card-photo { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 50% 42%, var(--surface), var(--surface-2) 75%); }
+.variety-card-photo img { width: 100%; height: 100%; object-fit: contain; padding: 3px; filter: drop-shadow(0 2px 2px rgb(40 22 10 / 25%));
+  transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
+.variety-card-name { font-size: 14px; font-weight: 500; line-height: 1.3; white-space: nowrap; }
+.variety-card:hover:not([aria-pressed="true"]) { border-color: var(--brand-leaf); background: var(--brand-tint); }
+.variety-card:hover .variety-card-photo img { transform: scale(1.08); }
+.variety-card:active { transform: scale(.97); }
+.variety-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.variety-card[aria-pressed="true"] { border-color: var(--brand); background: var(--brand); color: #fff; box-shadow: 0 4px 12px rgb(11 61 46 / 16%); }
+.variety-card[aria-pressed="true"] .variety-card-name { font-weight: 600; }
+.variety-card[aria-pressed="true"] .variety-card-photo { background: radial-gradient(circle at 50% 42%, #fff, #e8efe4 75%); }
+/* "More varieties" is one more pill in the row; it fills in when one of its varieties is chosen. The real select lies
+   invisibly over the face, which is only as wide as its own label (a select is as wide as its longest option). */
+.variety-more { position: relative; display: inline-flex; }
+.variety-more-face { display: inline-flex; align-items: center; height: 46px; padding: 0 34px 0 16px; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 14px; line-height: 1.3; white-space: nowrap; cursor: pointer;
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; }
-.variety-phone select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.variety-more-face { display: inline-flex; align-items: center; min-height: 34px; padding: 4px 32px 4px 14px; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 14px; line-height: 1.3; cursor: pointer;
-  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center; }
-/* The real select lies invisibly over the face, which is only as wide as its own label (a select is as wide as its
-   longest option). Tapping still opens the native list. */
-.variety-more { position: relative; }
 .variety-more select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.variety-more:hover .variety-more-face { border-color: var(--brand-leaf); }
 .variety-more:focus-within .variety-more-face { outline: 2px solid var(--ink); outline-offset: 2px; }
 .variety-more-active .variety-more-face { border-style: solid; border-color: var(--brand); background-color: var(--brand); color: #fff; font-weight: 600;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
 .variety-more-active select option, .variety-more-active select optgroup { color: var(--ink); background: var(--surface); font-weight: 400; }
+/* Phones only (see responsive.css): one dropdown in place of the picture pills. */
+.variety-phone { display: none; min-width: 0; }
+.variety-phone select { appearance: none; width: 100%; height: 46px; padding: 0 38px 0 14px; border: 1px solid var(--line-strong); border-radius: 12px; color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 15px center; }
+.variety-phone select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* Price cards share the width instead of one narrow centred column. */
 .home-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .home-actions a { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; }
@@ -697,8 +708,10 @@ a.rate-more-toggle { text-decoration: none; }
 :root[data-theme="dark"] .button-primary,
 :root[data-theme="dark"] .approve-button,
 :root[data-theme="dark"] .language-toggle button[aria-pressed="true"],
-:root[data-theme="dark"] .variety-chips button[aria-pressed="true"],
-:root[data-theme="dark"] .variety-more-active .variety-more-face { color: #10251a; }
+:root[data-theme="dark"] .variety-card[aria-pressed="true"], :root[data-theme="dark"] .variety-more-active .variety-more-face { color: #10251a; }
+:root[data-theme="dark"] .variety-card[aria-pressed="true"] { box-shadow: 0 4px 14px rgb(0 0 0 / 30%); }
+:root[data-theme="dark"] .variety-card-photo { background: radial-gradient(circle at 50% 42%, #2c4036, #1d2c25 75%); }
+:root[data-theme="dark"] .variety-card[aria-pressed="true"] .variety-card-photo { background: radial-gradient(circle at 50% 42%, #2c4036, #16231d 75%); }
 :root[data-theme="dark"] .variety-more-face, :root[data-theme="dark"] .variety-phone select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b3c2b5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
@@ -716,8 +729,8 @@ a.rate-more-toggle { text-decoration: none; }
 .rate-share-done svg { animation: pop-in .15s ease-out; }
 
 /* Motion is small and functional: each animation tells the reader something happened. All of it stops under reduced motion. */
-.variety-chips button, .rate-share { transition: transform .1s ease, background-color .12s ease, border-color .12s ease; }
-.variety-chips button:active, .rate-share:active { transform: scale(.96); }
+.rate-share { transition: transform .1s ease, background-color .12s ease, border-color .12s ease; }
+.rate-share:active { transform: scale(.96); }
 /* Matches CHANGE_FLASH_MS in useChangeFlash.ts. */
 .rate-row-updated { border-radius: 6px; animation: rate-updated 1.2s ease-out; }
 /* Matches COLLAPSE_MS on the home page. The height limit is only an animation ceiling; rows are shorter than it. */

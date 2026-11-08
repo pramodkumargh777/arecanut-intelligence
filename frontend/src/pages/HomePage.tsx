@@ -16,6 +16,13 @@ import { ageText, defineCopy, type Language, useLanguage } from "../services/lan
 import { placeName } from "../services/places";
 import { shareMessage } from "../services/share";
 import { VARIETIES, VARIETY_GROUPS } from "../services/varieties";
+import chaliImage from "../assets/varieties/chali.webp";
+import rashiImage from "../assets/varieties/rashi.webp";
+import sippeGotuImage from "../assets/varieties/sippe-gotu.webp";
+
+/** The three varieties most growers sell are picture cards; every other variety is in the "More varieties" list. */
+const HOME_VARIETIES = VARIETIES.filter((item) => item.everyday);
+const VARIETY_IMAGES: Record<string, string> = { rashi: rashiImage, chali: chaliImage, "sippe-gotu": sippeGotuImage };
 
 const SOURCES: { key: CooperativeSource; kn: string; en: string; assumedUnit: boolean }[] = [
   { key: "mamcos", kn: "ಮ್ಯಾಮ್ಕೋಸ್ (MAMCOS)", en: "MAMCOS", assumedUnit: false },
@@ -26,6 +33,7 @@ const COPY = defineCopy({
   kn: {
     title: "ಇತ್ತೀಚಿನ ಅಡಿಕೆ ಧಾರಣೆ",
     choose: "ತಳಿ ಆಯ್ಕೆ ಮಾಡಿ",
+    moreVarieties: "ಇನ್ನಷ್ಟು ತಳಿಗಳು", everyday: "ಸಾಮಾನ್ಯ ತಳಿಗಳು",
     sellOrHold: "ಈಗ ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ?",
     sellOrHoldHint: "ಹಿಂದಿನ ವರ್ಷಗಳಲ್ಲಿ ಏನಾಯಿತು ನೋಡಿ",
     ask: "ಪ್ರಶ್ನೆ ಕೇಳಿ",
@@ -33,7 +41,6 @@ const COPY = defineCopy({
     highest: "ಈ ದಿನದ ಹೆಚ್ಚಿನ ದರ",
     source: "ಮೂಲ",
     noRows: "ಈ ತಳಿಗೆ ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
-    moreVarieties: "ಇನ್ನಷ್ಟು ತಳಿಗಳು", everyday: "ಸಾಮಾನ್ಯ ತಳಿಗಳು",
     notPublished: (names: string) => `${names} ಈ ತಳಿಯ ದರವನ್ನು ಪ್ರಕಟಿಸುವುದಿಲ್ಲ.`,
     assumedUnit: "ಮೂಲವು ಘಟಕವನ್ನು ತಿಳಿಸಿಲ್ಲ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ",
     tumcosNote: "ತುಮ್ಕೋಸ್ ತಳಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ, ಆದ್ದರಿಂದ ಇದು ಯಾವ ತಳಿಯ ದರ ಎಂದು ಹೇಳಲಾಗದು. ಮೂಲದ ಪುಟದಲ್ಲಿ “kg” ಎಂದಿದೆ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ.",
@@ -92,6 +99,7 @@ const COPY = defineCopy({
   en: {
     title: "Latest arecanut rates",
     choose: "Choose a variety",
+    moreVarieties: "More varieties", everyday: "Everyday varieties",
     sellOrHold: "Sell now or wait?",
     sellOrHoldHint: "See what happened in past years",
     ask: "Ask a question",
@@ -99,7 +107,6 @@ const COPY = defineCopy({
     highest: "Highest that day",
     source: "Source",
     noRows: "No published rate for this variety.",
-    moreVarieties: "More varieties", everyday: "Everyday varieties",
     notPublished: (names: string) => `${names} ${names.includes(" and ") ? "do" : "does"} not publish this variety.`,
     assumedUnit: "The source states no unit; treated as per quintal",
     tumcosNote: "TUMCOS does not state the variety, so this cannot be matched to a grade. Its page says “kg”; treated as per quintal.",
@@ -245,8 +252,8 @@ export function HomePage() {
   const historyFrom = new Date(calendarDateToTime(today) - (MAX_CHANGE_GAP_DAYS + 7) * DAY_MS).toISOString().slice(0, 10);
   const variety = VARIETIES.find((item) => item.key === params.get("v")) ?? VARIETIES[0];
   const requests = SOURCES.flatMap((source) => (variety.labels[source.key] ?? []).map((label) => ({ source: source.key, label })));
-  // TUMCOS never states a variety, so its single rate is shown only beside the everyday varieties.
-  const showTumcos = Boolean(variety.everyday);
+  // TUMCOS never states a variety, so its single rate is shown only beside the common dried grades.
+  const showTumcos = Boolean(variety.tumcos);
   const queries = useQueries({ queries: [...requests, ...(showTumcos ? [{ source: "tumcos" as const, label: "areca" }] : [])].map(({ source, label }) => ({
     queryKey: ["home-rates", source, label],
     queryFn: () => api.cooperativePrices(source, label, "arecanut", { from: historyFrom }),
@@ -310,9 +317,11 @@ export function HomePage() {
 
     <div className="home-variety">
     <div className="home-variety-label" id="home-variety-label">{copy.choose}</div>
-    <div className="variety-chips" role="group" aria-labelledby="home-variety-label">
-      {VARIETIES.filter((item) => item.everyday).map((item) => <button key={item.key} type="button" aria-pressed={item.key === variety.key}
-        onClick={() => choose(item.key)}>{varietyName(item)}</button>)}
+    <div className="variety-cards" role="group" aria-labelledby="home-variety-label">
+      {HOME_VARIETIES.map((item) => <button key={item.key} type="button" className="variety-card" aria-pressed={item.key === variety.key} onClick={() => choose(item.key)}>
+        <span className="variety-card-photo"><img src={VARIETY_IMAGES[item.key]} alt="" width={480} height={320} loading="lazy" decoding="async" /></span>
+        <span className="variety-card-name">{varietyName(item)}</span>
+      </button>)}
       <label className={`variety-more${variety.everyday ? "" : " variety-more-active"}`}>
         <span className="sr-only">{copy.moreVarieties}</span>
         <span className="variety-more-face" aria-hidden="true">{variety.everyday ? copy.moreVarieties : varietyName(variety)}</span>
@@ -327,10 +336,10 @@ export function HomePage() {
         </select>
       </label>
     </div>
-    {/* Phones get one dropdown instead of the chips, which take three rows there. CSS shows one or the other. */}
+    {/* Phones get one dropdown instead of the picture pills, which take two rows there. CSS shows one or the other. */}
     <label className="variety-phone">
       <select aria-labelledby="home-variety-label" value={variety.key} onChange={(event) => choose(event.target.value)}>
-        <optgroup label={copy.everyday}>{VARIETIES.filter((item) => item.everyday).map((item) => <option key={item.key} value={item.key}>{varietyName(item)}</option>)}</optgroup>
+        <optgroup label={copy.everyday}>{HOME_VARIETIES.map((item) => <option key={item.key} value={item.key}>{varietyName(item)}</option>)}</optgroup>
         {VARIETY_GROUPS.map((group) => {
           const items = VARIETIES.filter((item) => !item.everyday && item.group === group.key);
           return items.length ? <optgroup key={group.key} label={language === "kn" ? group.kn : group.en}>

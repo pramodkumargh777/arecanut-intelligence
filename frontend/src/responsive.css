@@ -73,9 +73,6 @@
   .example-chip { max-width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; text-align: left; }
   .heading-controls { width: 100%; justify-content: stretch; }
   .heading-controls > *, .source-control { flex: 1 1 100%; width: 100%; }
-  /* Phones keep a 40px tap target; the select stays 16px so iOS does not zoom in when it opens. */
-  .variety-chips button, .variety-more-face { min-height: 40px; }
-  .variety-chips button { font-size: 15px; }
   .page-content { padding: 24px 18px; }
   .page-stack { gap: 18px; }
   .topbar { position: static; padding: 12px 18px; flex-wrap: wrap; }
@@ -200,9 +197,9 @@
   .home-hero > * { min-width: 0; max-width: 100%; }
   .home-date-pill { max-width: 100%; padding: 6px 9px; gap: 5px; font-size: 12px !important; white-space: nowrap; overflow: hidden; }
   .home-date-pill > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  /* One dropdown beside its label instead of three rows of chips. */
+  /* One dropdown beside its label instead of the picture pills, which would take two rows. */
   .home-variety { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; }
-  .variety-chips { display: none; }
+  .variety-cards { display: none; }
   .variety-phone { display: block; }
   .home-price-section .home-section-heading { display: grid; gap: 3px; }
   .rate-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
@@ -343,7 +340,6 @@
   .home-date-pill { padding: 0; border: 0; background: none; box-shadow: none; }
 
   .home-variety { padding: 4px 0 2px; }
-  .variety-phone select { height: 46px; border-radius: 12px; }
 
   /* Price board. */
   .glance { border-radius: 16px; }
