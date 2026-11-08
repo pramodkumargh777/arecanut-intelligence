@@ -8,6 +8,7 @@ import { formatTimestampIST } from "../../../shared/dates";
 import { LazyBarChart } from "../components/LazyCharts";
 import { SourceLabel, StatusBadge } from "../components/Scorecard";
 import { INK } from "../components/chartPalette";
+import { AboutData } from "../components/AboutData";
 
 const num = (value: number | null | undefined, digits = 0) => value == null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: digits });
 const pct = (value: number | null | undefined) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -34,9 +35,9 @@ export function ForecastEvaluationPage() {
   const engineModels = Array.from(new Set((meta?.legacy_comparison ?? []).flatMap((row) => Object.keys(row.engine_mae)))).sort();
 
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow">FORECAST EXPERIMENTS · NOT TRADING ADVICE</div><h1>Forecast model evaluation</h1>
+    <section className="page-heading"><div><h1>Forecast model evaluation</h1>
       <p>Walk-forward backtests of statistical, machine-learning and foundation models against naive baselines. Nothing here states that prices will rise or fall. <Link to="/forecasts">Existing monthly reference baselines</Link> remain unchanged.</p></div></section>
-    <div className="data-disclosure">Models are compared only within one price basis. Official monthly state-weighted prices, daily APMC modal prices, MAMCOS cooperative averages and TSS tender prices are never pooled. A model is labelled validated only after enough prospective outcomes, recorded after the forecast was saved, beat its baseline.</div>
+    <AboutData><p>Models are compared only within one price basis. Official monthly state-weighted prices, daily APMC modal prices, MAMCOS cooperative averages and TSS tender prices are never pooled. A model is labelled validated only after enough prospective outcomes, recorded after the forecast was saved, beat its baseline.</p></AboutData>
     {overview.isLoading ? <LoadingState /> : overview.error ? <ErrorState error={overview.error} onRetry={() => void overview.refetch()} /> : !experiment ? <EmptyState title="No forecasting experiment published">Run <code>python -m forecasting run --publish</code> from data-platform against real observations. No results are invented to fill this page.</EmptyState> : <>
       <section className="snapshot-grid">
         <article className="snapshot-card"><div className="card-kicker">EXPERIMENT</div><div className="snapshot-value">{experiment.origins_evaluated} origins</div><p>{experiment.id} · {experiment.engine_version} · {experiment.vintage_mode} vintages</p></article>

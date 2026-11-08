@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { failCooperativeFetch, startCooperativeFetch, storeCooperativeSnapshot, type CooperativeQuote, type IngestMode } from "./cooperative";
 import { fetchWithRetry, sha256Hex } from "./cooperative-fetch";
+import { TSS_VARIETIES } from "../../shared/tss-varieties";
+
+export { TSS_VARIETIES };
 
 export const TSS_LOCATIONS = ["Sirsi", "Siddapur", "Yellapur"] as const;
-export const TSS_VARIETIES = ["RASHI", "BETTE", "CHALI", "MURI", "KOLE", "ARECANUT"] as const;
 const allowedVarieties = new Set<string>(TSS_VARIETIES);
 const rateValue = z.union([z.number(), z.string(), z.null()]);
 const rowSchema = z.object({

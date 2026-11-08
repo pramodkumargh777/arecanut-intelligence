@@ -110,7 +110,7 @@ export function IntelligenceScorecard({ feed, variety }: { feed: MarketFeed; var
         tone={!forecastEnabled || forecasting.error ? "neutral" : forecastText.tone}
         detail={!forecastEnabled ? "Forecasting is not integrated for this commodity." : forecasting.error ? (forecasting.error as Error).message
           : `${forecastText.detail} ${forecasting.data?.status_counts.candidate ?? 0} candidate and ${forecasting.data?.status_counts.not_better_than_baseline ?? 0} not-better-than-baseline evaluations; ${forecasting.data?.totals.outcomes ?? 0} prospective outcomes matched.`}
-        source="ANI forecasting engine · walk-forward backtests" to="/forecasts/evaluation" />
+        source="Areca Pulse forecasting engine · walk-forward backtests" to="/forecasts/evaluation" />
     </div>
   </section>;
 }

@@ -5,6 +5,7 @@ import { toCsv } from "../services/csv";
 import type { Calculation, CalculationInputs, PriceReference } from "../services/intelligence";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { formatTimestampIST } from "../../../shared/dates";
+import { AboutData } from "../components/AboutData";
 
 type NumericKey = Exclude<keyof CalculationInputs, "name" | "price">;
 const fields: { key: NumericKey; label: string; min: number; max?: number; step?: string; section: string }[] = [
@@ -74,11 +75,11 @@ export function DecisionToolsPage() {
       ...Object.entries(value.results).map(([key, val]) => ["results", key, val]),
     ];
     const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a"); link.href = url; link.download = "ani-decision-scenario.csv"; link.click(); URL.revokeObjectURL(url);
+    const link = document.createElement("a"); link.href = url; link.download = "areca-pulse-decision-scenario.csv"; link.click(); URL.revokeObjectURL(url);
   }
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow">PRACTICAL DECISION TOOLS</div><h1>Realization & farm profitability</h1><p>Your quantities and costs, a traceable source price, and explicit hold scenarios. No predictive recommendation.</p></div></section>
-    <div className="data-disclosure">No costs or yields are prefilled. Match your exact product grade and reporting date. Published prices are indicative, not a buyer's executable offer. Monthly state averages are not local daily quotations; TSS units remain assumed.</div>
+    <section className="page-heading"><div><h1>Realization & farm profitability</h1><p>Your quantities and costs, a traceable source price, and explicit hold scenarios. No predictive recommendation.</p></div></section>
+    <AboutData title="Before you calculate"><p>No costs or yields are prefilled. Match your exact product grade and reporting date. Published prices are indicative, not a buyer's executable offer. Monthly state averages are not local daily quotations; TSS units remain assumed.</p></AboutData>
     {prices.isLoading ? <LoadingState /> : prices.error ? <ErrorState error={prices.error} onRetry={() => void prices.refetch()} /> : <form className="page-stack" onSubmit={(event) => {
       event.preventDefault(); setError(null); try { calculate.mutate(buildInputs()); } catch (error) { setError(error instanceof Error ? error : new Error("Invalid inputs.")); }
     }}>

@@ -40,9 +40,9 @@ export function MonthlyTrendsPage() {
   const data = query.data;
   const latestFetch = data?.data.reduce((latest, row) => row.fetched_at > latest ? row.fetched_at : latest, "");
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />OFFICIAL MONTHLY REPORTS</div>
+    <section className="page-heading"><div>
       <h1>Monthly Trends</h1><p>State-level, variety-specific weighted prices. Separate from daily market quotations and the reference index.</p></div><Link to="/history" className="button-secondary">Explore historical analytics</Link></section>
-    <div className="data-disclosure"><span>AGMARKNET published aggregates · INR / quintal · Not live auction prices. A missing value is not zero.</span></div>
+    <p className="page-meta">AGMARKNET monthly averages · ₹/quintal · not live auction prices · a gap means no report, not zero</p>
     <section className="filter-bar">
       <label className="filter-control"><span>Reporting month</span><select value={month} onChange={(event) => setMonth(event.target.value)}>
         <option value="">Latest available</option>{data?.months.map((value) => <option key={value} value={value}>{monthLabel(value)}</option>)}

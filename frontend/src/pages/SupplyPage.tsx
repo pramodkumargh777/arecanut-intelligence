@@ -137,7 +137,7 @@ export function SupplyPage() {
   const [district, setDistrict] = useState("Uttara Kannada");
   const weatherDistricts = useQuery({ queryKey: ["supply-weather", district], queryFn: () => api.supplyWeather({ district }) });
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow">SUPPLY · PRODUCTION · AGRICULTURAL RISK</div><h1>Supply and weather</h1>
+    <section className="page-heading"><div><h1>Supply and weather</h1>
       <p>Government production estimates and weather datasets. Every table states its source and reporting period.</p></div></section>
     <ProductionSection />
     <ArrivalsSection />

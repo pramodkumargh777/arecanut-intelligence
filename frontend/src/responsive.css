@@ -6,7 +6,12 @@
   .sidebar { width: 216px; }
   .main-column { margin-left: 216px; }
   .page-content { padding: 26px; }
-  .topbar { padding-inline: 26px; }
+  .topbar { padding-inline: 26px; gap: 12px; flex-wrap: wrap; }
+  .breadcrumb { flex: 1 1 180px; min-width: 0; }
+  .topbar-tools { flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
+  .topbar-tools-grower { flex: 0 0 auto; }
+  .topbar-tools form { flex: 1 1 180px; min-width: 0; }
+  .search-field { width: 100%; }
   .site-footer { width: calc(100% - 52px); }
   .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .token-form { grid-template-columns: 36px 1fr; }
@@ -22,8 +27,7 @@
   .mobile-close { display: grid; margin-left: auto; }
   .main-column { margin-left: 0; }
   .menu-toggle { display: grid; }
-  .topbar { gap: 14px; }
-  .breadcrumb { flex: 1; }
+  .topbar-brand { display: block; }
   .region-pill { display: none; }
 }
 
@@ -50,6 +54,7 @@
   .pulse-empty { padding-block: 20px; }
   .filter-bar { padding: 14px; gap: 12px; }
   .filter-bar .filter-control, .source-bar .filter-control { flex: 1 1 100%; max-width: none; }
+  .advanced-filter-fields .filter-control { flex: 1 1 100%; max-width: none; }
   .filter-bar > span { padding-top: 0; }
   .filter-control input, .filter-control select, .variety-select select, .period-select select, .token-form input { font-size: 16px; height: 44px; }
   .period-select { height: 44px; }

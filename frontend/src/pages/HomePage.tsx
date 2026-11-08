@@ -9,15 +9,7 @@ import { api } from "../services/api";
 import { useCommodity } from "../services/commodity";
 import type { CooperativeQuote, CooperativeSource } from "../services/cooperative";
 import { ageText, useLanguage, type Language } from "../services/language";
-
-/** A grower's word for a variety and the label each cooperative publishes it under. Labels stay visible on every row. */
-const VARIETIES: { key: string; kn: string; en: string; labels: Partial<Record<CooperativeSource, string[]>> }[] = [
-  { key: "rashi", kn: "ರಾಶಿ", en: "Rashi", labels: { mamcos: ["RASHI EDI"], tss: ["RASHI"] } },
-  { key: "new-rashi", kn: "ಹೊಸ ರಾಶಿ", en: "New Rashi", labels: { mamcos: ["NEW RASHIEDI", "NEWRASHIEDI"] } },
-  { key: "chali", kn: "ಚಾಲಿ", en: "Chali", labels: { mamcos: ["CHALI"], tss: ["CHALI"] } },
-  { key: "bette", kn: "ಬೆಟ್ಟೆ", en: "Bette", labels: { mamcos: ["BETTE"], tss: ["BETTE"] } },
-  { key: "gorabalu", kn: "ಗೊರಬಲು", en: "Gorabalu", labels: { mamcos: ["GORABALU"] } },
-];
+import { VARIETIES, VARIETY_GROUPS } from "../services/varieties";
 
 const SOURCES: { key: CooperativeSource; kn: string; en: string; assumedUnit: boolean }[] = [
   { key: "mamcos", kn: "ಮ್ಯಾಮ್ಕೋಸ್ (MAMCOS)", en: "MAMCOS", assumedUnit: false },
@@ -45,7 +37,8 @@ const COPY = {
     highest: "ಈ ದಿನದ ಹೆಚ್ಚಿನ ದರ",
     source: "ಮೂಲ",
     noRows: "ಈ ತಳಿಗೆ ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
-    noVariety: "ಈ ತಳಿಗೆ ಈ ಸಂಸ್ಥೆಯ ಹೊಂದಾಣಿಕೆಯ ಹೆಸರು ಇಲ್ಲಿ ಪಟ್ಟಿ ಮಾಡಿಲ್ಲ.",
+    moreVarieties: "ಇನ್ನಷ್ಟು ತಳಿಗಳು",
+    notPublished: (names: string) => `${names} ಈ ತಳಿಯ ದರವನ್ನು ಪ್ರಕಟಿಸುವುದಿಲ್ಲ.`,
     assumedUnit: "ಮೂಲವು ಘಟಕವನ್ನು ತಿಳಿಸಿಲ್ಲ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ",
     tumcos: "ಚನ್ನಗಿರಿ — ತುಮ್ಕೋಸ್ (TUMCOS)",
     tumcosNote: "ತುಮ್ಕೋಸ್ ತಳಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ, ಆದ್ದರಿಂದ ಇದು ಯಾವ ತಳಿಯ ದರ ಎಂದು ಹೇಳಲಾಗದು. ಮೂಲದ ಪುಟದಲ್ಲಿ “kg” ಎಂದಿದೆ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ.",
@@ -61,7 +54,6 @@ const COPY = {
     marketOn: (date: string) => `${date} ರ ಮಾರುಕಟ್ಟೆ`,
     typical: "ಮಧ್ಯಮ ಬದಲಾವಣೆ",
     changeNote: "ಪ್ರತಿ ಶಾಖೆಯನ್ನು ಅದರದೇ ಹಿಂದಿನ ವರದಿಗೆ ಹೋಲಿಸಲಾಗಿದೆ.",
-    cooperativeRates: "ಸಹಕಾರಿ ಸಂಘಗಳ ದರಗಳು",
     officialRates: "ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆ ದರಗಳು",
     officialCaption: "ಇತ್ತೀಚಿನ ವರದಿಗಳು · ಎಲ್ಲಾ ತಳಿಗಳು · ಮೋಡಲ್ ದರ, ₹/ಕ್ವಿಂಟಾಲ್ · AGMARKNET",
     officialEmpty: "ಪರಿಶೀಲಿಸಿದ ಎಪಿಎಂಸಿ ದರಗಳು ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ.",
@@ -85,7 +77,8 @@ const COPY = {
     highest: "Highest that day",
     source: "Source",
     noRows: "No published rate for this variety.",
-    noVariety: "No matching label is listed here for this cooperative.",
+    moreVarieties: "More varieties",
+    notPublished: (names: string) => `${names} ${names.includes(" and ") ? "do" : "does"} not publish this variety.`,
     assumedUnit: "The source states no unit; treated as per quintal",
     tumcos: "Channagiri — TUMCOS",
     tumcosNote: "TUMCOS does not state the variety, so this cannot be matched to a grade. Its page says “kg”; treated as per quintal.",
@@ -101,7 +94,6 @@ const COPY = {
     marketOn: (date: string) => `Market on ${date}`,
     typical: "Median change",
     changeNote: "Each branch is compared with its own previous report.",
-    cooperativeRates: "Cooperative rates",
     officialRates: "APMC market rates",
     officialCaption: "Latest reports · all varieties · modal price, ₹/quintal · AGMARKNET",
     officialEmpty: "No verified APMC prices are available yet.",
@@ -176,7 +168,9 @@ export function HomePage() {
   const historyFrom = new Date(calendarDateToTime(today) - (MAX_CHANGE_GAP_DAYS + 7) * DAY_MS).toISOString().slice(0, 10);
   const variety = VARIETIES.find((item) => item.key === params.get("v")) ?? VARIETIES[0];
   const requests = SOURCES.flatMap((source) => (variety.labels[source.key] ?? []).map((label) => ({ source: source.key, label })));
-  const queries = useQueries({ queries: [...requests, { source: "tumcos" as const, label: "areca" }].map(({ source, label }) => ({
+  // TUMCOS never states a variety, so its single rate is shown only beside the everyday varieties.
+  const showTumcos = Boolean(variety.everyday);
+  const queries = useQueries({ queries: [...requests, ...(showTumcos ? [{ source: "tumcos" as const, label: "areca" }] : [])].map(({ source, label }) => ({
     queryKey: ["home-rates", source, label],
     queryFn: () => api.cooperativePrices(source, label, "arecanut", { from: historyFrom }),
     refetchInterval: 300_000,
@@ -197,8 +191,13 @@ export function HomePage() {
     const labels = variety.labels[source] ?? [];
     return labels.flatMap((label) => queries[requests.findIndex((request) => request.source === source && request.label === label)]?.data?.data ?? []);
   };
-  const tumcos = queries.at(-1)?.data?.latest_by_branch ?? [];
-  const tumcosHistory = queries.at(-1)?.data?.data ?? [];
+  const tumcosQuery = showTumcos ? queries.at(-1) : undefined;
+  const tumcos = tumcosQuery?.data?.latest_by_branch ?? [];
+  const tumcosHistory = tumcosQuery?.data?.data ?? [];
+  const publishing = SOURCES.filter((source) => variety.labels[source.key]?.length);
+  const notPublishing = SOURCES.filter((source) => !variety.labels[source.key]?.length);
+  const choose = (key: string) => { const next = new URLSearchParams(params); next.set("v", key); setParams(next, { replace: true }); };
+  const varietyName = (item: typeof variety) => language === "kn" ? item.kn : item.en;
   const allDates = [...SOURCES.flatMap((source) => rowsFor(source.key)), ...tumcos].map((row) => row.reporting_date).sort();
   const newest = allDates.at(-1);
   return <div className="page-stack home" lang={language}>
@@ -209,13 +208,32 @@ export function HomePage() {
     </section>
 
     <div className="variety-chips" role="group" aria-label={copy.choose}>
-      {VARIETIES.map((item) => <button key={item.key} type="button" aria-pressed={item.key === variety.key}
-        onClick={() => { const next = new URLSearchParams(params); next.set("v", item.key); setParams(next, { replace: true }); }}>{language === "kn" ? item.kn : item.en}</button>)}
+      {VARIETIES.filter((item) => item.everyday).map((item) => <button key={item.key} type="button" aria-pressed={item.key === variety.key}
+        onClick={() => choose(item.key)}>{varietyName(item)}</button>)}
+      <label className={`variety-more${variety.everyday ? "" : " variety-more-active"}`}>
+        <span className="sr-only">{copy.moreVarieties}</span>
+        <select value={variety.everyday ? "" : variety.key} onChange={(event) => choose(event.target.value)}>
+          <option value="" disabled>{copy.moreVarieties}</option>
+          {VARIETY_GROUPS.map((group) => {
+            const items = VARIETIES.filter((item) => !item.everyday && item.group === group.key);
+            return items.length ? <optgroup key={group.key} label={language === "kn" ? group.kn : group.en}>
+              {items.map((item) => <option key={item.key} value={item.key}>{varietyName(item)}</option>)}
+            </optgroup> : null;
+          })}
+        </select>
+      </label>
     </div>
+    {variety.note && <p className="home-note">{variety.note[language]}</p>}
 
-    <div className="home-section-heading"><h2>{copy.cooperativeRates}</h2></div>
-      {SOURCES.map((source) => {
-        const published = variety.labels[source.key];
+    <nav className="home-sections" aria-label={language === "kn" ? "ದರಗಳ ವಿಭಾಗಗಳು" : "Price sections"}>
+      {publishing.map((source) => <a key={source.key} href={`#rates-${source.key}`}>{source.en}</a>)}
+      {showTumcos && <a href="#rates-tumcos">TUMCOS</a>}
+      <a href="#rates-official">APMC</a>
+    </nav>
+
+    <div className="rate-grid">
+      {publishing.map((source) => {
+        const published = variety.labels[source.key]!;
         const sourceQueries = requests.flatMap((request, index) => request.source === source.key ? [queries[index]] : []);
         const { latest, rows } = orderRows(rowsFor(source.key));
         const sameDay = rows.filter((row) => row.reporting_date === latest);
@@ -226,7 +244,7 @@ export function HomePage() {
             <h2 id={`rates-${source.key}`}>{language === "kn" ? source.kn : source.en}</h2>
             {rows[0] && <a href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source} <ExternalLink size={13} aria-hidden="true" /></a>}
           </header>
-          {!published ? <p className="rate-empty">{copy.noVariety}</p> : sourceQueries.some((query) => query.isPending) ? <LoadingState label={copy.loading} /> : <>
+          {sourceQueries.some((query) => query.isPending) ? <LoadingState label={copy.loading} /> : <>
             {sourceQueries.some((query) => query.isError) && <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => sourceQueries.filter((query) => query.isError).forEach((query) => void query.refetch())} />}
             {!rows.length && !sourceQueries.some((query) => query.isError) && <p className="rate-empty">{copy.noRows}</p>}
             {rows.length > 0 && <>
@@ -242,19 +260,18 @@ export function HomePage() {
               highest={sameDay.length > 1 && row === sameDay[0]} change={priceChange(row, history)} />)}</ul>
             </>}
           </>}
-          <Link className="home-more" to={`/prices?feed=${source.key}`}>{copy.moreFrom(source.en)} <ArrowRight size={15} aria-hidden="true" /></Link>
+          <Link className="home-more" to={`/prices?feed=${source.key}${published.length === 1 ? `&variety=${encodeURIComponent(published[0])}` : ""}`}>{copy.moreFrom(source.en)} <ArrowRight size={15} aria-hidden="true" /></Link>
         </section>;
       })}
-      <section className="rate-card" aria-labelledby="rates-tumcos">
+      {showTumcos && <section className="rate-card" aria-labelledby="rates-tumcos">
         <header>
           <h2 id="rates-tumcos">{copy.tumcos}</h2>
           {tumcos[0] && <a href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source} <ExternalLink size={13} aria-hidden="true" /></a>}
         </header>
         <p className="rate-caption">{copy.perQuintal} · {copy.range}. {copy.tumcosNote}</p>
-        {queries.at(-1)?.isPending ? <LoadingState label={copy.loading} /> : queries.at(-1)?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void queries.at(-1)?.refetch()} /> : tumcos.length ? <ul>{tumcos.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
+        {tumcosQuery?.isPending ? <LoadingState label={copy.loading} /> : tumcosQuery?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void tumcosQuery.refetch()} /> : tumcos.length ? <ul>{tumcos.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
         <Link className="home-more" to="/prices?feed=tumcos">{copy.moreFrom("TUMCOS")} <ArrowRight size={15} aria-hidden="true" /></Link>
-      </section>
-      <p className="home-note">{copy.notComparable}</p>
+      </section>}
 
     <section className="rate-card" aria-labelledby="rates-official">
       <header><h2 id="rates-official">{copy.officialRates}</h2></header>
@@ -266,6 +283,9 @@ export function HomePage() {
         </li>)}</ul>}
       <Link className="home-more" to="/prices?feed=official">{copy.officialMore} <ArrowRight size={15} aria-hidden="true" /></Link>
     </section>
+    </div>
+    {notPublishing.length > 0 && <p className="home-note">{copy.notPublished(notPublishing.map((source) => source.en).join(language === "kn" ? " ಮತ್ತು " : " and "))}</p>}
+    <p className="home-note">{copy.notComparable}</p>
     <div className="home-section-heading"><h2>{copy.otherTools}</h2></div>
     <nav className="home-actions" aria-label={copy.otherTools}>
       <Link to="/sell-or-hold"><strong>{copy.sellOrHold}</strong><span>{copy.sellOrHoldHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>

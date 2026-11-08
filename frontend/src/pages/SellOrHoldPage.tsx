@@ -87,7 +87,9 @@ export function SellOrHoldPage() {
   return <div className="page-stack home" lang={language}>
     <section className="home-heading"><h1>{copy.title}</h1><p>{copy.intro}</p></section>
 
-    <section className="hold-controls">
+    {/* Every input in one place: what to look at, and the reader's own cost of waiting. */}
+    <section className="rate-card hold-settings" aria-label={copy.costsTitle}>
+      <div className="hold-controls">
       <label className="filter-control"><span>{copy.variety}</span><select value={variety} onChange={(event) => setVariety(event.target.value)}>
         {common.map((item) => <option key={item.name} value={item.name}>{language === "kn" ? item.kn : item.name}</option>)}
         {others.map((name) => <option key={name} value={name}>{name}</option>)}
@@ -95,6 +97,11 @@ export function SellOrHoldPage() {
       <label className="filter-control"><span>{copy.month}</span><select value={startMonth} onChange={(event) => setStartMonth(Number(event.target.value))}>
         {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
       </select></label>
+      <label className="filter-control"><span>{copy.interest}</span><input type="number" inputMode="decimal" min={0} max={100} step="any" value={interest} onChange={(event) => setInterest(event.target.value)} /></label>
+      <label className="filter-control"><span>{copy.weightLoss}</span><input type="number" inputMode="decimal" min={0} max={99} step="any" value={weightLoss} onChange={(event) => setWeightLoss(event.target.value)} /></label>
+      <label className="filter-control"><span>{copy.storage}</span><input type="number" inputMode="decimal" min={0} step="any" value={storage} onChange={(event) => setStorage(event.target.value)} /></label>
+      </div>
+      <p className="rate-caption">{copy.costsHint}{latest?.weighted_price ? ` ${copy.latestPrice(rupees(latest.weighted_price), monthText(latest.reporting_month, language))}.` : ""}</p>
     </section>
 
     {query.isLoading ? <LoadingState label={copy.loading} /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !history?.years.length ? <p className="rate-empty">{copy.noData}</p> : <>
@@ -117,17 +124,6 @@ export function SellOrHoldPage() {
             </dl>}
           </li>;
         })}</ul>
-      </section>
-
-      <section className="rate-card" aria-labelledby="hold-costs">
-        <header><h2 id="hold-costs">{copy.costsTitle}</h2></header>
-        <p className="rate-caption">{copy.costsHint}</p>
-        <div className="hold-costs">
-          <label className="filter-control"><span>{copy.interest}</span><input type="number" inputMode="decimal" min={0} max={100} step="any" value={interest} onChange={(event) => setInterest(event.target.value)} /></label>
-          <label className="filter-control"><span>{copy.weightLoss}</span><input type="number" inputMode="decimal" min={0} max={99} step="any" value={weightLoss} onChange={(event) => setWeightLoss(event.target.value)} /></label>
-          <label className="filter-control"><span>{copy.storage}</span><input type="number" inputMode="decimal" min={0} step="any" value={storage} onChange={(event) => setStorage(event.target.value)} /></label>
-        </div>
-        {latest?.weighted_price && <p className="rate-caption">{copy.latestPrice(rupees(latest.weighted_price), monthText(latest.reporting_month, language))}</p>}
       </section>
 
       <section className="rate-card" aria-labelledby="hold-years">

@@ -44,7 +44,7 @@ export function AnalyticsPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <div className="eyebrow"><span className="eyebrow-line" />HISTORICAL MARKET ANALYSIS</div>
+          
           <h1>Price analytics</h1>
           <p>Daily Karnataka reference index from verified, comparable market observations only.</p>
         </div>

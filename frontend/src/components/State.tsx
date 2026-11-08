@@ -1,15 +1,25 @@
 import { AlertCircle, Database, LoaderCircle } from "lucide-react";
 import type { ReactNode } from "react";
+import { useLanguage } from "../services/language";
 
-export function LoadingState({ label = "Loading market data" }: { label?: string }) {
-  return <div className="state-card" role="status"><LoaderCircle className="spin" size={19} /><span>{label}…</span></div>;
+/** Defaults follow the reader's language; pages that pass their own label decide its language themselves. */
+const STATE_COPY = {
+  en: { loading: "Loading market data", retry: "Retry" },
+  kn: { loading: "ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶ ತರಲಾಗುತ್ತಿದೆ", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ" },
+} as const;
+
+export function LoadingState({ label }: { label?: string }) {
+  const { language } = useLanguage();
+  const text = label ?? STATE_COPY[language].loading;
+  return <div className="state-card" role="status" lang={label ? undefined : language}><LoaderCircle className="spin" size={19} /><span>{text}…</span></div>;
 }
 
-export function ErrorState({ error, onRetry, retryLabel = "Retry" }: { error: Error; onRetry?: () => void; retryLabel?: string }) {
+export function ErrorState({ error, onRetry, retryLabel }: { error: Error; onRetry?: () => void; retryLabel?: string }) {
+  const { language } = useLanguage();
   return (
     <div className="state-card state-error" role="alert">
       <AlertCircle size={19} /><span>{error.message}</span>
-      {onRetry && <button className="text-button" onClick={onRetry}>{retryLabel}</button>}
+      {onRetry && <button className="text-button" onClick={onRetry} lang={retryLabel ? undefined : language}>{retryLabel ?? STATE_COPY[language].retry}</button>}
     </div>
   );
 }

@@ -14,7 +14,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${API_BASE_URL}${path}`, init);
   } catch {
-    throw new Error("The ANI API is unavailable. Start the API service and try again.");
+    throw new Error("The Areca Pulse API is unavailable. Start the API service and try again.");
   }
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { error?: string } | null;

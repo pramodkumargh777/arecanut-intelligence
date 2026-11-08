@@ -138,3 +138,95 @@ Admin (`Authorization: Bearer <ADMIN_TOKEN>`):
 - Obtain unit confirmation from TSS and TUMCOS. Until then their values remain unpublished.
 - Confirm whether TUMCOS values correspond to a variety or grade.
 - Confirm the unit of TSS tender weights.
+
+## Operating the cooperative feeds
+
+### Cooperative branch prices (MAMCOS, TSS and TUMCOS)
+
+> **Current policy (2026-11-04):** see
+> [docs/COOPERATIVE_SOURCES.md](COOPERATIVE_SOURCES.md).
+>
+> - **Operator decision (2026-11-05, migration 0020):** TSS (no published unit) and TUMCOS (labels "kg" but shows per-quintal values) are treated as INR/quintal and published after review, in every module. They stay labelled as an operator assumption, not a source confirmation. TUMCOS values under 1,000 stay unconfirmed because they could genuinely be per kg.
+> - Older text below about TSS benchmark exclusion and non-publication is history.
+> - TUMCOS (`?feed=tumcos`) adds Channagiri arecanut and black pepper. Black pepper never enters arecanut benchmarks, calculators or aggregates.
+> - Scheduled collection needs both `<SOURCE>_SCHEDULE_ENABLED=true` (`MAMCOS`, `TSS` or `TUMCOS`) **and** a permission grant recorded in Data quality → Cooperative source intelligence.
+> - **Collection runs twice a day (2026-11-06):** 09:00 IST closes out the previous day's TSS date and does all other refreshes; 20:00 IST collects that day's cooperative rates only.
+> - **Auto-publishing (2026-11-06):** with `COOPERATIVE_AUTO_PUBLISH=true`, scheduled quotations from the last 30 days publish without a person if they pass validation, have a publishable unit, carry no unaccepted review flag, do not conflict with a verified price, and sit within 20% of that variety's recent median (at least 3 recent quotes). Everything else stays in the review queue. Each approval is recorded in `cooperative_reviews` under the reviewer `auto-validation-v1`. Manual refreshes still go through review. Rules: `api/src/cooperative-auto-publish.ts`.
+
+The four daily market screens now default to **MAMCOS cooperative branch
+averages**. Their source selector also offers **TSS reported averages with
+assumed units** (`?feed=tss`) and the original AGMARKNET modal-price screens
+(`?feed=official`). Cooperative quotations never enter
+`market_price_observations`, and averages are never renamed modal prices.
+The benchmark is the median of branch averages for one exact variety and
+date, with at least three reviewed, source-confirmed-unit branches. Constituents are disclosed;
+like-for-like movement claims are withheld when branch sets differ.
+
+Apply migrations through `0007` locally before using these routes. In
+**Data quality → Cooperative source review**, enter the local `ADMIN_TOKEN`,
+fetch a MAMCOS snapshot, inspect the raw records, and verify valid rows.
+Malformed ranges, missing varieties, non-positive prices and future dates
+cannot be published. Every review is recorded under the shared-token
+principal. Source snapshots, original branch names, reporting dates and
+record revisions are retained in separate cooperative tables.
+
+Public endpoint: `https://mamcos.info/areca-market-rates`. The connector
+validates its unit declaration and structured Livewire payload and fails
+explicitly if the page format changes. Each branch's own date is used.
+Repeated identical snapshots do not duplicate or unverify records. Source
+corrections require review again. Retained snapshots accumulate observed
+history; no unavailable past dates are fabricated or interpolated.
+
+Validated local publication: 39 quotations from the captured page were
+reviewed against their raw records; two invalid rows were withheld.
+`RASHI EDI` had qualifying benchmark dates on 31 October, 2 November and
+3 November 2026 (4, 3 and 3 branches respectively). These are cooperative
+branches, not claimed verified APMC market identifiers.
+
+Automatic collection is **disabled by default**. After recording a
+permission grant, set Worker variable `MAMCOS_SCHEDULE_ENABLED=true`.
+It then fetches at the existing 09:00 IST cron; new/corrected records still
+require review. Local refresh uses the authenticated button. The browser
+polls stored observations every minute, not the source website.
+
+#### TSS: explicitly assumed units (superseded publication policy)
+
+The user authorized publishing TSS rates with **INR/quintal assumed, not
+source-confirmed**. This assumption is stored per quotation (`unit_status`),
+displayed in the source selector, disclosures, table captions, charts, review
+queue and CSV exports. Review approval means the source values were checked;
+it does not certify their unit. TSS records are excluded at the benchmark
+calculation boundary even when three locations report. They never enter
+MAMCOS or official daily/modal-price calculations.
+
+The connector calls the public frontend's
+`https://webapi.tssindia.in/getrateshomepage` with `location`, `date_param`,
+and `tabIndex=0` for Sirsi, Siddapur and Yellapur. It requires the returned
+date to match the requested date exactly. Empty days stay empty. The raw
+JSON is archived, including excluded categories. Only exact labels `RASHI`,
+`BETTE`, `CHALI`, `MURI`, `KOLE` and `ARECANUT` are currently published.
+Pepper, ambiguous abbreviations and other unsupported labels are excluded,
+not silently mapped to arecanut. This is intentionally a partial taxonomy.
+
+`avgrate` supplies the reported average. `norrate` is retained and displayed
+as a separate **normal rate**, never substituted for the average or called
+modal price. Source corrections/version replays require review again.
+Failures are recorded per location; a partial refresh returns an error while
+retaining successfully captured locations. Recent location fetch details
+are available under Source and methodology.
+
+For manual refresh, open **Data quality → Cooperative source review**, unlock
+with `ADMIN_TOKEN`, select a UTC reporting day, acknowledge the unit
+assumption and fetch. The authenticated endpoint is
+`POST /api/v1/admin/cooperative/tss/refresh` with
+`{"date":"2026-11-03"}`. Then inspect and approve
+supported records with their assumed-unit label intact. TSS has **no automatic
+schedule**; source collection permission remains a separate requirement.
+
+Local validation captured 159 source rows across 2–3 November 2026:
+26 supported quotations were reviewed and published; 133 unsupported items
+were archived but excluded. A repeat 3 November fetch inserted zero rows
+and preserved the 26 approvals. Sirsi RASHI on 3 November has minimum
+44,099, average 46,055, maximum 47,299, and normal rate 45,699 in the
+assumed unit. Per-location history charts plot reported averages, not an
+inferred multi-market benchmark.

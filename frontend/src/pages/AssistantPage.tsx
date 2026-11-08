@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../services/api";
 import type { AssistantAnswer, AssistantCalculation, AssistantQuery } from "../services/assistant";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { formatTimestampIST } from "../../../shared/dates";
+import { useLanguage } from "../services/language";
+import { AboutData } from "../components/AboutData";
 
 const EXAMPLES: { text: string; language: "en" | "kn" }[] = [
   { text: "What is the latest Rashi arecanut price in Karnataka?", language: "en" },
@@ -43,12 +45,15 @@ const humanize = (value: string) => value.replace(/_/g, " ");
 
 function List({ title, items }: { title: string; items: string[] }) {
   if (!items.length) return null;
-  return <section className="panel table-panel"><div className="panel-heading"><div><h2>{title}</h2></div></div><div style={{ lineHeight: 1.65, overflowWrap: "anywhere" }}><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></div></section>;
+  return <section className="panel table-panel"><div className="panel-heading"><div><h2>{title}</h2></div></div><div className="prose-block"><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></div></section>;
 }
 
 export function AssistantPage() {
   const [question, setQuestion] = useState("");
-  const [language, setLanguage] = useState<"auto" | "en" | "kn">("auto");
+  // Answers follow the site's language toggle; the reader can still pick another language or detection for one question.
+  const { language: siteLanguage } = useLanguage();
+  const [language, setLanguage] = useState<"auto" | "en" | "kn">(siteLanguage);
+  useEffect(() => setLanguage(siteLanguage), [siteLanguage]);
   const [useLlm, setUseLlm] = useState(true);
   const [showCalculation, setShowCalculation] = useState(false);
   const [calculation, setCalculation] = useState<Record<string, string>>({});
@@ -71,19 +76,19 @@ export function AssistantPage() {
 
   const chat = status.data?.chat;
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow">VERIFIED ANI DATA · NOT TRADING ADVICE</div><h1>ANI intelligence assistant</h1>
-      <p>Answers come from ANI's own price, forecast, production, trade, weather and advisory endpoints and from ingested CPCRI, DASD and government documents. Every number is copied from a cited source or calculated from your inputs. A language model may only explain those values, and its text is rejected if it adds numbers, unknown citations or price predictions. Arecanut only for now.</p></div></section>
+    <section className="page-heading"><div><h1>Areca Pulse intelligence assistant</h1>
+      <p>Ask about arecanut prices, markets, weather or crop care. Every number in an answer comes from a cited source or from your own figures.</p></div></section>
 
     {status.error ? <div className="data-disclosure">Assistant status unavailable: {status.error.message}</div>
-      : status.data && <div className="data-disclosure">
+      : status.data && <AboutData title="How answers are made"><p>Answers come from Areca Pulse's own price, forecast, production, trade, weather and advisory endpoints and from ingested CPCRI, DASD and government documents. A language model may only explain those values, and its text is rejected if it adds numbers, unknown citations or price predictions. Arecanut only for now.</p><p>
         Language model: <strong>{chat?.configured ? `${chat.provider} · ${chat.model}` : "not configured"}</strong>{chat?.reason ? ` (${chat.reason})` : ""} ·
         Document index: <strong>{status.data.corpus.documents} documents, {status.data.corpus.chunks} passages</strong> ({status.data.corpus.embedded_chunks} with {status.data.embedding.configured ? "semantic" : "stored"} embeddings{status.data.embedding.configured ? "" : "; keyword search only"}) ·
         Limit {status.data.rate_limit_per_hour} questions/hour · Questions {status.data.questions_retained ? "are" : "are not"} retained.
-      </div>}
+      </p></AboutData>}
 
     <form className="panel table-panel" onSubmit={(event) => { event.preventDefault(); submit(); }}>
       <div className="panel-heading"><div><h2>Ask a question</h2><p>English or Kannada. Ask about prices, comparisons, the market index, arrivals, forecasts, production, trade, weather, crop risk, news or research documents.</p></div></div>
-      <div className="calculator-grid" style={{ padding: 0 }}>
+      <div className="calculator-grid calculator-grid-flush">
         <label className="filter-control calculator-wide"><span>Question</span>
           <textarea required minLength={2} maxLength={1000} rows={3} value={question} disabled={ask.isPending} onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); submit(); } }} />
@@ -101,11 +106,11 @@ export function AssistantPage() {
           <input type="number" step="any" min={0} value={calculation[field.key] ?? ""} disabled={ask.isPending} onChange={(event) => setCalculation((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}
         <div className="calculator-wide"><button className="button-primary" disabled={ask.isPending || question.trim().length < 2}>{ask.isPending ? "Collecting verified data…" : "Ask"}</button></div>
       </div>
-      <div style={{ lineHeight: 1.65, marginTop: 20 }}><span className="filter-label">Examples</span> {EXAMPLES.map((example) => <button type="button" key={example.text} className="button-secondary" style={{ margin: "4px 6px 0 0" }} disabled={ask.isPending}
-        onClick={() => { setQuestion(example.text); setLanguage(example.language); submit(example.text); }}>{example.text}</button>)}</div>
+      <div className="example-list"><span className="filter-label">Examples</span> {EXAMPLES.map((example) => <button type="button" key={example.text} className="button-secondary example-chip" lang={example.language} disabled={ask.isPending}
+        onClick={() => { setQuestion(example.text); submit(example.text); }}>{example.text}</button>)}</div>
     </form>
 
-    {ask.isPending && <LoadingState label="Querying ANI data sources" />}
+    {ask.isPending && <LoadingState label="Querying Areca Pulse data sources" />}
     {ask.error && <ErrorState error={ask.error} onRetry={() => submit()} />}
     {answer && !ask.isPending && <AnswerView answer={answer} />}
   </div>;
@@ -117,9 +122,9 @@ function AnswerView({ answer }: { answer: AssistantAnswer }) {
     <section className="panel table-panel" aria-label="Interpretation">
       <div className="panel-heading"><div><h2>{answer.interpretation.generated_by === "llm" ? "Interpretation · language model" : "Interpretation · rule-based"}</h2>
         <p>{LLM_STATUS[answer.llm.status]}{answer.llm.model ? ` · ${answer.llm.provider} ${answer.llm.model}` : ""}{grounding ? ` · grounding ${grounding.status}` : ""} · {answer.duration_ms.toLocaleString("en-IN")} ms</p></div></div>
-      <div style={{ lineHeight: 1.65, overflowWrap: "anywhere" }}>
+      <div className="prose-block">
         {answer.interpretation.data_dates && <p lang={answer.language}><strong>{answer.interpretation.data_dates}</strong></p>}
-        <p lang={answer.language} style={{ whiteSpace: "pre-wrap" }}>{answer.interpretation.text}</p>
+        <p lang={answer.language} className="pre-wrap">{answer.interpretation.text}</p>
         <p className="card-hint">{answer.interpretation.note}</p>
         {answer.llm.reason && answer.llm.status !== "used" && <p className="card-hint">Reason: {answer.llm.reason}</p>}
         {grounding?.status === "failed" && <p className="card-hint">Rejected model text: {grounding.reasons.join("; ")}</p>}
@@ -128,12 +133,12 @@ function AnswerView({ answer }: { answer: AssistantAnswer }) {
     </section>
 
     {answer.facts.length ? <section className="panel table-panel" aria-label="Verified facts">
-      <div className="panel-heading"><div><h2>Verified facts</h2><p>Values copied from ANI sources. Price basis is shown separately; different bases are not comparable.</p></div></div>
+      <div className="panel-heading"><div><h2>Verified facts</h2><p>Values copied from Areca Pulse sources. Price basis is shown separately; different bases are not comparable.</p></div></div>
       <div className="table-scroll" tabIndex={0} role="region" aria-label="Verified facts table"><table>
         <thead><tr><th>Fact</th><th>Value</th><th>Unit</th><th>Basis</th><th>Reporting period</th><th>Source</th><th>Note</th></tr></thead>
         <tbody>{answer.facts.map((fact, index) => <tr key={`${fact.citation}-${fact.label}-${index}`}>
           <td>{fact.label}</td><td className="numeric">{formatValue(fact.value)}</td><td>{fact.unit ?? "—"}</td><td>{fact.basis ? humanize(fact.basis) : "—"}</td>
-          <td>{fact.reporting_period ?? "—"}</td><td><span className="source-tag">[{fact.citation}]</span></td><td style={{ whiteSpace: "normal" }}>{fact.note ?? ""}</td>
+          <td>{fact.reporting_period ?? "—"}</td><td><span className="source-tag">[{fact.citation}]</span></td><td className="cell-wrap">{fact.note ?? ""}</td>
         </tr>)}</tbody>
       </table></div>
     </section> : <EmptyState title="No verified figures for this question">The assistant does not fill gaps from model knowledge. See missing data below.</EmptyState>}
@@ -142,8 +147,8 @@ function AnswerView({ answer }: { answer: AssistantAnswer }) {
       <div className="panel-heading"><div><h2>Data tools used</h2><p>Tool selection: {answer.planning === "llm" ? "language-model planner (arguments validated)" : answer.planning === "rules" ? "keyword rules" : "no matching tool"}{answer.planning_error ? ` · planner error: ${answer.planning_error}` : ""}</p></div></div>
       {answer.tools.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="Tools table"><table>
         <thead><tr><th>Tool</th><th>Status</th><th>Summary</th><th>Reporting period</th></tr></thead>
-        <tbody>{answer.tools.map((tool, index) => <tr key={`${tool.tool}-${index}`}><td>{tool.title}</td><td>{humanize(tool.status)}</td><td style={{ whiteSpace: "normal" }}>{tool.summary}</td><td>{tool.reporting_period ?? "—"}</td></tr>)}</tbody>
-      </table></div> : <div style={{ lineHeight: 1.65, overflowWrap: "anywhere" }}><p>No ANI tool matched this question. Try naming a variety, market, district or topic.</p></div>}
+        <tbody>{answer.tools.map((tool, index) => <tr key={`${tool.tool}-${index}`}><td>{tool.title}</td><td>{humanize(tool.status)}</td><td className="cell-wrap">{tool.summary}</td><td>{tool.reporting_period ?? "—"}</td></tr>)}</tbody>
+      </table></div> : <div className="prose-block"><p>No Areca Pulse tool matched this question. Try naming a variety, market, district or topic.</p></div>}
     </section>
 
     <List title="Calculation assumptions" items={answer.assumptions} />
@@ -153,7 +158,7 @@ function AnswerView({ answer }: { answer: AssistantAnswer }) {
 
     {answer.excerpts.length > 0 && <section className="panel table-panel" aria-label="Document excerpts">
       <div className="panel-heading"><div><h2>Document excerpts</h2><p>Quoted passages from ingested documents. Treat as reference material, not a diagnosis; consult an agricultural officer before acting.</p></div></div>
-      <div style={{ lineHeight: 1.65, overflowWrap: "anywhere" }}>{answer.excerpts.map((excerpt, index) => <blockquote key={`${excerpt.citation}-${index}`} style={{ margin: "0 0 12px", paddingLeft: 12, borderLeft: "3px solid #cbd6c7", whiteSpace: "pre-wrap" }}>
+      <div className="prose-block">{answer.excerpts.map((excerpt, index) => <blockquote key={`${excerpt.citation}-${index}`} className="excerpt">
         <span className="source-tag">[{excerpt.citation}]</span> {excerpt.text}</blockquote>)}</div>
     </section>}
 
@@ -163,7 +168,7 @@ function AnswerView({ answer }: { answer: AssistantAnswer }) {
         <thead><tr><th>Ref</th><th>Source</th><th>Publisher</th><th>Reporting period</th><th>Published</th><th>Page</th><th>Retrieved</th></tr></thead>
         <tbody>{answer.citations.map((citation) => <tr key={citation.ref}>
           <td><span className="source-tag">[{citation.ref}]</span></td>
-          <td style={{ whiteSpace: "normal" }}>{citation.url ? <a className="subtle-link" href={citation.url} target="_blank" rel="noopener noreferrer">{citation.label}</a> : citation.label}</td>
+          <td className="cell-wrap">{citation.url ? <a className="subtle-link" href={citation.url} target="_blank" rel="noopener noreferrer">{citation.label}</a> : citation.label}</td>
           <td>{citation.publisher ?? "—"}</td><td>{citation.reporting_period ?? "—"}</td><td>{citation.publication_date ?? "—"}</td><td>{citation.page ?? "—"}</td>
           <td>{citation.retrieved_at ? formatTimestampIST(citation.retrieved_at) : "—"}</td>
         </tr>)}</tbody>

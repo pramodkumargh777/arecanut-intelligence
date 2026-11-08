@@ -8,6 +8,7 @@ import { api } from "../services/api";
 import { useCommodity } from "../services/commodity";
 import { ErrorState, LoadingState } from "../components/State";
 import { calendarTodayIST, calendarDateToTime, DAY_MS, formatCalendarDate } from "../../../shared/dates";
+import { AboutData } from "../components/AboutData";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
 
@@ -63,7 +64,7 @@ export function OverviewPage() {
   return (
     <div className="page-stack">
       <section className="page-heading">
-        <div><div className="eyebrow"><span className="eyebrow-line" />KARNATAKA MARKET BRIEFING</div><h1>Arecanut market overview</h1><p>A clear view of verified market quotations, with the source behind every number.</p></div>
+        <div><h1>Arecanut market overview</h1><p>A clear view of verified market quotations, with the source behind every number.</p></div>
         <label className="variety-select"><span>Reported variety</span><select disabled={!varieties.data?.length} value={variety} onChange={(event) => setVariety(event.target.value)}><option value="">{varieties.data?.length ? "Select variety" : "No verified varieties"}</option>{(varieties.data ?? []).map((value) => <option key={value}>{value}</option>)}</select></label>
         <div className="updated-chip"><CalendarDays size={13} /> Latest report <b>{niceDate(data.latest_reporting_date)}</b></div>
       </section>
@@ -113,7 +114,7 @@ export function OverviewPage() {
         <div className="panel-heading"><div><h2>Latest market quotations</h2><p>Verified modal prices · {niceDate(data.latest_reporting_date)}{variety ? ` · ${variety}` : ""}</p></div><Link to="/prices?feed=official" className="subtle-link">Explore all markets <ArrowUpRightFromSquare size={14} /></Link></div>
         {prices.isLoading && variety ? <LoadingState label="Loading quotations" /> : prices.error ? <ErrorState error={prices.error} onRetry={() => void prices.refetch()} /> : !variety ? <div className="table-empty">Quotations will appear here once a reported variety has verified observations.</div> : !prices.data?.data.length ? <div className="table-empty">No verified quotations are available yet. Imported observations remain unpublished until reviewed.</div> : <div className="table-scroll" tabIndex={0} role="region" aria-label="Latest quotations, scroll horizontally for all columns"><table><caption>INR / quintal · Scroll horizontally for reporting dates and sources</caption><thead><tr><th scope="col">Market</th><th scope="col">District</th><th scope="col">Variety</th><th scope="col" className="numeric">Min price</th><th scope="col" className="numeric">Modal price</th><th scope="col" className="numeric">Max price</th><th scope="col">Reported</th><th scope="col">Source</th></tr></thead><tbody>{prices.data.data.map((row) => <tr key={row.id}><td className="table-market">{row.market_name}</td><td>{row.district}</td><td>{row.variety_name}</td><td className="numeric">{money(row.minimum_price)}</td><td className="table-price numeric">{money(row.modal_price)}</td><td className="numeric">{money(row.maximum_price)}</td><td>{niceDate(row.reporting_date)}</td><td><span className="source-tag">{row.source_name}</span></td></tr>)}</tbody></table></div>}
       </section>
-      <div className="data-disclosure"><ShieldCheck size={15} /><span>Prices shown are market modal quotations, not individual transaction prices. Values are traceable to their source and reporting date.</span></div>
+      <AboutData><p>Prices shown are market modal quotations, not individual transaction prices. Values are traceable to their source and reporting date.</p></AboutData>
     </div>
   );
 }

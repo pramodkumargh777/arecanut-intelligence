@@ -9,6 +9,7 @@ import { MonthlyInsights } from "../components/MonthlyInsights";
 import { DATE_PRESETS, forecastValidationStatus, presetRange } from "../services/insights";
 import { marketFeeds, type MarketFeed } from "../../../shared/commodities";
 import { calendarTodayIST, formatCalendarDate } from "../../../shared/dates";
+import { AboutData } from "../components/AboutData";
 import {
   createProfile, loadStore, profileSearch, removeProfile, ROLE_TEMPLATES, saveStore, SECTION_LABELS, upsertProfile,
   WORKSPACE_ROLES, WORKSPACE_SECTIONS, type WorkspaceProfile, type WorkspaceRole, type WorkspaceStore,
@@ -41,9 +42,10 @@ export function WorkspacePage() {
   }
 
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow">ORGANIZATION DASHBOARD</div><h1>Workspace</h1>
-      <p>Save a dashboard per organization or role with its own source, variety, reporting period and sections. Every panel reads the same verified ANI data as the main pages.</p></div></section>
-    <div className="data-disclosure">Profiles are stored only in this browser (localStorage); they contain filter preferences, never market data, and are not shared with other users or devices.{!persisted && " Browser storage is unavailable, so changes last only until this tab closes."}</div>
+    <section className="page-heading"><div><h1>Workspace</h1>
+      <p>Save a dashboard per organization or role with its own source, variety, reporting period and sections. Every panel reads the same verified Areca Pulse data as the main pages.</p></div></section>
+    {!persisted && <div className="data-disclosure" role="status">Browser storage is unavailable, so changes last only until this tab closes.</div>}
+    <AboutData><p>Profiles are stored only in this browser (localStorage); they contain filter preferences, never market data, and are not shared with other users or devices.</p></AboutData>
 
     <section className="panel workspace-panel"><div className="panel-heading"><div><h2>Dashboard profiles</h2><p>{store.profiles.length ? `${store.profiles.length} saved · up to 20` : "No profiles yet. Start from a role template."}</p></div></div>
       <div className="workspace-controls">

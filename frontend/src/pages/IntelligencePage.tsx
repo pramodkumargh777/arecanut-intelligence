@@ -7,6 +7,7 @@ import type { Production, Trade, Weather, Bulletin, Evidence, ModuleDomain } fro
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { defaultGeography } from "../services/intelligence";
 import { formatTimestampIST } from "../../../shared/dates";
+import { AboutData } from "../components/AboutData";
 const domains = ["production", "weather", "trade", "policy", "news", "quality"] as const;
 export function IntelligenceNavigation({ current }: { current: string }) {
   // No inspection report has been published yet, so the tab appears with the first one. Its page stays reachable by link.
@@ -55,13 +56,13 @@ export function IntelligencePage() {
           : "date" in row ? [row.date, row.kind, row.temperature_max_c, row.temperature_min_c, row.precipitation_mm, row.grid_latitude, row.grid_longitude]
           : [row.release_id, row.title, row.published_on];
         return [...values, row.source_url, row.publication_period, row.fetched_at, row.capture_id, row.content_hash];
-      })], `ani-${domain}.csv`);
+      })], `areca-pulse-${domain}.csv`);
   }
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow">INDEPENDENT SOURCE INTELLIGENCE</div><h1>{title}</h1><p>Source-specific reporting periods, original units and retained evidence. No inferred price impact.</p></div></section>
+    <section className="page-heading"><div><h1>{title}</h1><p>Source-specific reporting periods, original units and retained evidence. No inferred price impact.</p></div></section>
     <IntelligenceNavigation current={domain} />
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
-      <div className="data-disclosure">{data.coverage}</div>
+      <AboutData><p>{data.coverage}</p></AboutData>
       {staleWeather && <div role="alert" className="data-disclosure">Weather capture is more than 24 hours old. Refresh before relying on its dates; a forecast at capture is not necessarily a current forecast.</div>}
       <section className="snapshot-grid">
         <article className="snapshot-card"><div className="card-kicker">SELECTED RECORDS</div><div className="snapshot-value">{filtered.length}</div><p>{new Set(filtered.map((row) => row.capture_id)).size} current source captures; older captures retained</p></article>

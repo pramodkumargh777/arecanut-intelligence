@@ -29,7 +29,7 @@ function CommodityProfile({ commodity, missing }: { commodity: CommodityDef; mis
   const integrated = Object.entries(commodity.capabilities);
   const unitStatus = commodity.config?.config_status === "verified" ? "verified" : "reference configuration — unverified against a live source";
   return <div className="page-stack">
-    <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />COMMODITY PROFILE · {commodity.status === "production" ? "PRODUCTION" : "CONFIGURED"}</div>
+    <section className="page-heading"><div>
       <h1>{commodity.display_name}</h1>
       <p>No integrated source provides {missing} for {commodity.display_name.toLowerCase()} yet. Nothing is estimated or substituted; this page lists the configured classification only.</p></div></section>
     <div className="data-disclosure"><span>Default unit: {unit} ({unitStatus}). Grading system: {commodity.config?.grading_system ?? "not configured"}.{commodity.config?.notes ? ` ${commodity.config.notes}` : ""}</span></div>

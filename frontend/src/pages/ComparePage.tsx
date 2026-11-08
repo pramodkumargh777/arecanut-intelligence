@@ -8,6 +8,7 @@ import { LazyRangeChart } from "../components/LazyCharts";
 import { SourceLabel } from "../components/Scorecard";
 import { rankSameDate } from "../services/insights";
 import { formatCalendarDate } from "../../../shared/dates";
+import { AboutData } from "../components/AboutData";
 
 export function ComparePage() {
   const [sortBy, setSortBy] = useState<"modal_price" | "market_name">("market_name");
@@ -25,7 +26,7 @@ export function ComparePage() {
   const ranked = rankSameDate(rows, (row) => ({ key: row.market_id, label: row.market_name, detail: `${row.district} · ${row.variety_name}`, reporting_date: row.reporting_date, minimum: row.minimum_price, central: row.modal_price, maximum: row.maximum_price }), selectedDate);
   return (
     <div className="page-stack">
-      <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />MARKET SPREAD</div><h1>Market comparison</h1><p>Compare the latest verified modal quotation for each market. Dates are shown to make freshness and comparability clear.</p></div><div className="compare-heading-tools"><label className="variety-select"><span>Reported variety</span><select value={variety} onChange={(event) => setVariety(event.target.value)}><option value="">Select variety</option>{(varieties.data ?? []).map((value) => <option key={value}>{value}</option>)}</select></label><div className="comparison-count"><strong>{rows.length}</strong><span>markets</span></div></div></section>
+      <section className="page-heading"><div><h1>Market comparison</h1><p>Compare the latest verified modal quotation for each market. Dates are shown to make freshness and comparability clear.</p></div><div className="compare-heading-tools"><label className="variety-select"><span>Reported variety</span><select value={variety} onChange={(event) => setVariety(event.target.value)}><option value="">Select variety</option>{(varieties.data ?? []).map((value) => <option key={value}>{value}</option>)}</select></label><div className="comparison-count"><strong>{rows.length}</strong><span>markets</span></div></div></section>
       {rows.length > 0 && <section className="panel chart-panel">
         <div className="panel-heading"><div><h2>Ranked same-date comparison</h2><p>Bar: minimum–maximum · marker: modal price · {ranked.length} of {rows.length} markets reported {variety} on {formatCalendarDate(selectedDate)}; markets reporting on other dates are excluded</p></div>
           <label className="filter-control"><span>Same reporting date</span><select value={selectedDate} onChange={(event) => setComparisonDate(event.target.value)}>{dates.map((date) => <option key={date} value={date}>{formatCalendarDate(date)}</option>)}</select></label></div>
@@ -38,7 +39,7 @@ export function ComparePage() {
           <div className="comparison-row comparison-quotation" key={row.market_id}><div className="comparison-market"><strong>{row.market_name}</strong><span>{row.district} · {row.variety_name}{row.grade ? ` · Grade: ${row.grade}` : ""} · {formatCalendarDate(row.reporting_date)} · {row.source_name}</span></div><strong className="comparison-price">₹{Math.round(row.modal_price).toLocaleString("en-IN")}<small>/qtl</small></strong></div>
         )}</div>}
       </section>
-      <div className="data-disclosure"><ArrowUpDown size={15} /><span>Only the most recent verified report per market is displayed. Different reporting dates and varieties are not treated as directly comparable.</span></div>
+      <AboutData><p>Only the most recent verified report per market is displayed. Different reporting dates and varieties are not treated as directly comparable.</p></AboutData>
     </div>
   );
 }

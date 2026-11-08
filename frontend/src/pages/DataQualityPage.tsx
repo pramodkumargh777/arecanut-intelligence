@@ -79,7 +79,7 @@ export function DataQualityPage() {
   }
   return (
     <div className="page-stack">
-      <section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />TRUST & PROVENANCE</div><h1>Data quality</h1><p>Review imported observations before they are included in published prices and analytics.</p></div><div className="quality-heading-icon"><ClipboardCheck size={23} /></div></section>
+      <section className="page-heading"><div><h1>Data quality</h1><p>Review imported observations before they are included in published prices and analytics.</p></div><div className="quality-heading-icon"><ClipboardCheck size={23} /></div></section>
       <CooperativeReview />
       <section className="quality-banner"><div className="quality-banner-icon"><LockKeyhole size={18} /></div><div><strong>Official observations require verification</strong><p>The official modal-price queue below is separate from cooperative review. Approval publishes eligible official records to prices and reference-index calculations; rejection retains them without publication. Approved TSS and TUMCOS records are published in INR/quintal by operator decision, separately from official prices.</p></div></section>
       <section className="panel review-panel"><div className="panel-heading"><div><h2>Observation review queue</h2><p>Review source, date, reported variety and price range before publication.</p></div>{token && <button className="button-secondary" disabled={reviewingId !== null} onClick={lockReview}>Lock review queue</button>}</div>
