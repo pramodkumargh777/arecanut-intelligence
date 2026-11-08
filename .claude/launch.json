@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "api", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:api"], "port": 8787 },
+    { "name": "frontend", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:frontend"], "port": 5173 }
+  ]
+}

@@ -557,6 +557,7 @@ td.cell-wrap { white-space: normal; }
 .home-price-section .home-section-heading h2 { font-size: var(--text-section-title); letter-spacing: -.01em; }
 .home-price-section .home-section-heading p { font-size: 13px; line-height: 1.5; }
 .rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); align-items: start; gap: 16px; }
+.rate-grid-even { align-items: stretch; }
 .rate-grid > .rate-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .rate-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px 14px; border-bottom: 1px solid var(--line); }
 .rate-card-head h3 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: var(--brand); scroll-margin-top: 90px; }
@@ -618,3 +619,43 @@ td.cell-wrap { white-space: normal; }
 :root[data-theme="dark"] .market-breadth .hold-up,
 :root[data-theme="dark"] .rate-change.hold-up { color: #a9d2a4; }
 .rate-card-foot a:hover { text-decoration: underline !important; }
+.rate-share { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; margin-right: auto; padding: 0 2px; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.rate-share:hover { text-decoration: underline; }
+.rate-share:disabled { cursor: progress; opacity: .7; }
+.rate-share-done svg { animation: pop-in .15s ease-out; }
+
+/* Motion is small and functional: each animation tells the reader something happened. All of it stops under reduced motion. */
+.variety-chips button, .rate-share { transition: transform .1s ease, background-color .12s ease, border-color .12s ease; }
+.variety-chips button:active, .rate-share:active { transform: scale(.96); }
+/* Matches CHANGE_FLASH_MS in useChangeFlash.ts. */
+.rate-row-updated { border-radius: 6px; animation: rate-updated 1.2s ease-out; }
+/* Matches COLLAPSE_MS on the home page. The height limit is only an animation ceiling; rows are shorter than it. */
+.rate-row-in { overflow: hidden; animation: rate-reveal .15s ease-out; }
+.rate-row-out { overflow: hidden; animation: rate-reveal .15s ease-in reverse forwards; }
+.skeleton-rows { padding: 4px 18px 8px; }
+.skeleton-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.skeleton-row:first-of-type { border-top: 0; }
+.skeleton-lines { display: grid; flex: 1; gap: 8px; }
+.skeleton-bar { display: block; width: 45%; height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 50%, var(--surface-2) 75%) 0 0 / 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skeleton-bar-thin { width: 65%; height: 10px; }
+.skeleton-bar-price { flex: none; width: 84px; height: 22px; }
+.skeleton-row:nth-of-type(2) .skeleton-lines > :first-child { width: 38%; }
+.skeleton-row:nth-of-type(2) .skeleton-lines > :last-child { width: 55%; }
+.skeleton-row:nth-of-type(3) .skeleton-lines > :first-child { width: 50%; }
+.about-data[open] > .about-data-body { animation: fade-in .15s ease-out; }
+@supports selector(::details-content) {
+  .about-data { interpolate-size: allow-keywords; }
+  .about-data::details-content { block-size: 0; overflow: hidden; transition: block-size .15s ease, content-visibility .15s allow-discrete; }
+  .about-data[open]::details-content { block-size: auto; }
+}
+@keyframes rate-updated { from { background-color: var(--brand-tint); } to { background-color: transparent; } }
+@keyframes rate-reveal { from { max-height: 0; opacity: 0; } to { max-height: 240px; opacity: 1; } }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes pop-in { from { transform: scale(.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .rate-row-updated, .rate-row-in, .rate-row-out, .skeleton-bar, .rate-share-done svg, .mobile-scrim, .about-data[open] > .about-data-body { animation: none !important; }
+  /* Without the fade, the changed row is still marked, just without movement. */
+  .rate-row-updated { background-color: var(--brand-tint); }
+  .rate-row-out { opacity: 0; }
+}

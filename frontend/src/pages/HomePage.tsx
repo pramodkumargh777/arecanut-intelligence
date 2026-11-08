@@ -2,15 +2,18 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowRight, ArrowUp, ChevronDown, ExternalLink, Minus } from "lucide-react";
 import { useState } from "react";
 import { AboutData } from "../components/AboutData";
+import { ShareButton } from "../components/ShareButton";
+import { useChangeFlash } from "../components/useChangeFlash";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { calendarDateToTime, calendarTodayIST, DAY_MS, formatCalendarDate, formatPeriodKannada } from "../../../shared/dates";
 import { DEFAULT_COMMODITY } from "../../../shared/commodities";
 import { marketBreadth, MAX_CHANGE_GAP_DAYS, priceChange, varietyKey, type PriceChange } from "../../../shared/price-change";
-import { ErrorState, LoadingState } from "../components/State";
+import { ErrorState, SkeletonRows } from "../components/State";
 import { api } from "../services/api";
 import { useCommodity } from "../services/commodity";
 import type { CooperativeQuote, CooperativeSource } from "../services/cooperative";
 import { ageText, defineCopy, type Language, useLanguage } from "../services/language";
+import { shareMessage } from "../services/share";
 import { VARIETIES, VARIETY_GROUPS } from "../services/varieties";
 
 const SOURCES: { key: CooperativeSource; kn: string; en: string; assumedUnit: boolean }[] = [
@@ -73,6 +76,17 @@ const COPY = defineCopy({
     officialSub: "AGMARKNET · ಮಾದರಿ ದರ · ಎಲ್ಲಾ ತಳಿಗಳು",
     explore: "ಎಲ್ಲಾ ದರಗಳು",
     about: "ಈ ದರಗಳ ಬಗ್ಗೆ",
+    share: "ಹಂಚಿಕೊಳ್ಳಿ", shareOpening: "ತೆರೆಯಲಾಗುತ್ತಿದೆ…", shareDone: "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ", shareWhatsapp: "ವಾಟ್ಸ್‌ಆ್ಯಪ್ ತೆರೆಯಲಾಗಿದೆ",
+    shareAria: (source: string) => `${source} ದರಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ`,
+    shareTitle: (variety: string, source: string) => `${variety} ಅಡಿಕೆ ಧಾರಣೆ · ${source}`,
+    shareReport: (date: string) => `ವರದಿ: ${date}`,
+    shareMore: (count: number) => `…ಇನ್ನೂ ${count} ಶಾಖೆಗಳು`,
+    shareBasis: (assumed: boolean) => `ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ಸರಾಸರಿ ದರ${assumed ? " (ಘಟಕ ಊಹಿಸಲಾಗಿದೆ)" : ""}. ನಿಮ್ಮ ಮಾಲಿನ ದರ ಬೇರೆ ಇರಬಹುದು.`,
+    shareTumcosTitle: "ಅಡಿಕೆ ಧಾರಣೆ · ತುಮ್ಕೋಸ್ ಚನ್ನಗಿರಿ",
+    shareTumcosNote: "ತಳಿ ತಿಳಿಸಿಲ್ಲ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ. ನಿಮ್ಮ ಮಾಲಿನ ದರ ಬೇರೆ ಇರಬಹುದು.",
+    shareOfficialTitle: "ಅಡಿಕೆ ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆ ದರಗಳು",
+    shareOfficialNote: "ಎಪಿಎಂಸಿ ಮಾದರಿ ದರ, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ (AGMARKNET).",
+    shareOfficialMore: (count: number) => `…ಇನ್ನೂ ${count} ದರಗಳು`,
   },
   en: {
     title: "Latest arecanut rates",
@@ -122,6 +136,17 @@ const COPY = defineCopy({
     officialSub: "AGMARKNET · modal price, ₹/quintal · all varieties",
     explore: "All rates",
     about: "About these rates",
+    share: "Share", shareOpening: "Opening…", shareDone: "Shared", shareWhatsapp: "WhatsApp opened",
+    shareAria: (source: string) => `Share ${source} rates`,
+    shareTitle: (variety: string, source: string) => `${variety} arecanut rates · ${source}`,
+    shareReport: (date: string) => `Report: ${date}`,
+    shareMore: (count: number) => `…and ${count} more branch${count === 1 ? "" : "es"}`,
+    shareBasis: (assumed: boolean) => `Average rate per quintal${assumed ? " (unit assumed)" : ""}. The rate for your lot can differ.`,
+    shareTumcosTitle: "Arecanut rate · TUMCOS Channagiri",
+    shareTumcosNote: "Variety not stated; treated as per quintal. The rate for your lot can differ.",
+    shareOfficialTitle: "Arecanut APMC market rates",
+    shareOfficialNote: "APMC modal price per quintal (AGMARKNET).",
+    shareOfficialMore: (count: number) => `…and ${count} more rate${count === 1 ? "" : "s"}`,
   },
 });
 
@@ -129,6 +154,9 @@ const rupees = (value: number | null) => value === null ? "—" : `₹${value.to
 const dateText = (date: string, language: Language) => language === "kn" ? formatPeriodKannada(date) : formatCalendarDate(date);
 const ageDays = (date: string, today: string) => Math.round((calendarDateToTime(today) - calendarDateToTime(date)) / DAY_MS);
 const branchName = (branch: string, language: Language) => language === "kn" ? BRANCH_NAMES_KN[branch.toUpperCase()] ?? branch : branch;
+
+/** Shared links point at this site, so a friend who opens one sees the same variety's rates. */
+const shareUrl = (path: string) => `${window.location.origin}${path}`;
 
 const signedPercent = (value: number) => `${value > 0 ? "+" : ""}${value}%`;
 
@@ -161,10 +189,13 @@ function orderRows(all: CooperativeQuote[]) {
 }
 
 /** Two lines per branch: place, badge and date on the left; price, change and range on the right. */
-function RateRow({ row, today, language, highest, showLabel, change }: { row: CooperativeQuote; today: string; language: Language; highest: boolean; showLabel: boolean; change: PriceChange | null }) {
+function RateRow({ row, today, language, highest, showLabel, change, reveal }: { row: CooperativeQuote; today: string; language: Language; highest: boolean; showLabel: boolean; change: PriceChange | null; reveal?: "in" | "out" }) {
   const copy = COPY[language];
   const age = ageDays(row.reporting_date, today);
-  return <li className={`rate-row${highest ? " rate-row-top" : ""}`}>
+  // A refresh that brings a new report or price for this branch marks the row briefly. It is visual only: announcing
+  // every changed row would read out a dozen messages at once, and the new price is read when the row is reached.
+  const updated = useChangeFlash(`${row.reporting_date}|${row.average_price}`);
+  return <li className={`rate-row${highest ? " rate-row-top" : ""}${updated ? " rate-row-updated" : ""}${reveal ? ` rate-row-${reveal}` : ""}`}>
     <div className="rate-place">
       <strong>{branchName(row.branch, language)}{highest && <span className="rate-top-mark" title={copy.highest}>{copy.topMark}</span>}</strong>
       <span className="rate-meta"><span className={`rate-date${age > 2 ? " rate-date-old" : ""}`}>{dateText(row.reporting_date, language)} · {ageText(age, language)}</span>
@@ -177,8 +208,20 @@ function RateRow({ row, today, language, highest, showLabel, change }: { row: Co
   </li>;
 }
 
-/** The first rows of a long list, with a toggle for the rest, so one source does not push the others off the screen. */
-const VISIBLE_ROWS = 6;
+/**
+ * Rows per card before the toggle. Three keeps MAMCOS level with TSS, which has three branches, and stops one source
+ * pushing the others off the screen.
+ */
+const VISIBLE_ROWS = 3;
+/** Branches most readers look for. The collapsed card shows these first and tops up from the rest if one did not report. */
+const FEATURED_BRANCHES: Partial<Record<CooperativeSource, string[]>> = { mamcos: ["SHIVAMOGGA", "SAGARA", "THIRTHAHALLI"] };
+
+function collapsedRows(rows: CooperativeQuote[], featured: string[] = []) {
+  const picked = rows.filter((row) => featured.includes(row.branch.toUpperCase()));
+  return [...picked, ...rows.filter((row) => !picked.includes(row))].slice(0, VISIBLE_ROWS);
+}
+/** Matches the `rate-row-out` animation in styles.css. */
+const COLLAPSE_MS = 150;
 
 export function HomePage() {
   const { language } = useLanguage();
@@ -187,6 +230,8 @@ export function HomePage() {
   const copy = COPY[language];
   const today = calendarTodayIST();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // The card whose extra rows are fading out; they are removed once the animation ends.
+  const [collapsing, setCollapsing] = useState<string | null>(null);
   // Enough reports to find each branch's previous one. Older ones are too old to show a change against anyway.
   const historyFrom = new Date(calendarDateToTime(today) - (MAX_CHANGE_GAP_DAYS + 7) * DAY_MS).toISOString().slice(0, 10);
   const variety = VARIETIES.find((item) => item.key === params.get("v")) ?? VARIETIES[0];
@@ -225,9 +270,15 @@ export function HomePage() {
   const newest = allDates.at(-1);
   const newestAge = newest ? ageDays(newest, today) : null;
   const moreToggle = (key: string, total: number) => total > VISIBLE_ROWS && <button type="button" className="rate-more-toggle" aria-expanded={Boolean(expanded[key])}
-    onClick={() => setExpanded((current) => ({ ...current, [key]: !current[key] }))}>
+    onClick={() => {
+      if (!expanded[key]) return setExpanded((current) => ({ ...current, [key]: true }));
+      setCollapsing(key);
+      setTimeout(() => { setExpanded((current) => ({ ...current, [key]: false })); setCollapsing(null); }, COLLAPSE_MS);
+    }}>
     {expanded[key] ? copy.showFewer : copy.showAll(total)}<ChevronDown size={15} aria-hidden="true" /></button>;
-  const visible = <T,>(key: string, rows: T[]) => expanded[key] ? rows : rows.slice(0, VISIBLE_ROWS);
+  const shareLabels = { share: copy.share, opening: copy.shareOpening, shared: copy.shareDone, whatsapp: copy.shareWhatsapp };
+  // Rows outside the collapsed set animate in when the card is expanded and out when it is collapsed.
+  const reveal = (key: string, row: CooperativeQuote, collapsed: CooperativeQuote[]) => collapsed.includes(row) ? undefined : collapsing === key ? "out" as const : "in" as const;
   return <div className="page-stack home" lang={language}>
     <section className="home-hero">
       <div><h1>{copy.title}</h1><p>{copy.subtitle}</p></div>
@@ -264,7 +315,8 @@ export function HomePage() {
 
     <section className="home-price-section" aria-labelledby="cooperative-prices-heading">
     <div className="home-section-heading"><h2 id="cooperative-prices-heading">{copy.cooperativeTitle}</h2><p>{copy.cooperativeHint}</p></div>
-    <div className="rate-grid">
+    {/* Collapsed cards are stretched to one height so their footers line up; an expanded card would stretch the others too far. */}
+    <div className={`rate-grid${publishing.some((source) => expanded[source.key]) ? "" : " rate-grid-even"}`}>
       {publishing.map((source) => {
         const published = variety.labels[source.key]!;
         const sourceQueries = requests.flatMap((request, index) => request.source === source.key ? [queries[index]] : []);
@@ -272,6 +324,7 @@ export function HomePage() {
         const sameDay = rows.filter((row) => row.reporting_date === latest);
         const history = historyFor(source.key);
         const breadth = marketBreadth(sameDay.map((row) => priceChange(row, history)));
+        const collapsed = collapsedRows(rows, FEATURED_BRANCHES[source.key]);
         return <section className="rate-card" key={source.key} aria-labelledby={`rates-${source.key}`}>
           <header className="rate-card-head">
             <div><h3 id={`rates-${source.key}`}>{language === "kn" ? source.kn : source.en}</h3>
@@ -279,7 +332,7 @@ export function HomePage() {
               {latest && <span className="rate-card-sub">{copy.cardSub(dateText(latest, language), rows.length)}</span>}</div>
             {rows[0] && <a className="rate-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
           </header>
-          {sourceQueries.some((query) => query.isPending) ? <LoadingState label={copy.loading} /> : <>
+          {sourceQueries.some((query) => query.isPending) ? <SkeletonRows label={copy.loading} /> : <>
             {sourceQueries.some((query) => query.isError) && <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => sourceQueries.filter((query) => query.isError).forEach((query) => void query.refetch())} />}
             {!rows.length && !sourceQueries.some((query) => query.isError) && <p className="rate-empty">{copy.noRows}</p>}
             {rows.length > 0 && <>
@@ -289,12 +342,17 @@ export function HomePage() {
               {breadth.flat > 0 && <span><Minus size={13} aria-hidden="true" /><b>{breadth.flat}</b> {copy.flat}</span>}
               <span className={`market-breadth-median ${breadth.median_percent > 0 ? "hold-up" : breadth.median_percent < 0 ? "hold-down" : ""}`}>{copy.typical} <b>{signedPercent(breadth.median_percent).replace("-", "−")}</b></span>
             </div>}
-            <ul className="rate-list">{visible(source.key, rows).map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel
+            <ul className="rate-list">{(expanded[source.key] ? rows : collapsed).map((row) => <RateRow key={`${row.branch}|${varietyKey(row.variety)}`} reveal={reveal(source.key, row, collapsed)} row={row} today={today} language={language} showLabel
               highest={sameDay.length > 1 && row === sameDay[0]} change={priceChange(row, history)} />)}</ul>
             {moreToggle(source.key, rows.length)}
             </>}
           </>}
           <footer className="rate-card-foot">
+            {latest && <ShareButton labels={shareLabels} ariaLabel={copy.shareAria(source.en)} title={copy.shareTitle(varietyName(variety), source.en)} message={() => shareMessage({
+              title: copy.shareTitle(varietyName(variety), language === "kn" ? source.kn : source.en), date: copy.shareReport(dateText(latest, language)),
+              lines: sameDay.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
+              more: copy.shareMore, note: copy.shareBasis(source.assumedUnit), url: shareUrl(`/?v=${encodeURIComponent(variety.key)}`),
+            })} />}
             <Link to={`/prices?feed=${source.key}${published.length === 1 ? `&variety=${encodeURIComponent(published[0])}` : ""}`} aria-label={copy.moreFrom(source.en)}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
         </section>;
       })}
@@ -310,18 +368,26 @@ export function HomePage() {
           <div><h3 id="rates-tumcos">TUMCOS</h3><span className="rate-card-basis">{copy.unitFoot(true)}</span><span className="rate-card-sub">{copy.tumcosSub}</span></div>
           {tumcos[0] && <a className="rate-source" href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
         </header>
-        {tumcosQuery?.isPending ? <LoadingState label={copy.loading} /> : tumcosQuery?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void tumcosQuery.refetch()} /> : tumcos.length ? <ul className="rate-list">{tumcos.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
-        <footer className="rate-card-foot"><Link to="/prices?feed=tumcos" aria-label={copy.moreFrom("TUMCOS")}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
+        {tumcosQuery?.isPending ? <SkeletonRows label={copy.loading} rows={1} /> : tumcosQuery?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void tumcosQuery.refetch()} /> : tumcos.length ? <ul className="rate-list">{tumcos.map((row) => <RateRow key={row.branch} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
+        <footer className="rate-card-foot">{tumcos[0] && <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("TUMCOS")} title={copy.shareTumcosTitle} message={() => shareMessage({
+          title: copy.shareTumcosTitle, date: copy.shareReport(dateText(tumcos[0].reporting_date, language)),
+          lines: tumcos.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
+          more: copy.shareMore, note: copy.shareTumcosNote, url: shareUrl(`/?v=${encodeURIComponent(variety.key)}`),
+        })} />}<Link to="/prices?feed=tumcos" aria-label={copy.moreFrom("TUMCOS")}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
       </section>}
 
     <section className="rate-card" aria-labelledby="rates-official">
       <header className="rate-card-head"><div><h3 id="rates-official">{copy.officialRates}</h3><span className="rate-card-basis">{copy.officialSub}</span></div></header>
-      {official.isPending ? <LoadingState label={copy.loading} /> : official.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void official.refetch()} /> : !official.data?.data.length ? <p className="rate-empty">{copy.officialEmpty}</p> :
+      {official.isPending ? <SkeletonRows label={copy.loading} /> : official.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void official.refetch()} /> : !official.data?.data.length ? <p className="rate-empty">{copy.officialEmpty}</p> :
         <ul className="rate-list">{official.data.data.map((row) => <li className="rate-row" key={row.id}>
           <div className="rate-place"><strong>{row.market_name}</strong><span className="rate-meta"><span>{row.district} · {dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span><span className="rate-label" lang="en">{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""} · {row.source_name}</span></span></div>
           <div className="rate-price"><strong>{rupees(row.modal_price)}</strong></div>
         </li>)}</ul>}
-      <footer className="rate-card-foot"><Link to="/prices?feed=official" aria-label={copy.officialMore}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
+      <footer className="rate-card-foot">{official.data?.data.length ? <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("APMC")} title={copy.shareOfficialTitle} message={() => shareMessage({
+        title: copy.shareOfficialTitle,
+        lines: official.data.data.map((row) => ({ place: `${row.market_name} · ${row.variety_name}`, price: rupees(row.modal_price), date: dateText(row.reporting_date, language) })),
+        more: copy.shareOfficialMore, note: copy.shareOfficialNote, url: shareUrl("/prices?feed=official"),
+      })} /> : null}<Link to="/prices?feed=official" aria-label={copy.officialMore}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
     </section>
     </div>
     </section>

@@ -14,6 +14,19 @@ export function LoadingState({ label }: { label?: string }) {
   return <div className="state-card" role="status" lang={label ? undefined : language}><LoaderCircle className="spin" size={19} /><span>{text}…</span></div>;
 }
 
+/** Grey rows shaped like rate rows, so a slow connection shows where the prices will appear. Screen readers hear the label. */
+export function SkeletonRows({ label, rows = 3 }: { label?: string; rows?: number }) {
+  const { language } = useLanguage();
+  const text = label ?? STATE_COPY[language].loading;
+  return <div className="skeleton-rows" role="status" lang={label ? undefined : language}>
+    <span className="sr-only">{text}…</span>
+    {Array.from({ length: rows }, (_, index) => <div className="skeleton-row" key={index} aria-hidden="true">
+      <span className="skeleton-lines"><span className="skeleton-bar" /><span className="skeleton-bar skeleton-bar-thin" /></span>
+      <span className="skeleton-bar skeleton-bar-price" />
+    </div>)}
+  </div>;
+}
+
 export function ErrorState({ error, onRetry, retryLabel }: { error: Error; onRetry?: () => void; retryLabel?: string }) {
   const { language } = useLanguage();
   return (

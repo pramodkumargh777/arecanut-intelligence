@@ -29,6 +29,7 @@ import { WorkspacePage } from "./WorkspacePage";
 import { DataQualityPage } from "./DataQualityPage";
 import { SellOrHoldPage } from "./SellOrHoldPage";
 import { chartPalette } from "../components/chartPalette";
+import { shareMessage } from "../services/share";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 
@@ -56,7 +57,8 @@ vi.mock("@tanstack/react-query", () => ({
     return { data: undefined, isLoading: false };
   },
 }));
-vi.mock("../services/commodity", () => ({
+vi.mock("../services/commodity", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../services/commodity")>(),
   useCommodity: () => ({ code: "arecanut", commodity: FALLBACK_CATALOG.commodities[0], catalog: FALLBACK_CATALOG, unit: "INR / QUINTAL" }),
 }));
 vi.mock("../components/LazyCharts", () => ({ LazyRangeChart: ({ rows }: { rows: { label: string }[] }) => <div>Same-date chart: {rows.map((row) => row.label).join(", ")}</div> }));
@@ -217,6 +219,32 @@ describe("market experience", () => {
     expect(html).not.toContain("Could not load the rates");
   });
 
+  it("offers a share button on each card that has rates, and none on an empty one", () => {
+    state.cooperative = [
+      ready({ latest_by_branch: [cooperativeQuote("mamcos", "Sagara", "RASHI EDI")], data: [] }),
+      ready({ latest_by_branch: [], data: [] }),
+      ready({ latest_by_branch: [cooperativeQuote("tumcos", "Channagiri", "areca")], data: [] }),
+    ];
+    state.official = ready({ data: [] });
+    const html = render(<HomePage />);
+    expect(html).toContain('aria-label="Share MAMCOS rates"');
+    expect(html).toContain('aria-label="Share TUMCOS rates"');
+    expect(html).not.toContain('aria-label="Share TSS rates"');
+    expect(html).not.toContain('aria-label="Share APMC rates"');
+  });
+
+  it("builds a short chat message with the report date, basis and a link back", () => {
+    const lines = Array.from({ length: 10 }, (_, index) => ({ place: `Branch ${index + 1}`, price: `₹${48000 + index}` }));
+    const text = shareMessage({ title: "Rashi arecanut rates · MAMCOS", date: "Report: 1 Oct 2026", lines, more: (count) => `…and ${count} more`, note: "Average rate per quintal.", url: "https://example.test/?v=rashi" });
+    expect(text.split("\n")[0]).toBe("*Rashi arecanut rates · MAMCOS*");
+    expect(text).toContain("Report: 1 Oct 2026");
+    expect(text).toContain("• Branch 8: ₹48007");
+    expect(text).not.toContain("Branch 9:");
+    expect(text).toContain("…and 2 more");
+    expect(text).toContain("Areca Pulse: https://example.test/?v=rashi");
+    expect(shareMessage({ title: "APMC", lines: [{ place: "Market One", price: "₹100", date: "2 Oct 2026" }], more: String, note: "", url: "u" })).toContain("• Market One: ₹100 (2 Oct 2026)");
+  });
+
   it("distinguishes an empty official feed from a failed feed", () => {
     state.official = ready({ data: [] });
     expect(render(<HomePage />)).toContain("No verified APMC prices are available yet.");
@@ -228,6 +256,7 @@ describe("market experience", () => {
     state.official = { isPending: true, isError: false };
     const html = render(<HomePage />);
     expect(html).toContain("Loading rates");
+    expect(html).toContain('class="skeleton-rows"');
     expect(html).not.toContain("No verified APMC prices are available yet.");
   });
 
@@ -403,8 +432,8 @@ describe("market experience", () => {
 
   it("lays the home price cards out in one grid with the comparison note after it", () => {
     const html = render(<HomePage />);
-    expect(html).toContain('class="rate-grid"');
-    const grid = html.slice(html.indexOf('class="rate-grid"'));
+    expect(html).toContain('class="rate-grid');
+    const grid = html.slice(html.indexOf('class="rate-grid'));
     for (const source of ["mamcos", "tss", "tumcos", "official"]) expect(grid).toContain(`id="rates-${source}"`);
     expect(html.indexOf("rates-official")).toBeLessThan(html.indexOf("compare rates directly"));
   });
@@ -464,14 +493,19 @@ describe("market experience", () => {
     expect(html).not.toContain("source-bar");
   });
 
-  it("shows six branches per card with a toggle for the rest, and the latest report as a pill", () => {
-    const branches = ["Sagara", "Sirsi", "Koppa", "Birur", "Soraba", "Tarikere", "Sringeri", "Jayapura"];
+  it("shows three branches per card, the featured MAMCOS ones first, with a toggle for the rest", () => {
+    const branches = ["Koppa", "Sagara", "Birur", "Shivamogga", "Soraba", "Tarikere", "Thirthahalli", "Jayapura"];
     state.cooperative = [
       ready({ latest_by_branch: branches.map((branch, index) => ({ ...cooperativeQuote("mamcos", branch, "RASHI EDI"), id: `m${index}`, average_price: 48000 - index })), data: [] }),
       ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] }),
     ];
     const html = render(<HomePage />);
-    expect((html.match(/class="rate-row/g) ?? []).length).toBe(6 + 1);
+    expect((html.match(/class="rate-row/g) ?? []).length).toBe(3 + 1);
+    const card = html.slice(html.indexOf('id="rates-mamcos"'), html.indexOf("rate-more-toggle"));
+    expect(card).toContain("Sagara");
+    expect(card).toContain("Shivamogga");
+    expect(card).toContain("Thirthahalli");
+    expect(card).not.toContain("Koppa");
     expect(html).toContain("Show all 8 branches");
     expect(html).toContain('class="home-date-pill');
     expect(html).toContain("Latest report");

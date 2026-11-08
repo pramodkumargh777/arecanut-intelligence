@@ -24,7 +24,10 @@
   .hold-summary > li:nth-last-child(2) { grid-column: auto / span 2; }
   .hold-summary > li:last-child { grid-column: 2 / span 2; }
   .sidebar { width: 260px; transform: translateX(-100%); visibility: hidden; overflow-y: auto; }
-  .sidebar-open { transform: none; visibility: visible; }
+  /* Slides in; on close, visibility waits for the slide to finish so the drawer leaves the tab order only then. */
+  .sidebar { transition: transform .2s ease, visibility 0s linear .2s; }
+  .sidebar-open { transform: none; visibility: visible; transition: transform .2s ease, visibility 0s; }
+  .mobile-scrim { animation: fade-in .2s ease; }
   .mobile-scrim { display: block; position: fixed; inset: 0; background: rgba(24, 24, 27, .4); border: 0; z-index: 29; }
   .mobile-close { display: grid; margin-left: auto; }
   .main-column { margin-left: 0; }
@@ -133,8 +136,8 @@
   .home-date-pill { white-space: normal; }
   .home-price-section .home-section-heading { display: grid; gap: 3px; }
   .rate-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .rate-card-foot a { min-height: 44px; }
-  .rate-list { padding: 0 14px; }
+  .rate-card-foot a, .rate-share { min-height: 44px; }
+  .rate-list, .skeleton-rows { padding-left: 14px; padding-right: 14px; }
   .rate-card-head, .market-breadth, .rate-card-foot { padding-left: 14px; padding-right: 14px; }
   .rate-row-top::before { left: -14px; }
   .home-actions { grid-template-columns: 1fr 1fr; }

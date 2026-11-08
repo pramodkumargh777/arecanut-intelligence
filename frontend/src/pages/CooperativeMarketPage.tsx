@@ -10,12 +10,12 @@ import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import type { CooperativeCommodity, CooperativeData, CooperativeQuote, CooperativeSource } from "../services/cooperative";
 import { calendarTodayIST } from "../../../shared/dates";
 import { capabilityStatus, marketFeeds, type MarketFeed } from "../../../shared/commodities";
-import { useCommodity } from "../services/commodity";
+import { commodityName, useCommodity } from "../services/commodity";
 import { IntelligenceScorecard } from "../components/Scorecard";
 import { AboutData } from "../components/AboutData";
 import { SourceControl, SourceSlot } from "../components/SourceSlot";
 import { pageParam, readPage, readPreset, readSort, sortParams, withoutFilters, withParams } from "../services/priceFilters";
-import { defineCopy, useCopy, useFormat } from "../services/language";
+import { defineCopy, useCopy, useFormat, useLanguage } from "../services/language";
 import { COMMON, fetchStatusText } from "../services/commonCopy";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
@@ -222,12 +222,13 @@ export function MarketDataPage({ official }: { official: ReactNode }) {
   const c = useCopy(COMMON);
   const [params, setParams] = useSearchParams();
   const location = useLocation();
-  const { commodity } = useCommodity();
+  const { code, commodity } = useCommodity();
+  const { language } = useLanguage();
   const feeds = marketFeeds(commodity);
   const requestedFeed = params.get("feed");
   const feed = requestedFeed || feeds[0] || "";
   const supported = (feeds as string[]).includes(feed);
-  const name = commodity?.display_name ?? t.selectedCommodity;
+  const name = commodity ? commodityName(code, commodity, language) : t.selectedCommodity;
   const sourceSelect = <label className="filter-control source-control" aria-label={t.sourceBar}><span>{c.source}</span>
     <select value={supported ? feed : ""} onChange={(event) => {
       setParams(withParams(withoutFilters(params, ["variety"]), { feed: event.target.value }));
@@ -323,6 +324,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const { code, commodity: commodityDef } = useCommodity();
+  const { language } = useLanguage();
   // Only commodities with a cooperative capability reach this page (see marketFeeds); the API rejects anything else.
   const commodity = code as CooperativeCommodity;
   // Filters, sort, page and comparison date live in the URL so reloads, shared links and Back keep them.
@@ -407,7 +409,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
       ...tableRows.map((row) => [row.source_key, row.branch, row.reporting_date, row.variety, row.minimum_price, row.average_price, row.maximum_price, row.normal_price, row.price_type, row.price_unit, row.unit_status, row.source_url, row.fetched_at])], `areca-pulse-${source}-branch-prices.csv`);
   }
   return <div className="page-stack">
-    <section className="page-heading"><div><h1>{mode.title(commodityDef?.display_name ?? t.marketFallback)}</h1><p>{mode.description}</p>
+    <section className="page-heading"><div><h1>{mode.title(commodityDef ? commodityName(code, commodityDef, language) : t.marketFallback)}</h1><p>{mode.description}</p>
       <p className="page-meta">{t.meta(sourceName, assumedUnit)}</p></div>
       <div className="heading-controls"><SourceSlot />
       <label className="filter-control"><span>{t.exactReportedVariety}</span><select value={data?.variety ?? ""} disabled={!data?.varieties.length} onChange={(event) => {
