@@ -53,6 +53,15 @@ apply across routes. Favicon and iOS app icon use their existing branded assets 
 - Key snapshot and forecast values use 30px numerals (26px on phones); latest market prices use 22px.
   Sell or wait emphasizes typical movement and the break-even percentage, not every supporting statistic.
 
+## Phone layouts
+
+- At widths up to 700px, latest-rate rows place prices below market details so neither is clipped.
+- Header commodity/search tools expand from a localized **Market tools** button; desktop controls stay visible.
+- Charts observe their container size directly so resizing or rotating does not leave an oversized canvas.
+- Wide tables scroll inside their cards, with no inset gap behind the frozen first column.
+  Sell or wait includes a localized swipe hint; retain all month columns.
+- Check English and Kannada at 320, 360, 375, 393, 412 and 430 CSS pixels, including larger browser text.
+
 ## Colour tokens
 
 The kit's palette is merged into the existing tokens in `frontend/src/styles.css`. There is no second stylesheet.
