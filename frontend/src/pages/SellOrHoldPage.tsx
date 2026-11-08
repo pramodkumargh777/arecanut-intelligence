@@ -3,6 +3,7 @@ import { useState } from "react";
 import { calendarTodayIST, formatCalendarMonth, formatPeriodKannada, MONTH_NAMES_EN, MONTH_NAMES_KN, shiftCalendarMonth } from "../../../shared/dates";
 import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS } from "../../../shared/hold-history";
 import { ErrorState, LoadingState } from "../components/State";
+import { usePhone } from "../components/usePhone";
 import { api } from "../services/api";
 import { defineCopy, type Language, useLanguage } from "../services/language";
 
@@ -25,12 +26,15 @@ const hasHistory = (coverage: { months: number; years: number }) => coverage.yea
 
 /** A starting point for the reader to change. Weight loss and storage start at zero because they differ too much to guess. */
 const DEFAULT_INTEREST_PERCENT = 10;
+/** Waiting periods shown on phones; the year table keeps them all. */
+const PHONE_HORIZONS = [1, 3, 6];
 
 const COPY = defineCopy({
   kn: {
     title: "ಈಗ ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ?",
     intro: "ಹಿಂದಿನ ವರ್ಷಗಳಲ್ಲಿ ಈ ತಿಂಗಳ ನಂತರ ದರ ಏನಾಯಿತು ಎಂಬುದನ್ನು ಇಲ್ಲಿ ನೋಡಿ. ಇದು ಮುನ್ಸೂಚನೆ ಅಥವಾ ಸಲಹೆ ಅಲ್ಲ; ಮುಂದೆ ಏನಾಗುತ್ತದೆ ಎಂದು ಯಾರಿಗೂ ಖಚಿತವಾಗಿ ಹೇಳಲಾಗದು.",
-    variety: "ತಳಿ", month: "ಮಾರಾಟದ ತಿಂಗಳು", commonGrades: "ಸಾಮಾನ್ಯ ದರ್ಜೆಗಳು", otherGrades: "ಇತರ AGMARKNET ದರ್ಜೆಗಳು",
+    variety: "ತಳಿ", month: "ಮಾರಾಟದ ತಿಂಗಳು", costsToggle: "ನಿಮ್ಮ ಖರ್ಚು ಬದಲಿಸಿ",
+    costsNow: (interest: string, loss: string, storage: string) => `ಬಡ್ಡಿ ${interest}% · ತೂಕ ನಷ್ಟ ${loss}% · ಸಂಗ್ರಹ ₹${storage}`, commonGrades: "ಸಾಮಾನ್ಯ ದರ್ಜೆಗಳು", otherGrades: "ಇತರ AGMARKNET ದರ್ಜೆಗಳು",
     hidden: (count: number) => `${MIN_HOLD_YEARS} ವರ್ಷಕ್ಕಿಂತ ಕಡಿಮೆ ದರ ಇರುವ ${count} ದರ್ಜೆಗಳನ್ನು ಪಟ್ಟಿಯಲ್ಲಿ ತೋರಿಸಿಲ್ಲ.`,
     costsTitle: "ಕಾಯುವುದಕ್ಕೆ ನಿಮ್ಮ ಖರ್ಚು",
     costsHint: "ಇವು ನಿಮ್ಮ ಸಂಖ್ಯೆಗಳು. ಬಡ್ಡಿಯ ಆರಂಭಿಕ ಸಂಖ್ಯೆ ಕೇವಲ ಉದಾಹರಣೆ; ನಿಮ್ಮದಕ್ಕೆ ಬದಲಿಸಿ.",
@@ -52,7 +56,8 @@ const COPY = defineCopy({
   en: {
     title: "Sell now or wait?",
     intro: "See what the price did after this month in past years. This is neither a forecast nor advice; nobody can say for certain what happens next.",
-    variety: "Variety", month: "Month you would sell", commonGrades: "Common grades", otherGrades: "Other AGMARKNET grades",
+    variety: "Variety", month: "Month you would sell", costsToggle: "Change your costs",
+    costsNow: (interest: string, loss: string, storage: string) => `Interest ${interest}% · weight loss ${loss}% · storage ₹${storage}`, commonGrades: "Common grades", otherGrades: "Other AGMARKNET grades",
     hidden: (count: number) => `${count} grade${count === 1 ? " is" : "s are"} not listed because ${count === 1 ? "it has" : "they have"} under ${MIN_HOLD_YEARS} years of prices.`,
     costsTitle: "Your cost of waiting",
     costsHint: "These are your numbers. The interest figure is only a starting example; change it to yours.",
@@ -104,8 +109,18 @@ export function SellOrHoldPage() {
     .sort((a, b) => (OTHER_NAMES[a]?.en ?? a).localeCompare(OTHER_NAMES[b]?.en ?? b));
   const otherName = (name: string) => OTHER_NAMES[name]?.[language] ?? name;
   const monthNames = language === "kn" ? MONTH_NAMES_KN : MONTH_NAMES_EN;
+  // Phones show the key waiting periods and fold the cost inputs and year table away; both stay one tap from view.
+  const phone = usePhone();
+  const horizons = phone ? HOLD_HORIZONS.filter((months) => PHONE_HORIZONS.includes(months)) : HOLD_HORIZONS;
+  const latestText = latest?.weighted_price ? copy.latestPrice(rupees(latest.weighted_price), monthText(latest.reporting_month, language)) : "";
+  const costInputs = <>
+      <label className="filter-control"><span>{copy.interest}</span><input type="number" inputMode="decimal" min={0} max={100} step="any" value={interest} onChange={(event) => setInterest(event.target.value)} /></label>
+      <label className="filter-control"><span>{copy.weightLoss}</span><input type="number" inputMode="decimal" min={0} max={99} step="any" value={weightLoss} onChange={(event) => setWeightLoss(event.target.value)} /></label>
+      <label className="filter-control"><span>{copy.storage}</span><input type="number" inputMode="decimal" min={0} step="any" value={storage} onChange={(event) => setStorage(event.target.value)} /></label>
+  </>;
   return <div className="page-stack home" lang={language}>
-    <section className="home-heading"><h1>{copy.title}</h1><p>{copy.intro}</p></section>
+    {/* The intro hides on phones (.page-intro); the caveat at the bottom still says this is not advice. */}
+    <section className="home-heading"><h1>{copy.title}</h1><p className="page-intro">{copy.intro}</p></section>
 
     {/* Every input in one place: what to look at, and the reader's own cost of waiting. */}
     <section className="rate-card hold-settings" aria-label={copy.costsTitle}>
@@ -117,18 +132,19 @@ export function SellOrHoldPage() {
       <label className="filter-control"><span>{copy.month}</span><select value={startMonth} onChange={(event) => setStartMonth(Number(event.target.value))}>
         {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
       </select></label>
-      <label className="filter-control"><span>{copy.interest}</span><input type="number" inputMode="decimal" min={0} max={100} step="any" value={interest} onChange={(event) => setInterest(event.target.value)} /></label>
-      <label className="filter-control"><span>{copy.weightLoss}</span><input type="number" inputMode="decimal" min={0} max={99} step="any" value={weightLoss} onChange={(event) => setWeightLoss(event.target.value)} /></label>
-      <label className="filter-control"><span>{copy.storage}</span><input type="number" inputMode="decimal" min={0} step="any" value={storage} onChange={(event) => setStorage(event.target.value)} /></label>
+      {phone ? <details className="hold-costs">
+        <summary><span><strong>{copy.costsToggle}</strong><small>{copy.costsNow(interest || "0", weightLoss || "0", storage || "0")}</small></span></summary>
+        <div className="hold-costs-body">{costInputs}<p className="rate-caption">{copy.costsHint}</p></div>
+      </details> : costInputs}
       </div>
-      <p className="rate-caption">{hiddenCount > 0 ? `${copy.hidden(hiddenCount)} ` : ""}{copy.costsHint}{latest?.weighted_price ? ` ${copy.latestPrice(rupees(latest.weighted_price), monthText(latest.reporting_month, language))}.` : ""}</p>
+      <p className="rate-caption">{phone ? latestText && `${latestText}.` : <>{hiddenCount > 0 ? `${copy.hidden(hiddenCount)} ` : ""}{copy.costsHint}{latestText ? ` ${latestText}.` : ""}</>}</p>
     </section>
 
     {query.isLoading ? <LoadingState label={copy.loading} /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !history?.years.length ? <p className="rate-empty">{copy.noData}</p> : <>
       <section className="rate-card" aria-labelledby="hold-summary">
         <header><h2 id="hold-summary">{copy.summaryTitle(monthNames[startMonth - 1])}</h2></header>
-        <p className="rate-caption">{copy.summaryNote}</p>
-        <ul className="hold-summary">{HOLD_HORIZONS.map((months) => {
+        <p className="rate-caption phone-hide">{copy.summaryNote}</p>
+        <ul className="hold-summary">{horizons.map((months) => {
           const summary = history.summaries.find((item) => item.months === months)!;
           const needed = breakEven(months);
           const values = history.years.flatMap((year) => year.changes.filter((change) => change.months === months && change.percent !== null).map((change) => change.percent!));
@@ -146,8 +162,8 @@ export function SellOrHoldPage() {
         })}</ul>
       </section>
 
-      <section className="rate-card" aria-labelledby="hold-years">
-        <header><h2 id="hold-years">{copy.yearsTitle}</h2></header>
+      {(() => {
+        const yearsBody = <>
         <p id="hold-years-scroll-hint" className="table-scroll-hint">{copy.scrollHint}</p>
         <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="hold-years" aria-describedby="hold-years-scroll-hint"><table>
           <thead><tr><th scope="col">{copy.startMonth}</th><th scope="col" className="numeric">{copy.start}</th>{HOLD_HORIZONS.map((months) => <th scope="col" className="numeric" key={months}>{copy.months(months)}</th>)}</tr></thead>
@@ -157,9 +173,13 @@ export function SellOrHoldPage() {
           </tr>)}</tbody>
         </table></div>
         {history.excluded_months.length > 0 && <p className="rate-caption">* {copy.excluded(history.excluded_months.map((month) => monthText(month, language)).join(", "))}</p>}
-      </section>
+        </>;
+        return phone
+          ? <details className="rate-card hold-fold"><summary><h2 id="hold-years">{copy.yearsTitle}</h2></summary>{yearsBody}</details>
+          : <section className="rate-card" aria-labelledby="hold-years"><header><h2 id="hold-years">{copy.yearsTitle}</h2></header>{yearsBody}</section>;
+      })()}
 
-      <p className="home-note">{copy.caveat} {copy.source}.</p>
+      <p className="home-note">{copy.caveat} {copy.source}.{phone && hiddenCount > 0 ? ` ${copy.hidden(hiddenCount)}` : ""}</p>
     </>}
   </div>;
 }

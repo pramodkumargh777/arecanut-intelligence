@@ -5,6 +5,7 @@ import { commodityName, useCommodity } from "../services/commodity";
 import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
 import { CommodityGate } from "./CommodityGate";
 import { MarketSearch } from "./MarketSearch";
+import { SiteFooter } from "./SiteFooter";
 import type { MarketSuggestion } from "../services/marketSuggestions";
 import brandIcon from "../assets/areca-pulse-icon.svg";
 import darkLogo from "../assets/areca-pulse-logo-dark.svg";
@@ -55,7 +56,7 @@ const SHELL_COPY = defineCopy({
     skip: "Skip to content", openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation", navigation: "Main navigation",
     moreTools: "More tools", marketTools: "Market tools", tools: "Tools", commodity: "Commodity", search: "Search markets · Enter", searchLabel: "Search markets, press Enter to search",
     region: "Karnataka", tagline: "Know the market. See the opportunity.", taglineHint: "Prices, trends, and insights for your next move.",
-    footerNote: "Market observations · Not financial advice", notFound: "Page not found", noSource: "No data",
+    notFound: "Page not found", noSource: "No data",
     noSourceFor: (name: string) => `No integrated source for ${name}`, unknown: (code: string) => `Unknown: ${code}`, configured: "configured",
     switchDark: "Switch to dark mode", switchLight: "Switch to light mode",
     collapse: "Collapse menu", expand: "Expand menu",
@@ -64,7 +65,7 @@ const SHELL_COPY = defineCopy({
     skip: "ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ", openMenu: "ಮೆನು ತೆರೆಯಿರಿ", closeMenu: "ಮೆನು ಮುಚ್ಚಿ", closeNavigation: "ಮೆನು ಮುಚ್ಚಿ", navigation: "ಮುಖ್ಯ ಮೆನು",
     moreTools: "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು", marketTools: "ಮಾರುಕಟ್ಟೆ ಸಾಧನಗಳು", tools: "ಸಾಧನಗಳು", commodity: "ಬೆಳೆ", search: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ · Enter", searchLabel: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ, Enter ಒತ್ತಿ",
     region: "ಕರ್ನಾಟಕ", tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.", taglineHint: "ನಿಮ್ಮ ಮುಂದಿನ ಹೆಜ್ಜೆಗೆ ದರಗಳು, ಪ್ರವೃತ್ತಿಗಳು ಮತ್ತು ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ.",
-    footerNote: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ · ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ", notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
+    notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
     noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
     switchDark: "ಡಾರ್ಕ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ", switchLight: "ಲೈಟ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ",
     collapse: "ಮೆನು ಕಿರಿದಾಗಿಸಿ", expand: "ಮೆನು ವಿಸ್ತರಿಸಿ",
@@ -216,7 +217,7 @@ export function AppShell() {
         </div>
       </aside>
       <div className="main-column" ref={mainColumn}>
-        <header className="topbar">
+        <header className={`topbar${location.pathname === "/" ? " topbar-home" : ""}`}>
           <button ref={menuButton} className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label={copy.openMenu} aria-expanded={menuOpen} aria-controls="main-navigation"><Menu size={21} /></button>
           {/* Desktop only, at the start of the top bar so it stays in view whatever the menu's height. */}
           <button type="button" className="icon-button sidebar-collapse" onClick={toggleCollapsed} aria-label={collapsed ? copy.expand : copy.collapse} title={collapsed ? copy.expand : copy.collapse} aria-controls="main-navigation">
@@ -246,7 +247,7 @@ export function AppShell() {
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><Outlet /></CommodityGate></main>
-        <footer className="site-footer"><span>Areca Pulse · Market Intelligence</span><span>{copy.footerNote}</span></footer>
+        <SiteFooter />
       </div>
     </div>
   );
@@ -264,7 +265,15 @@ function BrandLockup() {
   return <Link to="/" className="brand-lockup" aria-label={BRAND_LABEL}>
     {/* Shown instead of the lockup when the desktop menu is collapsed. */}
     <img className="brand-collapsed-icon" src={theme === "dark" ? appIcon : brandIcon} alt="" width={36} height={28} />
-    {theme === "dark" ? <img className="brand-dark-logo" src={darkLogo} alt="" /> :
+    {/* On phones the dark logo's built-in tagline is too small to read, so the mark and live wordmark replace it. */}
+    {theme === "dark" ? <><img className="brand-dark-logo" src={darkLogo} alt="" />
+      <span className="brand-lockup-row brand-lockup-phone">
+        <img className="brand-icon topbar-brand-mark-dark" src={darkLogo} alt="" width={40} height={31} />
+        <span className="brand-words" aria-hidden="true" lang="en">
+          <span className="brand-name">Areca <span className="brand-name-accent">Pulse</span></span>
+          <span className="brand-descriptor">Market Intelligence</span>
+        </span>
+      </span></> :
     <span className="brand-lockup-row">
       <img className="brand-icon" src={brandIcon} alt="" width={40} height={31} />
       <span className="brand-words" aria-hidden="true" lang="en">

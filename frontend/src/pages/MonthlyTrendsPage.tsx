@@ -123,7 +123,8 @@ export function MonthlyTrendsPage() {
           <tbody>{data.history.map((row) => <tr key={row.reporting_month}><td>{monthLabel(row.reporting_month)}</td><td className="numeric">{price(row.weighted_price, c.notReported)}</td><td>{row.fetched_at ? timestamp(row.fetched_at) : t.noCaptured}</td></tr>)}</tbody>
         </table></div></details></>}
     </section>}
-    <section className="panel"><div className="panel-heading"><div><h2>{t.methodTitle}</h2><p>{t.methodology}</p></div></div>
+    {/* Method and refresh details are for reviewers; phones skip the section. */}
+    <section className="panel phone-hide"><div className="panel-heading"><div><h2>{t.methodTitle}</h2><p>{t.methodology}</p></div></div>
       <div className="monthly-details">
         <p>{t.primaryOnly}</p>
         <p>{t.schedule}</p>

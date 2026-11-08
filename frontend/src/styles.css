@@ -98,6 +98,7 @@ small { font-size: 11px; color: var(--muted); }
 /* The lockup sizes itself to the space it gets (196px desktop, 180px at 1200px and in the mobile drawer). */
 .brand-lockup { flex: 1 1 auto; min-width: 0; container-type: inline-size; display: block; padding: 4px; margin: -4px; border-radius: var(--radius-sm); }
 .brand-lockup-row { display: flex; align-items: center; gap: 8px; }
+.brand-lockup-phone { display: none; }
 .brand-dark-logo { display: block; width: 100%; height: auto; }
 .brand-icon { display: block; width: min(40px, 21cqi); height: auto; flex: none; }
 .brand-words { display: grid; gap: 4px; min-width: 0; }
@@ -157,7 +158,38 @@ small { font-size: 11px; color: var(--muted); }
 .market-suggestion-detail { color: var(--muted); font-size: 12px; }
 .region-pill { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .page-content { width: min(1320px, 100%); margin: 0 auto; padding: 20px 28px 36px; flex: 1; }
-.site-footer { display: flex; justify-content: space-between; gap: 16px; width: min(1256px, calc(100% - 64px)); margin: 0 auto; padding: 16px 0 20px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+/* Footer: a contact panel, then brand and link columns, then the data note. Quiet type, generous spacing. */
+.site-footer { margin-top: 32px; border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.site-footer-inner { width: min(1256px, calc(100% - 64px)); margin: 0 auto; padding: 36px 0 28px; }
+.site-footer h2 { margin: 0; }
+.footer-report { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 16px;
+  background: linear-gradient(120deg, var(--brand-tint), var(--surface-2) 70%); }
+.footer-report-badge { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: #1f8f4e; color: #fff; box-shadow: 0 6px 18px -8px rgb(31 143 78 / 70%); }
+.footer-report-text h2 { font-size: 17px; font-weight: 650; line-height: 1.35; letter-spacing: -.01em; color: var(--ink); }
+.footer-report-text p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.footer-whatsapp { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px 0 16px; border-radius: 12px; background: #1f8f4e; color: #fff !important; text-decoration: none !important;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 18%) inset, 0 8px 20px -10px rgb(31 143 78 / 80%); transition: background-color .15s ease, transform .1s ease; }
+.footer-whatsapp:hover { background: #1a7d44; }
+.footer-whatsapp:active { transform: scale(.98); }
+.footer-whatsapp:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.footer-whatsapp strong { font-size: 14px; font-weight: 650; white-space: nowrap; }
+.footer-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 32px; padding: 36px 0 30px; border-bottom: 1px solid var(--line); }
+.footer-logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none !important; }
+.footer-logo-mark { display: block; width: 44px; height: 34px; }
+.footer-logo-mark-dark { object-fit: cover; object-position: left center; }
+.footer-logo > span { display: grid; gap: 2px; }
+.footer-logo-name { font-size: 19px; font-weight: 700; letter-spacing: -.03em; line-height: 1.05; color: var(--brand); }
+.footer-logo-descriptor { font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--subtle); }
+.footer-tagline { margin: 16px 0 0; font-size: 14px; font-weight: 550; color: var(--ink-2); }
+.footer-made { max-width: 300px; margin: 6px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.footer-column h2 { font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--subtle); }
+.footer-column ul { display: grid; gap: 11px; margin: 14px 0 0; padding: 0; list-style: none; }
+.footer-column a { font-size: 14px; color: var(--ink-2); text-decoration: none !important; transition: color .12s ease; }
+.footer-column a:hover { color: var(--brand); }
+.footer-sources li { display: grid; gap: 1px; font-size: 14px; color: var(--ink-2); }
+.footer-sources small { font-size: 12px; color: var(--muted); }
+.footer-disclaimer { margin: 20px 0 0; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.footer-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; margin-top: 18px; font-size: 12.5px; color: var(--muted); }
 .page-stack { display: grid; gap: 14px; min-width: 0; }
 .page-stack > * { min-width: 0; }
 .page-stack > form { display: grid; gap: 20px; }
@@ -438,6 +470,8 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 .status-pill.tone-warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-line); }
 .status-pill.tone-bad { background: var(--bad-bg); color: var(--bad-ink); border-color: var(--bad-line); }
 .quality-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+/* Failed checks under the market name, shown only on phones where the quality column is hidden. */
+.row-warnings { display: none; }
 .source-label { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-size: 12px; color: var(--muted); line-height: 1.45; }
 .source-label-key { font-size: 11px; font-weight: 500; color: var(--subtle); }
 .coverage-meter { height: 4px; margin: 0 0 14px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
@@ -489,6 +523,11 @@ th.numeric .sort-button span { order: -1; }
 .variety-chips button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* "More varieties" sits in the chip row as one more pill; it fills in when one of its varieties is chosen. */
 .variety-more { display: inline-flex; }
+/* Phones only (see responsive.css): one dropdown in place of the chips. */
+.variety-phone { display: none; min-width: 0; }
+.variety-phone select { appearance: none; width: 100%; height: 42px; padding: 0 36px 0 14px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; }
+.variety-phone select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .variety-more select { appearance: none; min-height: 34px; padding: 4px 32px 4px 14px; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 14px; line-height: 1.3; cursor: pointer;
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center; }
 .variety-more select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -652,7 +691,7 @@ a.rate-more-toggle { text-decoration: none; }
 :root[data-theme="dark"] .language-toggle button[aria-pressed="true"],
 :root[data-theme="dark"] .variety-chips button[aria-pressed="true"],
 :root[data-theme="dark"] .variety-more-active select { color: #10251a; }
-:root[data-theme="dark"] .variety-more select {
+:root[data-theme="dark"] .variety-more select, :root[data-theme="dark"] .variety-phone select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b3c2b5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 :root[data-theme="dark"] .variety-more-active select {

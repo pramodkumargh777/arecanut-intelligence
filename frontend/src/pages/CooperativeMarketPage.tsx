@@ -272,12 +272,14 @@ function QuoteTable({ rows, sort, onSort }: { rows: CooperativeQuote[]; sort?: Q
     <caption className="sr-only">{t.tableCaption(sourceName, c.inrQuintal, rows[0]?.unit_status === "assumed")}</caption>
     <thead><tr><SortHeader label={c.branch} column="branch" sort={sort} onSort={onSort} /><SortHeader label={c.reportingDate} column="reporting_date" sort={sort} onSort={onSort} /><th scope="col">{c.exactVariety}</th>
       <SortHeader label={c.minimum} column="minimum_price" sort={sort} onSort={onSort} numeric /><SortHeader label={c.average} column="average_price" sort={sort} onSort={onSort} numeric /><SortHeader label={c.maximum} column="maximum_price" sort={sort} onSort={onSort} numeric />
-      {tss && <th scope="col" className="numeric">{t.normalRate}</th>}<th scope="col">{c.quality}</th><th scope="col">{t.sourceFetched}</th></tr></thead>
-    <tbody>{rows.map((row) => <tr key={row.id}><td className="table-market">{row.branch}</td><td>{format.date(row.reporting_date)}</td><td lang="en">{row.variety}</td>
+      {tss && <th scope="col" className="numeric">{t.normalRate}</th>}<th scope="col" className="col-quality">{c.quality}</th><th scope="col" className="col-source">{t.sourceFetched}</th></tr></thead>
+    <tbody>{rows.map((row) => { const checks = quoteQuality(row, t); return <tr key={row.id}><td className="table-market">{row.branch}
+      {/* Phones drop the quality column; a failed check still shows, under the branch. */}
+      {checks.some((check) => check.ok === false) && <span className="quality-chips row-warnings">{checks.filter((check) => check.ok === false).map((check) => <span key={check.label} className="status-pill tone-warn">{check.label}</span>)}</span>}</td><td>{format.date(row.reporting_date)}</td><td lang="en">{row.variety}</td>
       <td className="numeric">{money(row.minimum_price, c.notReported)}</td><td className="numeric table-price">{money(row.average_price, c.notReported)}</td><td className="numeric">{money(row.maximum_price, c.notReported)}</td>
       {tss && <td className="numeric">{money(row.normal_price, c.notReported)}</td>}
-      <td><span className="quality-chips">{quoteQuality(row, t).map((check) => <span key={check.label} className={`status-pill tone-${check.ok === null ? "neutral" : check.ok ? "good" : "warn"}`}>{check.label}</span>)}</span></td>
-      <td><a href={row.source_url} target="_blank" rel="noreferrer">{sourceName}</a><small className="quote-fetch">{t.platformFetched(format.timestamp(row.fetched_at))}</small></td></tr>)}</tbody>
+      <td className="col-quality"><span className="quality-chips">{checks.map((check) => <span key={check.label} className={`status-pill tone-${check.ok === null ? "neutral" : check.ok ? "good" : "warn"}`}>{check.label}</span>)}</span></td>
+      <td className="col-source"><a href={row.source_url} target="_blank" rel="noreferrer">{sourceName}</a><small className="quote-fetch">{t.platformFetched(format.timestamp(row.fetched_at))}</small></td></tr>; })}</tbody>
   </table></div>;
 }
 
@@ -410,7 +412,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
       ...tableRows.map((row) => [row.source_key, row.branch, row.reporting_date, row.variety, row.minimum_price, row.average_price, row.maximum_price, row.normal_price, row.price_type, row.price_unit, row.unit_status, row.source_url, row.fetched_at])], `areca-pulse-${source}-branch-prices.csv`);
   }
   return <div className="page-stack">
-    <section className="page-heading"><div><h1>{mode.title(commodityDef ? commodityName(code, commodityDef, language) : t.marketFallback)}</h1><p>{mode.description}</p>
+    <section className="page-heading"><div><h1>{mode.title(commodityDef ? commodityName(code, commodityDef, language) : t.marketFallback)}</h1><p className="page-intro">{mode.description}</p>
       <p className="page-meta">{t.meta(sourceName, assumedUnit)}</p></div>
       <div className="heading-controls"><SourceSlot />
       <label className="filter-control"><span>{t.exactReportedVariety}</span><select value={data?.variety ?? ""} disabled={!data?.varieties.length} onChange={(event) => {
@@ -458,21 +460,21 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
         <article className="snapshot-card"><div className="card-kicker">{t.periodHighLow}</div><div className="snapshot-value">{rupees(benchmarkValues.length ? Math.max(...benchmarkValues) : null)}</div><p>{t.low(rupees(benchmarkValues.length ? Math.min(...benchmarkValues) : null))}</p></article>
         <article className="snapshot-card"><div className="card-kicker">{t.dispersion}</div><div className="snapshot-value">{rupees(dispersion)}</div><p>{t.dispersionHint}</p></article>
       </section>}
-      {(location.pathname === "/overview" || location.pathname === "/analytics") && <section className="panel"><div className="panel-heading"><div><h2>{t.historyTitle(sourceName, singleLocation)}</h2><p>{singleLocation ? t.historySingleHint : t.historyHint(series.length, coverage)}</p></div>
+      {(location.pathname === "/overview" || location.pathname === "/analytics") && <section className="panel"><div className="panel-heading"><div><h2>{t.historyTitle(sourceName, singleLocation)}</h2><p className="phone-hide">{singleLocation ? t.historySingleHint : t.historyHint(series.length, coverage)}</p></div>
         {singleLocation && <label className="filter-control"><span>{t.chartLocation}</span><select value={selectedChartBranch} onChange={(event) => setChartBranch(event.target.value)}>{branches.map((value) => <option key={value}>{value}</option>)}</select></label>}</div>
         {singleLocation ? <div className="monthly-details"><Suspense fallback={<LoadingState />}><PriceChart label={t.chartSingleLabel(sourceName, selectedChartBranch, data?.variety ?? "")} quotePoints={quotePoints} unitNote={unitNote} /></Suspense></div>
           : !series.length ? <EmptyState title={t.insufficientCoverage} /> : <div className="monthly-details"><Suspense fallback={<LoadingState />}><PriceChart label={t.chartBenchmarkLabel(sourceName)} averagePoints={series} showStats={location.pathname !== "/analytics"} unitNote={unitNote} /></Suspense>
           <details><summary>{t.constituents}</summary>{series.map((point) => <p key={point.reporting_date}>{dateText(point.reporting_date)}: {point.branches.join(", ")}</p>)}</details></div>}
       </section>}
       {location.pathname === "/analytics" && <section className="chart-grid">
-        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.spreadTitle}</h2><p>{t.spreadHint}</p></div></div>
+        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.spreadTitle}</h2><p className="phone-hide">{t.spreadHint}</p></div></div>
           {!spreadByDate.length ? <EmptyState title={t.noSpread} /> : <LazyBarChart categories={spreadByDate.map((point) => format.date(point.date))} values={spreadByDate.map((point) => point.spread)} name={t.spreadName} description={t.spreadDescription(sourceName)} />}
           <div className="chart-foot"><SourceLabel>{sourceName} · {t.reportedAveragesLabel}{assumedUnit ? t.assumedUnitLabel : ""}</SourceLabel></div></article>
-        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.distributionTitle}</h2><p>{t.distributionHint(averageDistribution.count)}</p></div></div>
+        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.distributionTitle}</h2><p className="phone-hide">{t.distributionHint(averageDistribution.count)}</p></div></div>
           {!averageBins.length ? <EmptyState title={t.noAverages} /> : <LazyBarChart categories={averageBins.map((bin) => `₹${(bin.from / 1000).toFixed(1)}k`)} tooltipLabels={averageBins.map((bin) => `${rupees(bin.from)} – ${rupees(bin.to)}`)} values={averageBins.map((bin) => bin.count)} name={t.observationsName} valueFormat="count" description={t.distributionDescription(sourceName)} />}
           <dl className="fact-list compact"><div><dt>{c.median}</dt><dd>{rupees(averageDistribution.median)}</dd></div><div><dt>{t.iqr}</dt><dd>{rupees(averageDistribution.q1)} – {rupees(averageDistribution.q3)}</dd></div><div><dt>{t.cv}</dt><dd>{averageDistribution.cvPercent === null ? "—" : `${averageDistribution.cvPercent.toFixed(1)}%`}</dd></div></dl>
           <div className="chart-foot"><SourceLabel>{sourceName} · {data?.window ? `${format.date(data.window.from)} – ${format.date(data.window.to)}` : t.currentWindow}</SourceLabel></div></article>
-        <p className="panel-note chart-wide">{t.seasonalNote} <Link to="/history">{t.historyLink}</Link> {t.seasonalBasis}</p>
+        <p className="panel-note chart-wide phone-hide">{t.seasonalNote} <Link to="/history">{t.historyLink}</Link> {t.seasonalBasis}</p>
       </section>}
       {location.pathname === "/prices" && <section className="filter-bar">
         <label className="filter-control"><span>{c.branch}</span><select value={branch} onChange={(event) => update({ branch: event.target.value })}><option value="">{c.allBranches}</option>{(data?.branches ?? [...new Set(rows.map((row) => row.branch))].sort()).map((value) => <option key={value}>{value}</option>)}</select></label>
@@ -493,7 +495,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
         <div className="chart-foot"><SourceLabel>{sourceName} · {t.cooperativeAverages} · {format.date(selectedDate)}</SourceLabel></div>
       </section>}
       {from && to && from > to ? <ErrorState error={new Error(c.invalidRange)} /> : <section className="panel table-panel">
-        <div className="panel-heading"><div><h2>{isCompare ? t.comparisonTitle : t.observationsTitle}</h2><p>{t.matching(tableRows.length)} · {t.notModal}{data?.window && <> · {t.window(format.date(data.window.from), format.date(data.window.to))}{data.window.truncated ? t.truncated(data.window.row_limit.toLocaleString("en-IN")) : ""}</>}</p></div>
+        <div className="panel-heading"><div><h2>{isCompare ? t.comparisonTitle : t.observationsTitle}</h2><p className="phone-hide">{t.matching(tableRows.length)} · {t.notModal}{data?.window && <> · {t.window(format.date(data.window.from), format.date(data.window.to))}{data.window.truncated ? t.truncated(data.window.row_limit.toLocaleString("en-IN")) : ""}</>}</p></div>
           <button className="button-secondary" onClick={exportRows} disabled={!tableRows.length}>{c.exportMatchingCsv}</button></div>
         {!tableRows.length ? <EmptyState title={t.noMatches} /> : <QuoteTable rows={isCompare ? comparison : filtered.slice(activePage * PAGE_SIZE, (activePage + 1) * PAGE_SIZE)} sort={isCompare ? undefined : sort} onSort={isCompare ? undefined : toggleSort} />}
         {!isCompare && filtered.length > PAGE_SIZE && <div className="pagination"><span>{c.page(activePage + 1, Math.ceil(filtered.length / PAGE_SIZE))}</span><div><button className="button-secondary" disabled={!activePage} onClick={() => update({ page: pageParam(activePage - 1) })}>{c.previous}</button><button className="button-secondary" disabled={(activePage + 1) * PAGE_SIZE >= filtered.length} onClick={() => update({ page: pageParam(activePage + 1) })}>{c.next}</button></div></div>}

@@ -33,7 +33,7 @@ const COPY = defineCopy({
     highest: "ಈ ದಿನದ ಹೆಚ್ಚಿನ ದರ",
     source: "ಮೂಲ",
     noRows: "ಈ ತಳಿಗೆ ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
-    moreVarieties: "ಇನ್ನಷ್ಟು ತಳಿಗಳು",
+    moreVarieties: "ಇನ್ನಷ್ಟು ತಳಿಗಳು", everyday: "ಸಾಮಾನ್ಯ ತಳಿಗಳು",
     notPublished: (names: string) => `${names} ಈ ತಳಿಯ ದರವನ್ನು ಪ್ರಕಟಿಸುವುದಿಲ್ಲ.`,
     assumedUnit: "ಮೂಲವು ಘಟಕವನ್ನು ತಿಳಿಸಿಲ್ಲ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ",
     tumcosNote: "ತುಮ್ಕೋಸ್ ತಳಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ, ಆದ್ದರಿಂದ ಇದು ಯಾವ ತಳಿಯ ದರ ಎಂದು ಹೇಳಲಾಗದು. ಮೂಲದ ಪುಟದಲ್ಲಿ “kg” ಎಂದಿದೆ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ.",
@@ -100,7 +100,7 @@ const COPY = defineCopy({
     highest: "Highest that day",
     source: "Source",
     noRows: "No published rate for this variety.",
-    moreVarieties: "More varieties",
+    moreVarieties: "More varieties", everyday: "Everyday varieties",
     notPublished: (names: string) => `${names} ${names.includes(" and ") ? "do" : "does"} not publish this variety.`,
     assumedUnit: "The source states no unit; treated as per quintal",
     tumcosNote: "TUMCOS does not state the variety, so this cannot be matched to a grade. Its page says “kg”; treated as per quintal.",
@@ -328,6 +328,18 @@ export function HomePage() {
         </select>
       </label>
     </div>
+    {/* Phones get one dropdown instead of the chips, which take three rows there. CSS shows one or the other. */}
+    <label className="variety-phone">
+      <select aria-labelledby="home-variety-label" value={variety.key} onChange={(event) => choose(event.target.value)}>
+        <optgroup label={copy.everyday}>{VARIETIES.filter((item) => item.everyday).map((item) => <option key={item.key} value={item.key}>{varietyName(item)}</option>)}</optgroup>
+        {VARIETY_GROUPS.map((group) => {
+          const items = VARIETIES.filter((item) => !item.everyday && item.group === group.key);
+          return items.length ? <optgroup key={group.key} label={language === "kn" ? group.kn : group.en}>
+            {items.map((item) => <option key={item.key} value={item.key}>{varietyName(item)}</option>)}
+          </optgroup> : null;
+        })}
+      </select>
+    </label>
     </div>
     {variety.note && <p className="home-note home-note-callout">{variety.note[language]}</p>}
 
@@ -381,7 +393,7 @@ export function HomePage() {
           <header className="rate-card-head">
             <div><h3 id={`rates-${source.key}`}>{language === "kn" ? source.kn : source.en}</h3>
               <span className="rate-card-basis">{copy.unitFoot(source.assumedUnit)}</span>
-              {latest && <span className="rate-card-sub">{copy.cardSub(dateText(latest, language), rows.length)}</span>}</div>
+              {latest && <span className="rate-card-sub rate-card-latest">{copy.cardSub(dateText(latest, language), rows.length)}</span>}</div>
             {rows[0] && <a className="rate-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
           </header>
           {sourceQueries.some((query) => query.isPending) ? <SkeletonRows label={copy.loading} /> : <>
@@ -432,7 +444,7 @@ export function HomePage() {
       <header className="rate-card-head"><div><h3 id="rates-official">{copy.officialRates}</h3><span className="rate-card-basis">{copy.officialSub}</span></div></header>
       {official.isPending ? <SkeletonRows label={copy.loading} rows={1} /> : official.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void official.refetch()} /> : !apmcRow ? <p className="rate-empty">{copy.officialEmpty}</p> :
         <><ul className="rate-list">{[apmcRow].map((row) => <li className="rate-row" key={row.id}>
-          <div className="rate-place"><strong>{row.market_name}</strong><span className="rate-meta"><span>{row.district} · {dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span><span className="rate-label" lang="en">{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""} · {row.source_name}</span></span></div>
+          <div className="rate-place"><strong>{row.market_name}</strong><span className="rate-meta"><span>{row.district} · {dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span><span className="rate-label" lang="en">{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""}<span className="rate-label-source"> · {row.source_name}</span></span></span></div>
           <div className="rate-price"><strong>{rupees(row.modal_price)}</strong></div>
         </li>)}</ul>
         <Link className="rate-more-toggle" to="/prices?feed=official">{copy.officialOthers}<ArrowRight size={15} aria-hidden="true" /></Link></>}
