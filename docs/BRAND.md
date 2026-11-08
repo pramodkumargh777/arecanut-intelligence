@@ -8,6 +8,10 @@ asset is used, the palette, and the usage rules.
 **Positioning:** a clear, dependable view of arecanut market prices, movements and intelligence. Calm and premium,
 inspired by the arecanut palm landscape, without looking like a conventional agriculture portal.
 
+The sidebar closes with the brand tagline, **Know the market. See the opportunity.**, and the supporting
+caption, **Prices, trends, and insights for your next move.** Both are localized in Kannada. Source dates
+and price units remain alongside the data rather than in the sidebar.
+
 ## Where each asset is used
 
 | Asset | Used for | File in the app |

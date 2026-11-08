@@ -49,7 +49,7 @@ const COPY = defineCopy({
     sourceFreshness: "Source / freshness", recent: "Recent model estimate", forecast: "Forecast model", pib: "PIB release", dasd: "DASD announcement",
     direction: { Import: "Import", Export: "Export" } as Record<string, string>,
     grid: (lat: number, lon: number, elevation: number) => `Returned model grid: ${lat}, ${lon} · Elevation ${elevation} m. Open-Meteo attribution:`,
-    terms: "Terms", nonCommercial: "Free API is for non-commercial evaluation; commercial use requires the appropriate service terms.",
+    terms: "Terms",
     publisher: "Publisher", archived: "Archived capture", platformFetched: (time: string) => `Platform fetched ${time}`, documentPublication: (period: string) => `Document publication: ${period}`,
   },
   kn: {
@@ -88,7 +88,7 @@ const COPY = defineCopy({
     sourceFreshness: "ಮೂಲ / ಹೊಸತನ", recent: "ಇತ್ತೀಚಿನ ಮಾದರಿ ಅಂದಾಜು", forecast: "ಮುನ್ಸೂಚನೆ ಮಾದರಿ", pib: "PIB ಪ್ರಕಟಣೆ", dasd: "DASD ಘೋಷಣೆ",
     direction: { Import: "ಆಮದು", Export: "ರಫ್ತು" },
     grid: (lat: number, lon: number, elevation: number) => `ಮಾದರಿ ಗ್ರಿಡ್: ${lat}, ${lon} · ಎತ್ತರ ${elevation} ಮೀ. Open-Meteo ಉಲ್ಲೇಖ:`,
-    terms: "ನಿಯಮಗಳು", nonCommercial: "ಉಚಿತ API ವಾಣಿಜ್ಯೇತರ ಮೌಲ್ಯಮಾಪನಕ್ಕೆ ಮಾತ್ರ; ವಾಣಿಜ್ಯ ಬಳಕೆಗೆ ಸೂಕ್ತ ಸೇವಾ ನಿಯಮಗಳು ಬೇಕು.",
+    terms: "ನಿಯಮಗಳು",
     publisher: "ಪ್ರಕಟಣಕಾರ", archived: "ಸಂಗ್ರಹಿಸಿದ ಪ್ರತಿ", platformFetched: (time: string) => `ತಂದ ಸಮಯ ${time}`, documentPublication: (period: string) => `ದಾಖಲೆಯ ಪ್ರಕಟಣೆ: ${period}`,
   },
 });
@@ -179,7 +179,7 @@ export function IntelligencePage() {
               <td className="evidence-column"><EvidenceCell row={row} /></td>
             </tr>)}</tbody></table></div>}
       </section>
-      {domain === "weather" && rows.length > 0 && "grid_latitude" in rows[0] && <p className="data-disclosure">{t.grid(rows[0].grid_latitude, rows[0].grid_longitude, rows[0].elevation_m)} <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · <a href="https://open-meteo.com/en/terms" target="_blank" rel="noreferrer">{t.terms}</a>. {t.nonCommercial}</p>}
+      {domain === "weather" && rows.length > 0 && "grid_latitude" in rows[0] && <p className="data-disclosure">{t.grid(rows[0].grid_latitude, rows[0].grid_longitude, rows[0].elevation_m)} <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · <a href="https://open-meteo.com/en/terms" target="_blank" rel="noreferrer">{t.terms}</a>.</p>}
     </>}
   </div>;
 }
