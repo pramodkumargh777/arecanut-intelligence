@@ -74,10 +74,9 @@ const COPY = defineCopy({
     about: "ಈ ದರಗಳ ಬಗ್ಗೆ",
     glanceTitle: (variety: string) => `${variety} — ಒಂದು ನೋಟ`,
     glanceHint: "ಪ್ರತಿ ಸಂಸ್ಥೆಯ ಇತ್ತೀಚಿನ ವರದಿಯ ಶಾಖಾ ಸರಾಸರಿಗಳ ವ್ಯಾಪ್ತಿ",
-    glanceBranches: (count: number) => `${count} ಶಾಖೆಗಳು`, perQuintal: "/ ಕ್ವಿಂಟಾಲ್", to: "ರಿಂದ",
+    glanceBranches: (count: number) => `${count} ಶಾಖೆಗಳು`, perQuintal: "/ ಕ್ವಿಂಟಾಲ್", perQuintalWord: "ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್", to: "ರಿಂದ",
     noCompare: "ಹೋಲಿಸಲು ಹಿಂದಿನ ವರದಿ ಇಲ್ಲ",
-    mostlyUp: "ಹೆಚ್ಚಿನ ಶಾಖೆಗಳಲ್ಲಿ ಏರಿಕೆ", mostlyDown: "ಹೆಚ್ಚಿನ ಶಾಖೆಗಳಲ್ಲಿ ಇಳಿಕೆ", mixed: "ಏರಿಳಿತ ಮಿಶ್ರ", unchanged: "ಬದಲಾವಣೆ ಇಲ್ಲ",
-    medianShort: (percent: string) => `ಮಧ್ಯಮ ${percent}`,
+    mostlyUp: "ಏರಿಕೆ", mostlyDown: "ಇಳಿಕೆ", mixed: "ಏರಿಳಿತ ಮಿಶ್ರ", unchanged: "ಬದಲಾವಣೆ ಇಲ್ಲ",
     share: "ಹಂಚಿಕೊಳ್ಳಿ", shareOpening: "ತೆರೆಯಲಾಗುತ್ತಿದೆ…", shareDone: "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ", shareWhatsapp: "ವಾಟ್ಸ್‌ಆ್ಯಪ್ ತೆರೆಯಲಾಗಿದೆ",
     shareAria: (source: string) => `${source} ದರಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ`,
     shareTitle: (variety: string, source: string) => `${variety} ಅಡಿಕೆ ಧಾರಣೆ · ${source}`,
@@ -141,10 +140,9 @@ const COPY = defineCopy({
     about: "About these rates",
     glanceTitle: (variety: string) => `${variety} at a glance`,
     glanceHint: "Range of branch averages in each cooperative's latest report",
-    glanceBranches: (count: number) => `${count} branch${count === 1 ? "" : "es"}`, perQuintal: "/ quintal", to: "to",
+    glanceBranches: (count: number) => `${count} branch${count === 1 ? "" : "es"}`, perQuintal: "/ quintal", perQuintalWord: "per quintal", to: "to",
     noCompare: "No earlier report to compare",
-    mostlyUp: "mostly up", mostlyDown: "mostly down", mixed: "mixed", unchanged: "unchanged",
-    medianShort: (percent: string) => `median ${percent}`,
+    mostlyUp: "Up", mostlyDown: "Down", mixed: "Mixed", unchanged: "Unchanged",
     share: "Share", shareOpening: "Opening…", shareDone: "Shared", shareWhatsapp: "WhatsApp opened",
     shareAria: (source: string) => `Share ${source} rates`,
     shareTitle: (variety: string, source: string) => `${variety} arecanut rates · ${source}`,
@@ -207,7 +205,7 @@ function RateRow({ row, today, language, highest, showLabel, change, reveal }: {
   return <li className={`rate-row${highest ? " rate-row-top" : ""}${updated ? " rate-row-updated" : ""}${reveal ? ` rate-row-${reveal}` : ""}`}>
     <div className="rate-place">
       <strong>{branchName(row.branch, language)}{highest && <span className="rate-top-mark" title={copy.highest}>{copy.topMark}</span>}</strong>
-      <span className="rate-meta"><span className={`rate-date${age > 2 ? " rate-date-old" : ""}`}>{dateText(row.reporting_date, language)} · {ageText(age, language)}</span>
+      <span className="rate-meta"><span className={`rate-date${age > 2 ? " rate-date-old" : ""}`}>{dateText(row.reporting_date, language)} <span className="rate-age">{ageText(age, language)}</span></span>
         {showLabel && <span className="rate-label" lang="en">{row.variety}</span>}</span>
     </div>
     <div className="rate-price">
@@ -317,6 +315,7 @@ export function HomePage() {
         onClick={() => choose(item.key)}>{varietyName(item)}</button>)}
       <label className={`variety-more${variety.everyday ? "" : " variety-more-active"}`}>
         <span className="sr-only">{copy.moreVarieties}</span>
+        <span className="variety-more-face" aria-hidden="true">{variety.everyday ? copy.moreVarieties : varietyName(variety)}</span>
         <select value={variety.everyday ? "" : variety.key} onChange={(event) => choose(event.target.value)}>
           <option value="" disabled>{copy.moreVarieties}</option>
           {VARIETY_GROUPS.map((group) => {
@@ -362,8 +361,10 @@ export function HomePage() {
             {low !== high && <><span className="glance-dash" aria-hidden="true">–</span><span className="sr-only"> {copy.to} </span><span>{rupees(high)}</span></>}
             <small>{copy.perQuintal}</small>
           </p>
+          {/* Phones: unit and branch count on one quiet line under the range, so neither wraps alone. */}
+          <p className="glance-sub">{copy.perQuintalWord} · {copy.glanceBranches(count)}</p>
           <div className="glance-tile-foot">
-            {trend ? <span className={`glance-trend ${trend.className}`}><trend.Icon size={13} aria-hidden="true" />{trend.text} · {copy.medianShort(signedPercent(breadth.median_percent!).replace("-", "−"))}</span>
+            {trend ? <span className={`glance-trend ${trend.className}`}><trend.Icon size={13} aria-hidden="true" />{trend.text} {signedPercent(breadth.median_percent!).replace("-", "−")}</span>
               : <span className="glance-trend">{copy.noCompare}</span>}
             <span className="glance-branches">{copy.glanceBranches(count)}</span>
           </div>
