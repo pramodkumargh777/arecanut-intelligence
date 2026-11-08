@@ -1,4 +1,5 @@
 import ReactEChartsCore from "echarts-for-react/lib/core";
+import { useResponsiveChart } from "./useResponsiveChart";
 import * as echarts from "echarts/core";
 import { LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, TooltipComponent } from "echarts/components";
@@ -53,6 +54,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
   points?: ReferencePoint[]; averagePoints?: AveragePoint[]; quotePoints?: { reporting_date: string; average_price: number }[]; unitNote?: string; label?: string; calendarInterval?: "daily" | "monthly"; range?: { from: string; to: string }; showStats?: boolean;
 }) {
   const t = useCopy(COPY);
+  const onChartReady = useResponsiveChart();
   const { AXIS_LABEL, AXIS_LINE, BRAND, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
   const { language } = useLanguage();
   const label = givenLabel ?? t.defaultLabel;
@@ -165,7 +167,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
       <div><dt>{t.low}</dt><dd>{rupees(low)}</dd><small>{lowPoint && dateText(lowPoint.reporting_date)}</small></div>
       <div><dt>{t.average}</dt><dd>{rupees(mean)}</dd><small>{t.reports(chart.observations)}</small></div>
     </dl>}
-    <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate style={{ height: 300, width: "100%" }} />
+    <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: 300, width: "100%" }} />
     <p className="price-chart-caption">{label} · {t.perQuintal}{unitNote} · {coverage}{missingNote}. {t.caption(markers, monthly)}</p>
     {table}
   </div>;

@@ -43,7 +43,7 @@ const GROWER_PAGES = ["/", "/sell-or-hold"];
 const SHELL_COPY = defineCopy({
   en: {
     skip: "Skip to content", openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation", navigation: "Main navigation",
-    moreTools: "More tools", commodity: "Commodity", search: "Search markets · Enter", searchLabel: "Search markets, press Enter to search",
+    moreTools: "More tools", marketTools: "Market tools", commodity: "Commodity", search: "Search markets · Enter", searchLabel: "Search markets, press Enter to search",
     region: "Karnataka", tagline: "Know the market. See the opportunity.", taglineHint: "Prices, trends, and insights for your next move.",
     footerNote: "Market observations · Not financial advice", notFound: "Page not found", noSource: "No data",
     noSourceFor: (name: string) => `No integrated source for ${name}`, unknown: (code: string) => `Unknown: ${code}`, configured: "configured",
@@ -51,7 +51,7 @@ const SHELL_COPY = defineCopy({
   },
   kn: {
     skip: "ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ", openMenu: "ಮೆನು ತೆರೆಯಿರಿ", closeMenu: "ಮೆನು ಮುಚ್ಚಿ", closeNavigation: "ಮೆನು ಮುಚ್ಚಿ", navigation: "ಮುಖ್ಯ ಮೆನು",
-    moreTools: "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು", commodity: "ಬೆಳೆ", search: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ · Enter", searchLabel: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ, Enter ಒತ್ತಿ",
+    moreTools: "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು", marketTools: "ಮಾರುಕಟ್ಟೆ ಸಾಧನಗಳು", commodity: "ಬೆಳೆ", search: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ · Enter", searchLabel: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ, Enter ಒತ್ತಿ",
     region: "ಕರ್ನಾಟಕ", tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.", taglineHint: "ನಿಮ್ಮ ಮುಂದಿನ ಹೆಜ್ಜೆಗೆ ದರಗಳು, ಪ್ರವೃತ್ತಿಗಳು ಮತ್ತು ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ.",
     footerNote: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ · ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ", notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
     noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
@@ -65,6 +65,7 @@ export function AppShell() {
   const theme = useTheme();
   const copy = SHELL_COPY[language];
   const [menuOpen, setMenuOpen] = useState(false);
+  const [marketToolsOpen, setMarketToolsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -101,6 +102,7 @@ export function AppShell() {
   useEffect(() => {
     setSearch(new URLSearchParams(location.search).get("search") ?? "");
     setMenuOpen(false);
+    setMarketToolsOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -185,7 +187,8 @@ export function AppShell() {
           <button ref={menuButton} className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label={copy.openMenu} aria-expanded={menuOpen} aria-controls="main-navigation"><Menu size={21} /></button>
           <Link to="/" className="topbar-brand" aria-label={BRAND_LABEL}><img src={theme === "dark" ? appIcon : brandIcon} alt="" width={36} height={28} /></Link>
           <div className="breadcrumb"><span>{commodity?.display_name ?? commodityCode}</span><span className="breadcrumb-sep">/</span><strong>{currentPage}</strong></div>
-          {!growerPage && <div className="topbar-tools">
+          {!growerPage && <button type="button" className="button-secondary market-tools-toggle" aria-expanded={marketToolsOpen} aria-controls="header-market-tools" onClick={() => setMarketToolsOpen((open) => !open)}>{copy.marketTools}</button>}
+          {!growerPage && <div id="header-market-tools" className={`topbar-tools${marketToolsOpen ? " topbar-tools-open" : ""}`}>
             <label className="commodity-select"><span>{copy.commodity}</span><select aria-label={copy.commodity} value={commodity ? commodityCode : ""} onChange={(event) => selectCommodity(event.target.value)}>
               {!commodity && <option value="" disabled>{copy.unknown(commodityCode)}</option>}
               {catalog.commodities.map((item) => <option key={item.code} value={item.code}>{item.display_name}{item.status === "production" ? "" : ` · ${copy.configured}`}</option>)}

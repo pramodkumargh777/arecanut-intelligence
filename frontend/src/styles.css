@@ -129,6 +129,7 @@ small { font-size: 11px; color: var(--muted); }
 .breadcrumb strong { color: var(--ink); font-weight: 550; }
 .breadcrumb-sep { color: var(--line-strong); }
 .topbar-tools { display: flex; align-items: center; gap: 12px; }
+.topbar .market-tools-toggle { display: none; }
 .topbar-preferences { display: flex; align-items: center; gap: 12px; flex: none; }
 .theme-toggle { flex: none; }
 .commodity-select { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
@@ -586,7 +587,9 @@ td.cell-wrap { white-space: normal; }
 .rate-row-top { position: relative; }
 .rate-row-top::before { content: ""; position: absolute; left: -18px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--brand-leaf); }
 .rate-price { display: grid; justify-items: end; gap: 2px; flex: 0 1 auto; min-width: 0; text-align: right; }
-.rate-price strong { font-size: 22px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.rate-price strong { font-size: 22px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.rate-meta > span { min-width: 0; overflow-wrap: anywhere; }
+.table-scroll-hint { display: none; }
 .rate-sub { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 2px 8px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .rate-change { display: inline-flex; align-items: center; gap: 2px; font-weight: 600; color: var(--muted); }
 .rate-change.hold-up { color: #166534; }
