@@ -351,6 +351,8 @@ Weighted Average Price = ∑(arrival quantity * modal price) / ∑arrival quanti
     expect(await (await read()).json()).toMatchObject({
       observed_months: 0, reporting_months: 1, expected_months: 2,
       points: [{ reporting_month: "2026-09", status: "report_missing" }, { reporting_month: "2026-10", status: "price_missing" }],
+      // A month whose price is null does not count towards a variety's history.
+      variety_coverage: expect.arrayContaining([{ variety: "Rashi", months: 0, years: 0 }]),
       versions: expect.arrayContaining([expect.objectContaining({ weighted_price: 47174.91 }), expect.objectContaining({ weighted_price: 48000 }), expect.objectContaining({ weighted_price: null })]),
     });
     text = monthlyReport("1", false);

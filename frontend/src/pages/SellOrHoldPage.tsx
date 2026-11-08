@@ -13,6 +13,16 @@ const COMMON_VARIETIES: { name: string; kn: string }[] = [
   { name: "Saraku", kn: "ಸರಕು" }, { name: "Sippegotu", kn: "ಸಿಪ್ಪೆಗೋಟು" },
 ];
 
+/** Display names for other source labels, where the source's own spelling reads poorly. The source name stays the value. */
+const OTHER_NAMES: Record<string, { en: string; kn: string }> = { api: { en: "Api", kn: "ಅಪಿ" }, Churu: { en: "Churu", kn: "ಚೂರು" } };
+
+/** Husk is a by-product, not a nut grade, so its price says nothing about when to sell nuts. */
+const NOT_NUT_GRADES = new Set(["Arecanut-Husk"]);
+
+/** Enough history for at least some months to clear the minimum years; fewer would only ever show "not enough data". */
+const MIN_LISTED_MONTHS = 24;
+const hasHistory = (coverage: { months: number; years: number }) => coverage.years >= MIN_HOLD_YEARS && coverage.months >= MIN_LISTED_MONTHS;
+
 /** A starting point for the reader to change. Weight loss and storage start at zero because they differ too much to guess. */
 const DEFAULT_INTEREST_PERCENT = 10;
 
@@ -20,7 +30,8 @@ const COPY = defineCopy({
   kn: {
     title: "ಈಗ ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ?",
     intro: "ಹಿಂದಿನ ವರ್ಷಗಳಲ್ಲಿ ಈ ತಿಂಗಳ ನಂತರ ದರ ಏನಾಯಿತು ಎಂಬುದನ್ನು ಇಲ್ಲಿ ನೋಡಿ. ಇದು ಮುನ್ಸೂಚನೆ ಅಥವಾ ಸಲಹೆ ಅಲ್ಲ; ಮುಂದೆ ಏನಾಗುತ್ತದೆ ಎಂದು ಯಾರಿಗೂ ಖಚಿತವಾಗಿ ಹೇಳಲಾಗದು.",
-    variety: "ತಳಿ", month: "ಮಾರಾಟದ ತಿಂಗಳು",
+    variety: "ತಳಿ", month: "ಮಾರಾಟದ ತಿಂಗಳು", commonGrades: "ಸಾಮಾನ್ಯ ದರ್ಜೆಗಳು", otherGrades: "ಇತರ AGMARKNET ದರ್ಜೆಗಳು",
+    hidden: (count: number) => `${MIN_HOLD_YEARS} ವರ್ಷಕ್ಕಿಂತ ಕಡಿಮೆ ದರ ಇರುವ ${count} ದರ್ಜೆಗಳನ್ನು ಪಟ್ಟಿಯಲ್ಲಿ ತೋರಿಸಿಲ್ಲ.`,
     costsTitle: "ಕಾಯುವುದಕ್ಕೆ ನಿಮ್ಮ ಖರ್ಚು",
     costsHint: "ಇವು ನಿಮ್ಮ ಸಂಖ್ಯೆಗಳು. ಬಡ್ಡಿಯ ಆರಂಭಿಕ ಸಂಖ್ಯೆ ಕೇವಲ ಉದಾಹರಣೆ; ನಿಮ್ಮದಕ್ಕೆ ಬದಲಿಸಿ.",
     interest: "ವಾರ್ಷಿಕ ಬಡ್ಡಿ (%)", weightLoss: "ಸಂಗ್ರಹದಲ್ಲಿ ತೂಕ ನಷ್ಟ (%)", storage: "ಸಂಗ್ರಹ ಖರ್ಚು (₹/ಕ್ವಿಂಟಾಲ್/ತಿಂಗಳು)",
@@ -41,7 +52,8 @@ const COPY = defineCopy({
   en: {
     title: "Sell now or wait?",
     intro: "See what the price did after this month in past years. This is neither a forecast nor advice; nobody can say for certain what happens next.",
-    variety: "Variety", month: "Month you would sell",
+    variety: "Variety", month: "Month you would sell", commonGrades: "Common grades", otherGrades: "Other AGMARKNET grades",
+    hidden: (count: number) => `${count} grade${count === 1 ? " is" : "s are"} not listed because ${count === 1 ? "it has" : "they have"} under ${MIN_HOLD_YEARS} years of prices.`,
     costsTitle: "Your cost of waiting",
     costsHint: "These are your numbers. The interest figure is only a starting example; change it to yours.",
     interest: "Annual interest (%)", weightLoss: "Weight lost in storage (%)", storage: "Storage cost (₹/quintal/month)",
@@ -83,8 +95,14 @@ export function SellOrHoldPage() {
   const latest = observed.at(-1);
   const costs = { annualInterestPercent: Number(interest || 0), weightLossPercent: Number(weightLoss || 0), storagePerQuintalPerMonth: Number(storage || 0) };
   const breakEven = (months: number) => latest?.weighted_price ? holdBreakEvenPercent(months, latest.weighted_price, costs) : null;
-  const common = COMMON_VARIETIES.filter((item) => !data || data.varieties.includes(item.name));
-  const others = (data?.varieties ?? []).filter((name) => !COMMON_VARIETIES.some((item) => item.name === name));
+  // Older API responses carry no coverage; then every variety is listed, as before.
+  const listed = data?.variety_coverage ? data.variety_coverage.filter(hasHistory).map((item) => item.variety) : data?.varieties ?? [];
+  const usable = listed.filter((name) => !NOT_NUT_GRADES.has(name) || name === variety);
+  const hiddenCount = data?.variety_coverage ? data.varieties.length - usable.length : 0;
+  const common = COMMON_VARIETIES.filter((item) => !data || usable.includes(item.name) || item.name === variety);
+  const others = usable.filter((name) => !COMMON_VARIETIES.some((item) => item.name === name))
+    .sort((a, b) => (OTHER_NAMES[a]?.en ?? a).localeCompare(OTHER_NAMES[b]?.en ?? b));
+  const otherName = (name: string) => OTHER_NAMES[name]?.[language] ?? name;
   const monthNames = language === "kn" ? MONTH_NAMES_KN : MONTH_NAMES_EN;
   return <div className="page-stack home" lang={language}>
     <section className="home-heading"><h1>{copy.title}</h1><p>{copy.intro}</p></section>
@@ -93,8 +111,8 @@ export function SellOrHoldPage() {
     <section className="rate-card hold-settings" aria-label={copy.costsTitle}>
       <div className="hold-controls">
       <label className="filter-control"><span>{copy.variety}</span><select value={variety} onChange={(event) => setVariety(event.target.value)}>
-        {common.map((item) => <option key={item.name} value={item.name}>{language === "kn" ? item.kn : item.name}</option>)}
-        {others.map((name) => <option key={name} value={name}>{name}</option>)}
+        <optgroup label={copy.commonGrades}>{common.map((item) => <option key={item.name} value={item.name}>{language === "kn" ? item.kn : item.name}</option>)}</optgroup>
+        {others.length > 0 && <optgroup label={copy.otherGrades}>{others.map((name) => <option key={name} value={name}>{otherName(name)}</option>)}</optgroup>}
       </select></label>
       <label className="filter-control"><span>{copy.month}</span><select value={startMonth} onChange={(event) => setStartMonth(Number(event.target.value))}>
         {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
@@ -103,7 +121,7 @@ export function SellOrHoldPage() {
       <label className="filter-control"><span>{copy.weightLoss}</span><input type="number" inputMode="decimal" min={0} max={99} step="any" value={weightLoss} onChange={(event) => setWeightLoss(event.target.value)} /></label>
       <label className="filter-control"><span>{copy.storage}</span><input type="number" inputMode="decimal" min={0} step="any" value={storage} onChange={(event) => setStorage(event.target.value)} /></label>
       </div>
-      <p className="rate-caption">{copy.costsHint}{latest?.weighted_price ? ` ${copy.latestPrice(rupees(latest.weighted_price), monthText(latest.reporting_month, language))}.` : ""}</p>
+      <p className="rate-caption">{hiddenCount > 0 ? `${copy.hidden(hiddenCount)} ` : ""}{copy.costsHint}{latest?.weighted_price ? ` ${copy.latestPrice(rupees(latest.weighted_price), monthText(latest.reporting_month, language))}.` : ""}</p>
     </section>
 
     {query.isLoading ? <LoadingState label={copy.loading} /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !history?.years.length ? <p className="rate-empty">{copy.noData}</p> : <>

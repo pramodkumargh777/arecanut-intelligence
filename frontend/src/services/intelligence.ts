@@ -6,7 +6,9 @@ export type HistoryPoint = {
   latest_attempt: { status: string; error_message: string | null; started_at: string } | null;
 };
 export type MonthlyHistory = {
-  points: HistoryPoint[]; varieties: string[]; variety: string; state: string; from: string; to: string;
+  points: HistoryPoint[]; varieties: string[];
+  /** Months and calendar years with a price for each variety. */
+  variety_coverage?: { variety: string; months: number; years: number }[]; variety: string; state: string; from: string; to: string;
   expected_months: number; observed_months: number; reporting_months: number; methodology: string;
   flagged_months: number; review_method: string; anomaly_threshold_percent: number;
   seasonal: { month: number; index: number | null; complete_years: number }[]; seasonal_years: string[];

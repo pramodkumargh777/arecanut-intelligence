@@ -70,6 +70,7 @@ const quote = {
   variety_name: "Rashi", grade: "Grade A", reporting_date: "2026-10-01",
   source_name: "AGMARKNET", modal_price: 51000, minimum_price: 50000, maximum_price: 52000,
 };
+const siddapur = { ...quote, market_name: "Siddapur APMC", district: "Uttara Kannada" };
 const ready = (data: object) => ({ data, isPending: false, isError: false, refetch: vi.fn() });
 const failed = { isPending: false, isError: true, error: new Error("offline"), refetch: vi.fn() };
 const cooperativeQuote = (source: string, branch: string, variety: string) => ({
@@ -82,7 +83,7 @@ const render = (node: React.ReactNode, path = "/") => renderToStaticMarkup(
 
 beforeEach(() => {
   state.cooperative = [failed, ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] })];
-  state.official = ready({ data: [quote] });
+  state.official = ready({ data: [siddapur] });
   state.comparison = [];
   state.language = "en";
   state.intelligence = { data: undefined, isLoading: true };
@@ -194,7 +195,7 @@ describe("market experience", () => {
   it("reports a failed cooperative separately while showing dated official modal prices", () => {
     const html = render(<HomePage />);
     expect(html).toContain("Could not load the rates");
-    expect(html).toContain("Market One");
+    expect(html).toContain("Siddapur APMC");
     expect(html).toContain("Grade A");
     expect(html).toContain("AGMARKNET");
     expect(html).toContain("modal price, ₹/quintal");
@@ -214,7 +215,7 @@ describe("market experience", () => {
     expect(html).toContain("Sagara");
     expect(html).toContain("Sirsi");
     expect(html).toContain("Channagiri");
-    expect(html).toContain("Market One");
+    expect(html).toContain("Siddapur APMC");
     expect(html).toContain("average per quintal");
     expect(html).toContain("modal price, ₹/quintal");
     expect(html).toContain("1 Oct 2026");
@@ -544,6 +545,20 @@ describe("market experience", () => {
     expect(strip).toContain("₹48,000");
     expect(strip).toContain("1 branch<");
     expect(strip).toContain("No earlier report to compare");
+  });
+
+  it("shows one APMC Siddapur row for the chosen variety from its latest day, with a link to the other markets", () => {
+    state.official = ready({ data: [
+      { ...siddapur, id: "s-chali", variety_name: "Chali", modal_price: 41899 },
+      { ...siddapur, id: "s-rashi", variety_name: "Rashi", modal_price: 45699 },
+      { ...siddapur, id: "s-old", variety_name: "Rashi", reporting_date: "2026-09-30", modal_price: 40000 },
+    ] });
+    const html = render(<HomePage />);
+    const card = html.slice(html.indexOf('id="rates-official"'));
+    expect((card.match(/class="rate-row/g) ?? []).length).toBe(1);
+    expect(card).toContain("₹45,699");
+    expect(card).not.toContain("₹40,000");
+    expect(card).toContain("See rates from more APMC markets");
   });
 
   it("shows three branches per card, the featured MAMCOS ones first, with a toggle for the rest", () => {

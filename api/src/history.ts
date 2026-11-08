@@ -119,7 +119,10 @@ historyRoutes.get("/history/monthly", async (c) => {
     .bind(state, variety, previousMonth(new Date(`${from}-01T00:00:00Z`), 12), shiftCalendarMonth(to, 1)).all<Price>();
   const reports = await c.env.DB.prepare("SELECT DISTINCT reporting_month FROM monthly_variety_prices WHERE state=? AND reporting_month BETWEEN ? AND ?")
     .bind(state, from, to).all<{ reporting_month: string }>();
-  const varieties = await c.env.DB.prepare("SELECT DISTINCT variety_name FROM monthly_variety_prices WHERE state=? ORDER BY variety_name").bind(state).all<{ variety_name: string }>();
+  // Months and calendar years with a price, per variety, so a page can leave out varieties with too little history.
+  const varieties = await c.env.DB.prepare(`SELECT variety_name, COUNT(DISTINCT CASE WHEN weighted_price IS NOT NULL THEN reporting_month END) AS months,
+    COUNT(DISTINCT CASE WHEN weighted_price IS NOT NULL THEN substr(reporting_month, 1, 4) END) AS years
+    FROM monthly_variety_prices WHERE state=? GROUP BY variety_name ORDER BY variety_name`).bind(state).all<{ variety_name: string; months: number; years: number }>();
   const runs = await c.env.DB.prepare("SELECT reporting_month,status,error_message,started_at FROM monthly_refresh_runs WHERE state=? AND reporting_month BETWEEN ? AND ? ORDER BY started_at DESC")
     .bind(state, from, to).all<Run>();
   const versions = await c.env.DB.prepare(`SELECT r.reporting_month,v.weighted_price,r.source_url,
@@ -131,7 +134,8 @@ historyRoutes.get("/history/monthly", async (c) => {
   ORDER BY r.reporting_month,r.finished_at,r.rowid`)
   .bind(variety, state, from, to).all();
   return c.json({ ...monthlyAnalytics(from, to, prices.results, reports.results.map((row) => row.reporting_month), runs.results),
-    variety, state, from, to, varieties: varieties.results.map((row) => row.variety_name), versions: versions.results,
+    variety, state, from, to, varieties: varieties.results.map((row) => row.variety_name),
+    variety_coverage: varieties.results.map(({ variety_name, months, years }) => ({ variety: variety_name, months, years })), versions: versions.results,
     methodology: "Rolling means require every calendar month in the window; rolling statistics and YoY use up to 12 stored months before the selected range as lookback. Volatility: sample standard deviation of 12 consecutive monthly log returns, annualized by sqrt(12). Seasonality: monthly price / full-year mean × 100, averaged across at least 3 complete years within the selected range. Descriptive only, not a forecast. Missing months and varieties are not filled. Monthly state-level arrival-weighted modal prices are not daily quotes.",
   });
 
