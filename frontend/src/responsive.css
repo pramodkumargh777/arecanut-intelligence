@@ -161,6 +161,8 @@
   .rate-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .rate-card-foot a, .rate-share { min-height: 44px; }
   .rate-list, .skeleton-rows { padding-left: 14px; padding-right: 14px; }
+  .glance-head, .glance-tile { padding-left: 16px; padding-right: 16px; }
+  .glance-range { font-size: 24px; }
   .rate-card-head, .market-breadth, .rate-card-foot { padding-left: 14px; padding-right: 14px; }
   .rate-row-top::before { left: -14px; }
   .home-actions { grid-template-columns: 1fr 1fr; }

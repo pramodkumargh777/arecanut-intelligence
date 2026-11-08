@@ -4,7 +4,8 @@ import type { Env } from "./index";
 import { bearerMatches } from "./auth";
 
 export const sourceStatusRoutes = new Hono<Env>();
-const STATUS_SOURCES = ["agmarknet", "agmarknet_csv"] as const;
+const STATUS_SOURCES = ["agmarknet", "agmarknet_csv", "agmarknet_history"] as const;
+const SOURCE_PLACEHOLDERS = STATUS_SOURCES.map(() => "?").join(", ");
 const authorized = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
 const count = z.number().int().nonnegative().max(10_000_000);
 const isoTimestamp = z.string().datetime({ offset: true });
@@ -75,15 +76,15 @@ sourceStatusRoutes.get("/admin/source-status", async (c) => {
   const state = c.env.REFERENCE_STATE ?? "Karnataka";
   const [sources, observations, latest, runs] = await c.env.DB.batch([
     c.env.DB.prepare(`SELECT id, source_key, name, source_type, is_enabled FROM data_sources
-      WHERE source_key IN (?, ?) ORDER BY source_key`).bind(...STATUS_SOURCES),
+      WHERE source_key IN (${SOURCE_PLACEHOLDERS}) ORDER BY source_key`).bind(...STATUS_SOURCES),
     c.env.DB.prepare(`SELECT s.source_key, o.validation_status, COUNT(*) AS count
       FROM market_price_observations o JOIN data_sources s ON s.id = o.source_id
-      WHERE s.source_key IN (?, ?) GROUP BY s.source_key, o.validation_status`).bind(...STATUS_SOURCES),
+      WHERE s.source_key IN (${SOURCE_PLACEHOLDERS}) GROUP BY s.source_key, o.validation_status`).bind(...STATUS_SOURCES),
     // Narrow projection (no raw payloads) and one aggregate pass instead of correlated re-scans.
     c.env.DB.prepare(`WITH current AS (
         SELECT s.source_key, o.reporting_date, o.market_id, o.platform_fetched_at, o.ingested_at FROM market_price_observations o
         JOIN data_sources s ON s.id = o.source_id JOIN markets m ON m.id = o.market_id
-        WHERE s.source_key IN (?, ?) AND m.state = ? AND o.validation_status != 'superseded'
+        WHERE s.source_key IN (${SOURCE_PLACEHOLDERS}) AND m.state = ? AND o.validation_status != 'superseded'
       ), stats AS (SELECT source_key, MAX(reporting_date) AS latest, MIN(reporting_date) AS earliest,
           COUNT(DISTINCT reporting_date) AS dates FROM current GROUP BY source_key)
       SELECT st.source_key, st.latest AS latest_reporting_date,
@@ -122,6 +123,7 @@ sourceStatusRoutes.get("/admin/source-status", async (c) => {
     limitations: [
       "The data.gov.in current-daily resource returns only the latest arrival date; history accumulates only from scheduled runs, archived replays or official CSV exports.",
       "The resource publishes no price unit, arrival quantity or record identifier. The unit is an operator-confirmed configuration and record IDs are derived from the market/variety/grade/date key.",
+      "AGMARKNET daily history (agmarknet_history) fills past dates from data.gov.in's variety-wise daily resource. It never adds a market/date/variety/grade another source already holds.",
     ],
   });
 });

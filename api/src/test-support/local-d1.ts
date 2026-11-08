@@ -6,10 +6,15 @@ export class LocalStatement {
   constructor(private db: LocalDatabase, private sql: string, private args: SQLInputValue[] = []) {}
   bind(...args: SQLInputValue[]) { return new LocalStatement(this.db, this.sql, args); }
   execute() {
+    const totalBefore = this.db.countTriggerChanges ? this.totalChanges() : 0;
     const rows = this.db.sqlite.prepare(this.sql).all(...this.args);
-    const changes = Number(this.db.sqlite.prepare("SELECT changes() AS count").get()?.count ?? 0);
+    // D1 reports rows written by triggers in meta.changes too; SQLite's changes() does not. Opt-in, see LocalDatabase.
+    const changes = this.db.countTriggerChanges
+      ? this.totalChanges() - totalBefore
+      : Number(this.db.sqlite.prepare("SELECT changes() AS count").get()?.count ?? 0);
     return { results: rows, success: true, meta: { changes } };
   }
+  private totalChanges() { return Number(this.db.sqlite.prepare("SELECT total_changes() AS count").get()?.count ?? 0); }
   async all() { return this.execute(); }
   async run() { return this.execute(); }
   async first() {
@@ -26,6 +31,8 @@ export class LocalStatement {
 export class LocalDatabase {
   sqlite = new DatabaseSync(":memory:");
   afterObservationRead?: () => Promise<void>;
+  /** When true, meta.changes includes rows written by triggers, as on Cloudflare D1. */
+  countTriggerChanges = false;
   prepare(sql: string) { return new LocalStatement(this, sql); }
   async batch(statements: LocalStatement[]) {
     this.sqlite.exec("BEGIN");

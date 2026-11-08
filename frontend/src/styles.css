@@ -140,6 +140,16 @@ small { font-size: 11px; color: var(--muted); }
 .search-field { display: flex; align-items: center; gap: 8px; width: 220px; height: 34px; color: var(--muted); padding: 0 10px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); }
 .search-field:focus-within { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .search-field input { border: 0; outline: 0; width: 100%; background: transparent; font-size: 13px; color: var(--ink); }
+/* Market suggestions under a search box. */
+.market-search { position: relative; display: block; flex: 1; min-width: 0; }
+.search-field .market-search { align-self: stretch; display: flex; }
+.market-suggestions { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; width: max(100%, 280px); max-height: 340px; overflow-y: auto; margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgb(0 0 0 / 14%); animation: fade-in .12s ease-out; }
+.search-field .market-suggestions { left: -36px; width: max(calc(100% + 46px), 280px); }
+.market-suggestions[hidden] { display: none; }
+.market-suggestions li { display: grid; gap: 1px; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.market-suggestions li[aria-selected="true"] { background: var(--brand-tint); }
+.market-suggestion-name { color: var(--ink); font-size: 14px; font-weight: 600; }
+.market-suggestion-detail { color: var(--muted); font-size: 12px; }
 .region-pill { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .page-content { width: min(1320px, 100%); margin: 0 auto; padding: 20px 28px 36px; flex: 1; }
 .site-footer { display: flex; justify-content: space-between; gap: 16px; width: min(1256px, calc(100% - 64px)); margin: 0 auto; padding: 16px 0 20px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
@@ -561,16 +571,26 @@ td.cell-wrap { white-space: normal; }
 .home-price-section .home-section-heading p { font-size: 13px; line-height: 1.5; }
 .rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); align-items: start; gap: 16px; }
 .rate-grid-even { align-items: stretch; }
-/* At-a-glance strip: one line per cooperative, above the full cards. */
-.glance { display: grid; gap: 10px; padding: 14px 18px; border: 1px solid var(--line); border-left: 3px solid var(--brand-leaf); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
-.glance h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--brand); }
-.glance ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px 28px; margin: 0; padding: 0; list-style: none; }
-.glance li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; }
-.glance-source { min-width: 52px; color: var(--ink-2); font-size: 13px; font-weight: 700; text-decoration: none !important; }
-.glance-source:hover { color: var(--brand); }
-.glance-range { font-size: 19px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.glance-trend { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; }
-.glance-meta { flex-basis: 100%; color: var(--muted); font-size: 12.5px; }
+/* At-a-glance strip: one stat tile per cooperative, above the full cards. */
+.glance { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.glance-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.glance-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+.glance-head p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.glance-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); margin: 0; padding: 0; list-style: none; }
+/* Dividers drawn on the left and top edges, so they fall between tiles whether the row wraps or not; the outer ones are clipped. */
+.glance-tile { display: grid; align-content: start; gap: 12px; min-width: 0; padding: 18px 20px 20px; box-shadow: -1px 0 0 var(--line), 0 -1px 0 var(--line); }
+.glance-tile-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.glance-source { padding: 3px 10px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-decoration: none !important; }
+.glance-source:hover { box-shadow: inset 0 0 0 1px var(--brand-leaf); }
+.glance-date { color: var(--muted); font-size: 12.5px; }
+.glance-date-old { color: var(--warn-ink, var(--muted)); }
+.glance-range { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; margin: 0; color: var(--ink); font-size: 28px; font-weight: 700; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.glance-dash { color: var(--subtle); font-weight: 400; }
+.glance-range small { color: var(--muted); font-size: 13px; font-weight: 500; letter-spacing: 0; }
+.glance-tile-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.glance-trend { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.glance-trend.hold-up, .glance-trend.hold-down { background: color-mix(in srgb, currentColor 13%, transparent); }
+.glance-branches { color: var(--muted); font-size: 12.5px; }
 .rate-grid > .rate-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .rate-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px 14px; border-bottom: 1px solid var(--line); }
 .rate-card-head h3 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: var(--brand); scroll-margin-top: 90px; }
@@ -600,7 +620,9 @@ td.cell-wrap { white-space: normal; }
 .rate-top-mark { padding: 1px 8px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 11.5px; font-weight: 600; }
 .rate-row-top { position: relative; }
 .rate-row-top::before { content: ""; position: absolute; left: -18px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--brand-leaf); }
-.rate-price { display: grid; justify-items: end; gap: 2px; flex: 0 1 auto; min-width: 0; text-align: right; }
+/* Never narrower than the price itself: the place and label column wraps instead, so a price is never cut off. */
+.rate-price { display: grid; justify-items: end; gap: 2px; flex: 0 1 auto; min-width: min-content; text-align: right; }
+.rate-price > strong { white-space: nowrap; }
 .rate-price strong { font-size: 22px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
 .rate-meta > span { min-width: 0; overflow-wrap: anywhere; }
 .table-scroll-hint { display: none; }
@@ -667,7 +689,7 @@ td.cell-wrap { white-space: normal; }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes pop-in { from { transform: scale(.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .rate-row-updated, .rate-row-in, .rate-row-out, .skeleton-bar, .rate-share-done svg, .mobile-scrim, .about-data[open] > .about-data-body { animation: none !important; }
+  .rate-row-updated, .rate-row-in, .rate-row-out, .skeleton-bar, .rate-share-done svg, .mobile-scrim, .about-data[open] > .about-data-body, .market-suggestions { animation: none !important; }
   /* Without the fade, the changed row is still marked, just without movement. */
   .rate-row-updated { background-color: var(--brand-tint); }
   .rate-row-out { opacity: 0; }

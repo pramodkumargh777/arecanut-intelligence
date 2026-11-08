@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { routeAvailable } from "../../../shared/commodities";
+import { marketFeeds, routeAvailable } from "../../../shared/commodities";
 import { commodityName, useCommodity } from "../services/commodity";
 import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
 import { CommodityGate } from "./CommodityGate";
+import { MarketSearch } from "./MarketSearch";
+import type { MarketSuggestion } from "../services/marketSuggestions";
 import brandIcon from "../assets/areca-pulse-icon.svg";
 import darkLogo from "../assets/areca-pulse-logo-dark.svg";
 import appIcon from "../assets/areca-pulse-app-icon.svg";
@@ -105,6 +107,18 @@ export function AppShell() {
   const marketSearch = marketContext.toString() ? `?${marketContext}` : "";
   const commoditySearch = commodityContext.toString() ? `?${commodityContext}` : "";
   const currentCommodity = commodityName(commodityCode, commodity, language);
+  /** A chosen market opens its prices: APMC markets by id, cooperative branches by name under their own source. */
+  function openMarket(suggestion: MarketSuggestion) {
+    const params = new URLSearchParams();
+    if (marketParams.get("commodity")) params.set("commodity", commodityCode);
+    params.set("feed", suggestion.feed);
+    // Variety labels differ between sources, so one is carried over only within the same source.
+    if (marketParams.get("variety") && marketParams.get("feed") === suggestion.feed) params.set("variety", marketParams.get("variety")!);
+    if (suggestion.marketId) params.set("market", suggestion.marketId);
+    else params.set("branch", suggestion.name);
+    setSearch("");
+    navigate(`/prices?${params}`);
+  }
   function selectCommodity(next: string) {
     // Variety, grade and feed filters are commodity-specific, so they are cleared on change.
     const params = new URLSearchParams();
@@ -221,7 +235,7 @@ export function AppShell() {
               const next = new URLSearchParams(marketContext);
               if (search.trim()) next.set("search", search.trim());
               navigate(next.toString() ? `/prices?${next}` : "/prices");
-            }}><label className="search-field"><Search size={16} /><input type="search" aria-label={copy.searchLabel} placeholder={copy.search} value={search} onChange={(event) => setSearch(event.target.value)} /></label></form>}
+            }}><label className="search-field"><Search size={16} /><MarketSearch feeds={marketFeeds(commodity)} ariaLabel={copy.searchLabel} placeholder={copy.search} value={search} onChange={setSearch} onSelect={openMarket} /></label></form>}
             <span className="region-pill"><MapPin size={13} /> {copy.region}</span>
           </div>}
           <div className="topbar-preferences">

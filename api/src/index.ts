@@ -18,6 +18,8 @@ import { forecastRoutes, refreshChangedForecasts } from "./forecast";
 import { commodityRoutes, resolveCommodity } from "./commodity-routes";
 import { priceBasisForSource } from "../../shared/commodities";
 import { sourceStatusRoutes } from "./source-status";
+import { agmarknetHistoryRoutes } from "./agmarknet-history";
+import { AGMARKNET_DAILY_REVIEWER, AGMARKNET_DAILY_SOURCE, autoVerifyPendingDaily, autoVerifyStatements } from "./auto-verify";
 import { coveredReferenceSeries, overviewSnapshot, referenceChart, refreshAllDirtySummaries, refreshDirtySummaries, type ChartInterval } from "./summaries";
 import { operationsRoutes } from "./operations-routes";
 import { logOperationalError, purgeExpiredTemporary, syncArchive } from "./archive";
@@ -41,6 +43,10 @@ export type Env = {
     /** "true" publishes scheduled quotations that pass every check; the rest wait in the review queue. */
     COOPERATIVE_AUTO_PUBLISH?: string;
     COOPERATIVE_FETCH_ATTEMPTS?: string;
+    /** "true" verifies AGMARKNET current-daily rows that pass every check (src/auto-verify.ts). */
+    AGMARKNET_DAILY_AUTO_VERIFY?: string;
+    /** "true" verifies AGMARKNET history records that pass every check at import (src/agmarknet-history.ts). */
+    AGMARKNET_HISTORY_AUTO_VERIFY?: string;
     INTELLIGENCE_SCHEDULE_ENABLED?: string;
     /** Optional R2 evidence archive. Absent locally and on deployments without a bucket. */
     ARCHIVE?: R2Bucket;
@@ -172,6 +178,7 @@ app.route("/", cooperativeRoutes);
 app.route("/", historyRoutes);
 app.route("/", decisionRoutes);
 app.route("/", sourceStatusRoutes);
+app.route("/", agmarknetHistoryRoutes);
 app.route("/", intelligenceRoutes);
 app.route("/", forecastRoutes);
 app.route("/", forecastingRoutes);
@@ -564,6 +571,8 @@ app.post("/admin/import", async (c) => {
   let insertedCount = 0;
   let duplicateCount = 0;
   let correctedCount = 0;
+  let autoVerifiedCount = 0;
+  const autoVerify = source.source_key === AGMARKNET_DAILY_SOURCE && c.env.AGMARKNET_DAILY_AUTO_VERIFY === "true";
   try {
     const seenInRequest = new Set<string>();
     for (let offset = 0; offset < parsed.data.records.length; offset += 25) {
@@ -637,12 +646,23 @@ app.post("/admin/import", async (c) => {
         if (results[index].meta.changes) insertedCount += 1;
         else duplicateCount += 1;
       }
-      for (const index of correctionStatementIndexes) correctedCount += results[index].meta.changes;
+      // D1's meta.changes also counts rows written by triggers (summary-cache markers when a verified row is
+      // superseded). At most one current row exists per source record, so each statement is read as changed or not.
+      for (const index of correctionStatementIndexes) correctedCount += results[index].meta.changes > 0 ? 1 : 0;
+    }
+    if (autoVerify) {
+      // One set-based pass over this job's rows (src/auto-verify.ts); flagged rows stay in the review queue. A failure
+      // here leaves the stored rows pending, and the 09:00 IST cron verifies them, so it never fails the import.
+      try {
+        autoVerifiedCount = (await c.env.DB.batch(autoVerifyStatements(c.env.DB, source.id, { jobId })))[0].meta.changes;
+      } catch (error) {
+        await logOperationalError(c.env.DB, "import", source.source_key, `Auto-verification failed: ${error instanceof Error ? error.message : String(error)}`, { job_id: jobId });
+      }
     }
     await c.env.DB.batch([
       c.env.DB.prepare(
         "INSERT INTO ingestion_job_logs (id, job_id, level, message) VALUES (?, ?, 'info', ?)",
-      ).bind(crypto.randomUUID(), jobId, `Received ${parsed.data.records.length}; inserted ${insertedCount}; corrected ${correctedCount}; duplicates ignored ${duplicateCount}.`),
+      ).bind(crypto.randomUUID(), jobId, `Received ${parsed.data.records.length}; inserted ${insertedCount}; corrected ${correctedCount}; duplicates ignored ${duplicateCount}${autoVerify ? `; auto-verified ${autoVerifiedCount}` : ""}.`),
       c.env.DB.prepare(
         `UPDATE ingestion_jobs SET status = 'completed', inserted_count = ?, duplicate_count = ?, corrected_count = ?,
            completed_at = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -668,9 +688,21 @@ app.post("/admin/import", async (c) => {
     inserted_count: insertedCount,
     duplicate_count: duplicateCount,
     corrected_count: correctedCount,
+    ...(autoVerify ? { auto_verified_count: autoVerifiedCount } : {}),
     replayed: false,
     reprocess_of: reprocessOf,
   }, 201);
+});
+
+/** Runs the 09:00 IST backlog pass now: verifies current-daily rows still waiting that pass every check. */
+app.post("/admin/agmarknet/auto-verify", async (c) => {
+  if (!isAuthorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) {
+    return c.json({ error: "A valid reviewer token is required." }, 401);
+  }
+  if (c.env.AGMARKNET_DAILY_AUTO_VERIFY !== "true") {
+    return c.json({ error: "AGMARKNET_DAILY_AUTO_VERIFY is not \"true\"; nothing was verified." }, 409);
+  }
+  return c.json({ auto_verified_count: await autoVerifyPendingDaily(c.env.DB), reviewer: AGMARKNET_DAILY_REVIEWER });
 });
 
 app.post("/admin/observations/:id/review", async (c) => {
@@ -771,6 +803,13 @@ export default {
         console.error("Scheduled monthly refresh failed", error);
         errors.push(error);
       }
+    }
+    // Catches current-daily rows imported before auto-verification was on, or by an import that failed part-way.
+    if (env.AGMARKNET_DAILY_AUTO_VERIFY === "true") {
+      try {
+        const verified = await autoVerifyPendingDaily(env.DB);
+        if (verified) console.log(`AGMARKNET daily: ${verified} pending row(s) auto-verified`);
+      } catch (error) { console.error("Scheduled AGMARKNET daily auto-verification failed", error); errors.push(error); }
     }
     // Derived-cache and archive maintenance never fail the source schedule; failures are persisted for operators.
     const maintenance: [string, unknown][] = [];
