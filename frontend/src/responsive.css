@@ -55,7 +55,8 @@
   .sidebar-collapse { display: none; }
   .main-column { margin-left: 0; }
   .menu-toggle { display: grid; }
-  .topbar-brand { display: block; }
+  .topbar-brand { display: flex; }
+  .topbar-brand-name { display: inline; }
   .region-pill { display: none; }
 }
 
@@ -77,13 +78,25 @@
   .topbar-preferences { margin-left: auto; gap: 10px; }
   .topbar-tools { width: 100%; flex-wrap: wrap; gap: 10px; }
   .topbar-tools:not(.topbar-tools-open) { display: none; }
-  .topbar .market-tools-toggle { display: inline-flex; order: 2; }
+  /* The breadcrumb and the tools button share the second row; the tools open full width below them. */
+  .topbar .market-tools-toggle { display: inline-flex; order: 1; min-height: 36px; padding: 0 11px; font-size: 13px; color: var(--ink-2); }
   .commodity-select { width: 100%; }
   .commodity-select select { flex: 1; height: 40px; font-size: 16px; }
   .topbar-tools form { width: 100%; }
   .search-field { width: 100%; }
   .search-field input { font-size: 16px; }
-  .breadcrumb { order: 1; flex: 1 1 100%; font-size: 12px; }
+  /* Too wide to squeeze into the first row, so it always starts the second. */
+  .breadcrumb { order: 1; flex: 1 1 0; min-width: 52%; font-size: 12.5px; }
+  .breadcrumb strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* One height for every control in the first row, so the menu, language and theme buttons read as a set. */
+  .topbar .icon-button { width: 42px; min-height: 42px; }
+  .topbar .language-toggle { height: 42px; align-items: stretch; }
+  .topbar .language-toggle button { min-height: 0; padding-inline: 11px; }
+}
+
+/* Too narrow for the wordmark beside the menu, language and theme controls: the palm mark alone stands for the brand. */
+@media (max-width: 459px) {
+  .topbar-brand-name { display: none; }
   .topbar-tools { order: 3; }
   .page-heading { gap: 16px; }
   .page-heading > div:first-child { flex-basis: 100%; }

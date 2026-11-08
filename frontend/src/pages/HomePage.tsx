@@ -51,6 +51,7 @@ const COPY = defineCopy({
     officialRates: "ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆ ದರಗಳು",
     officialEmpty: "ಪರಿಶೀಲಿಸಿದ ಎಪಿಎಂಸಿ ದರಗಳು ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ.",
     officialMore: "ಎಲ್ಲಾ ಎಪಿಎಂಸಿ ದರಗಳನ್ನು ನೋಡಿ",
+    officialOthers: "ಇತರ ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳ ದರ ನೋಡಿ",
     grade: "ದರ್ಜೆ",
     otherTools: "ಇನ್ನಷ್ಟು ಮಾಹಿತಿ",
     moreFrom: (source: string) => `${source} ದರಗಳನ್ನು ನೋಡಿ`,
@@ -117,6 +118,7 @@ const COPY = defineCopy({
     officialRates: "APMC market rates",
     officialEmpty: "No verified APMC prices are available yet.",
     officialMore: "Explore all APMC prices",
+    officialOthers: "See rates from more APMC markets",
     grade: "Grade",
     otherTools: "Explore further",
     moreFrom: (source: string) => `Explore ${source} prices`,
@@ -220,6 +222,8 @@ function RateRow({ row, today, language, highest, showLabel, change, reveal }: {
  * pushing the others off the screen.
  */
 const VISIBLE_ROWS = 3;
+/** The one APMC market shown on the home page; every other market is a link away. */
+const HOME_APMC = { name: "Siddapur", district: "Uttara Kannada" };
 /** Branches most readers look for. The collapsed card shows these first and tops up from the rest if one did not report. */
 const FEATURED_BRANCHES: Partial<Record<CooperativeSource, string[]>> = { mamcos: ["SHIVAMOGGA", "SAGARA", "THIRTHAHALLI"] };
 
@@ -251,8 +255,8 @@ export function HomePage() {
     refetchInterval: 300_000,
   })) });
   const official = useQuery({
-    queryKey: ["home-official-prices"],
-    queryFn: () => api.prices({ commodity: DEFAULT_COMMODITY, limit: "5", sort: "reporting_date", order: "desc" }),
+    queryKey: ["home-official-prices", HOME_APMC.name],
+    queryFn: () => api.prices({ commodity: DEFAULT_COMMODITY, q: HOME_APMC.name, district: HOME_APMC.district, limit: "30", sort: "reporting_date", order: "desc" }),
     enabled: code === DEFAULT_COMMODITY,
     refetchInterval: 300_000,
   });
@@ -266,6 +270,10 @@ export function HomePage() {
     const labels = variety.labels[source] ?? [];
     return labels.flatMap((label) => queries[requests.findIndex((request) => request.source === source && request.label === label)]?.data?.data ?? []);
   };
+  // Siddapur's latest day, and from it the row for the chosen variety when the APMC publishes one under the same name.
+  const apmcDay = (official.data?.data ?? []).filter((row, _, all) => row.market_name.startsWith(HOME_APMC.name) && row.reporting_date === all[0].reporting_date);
+  const apmcRow = apmcDay.find((row) => row.variety_name.toLowerCase() === variety.en.toLowerCase())
+    ?? apmcDay.find((row) => row.variety_name.toLowerCase() === "rashi") ?? apmcDay[0];
   const tumcosQuery = showTumcos ? queries.at(-1) : undefined;
   const tumcos = tumcosQuery?.data?.latest_by_branch ?? [];
   const tumcosHistory = tumcosQuery?.data?.data ?? [];
@@ -406,7 +414,7 @@ export function HomePage() {
 
     <section className="home-price-section" aria-labelledby="other-prices-heading">
     <div className="home-section-heading"><h2 id="other-prices-heading">{copy.otherMarketsTitle}</h2>{showTumcos && <p>{copy.otherMarketsHint}</p>}</div>
-    <div className="rate-grid">
+    <div className="rate-grid rate-grid-even">
       {showTumcos && <section className="rate-card" aria-labelledby="rates-tumcos">
         <header className="rate-card-head">
           <div><h3 id="rates-tumcos">TUMCOS</h3><span className="rate-card-basis">{copy.unitFoot(true)}</span><span className="rate-card-sub">{copy.tumcosSub}</span></div>
@@ -422,14 +430,16 @@ export function HomePage() {
 
     <section className="rate-card" aria-labelledby="rates-official">
       <header className="rate-card-head"><div><h3 id="rates-official">{copy.officialRates}</h3><span className="rate-card-basis">{copy.officialSub}</span></div></header>
-      {official.isPending ? <SkeletonRows label={copy.loading} /> : official.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void official.refetch()} /> : !official.data?.data.length ? <p className="rate-empty">{copy.officialEmpty}</p> :
-        <ul className="rate-list">{official.data.data.map((row) => <li className="rate-row" key={row.id}>
+      {official.isPending ? <SkeletonRows label={copy.loading} rows={1} /> : official.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void official.refetch()} /> : !apmcRow ? <p className="rate-empty">{copy.officialEmpty}</p> :
+        <><ul className="rate-list">{[apmcRow].map((row) => <li className="rate-row" key={row.id}>
           <div className="rate-place"><strong>{row.market_name}</strong><span className="rate-meta"><span>{row.district} · {dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span><span className="rate-label" lang="en">{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""} · {row.source_name}</span></span></div>
           <div className="rate-price"><strong>{rupees(row.modal_price)}</strong></div>
-        </li>)}</ul>}
-      <footer className="rate-card-foot">{official.data?.data.length ? <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("APMC")} title={copy.shareOfficialTitle} message={() => shareMessage({
+        </li>)}</ul>
+        <Link className="rate-more-toggle" to="/prices?feed=official">{copy.officialOthers}<ArrowRight size={15} aria-hidden="true" /></Link></>}
+      <footer className="rate-card-foot">{apmcRow ? <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("APMC")} title={copy.shareOfficialTitle} message={() => shareMessage({
         title: copy.shareOfficialTitle,
-        lines: official.data.data.map((row) => ({ place: `${row.market_name} · ${row.variety_name}`, price: rupees(row.modal_price), date: dateText(row.reporting_date, language) })),
+        date: copy.shareReport(dateText(apmcRow.reporting_date, language)),
+        lines: apmcDay.map((row) => ({ place: `${row.market_name} · ${row.variety_name}`, price: rupees(row.modal_price) })),
         more: copy.shareOfficialMore, note: copy.shareOfficialNote, url: shareUrl("/prices?feed=official"),
       })} /> : null}<Link to="/prices?feed=official" aria-label={copy.officialMore}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
     </section>

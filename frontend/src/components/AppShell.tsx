@@ -10,7 +10,7 @@ import brandIcon from "../assets/areca-pulse-icon.svg";
 import darkLogo from "../assets/areca-pulse-logo-dark.svg";
 import appIcon from "../assets/areca-pulse-app-icon.svg";
 import { setTheme, useTheme } from "../services/theme";
-import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, ClipboardCheck, Ellipsis, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, Search, Sun, TableProperties, X } from "lucide-react";
+import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, ChevronDown, ClipboardCheck, Ellipsis, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, Search, SlidersHorizontal, Sun, TableProperties, X } from "lucide-react";
 
 const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
@@ -53,7 +53,7 @@ const GROWER_PAGES = ["/", "/sell-or-hold"];
 const SHELL_COPY = defineCopy({
   en: {
     skip: "Skip to content", openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation", navigation: "Main navigation",
-    moreTools: "More tools", marketTools: "Market tools", commodity: "Commodity", search: "Search markets · Enter", searchLabel: "Search markets, press Enter to search",
+    moreTools: "More tools", marketTools: "Market tools", tools: "Tools", commodity: "Commodity", search: "Search markets · Enter", searchLabel: "Search markets, press Enter to search",
     region: "Karnataka", tagline: "Know the market. See the opportunity.", taglineHint: "Prices, trends, and insights for your next move.",
     footerNote: "Market observations · Not financial advice", notFound: "Page not found", noSource: "No data",
     noSourceFor: (name: string) => `No integrated source for ${name}`, unknown: (code: string) => `Unknown: ${code}`, configured: "configured",
@@ -62,7 +62,7 @@ const SHELL_COPY = defineCopy({
   },
   kn: {
     skip: "ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ", openMenu: "ಮೆನು ತೆರೆಯಿರಿ", closeMenu: "ಮೆನು ಮುಚ್ಚಿ", closeNavigation: "ಮೆನು ಮುಚ್ಚಿ", navigation: "ಮುಖ್ಯ ಮೆನು",
-    moreTools: "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು", marketTools: "ಮಾರುಕಟ್ಟೆ ಸಾಧನಗಳು", commodity: "ಬೆಳೆ", search: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ · Enter", searchLabel: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ, Enter ಒತ್ತಿ",
+    moreTools: "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು", marketTools: "ಮಾರುಕಟ್ಟೆ ಸಾಧನಗಳು", tools: "ಸಾಧನಗಳು", commodity: "ಬೆಳೆ", search: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ · Enter", searchLabel: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ, Enter ಒತ್ತಿ",
     region: "ಕರ್ನಾಟಕ", tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.", taglineHint: "ನಿಮ್ಮ ಮುಂದಿನ ಹೆಜ್ಜೆಗೆ ದರಗಳು, ಪ್ರವೃತ್ತಿಗಳು ಮತ್ತು ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ.",
     footerNote: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ · ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ", notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
     noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
@@ -222,9 +222,11 @@ export function AppShell() {
           <button type="button" className="icon-button sidebar-collapse" onClick={toggleCollapsed} aria-label={collapsed ? copy.expand : copy.collapse} title={collapsed ? copy.expand : copy.collapse} aria-controls="main-navigation">
             {collapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
           </button>
-          <Link to="/" className="topbar-brand" aria-label={BRAND_LABEL}><img src={theme === "dark" ? appIcon : brandIcon} alt="" width={36} height={28} /></Link>
+          {/* Phones and tablets only. The bare palm mark, not the tiled app icon, so it reads as the logo beside outlined buttons; the dark logo is cropped to its mark. */}
+          <Link to="/" className="topbar-brand" aria-label={BRAND_LABEL}><img className={`topbar-brand-mark${theme === "dark" ? " topbar-brand-mark-dark" : ""}`} src={theme === "dark" ? darkLogo : brandIcon} alt="" />
+            <span className="topbar-brand-name" aria-hidden="true" lang="en">Areca <span className="brand-name-accent">Pulse</span></span></Link>
           <div className="breadcrumb"><span>{currentCommodity}</span><span className="breadcrumb-sep">/</span><strong>{currentPage}</strong></div>
-          {!growerPage && <button type="button" className="button-secondary market-tools-toggle" aria-expanded={marketToolsOpen} aria-controls="header-market-tools" onClick={() => setMarketToolsOpen((open) => !open)}>{copy.marketTools}</button>}
+          {!growerPage && <button type="button" className="button-secondary market-tools-toggle" aria-expanded={marketToolsOpen} aria-controls="header-market-tools" aria-label={copy.marketTools} onClick={() => setMarketToolsOpen((open) => !open)}><SlidersHorizontal size={15} aria-hidden="true" />{copy.tools}<ChevronDown className="market-tools-chevron" size={15} aria-hidden="true" /></button>}
           {!growerPage && <div id="header-market-tools" className={`topbar-tools${marketToolsOpen ? " topbar-tools-open" : ""}`}>
             <label className="commodity-select"><span>{copy.commodity}</span><select aria-label={copy.commodity} value={commodity ? commodityCode : ""} onChange={(event) => selectCommodity(event.target.value)}>
               {!commodity && <option value="" disabled>{copy.unknown(commodityCode)}</option>}
