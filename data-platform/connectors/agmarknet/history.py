@@ -39,7 +39,7 @@ from ingestion.idempotency import batch_idempotency_key
 HISTORY_RESOURCE_ID = "35985678-0d79-46b4-9ed6-6f13308a1d24"
 HISTORY_SOURCE_KEY = "agmarknet_history"
 # Must stay at or below HISTORY_IMPORT_MAX_RECORDS in api/src/agmarknet-history.ts (D1 50-query limit on Workers Free).
-DEFAULT_BATCH_SIZE = 4
+DEFAULT_BATCH_SIZE = 5
 MAX_BATCH_SIZE = 5
 # The current-daily connector owns recent dates; history only fills dates at least this many days old (IST).
 DEFAULT_LAG_DAYS = 2
@@ -293,9 +293,28 @@ def _write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+_ZERO_COUNTS = ("fetched_count", "out_of_scope_count", "accepted_count", "review_required_count", "rejected_count",
+                "inserted_count", "duplicate_count", "held_by_other_source_count", "corrected_count", "auto_verified_count")
+
+
+def _deferred(start: date, end: date, reason: str, records: int, failed_dates: dict[str, str]) -> dict[str, Any]:
+    """A month left whole for a later run: nothing of it was stored."""
+    return {"source_key": HISTORY_SOURCE_KEY, "status": "deferred", "deferred_reason": reason, "deferred_count": records,
+            "start": start.isoformat(), "end": end.isoformat(), **{key: 0 for key in _ZERO_COUNTS}, "import_job_ids": [],
+            "reporting_dates": [], "dates_with_no_records": [], "failed_dates": failed_dates, "market_count": 0,
+            "renamed_markets": {}, "markets": {}, "error_message": None}
+
+
 def ingest_history_month(config: ConnectorConfig, start: date, end: date, *, dry_run: bool, api_url: str | None,
                          token: str | None, batch_size: int, report_dir: Path | None,
-                         opener: Callable[..., Any], sleep: Callable[[float], None], today: date) -> dict[str, Any]:
+                         opener: Callable[..., Any], sleep: Callable[[float], None], today: date,
+                         max_records: int | None = None, backfill: bool = False) -> dict[str, Any]:
+    """One month: fetch, validate, import.
+
+    With ``backfill``, the month is all or nothing so the stored history never has holes: a month with a failed date
+    is not stored at all, and records are imported newest date first, so an interrupted import leaves only the oldest
+    dates for the next run. With ``max_records``, a month larger than that is left untouched for the next run.
+    """
     started_at = utc_now_iso()
     fetched_at = started_at
     days: list[DayFetch] = []
@@ -312,7 +331,13 @@ def ingest_history_month(config: ConnectorConfig, start: date, end: date, *, dry
             sleep(config.page_delay_seconds)
         day += timedelta(days=1)
     raw_records = [record for fetch in days for record in fetch.records]
+    if backfill and failed_dates:
+        return _deferred(start, end, "fetch_failed", 0, failed_dates)
     prepared = prepare_history(raw_records, config, fetched_at, today=today)
+    if max_records is not None and len(prepared.accepted) > max_records:
+        return _deferred(start, end, "daily_record_budget", len(prepared.accepted), {})
+    if backfill:
+        prepared.accepted.sort(key=lambda record: record["reporting_date"], reverse=True)
     totals = {"inserted_count": 0, "duplicate_count": prepared.duplicates, "held_by_other_source_count": 0,
               "corrected_count": 0, "auto_verified_count": 0}
     job_ids: list[str] = []
@@ -393,8 +418,14 @@ def backfill_history(config: ConnectorConfig, start: date, end: date, *, dry_run
                      token: str | None = None, batch_size: int = DEFAULT_BATCH_SIZE, lag_days: int = DEFAULT_LAG_DAYS,
                      report_dir: Path | None = None, opener: Callable[..., Any] = urllib.request.urlopen,
                      sleep: Callable[[float], None] = time.sleep, today: date | None = None,
-                     on_month: Callable[[dict[str, Any]], None] | None = None) -> dict[str, Any]:
-    """Fetch, validate and import one month at a time. Re-running any range is safe: imports are idempotent."""
+                     on_month: Callable[[dict[str, Any]], None] | None = None,
+                     backfill: bool = False, max_records: int | None = None) -> dict[str, Any]:
+    """Fetch, validate and import one month at a time. Re-running any range is safe: imports are idempotent.
+
+    With ``backfill``, months go newest first and the run stops at the first month that fails or is deferred, so the
+    stored history stays contiguous and the next run resumes from it. ``max_records`` caps the records stored per run
+    (the D1 daily write budget); the first month always runs, so one large month cannot stall the backfill.
+    """
     config.validate()
     if not 1 <= batch_size <= MAX_BATCH_SIZE:
         raise ValueError(f"batch_size must be 1–{MAX_BATCH_SIZE} (D1 query limit per request).")
@@ -405,13 +436,20 @@ def backfill_history(config: ConnectorConfig, start: date, end: date, *, dry_run
     end = min(end, latest)
     if end < start:
         raise ValueError(f"Nothing to fetch: the range ends before {latest.isoformat()} is allowed (lag {lag_days} day(s)).")
-    months = []
-    for month_start, month_end in month_ranges(start, end):
+    months: list[dict[str, Any]] = []
+    ranges = month_ranges(start, end)
+    used = 0
+    for month_start, month_end in reversed(ranges) if backfill else ranges:
+        remaining = None if max_records is None or not months else max(max_records - used, 0)
         summary = ingest_history_month(config, month_start, month_end, dry_run=dry_run, api_url=api_url, token=token,
-                                       batch_size=batch_size, report_dir=report_dir, opener=opener, sleep=sleep, today=today)
+                                       batch_size=batch_size, report_dir=report_dir, opener=opener, sleep=sleep, today=today,
+                                       max_records=remaining, backfill=backfill)
         months.append(summary)
         if on_month:
             on_month(summary)
+        used += summary["accepted_count"]
+        if backfill and (summary["status"] in ("deferred", "failed") or (max_records is not None and used >= max_records)):
+            break
     keys = ("fetched_count", "accepted_count", "review_required_count", "rejected_count", "inserted_count", "duplicate_count",
             "held_by_other_source_count", "corrected_count", "auto_verified_count")
     result = {
@@ -421,6 +459,8 @@ def backfill_history(config: ConnectorConfig, start: date, end: date, *, dry_run
         "dates_with_no_records": [d for month in months for d in month["dates_with_no_records"]],
         "renamed_markets": dict(sorted(sum((Counter(m["renamed_markets"]) for m in months), Counter()).items())),
         "markets": dict(sorted(sum((Counter(m["markets"]) for m in months), Counter()).items())),
+        "deferred": [{"month": m["start"][:7], "reason": m["deferred_reason"], "records": m["deferred_count"]}
+                     for m in months if m["status"] == "deferred"],
         "status": "failed" if any(m["status"] == "failed" for m in months) else
                   "completed_with_rejections" if any(m["status"] == "completed_with_rejections" for m in months) else "completed",
     }
@@ -442,16 +482,22 @@ def fetch_history_coverage(api_url: str, token: str, timeout: float = 60.0) -> d
         raise RuntimeError(f"ANI API coverage request failed: {getattr(error, 'reason', error)}") from None
 
 
-def next_backfill_window(earliest: date | None, backfill_from: date, latest: date, months: int) -> tuple[date, date] | None:
-    """The next whole-month window older than the stored history, or None once ``backfill_from`` is reached.
+# Within this many days of backfill_from the backfill counts as complete: the first days of a year can be holidays
+# with no market data, and waiting for a record there would repeat the same empty window every day.
+BACKFILL_DONE_WITHIN_DAYS = 7
 
-    Each scheduled run fills one window, so the backfill advances by ``months`` per run and stops by itself.
+
+def next_backfill_window(earliest: date | None, backfill_from: date, latest: date, months: int) -> tuple[date, date] | None:
+    """The next window of whole months ending at the oldest stored date, or None once ``backfill_from`` is reached.
+
+    The window includes the oldest stored date itself, so a date that an interrupted run stored only in part is
+    completed (the stored records are duplicates and cost nothing).
     """
     if months < 1:
         raise ValueError("months must be at least 1.")
-    end = earliest - timedelta(days=1) if earliest else latest
-    if end < backfill_from:
+    if earliest and (earliest - backfill_from).days < BACKFILL_DONE_WITHIN_DAYS:
         return None
+    end = earliest if earliest else latest
     month_index = end.year * 12 + end.month - 1 - (months - 1)
     start = date(month_index // 12, month_index % 12 + 1, 1)
     return max(start, backfill_from), end

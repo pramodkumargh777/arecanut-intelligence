@@ -97,11 +97,19 @@ count. `LEGACY_DISTRICTS` and `LEGACY_MARKETS` in `history.py` map every old nam
 nightly refresh:
 
 1. `--recent-days 14` fills any recent date the daily runs missed.
-2. `--backfill-from 2021-01-01 --backfill-months 3` reads the oldest stored history date
-   (`GET /admin/agmarknet-history/coverage`, INGESTION_TOKEN) and fills the 3 months before it. Each day goes 3 months
-   further back; once 2021-01-01 is reached it does nothing more. That takes about 3 weeks. 3 months is about 3,000
-   records, well inside D1 Free's 100,000 row writes per day, which the daily import and cooperative collection also
-   need. On the paid plan, raise `--backfill-months` to finish sooner.
+2. `--backfill-from 2021-01-01 --backfill-max-records 4000` reads the oldest stored history date
+   (`GET /admin/agmarknet-history/coverage`, INGESTION_TOKEN) and fills older months, newest first, until the day's
+   record budget is used. Once it is within a week of 2021-01-01 it does nothing more.
+   - **Budget.** Measured with Cloudflare's local D1 engine (June 2023, 1,004 records): 17.4 D1 rows written per
+     record, including the summary-cache rebuild. 4,000 records is about 70,000 of D1 Free's 100,000 writes per day,
+     leaving the rest for the daily import and cooperative collection. About 63,500 records date from 2021, so the
+     backfill takes about 16 days. Change the budget with the repository variable `AGMARKNET_HISTORY_DAILY_RECORDS`;
+     on Workers Paid (50 million writes a month included), 100000 finishes it in one run.
+   - **No gaps.** A month is all or nothing: one with a failed date stores nothing and is retried whole the next day,
+     and a month that does not fit the day's budget waits whole. Within a month, the newest dates are stored first, and
+     each run restarts at the oldest stored date, so an interrupted import is completed the next day.
+   - **Write cost.** Clean records are stored as verified in one write rather than inserted and then updated
+     (22.1 → 16.6 rows written per record).
 
 It uses the same repository variables and secrets as `agmarknet-ingestion.yml`, and the same Mumbai relay
 (`AGMARKNET_API_BASE_URL`). The deploy workflow deploys the relay.

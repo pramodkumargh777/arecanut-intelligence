@@ -20,8 +20,8 @@ import { logOperationalError } from "./archive";
 export const AGMARKNET_HISTORY_SOURCE = "agmarknet_history";
 export const AGMARKNET_HISTORY_REVIEWER = "auto-validation-history-v1";
 /**
- * Eight statements per record plus six per request keeps one request at 46 D1 queries or fewer, inside the
- * 50-query limit of Workers Free.
+ * Seven statements per record plus six per request (three more if it fails) keeps one request at 44 D1 queries or
+ * fewer, inside the 50-query limit of Workers Free.
  */
 export const HISTORY_IMPORT_MAX_RECORDS = 5;
 
@@ -102,7 +102,12 @@ function recordStatements(db: D1Database, sourceId: string, jobId: string, recor
         original_commodity_name, variety_name, original_variety_name, minimum_price, maximum_price, modal_price,
         arrival_quantity, arrival_unit, original_unit, price_unit, validation_status, validation_message, raw_payload,
         grade, source_resource_id, platform_fetched_at, price_basis)
-      SELECT ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      SELECT ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?,
+        -- Auto-verified in the same write: about a third fewer D1 rows written than inserting, then updating. The
+        -- conditions are the verified-price trigger's, so a row that would fail it is stored unverified instead.
+        CASE WHEN ? = 1 AND ? IS NULL AND ? <= ? AND ? <= ? AND ? <= date('now') AND ? = 'INR/quintal'
+          THEN 'verified' ELSE ? END,
+        ?, ?, ?, ?, ?, ?
       WHERE NOT ${HELD_ELSEWHERE}
       ON CONFLICT(id) DO UPDATE SET validation_status = excluded.validation_status,
         validation_message = excluded.validation_message, ingestion_job_id = excluded.ingestion_job_id,
@@ -112,21 +117,21 @@ function recordStatements(db: D1Database, sourceId: string, jobId: string, recor
       .bind(record.id, sourceId, jobId, record.source_record_id, record.market_id, record.reporting_date,
         record.commodity_name, record.original_commodity_name, record.variety_name, record.original_variety_name,
         record.minimum_price, record.maximum_price, record.modal_price, record.original_unit, record.price_unit,
-        record.validation_status, record.validation_message, record.raw_payload, record.grade ?? null,
+        autoVerify && record.validation_status === "validated" ? 1 : 0, record.validation_message, record.minimum_price,
+        record.modal_price, record.modal_price, record.maximum_price, record.reporting_date, record.price_unit,
+        record.validation_status,
+        record.validation_message, record.raw_payload, record.grade ?? null,
         record.source_resource_id, record.platform_fetched_at ?? null, priceBasisForSource(AGMARKNET_HISTORY_SOURCE),
         ...elsewhere),
   ];
   if (!autoVerify) return statements;
   const reviewId = crypto.randomUUID();
-  // Only rows written by this job, and only when the stored values satisfy the verified-price invariants, so the
-  // database trigger never aborts the batch.
   statements.push(
-    db.prepare(`UPDATE market_price_observations SET validation_status = 'verified'
-      WHERE id = ? AND source_id = ? AND ingestion_job_id = ? AND validation_status = 'validated' AND validation_message IS NULL
-        AND minimum_price <= modal_price AND modal_price <= maximum_price AND reporting_date <= date('now')
-        AND price_unit = 'INR/quintal'`).bind(record.id, sourceId, jobId),
+    // The approval record, only for a row this job stored as verified (a re-import of an existing row adds none).
     db.prepare(`INSERT INTO observation_reviews (id, observation_id, action, reviewer, previous_status, validation_message)
-      SELECT ?, ?, 'approve', ?, 'validated', NULL WHERE changes() = 1`).bind(reviewId, record.id, AGMARKNET_HISTORY_REVIEWER),
+      SELECT ?, ?, 'approve', ?, 'validated', NULL WHERE EXISTS (SELECT 1 FROM market_price_observations
+        WHERE id = ? AND source_id = ? AND ingestion_job_id = ? AND validation_status = 'verified')`)
+      .bind(reviewId, record.id, AGMARKNET_HISTORY_REVIEWER, record.id, sourceId, jobId),
     // As with a manual approval. A market a reviewer has set to any other status is left alone.
     db.prepare(`UPDATE markets SET mapping_status = 'verified' WHERE id = ? AND mapping_status = 'unverified'
       AND EXISTS (SELECT 1 FROM observation_reviews WHERE id = ?)`).bind(record.market_id, reviewId),
@@ -188,6 +193,7 @@ agmarknetHistoryRoutes.post("/admin/agmarknet-history/import", async (c) => {
     for (const record of records) {
       const start = statements.length;
       statements.push(...recordStatements(db, source.id, jobId, record, autoVerify));
+      // The review insert (start + 5) counts verified rows; the reviews table has no triggers, so its count is exact.
       indexes.push({ supersede: start + 3, insert: start + 4, verify: autoVerify ? start + 5 : null });
     }
     const results = await db.batch(statements);

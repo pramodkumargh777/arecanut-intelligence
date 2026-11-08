@@ -3,9 +3,10 @@ name: AGMARKNET history
 # Add-on to agmarknet-ingestion.yml (which is unchanged). Fully scheduled; nothing needs starting by hand.
 # Each run, after data.gov.in's overnight refresh (about 05:00 IST):
 # 1. fills any of the last 14 days the current-daily runs missed (dates the daily feed holds are skipped);
-# 2. backfills the next 3 months older than the stored history, until 2021-01-01 is reached, then does nothing more.
-#    Three months is about 3,000 records, well inside D1 Free's 100,000 row writes per day, which the rest of the
-#    app also needs. On the paid plan, raise --backfill-months to finish sooner.
+# 2. backfills older history, newest month first, until 2021-01-01 is reached, then does nothing more.
+#    Each run stores at most AGMARKNET_HISTORY_DAILY_RECORDS records (default 4,000). Measured cost: 17.4 D1 rows
+#    written per record, so 4,000 records is about 70,000 of D1 Free's 100,000 writes per day, leaving the rest for
+#    the daily import and cooperative collection. On Workers Paid, set the variable to e.g. 100000 to finish in a day.
 on:
   schedule:
     - cron: "30 1 * * *" # 07:00 IST
@@ -44,7 +45,8 @@ jobs:
         if: steps.credentials.outputs.configured == 'true'
         run: |
           python data-platform/connectors/agmarknet/run_history.py --env-file /dev/null \
-            --report-dir "$RUNNER_TEMP/agmarknet-history" --recent-days 14 --backfill-from 2021-01-01 --backfill-months 3
+            --report-dir "$RUNNER_TEMP/agmarknet-history" --recent-days 14 --backfill-from 2021-01-01 \
+            --backfill-months 12 --backfill-max-records "${AGMARKNET_HISTORY_DAILY_RECORDS:-4000}"
         env:
           AGMARKNET_HISTORY_RESOURCE_ID: ${{ vars.AGMARKNET_HISTORY_RESOURCE_ID }}
           AGMARKNET_API_BASE_URL: ${{ vars.AGMARKNET_API_BASE_URL }}
@@ -52,6 +54,7 @@ jobs:
           DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
           INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
           ANI_API_URL: ${{ vars.ANI_API_URL }}
+          AGMARKNET_HISTORY_DAILY_RECORDS: ${{ vars.AGMARKNET_HISTORY_DAILY_RECORDS }}
       - name: Archive source pages and reports for replay
         if: always() && steps.credentials.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
