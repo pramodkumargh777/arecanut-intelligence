@@ -1,6 +1,16 @@
 name: Deploy to Cloudflare
 
+# Production branch: feature/ani-production-upgrade, the production branch of the Cloudflare Pages project
+# (created with --production-branch feature/ani-production-upgrade). To deploy from another branch, change it in all
+# three places marked PRODUCTION BRANCH and in the Pages project settings.
 on:
+  # Every push to the production branch deploys after the full test suite passes; documentation-only pushes do not.
+  push:
+    branches: [feature/ani-production-upgrade] # PRODUCTION BRANCH
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE"
   workflow_dispatch:
 
 permissions:
@@ -12,7 +22,8 @@ concurrency:
 
 jobs:
   validate:
-    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    # Runs only from the production branch, so a manual run on any other branch deploys nothing.
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/feature/ani-production-upgrade' }} # PRODUCTION BRANCH
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -75,6 +86,13 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # The Mumbai relay for data.gov.in (api/src/agmarknet-relay.ts). Its INGESTION_TOKEN secret is kept by Cloudflare
+      # across deploys; set it once with: npx wrangler secret put INGESTION_TOKEN --config api/wrangler.relay.toml
+      - name: Deploy AGMARKNET relay
+        run: npx wrangler deploy --config api/wrangler.relay.toml
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   deploy-pages:
     needs: deploy-worker
@@ -97,4 +115,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
-          DEPLOY_BRANCH: ${{ github.event.repository.default_branch }}
+          # Must equal the Pages project's production branch, or the upload becomes a preview deployment.
+          DEPLOY_BRANCH: feature/ani-production-upgrade # PRODUCTION BRANCH

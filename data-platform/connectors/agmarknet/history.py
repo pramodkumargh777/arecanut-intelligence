@@ -57,7 +57,7 @@ HISTORY_FIELDS = {
 # variety, grade and prices). Without these maps one market would count twice on those days.
 #
 # Only names with a current counterpart are mapped. Markets that no longer report (Bangalore, Malur, Pavagada,
-# Sringeri, Gundlupet, Ramanagara) keep their own names; "Bangalore" and "Kolar" districts were split, so they are
+# Sringeri, Gundlupet, Ramanagara, Sakaleshpura) keep their own names; "Bangalore" and "Kolar" districts were split, so they are
 # mapped per market, not as districts.
 LEGACY_DISTRICTS: dict[str, str] = {
     "Karwar(Uttar Kannad)": "Uttara Kannada",
@@ -78,9 +78,10 @@ _APMC_SUFFIX: dict[str, tuple[str, ...]] = {
     "Tumakuru": ("Gubbi", "Huliyar", "Kunigal", "Madhugiri", "Sira", "Turvekere"),
     "Mysuru": ("Hunsur", "K.R.Nagar"),
     "Kodagu": ("Gonikappal", "Madikeri", "Somvarpet"),
-    "Hassan": ("Arakalgud", "Arasikere", "Holenarsipura"),
+    "Hassan": ("Arakalgud", "Arasikere", "Hassan", "Holenarsipura"),
     "Davangere": ("Channagiri", "Davangere", "Honnali"),
-    "Chitradurga": ("Chitradurga", "Holalkere"),
+    "Chitradurga": ("Chitradurga", "Hiriyur", "Holalkere"),
+    "Haveri": ("Byadagi", "Hanagal"),
     "Udupi": ("Karkala", "Kundapura"),
     "Mandya": ("K.R. Pet",),
 }
@@ -102,6 +103,7 @@ LEGACY_MARKETS: dict[tuple[str, str], tuple[str, str]] = {
     ("Tumakuru", "Tumkur APMC"): ("Tumakuru", "Tumakuru APMC"),
     ("Mysuru", "Piriya Pattana"): ("Mysuru", "Periyapatna APMC"),
     ("Mysuru", "Piriya Pattana APMC"): ("Mysuru", "Periyapatna APMC"),
+    ("Mysuru", "Mysore (Bandipalya)"): ("Mysuru", "Mysuru APMC"),
     ("Mysuru", "Mysore (Bandipalya) APMC"): ("Mysuru", "Mysuru APMC"),
     ("Chamarajanagar", "Chamaraj Nagar"): ("Chamarajanagar", "Chamarajanagar APMC"),
     ("Chamarajanagar", "Chamaraj Nagar APMC"): ("Chamarajanagar", "Chamarajanagar APMC"),

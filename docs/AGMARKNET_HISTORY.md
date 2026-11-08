@@ -64,7 +64,7 @@ count. `LEGACY_DISTRICTS` and `LEGACY_MARKETS` in `history.py` map every old nam
   APMC THIRTHAHALLI, Sagar(Hosanagara) → Hosanagara, Mysore (Bandipalya) → Mysuru, Chamaraj Nagar → Chamarajanagar,
   Chikkamagalore → Chikkamagaluru, Piriya Pattana → Periyapatna. Moodigere → Mudigere and Doddaballa Pur →
   Doddaballapur are spelling variants of the same towns.
-- Markets with no current counterpart (Bangalore, Malur, Pavagada, Sringeri, Gundlupet, Ramanagara) keep their own
+- Markets with no current counterpart (Bangalore, Malur, Pavagada, Sringeri, Gundlupet, Ramanagara, Sakaleshpura) keep their own
   names. The Bangalore and Kolar districts were split, so they are mapped per market, not as districts.
 - When rows land on one market, variety, grade and date after mapping:
   - **Same price:** one copy is kept, preferring the row that already uses current names; the rest count as duplicates.
