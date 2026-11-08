@@ -76,6 +76,10 @@ const COPY = defineCopy({
     officialSub: "AGMARKNET · ಮಾದರಿ ದರ · ಎಲ್ಲಾ ತಳಿಗಳು",
     explore: "ಎಲ್ಲಾ ದರಗಳು",
     about: "ಈ ದರಗಳ ಬಗ್ಗೆ",
+    glanceTitle: (variety: string) => `${variety} — ಒಂದು ನೋಟ`,
+    glanceReported: (count: number, date: string) => `${count} ಶಾಖೆಗಳು · ${date}`,
+    mostlyUp: "ಹೆಚ್ಚಿನ ಶಾಖೆಗಳಲ್ಲಿ ಏರಿಕೆ", mostlyDown: "ಹೆಚ್ಚಿನ ಶಾಖೆಗಳಲ್ಲಿ ಇಳಿಕೆ", mixed: "ಏರಿಳಿತ ಮಿಶ್ರ", unchanged: "ಬದಲಾವಣೆ ಇಲ್ಲ",
+    medianShort: (percent: string) => `ಮಧ್ಯಮ ${percent}`,
     share: "ಹಂಚಿಕೊಳ್ಳಿ", shareOpening: "ತೆರೆಯಲಾಗುತ್ತಿದೆ…", shareDone: "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ", shareWhatsapp: "ವಾಟ್ಸ್‌ಆ್ಯಪ್ ತೆರೆಯಲಾಗಿದೆ",
     shareAria: (source: string) => `${source} ದರಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ`,
     shareTitle: (variety: string, source: string) => `${variety} ಅಡಿಕೆ ಧಾರಣೆ · ${source}`,
@@ -136,6 +140,10 @@ const COPY = defineCopy({
     officialSub: "AGMARKNET · modal price, ₹/quintal · all varieties",
     explore: "All rates",
     about: "About these rates",
+    glanceTitle: (variety: string) => `${variety} at a glance`,
+    glanceReported: (count: number, date: string) => `${count} branch${count === 1 ? "" : "es"} · ${date}`,
+    mostlyUp: "mostly up", mostlyDown: "mostly down", mixed: "mixed", unchanged: "unchanged",
+    medianShort: (percent: string) => `median ${percent}`,
     share: "Share", shareOpening: "Opening…", shareDone: "Shared", shareWhatsapp: "WhatsApp opened",
     shareAria: (source: string) => `Share ${source} rates`,
     shareTitle: (variety: string, source: string) => `${variety} arecanut rates · ${source}`,
@@ -276,6 +284,15 @@ export function HomePage() {
       setTimeout(() => { setExpanded((current) => ({ ...current, [key]: false })); setCollapsing(null); }, COLLAPSE_MS);
     }}>
     {expanded[key] ? copy.showFewer : copy.showAll(total)}<ChevronDown size={15} aria-hidden="true" /></button>;
+  // One line per cooperative from its latest report. Sources stay separate because each works out its average differently.
+  const glance = publishing.flatMap((source) => {
+    const { latest, rows } = orderRows(rowsFor(source.key));
+    const sameDay = rows.filter((row) => row.reporting_date === latest);
+    if (!latest || !sameDay.length) return [];
+    const prices = sameDay.map((row) => row.average_price!);
+    const history = historyFor(source.key);
+    return [{ source, latest, low: Math.min(...prices), high: Math.max(...prices), count: sameDay.length, breadth: marketBreadth(sameDay.map((row) => priceChange(row, history))) }];
+  });
   const shareLabels = { share: copy.share, opening: copy.shareOpening, shared: copy.shareDone, whatsapp: copy.shareWhatsapp };
   // Rows outside the collapsed set animate in when the card is expanded and out when it is collapsed.
   const reveal = (key: string, row: CooperativeQuote, collapsed: CooperativeQuote[]) => collapsed.includes(row) ? undefined : collapsing === key ? "out" as const : "in" as const;
@@ -306,6 +323,22 @@ export function HomePage() {
     </div>
     </div>
     {variety.note && <p className="home-note home-note-callout">{variety.note[language]}</p>}
+
+    {glance.length > 0 && <section className="glance" aria-labelledby="glance-heading">
+      <h2 id="glance-heading">{copy.glanceTitle(varietyName(variety))}</h2>
+      <ul>{glance.map(({ source, latest, low, high, count, breadth }) => {
+        const trend = breadth.median_percent === null ? null
+          : breadth.up > breadth.down ? { text: copy.mostlyUp, className: "hold-up", Icon: ArrowUp }
+          : breadth.down > breadth.up ? { text: copy.mostlyDown, className: "hold-down", Icon: ArrowDown }
+          : { text: breadth.up ? copy.mixed : copy.unchanged, className: "", Icon: Minus };
+        return <li key={source.key}>
+          <a className="glance-source" href={`#rates-${source.key}`}>{source.en}</a>
+          <strong className="glance-range">{low === high ? rupees(low) : `${rupees(low)} – ${rupees(high)}`}</strong>
+          {trend && <span className={`glance-trend ${trend.className}`}><trend.Icon size={13} aria-hidden="true" />{trend.text} · {copy.medianShort(signedPercent(breadth.median_percent!).replace("-", "−"))}</span>}
+          <span className="glance-meta">{copy.glanceReported(count, dateText(latest, language))}</span>
+        </li>;
+      })}</ul>
+    </section>}
 
     <nav className="home-sections" aria-label={language === "kn" ? "ದರಗಳ ವಿಭಾಗಗಳು" : "Price sections"}>
       {publishing.map((source) => <a key={source.key} href={`#rates-${source.key}`}>{source.en}</a>)}

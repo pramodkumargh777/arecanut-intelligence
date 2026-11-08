@@ -330,6 +330,14 @@ describe("market experience", () => {
     expect(html).not.toContain("Same-date chart: Market One, Market Two");
   });
 
+  it("offers a menu collapse button that starts expanded", () => {
+    const html = render(<AppShell />);
+    expect(html).toContain('class="app-shell"');
+    expect(html).toContain('class="icon-button sidebar-collapse"');
+    expect(html).toContain('aria-label="Collapse menu"');
+    expect(html).toContain('class="brand-collapsed-icon"');
+  });
+
   it("keeps advanced routes in a disclosure and displays both navigation languages", () => {
     const english = render(<AppShell />);
     expect(english).toContain('aria-label="Areca Pulse · Market Intelligence"');
@@ -491,6 +499,28 @@ describe("market experience", () => {
     expect(heading).toContain('class="heading-controls"');
     expect(heading).toContain("source-control");
     expect(html).not.toContain("source-bar");
+  });
+
+  it("sums up each cooperative's latest report in the at-a-glance strip, separately per source", () => {
+    state.cooperative = [
+      ready({ latest_by_branch: [
+        { ...cooperativeQuote("mamcos", "Sagara", "RASHI EDI"), id: "m1", average_price: 47000 },
+        { ...cooperativeQuote("mamcos", "Koppa", "RASHI EDI"), id: "m2", average_price: 48500 },
+      ], data: [
+        { ...cooperativeQuote("mamcos", "Sagara", "RASHI EDI"), id: "p1", reporting_date: "2026-09-30", average_price: 48000 },
+        { ...cooperativeQuote("mamcos", "Koppa", "RASHI EDI"), id: "p2", reporting_date: "2026-09-30", average_price: 49000 },
+      ] }),
+      ready({ latest_by_branch: [cooperativeQuote("tss", "Sirsi", "RASHI")], data: [] }),
+      ready({ latest_by_branch: [], data: [] }),
+    ];
+    const html = render(<HomePage />);
+    const strip = html.slice(html.indexOf('class="glance"'), html.indexOf("</section>", html.indexOf('class="glance"')));
+    expect(strip).toContain("Rashi at a glance");
+    expect(strip).toContain("₹47,000 – ₹48,500");
+    expect(strip).toContain("mostly down");
+    expect(strip).toContain("2 branches · 1 Oct 2026");
+    expect(strip).toContain("₹48,000");
+    expect(strip).toContain("1 branch · 1 Oct 2026");
   });
 
   it("shows three branches per card, the featured MAMCOS ones first, with a toggle for the rest", () => {

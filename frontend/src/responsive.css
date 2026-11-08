@@ -2,6 +2,28 @@
   .page-content { padding: 40px; }
 }
 
+/* Desktop only: the collapsed menu keeps its icons, and every name stays available to screen readers and on hover. */
+@media (min-width: 961px) {
+  .sidebar, .main-column { transition: width .2s ease, margin-left .2s ease, padding .2s ease; }
+  .app-shell-collapsed .sidebar { width: 64px; padding: 0 8px; overflow-x: hidden; }
+  .app-shell-collapsed .main-column { margin-left: 64px; }
+  .app-shell-collapsed .brand { justify-content: center; padding: 8px 0; }
+  /* The lockup normally sizes from its container; collapsed, it must size from the icon instead. */
+  .app-shell-collapsed .brand-lockup { flex: none; container-type: normal; }
+  .app-shell-collapsed .brand-collapsed-icon { width: 36px; height: auto; }
+  .app-shell-collapsed .brand-lockup > :not(.brand-collapsed-icon) { display: none; }
+  .app-shell-collapsed .brand-collapsed-icon { display: block; }
+  .app-shell-collapsed .nav-link, .app-shell-collapsed .nav-advanced summary { justify-content: center; padding-left: 0; padding-right: 0; }
+  .app-shell-collapsed .nav-link { min-height: 38px; }
+  .app-shell-collapsed .nav-link > span[lang], .app-shell-collapsed .nav-advanced summary > span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .app-shell-collapsed .nav-badge, .app-shell-collapsed .nav-group, .app-shell-collapsed .sidebar-caption { display: none; }
+  .app-shell-collapsed .nav-advanced summary { display: flex; list-style: none; }
+  .app-shell-collapsed .nav-advanced summary::-webkit-details-marker { display: none; }
+  .app-shell-collapsed .nav-advanced-icon { display: block; }
+}
+
 @media (max-width: 1200px) {
   .sidebar { width: 216px; }
   .main-column { margin-left: 216px; }
@@ -30,6 +52,7 @@
   .mobile-scrim { animation: fade-in .2s ease; }
   .mobile-scrim { display: block; position: fixed; inset: 0; background: rgba(24, 24, 27, .4); border: 0; z-index: 29; }
   .mobile-close { display: grid; margin-left: auto; }
+  .sidebar-collapse { display: none; }
   .main-column { margin-left: 0; }
   .menu-toggle { display: grid; }
   .topbar-brand { display: block; }

@@ -8,7 +8,7 @@ import brandIcon from "../assets/areca-pulse-icon.svg";
 import darkLogo from "../assets/areca-pulse-logo-dark.svg";
 import appIcon from "../assets/areca-pulse-app-icon.svg";
 import { setTheme, useTheme } from "../services/theme";
-import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Moon, Search, Sun, TableProperties, X } from "lucide-react";
+import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, ClipboardCheck, Ellipsis, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, Search, Sun, TableProperties, X } from "lucide-react";
 
 const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
@@ -37,6 +37,14 @@ const advancedGroups = [
   ] },
 ];
 const navigation: { to: string; label: string; kn: string; icon: typeof Activity; end?: boolean }[] = [...primaryNavigation, ...advancedGroups.flatMap((group) => group.items)];
+const COLLAPSE_KEY = "areca-pulse-sidebar-collapsed";
+
+/** Whether the desktop menu was last left collapsed. The phone drawer ignores this. */
+function storedCollapsed() {
+  try { return localStorage.getItem(COLLAPSE_KEY) === "true"; }
+  catch { return false; }
+}
+
 /** Grower pages are arecanut-only and short, so they leave out the commodity and market-search controls. */
 const GROWER_PAGES = ["/", "/sell-or-hold"];
 
@@ -48,6 +56,7 @@ const SHELL_COPY = defineCopy({
     footerNote: "Market observations · Not financial advice", notFound: "Page not found", noSource: "No data",
     noSourceFor: (name: string) => `No integrated source for ${name}`, unknown: (code: string) => `Unknown: ${code}`, configured: "configured",
     switchDark: "Switch to dark mode", switchLight: "Switch to light mode",
+    collapse: "Collapse menu", expand: "Expand menu",
   },
   kn: {
     skip: "ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ", openMenu: "ಮೆನು ತೆರೆಯಿರಿ", closeMenu: "ಮೆನು ಮುಚ್ಚಿ", closeNavigation: "ಮೆನು ಮುಚ್ಚಿ", navigation: "ಮುಖ್ಯ ಮೆನು",
@@ -56,6 +65,7 @@ const SHELL_COPY = defineCopy({
     footerNote: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ · ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ", notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
     noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
     switchDark: "ಡಾರ್ಕ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ", switchLight: "ಲೈಟ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ",
+    collapse: "ಮೆನು ಕಿರಿದಾಗಿಸಿ", expand: "ಮೆನು ವಿಸ್ತರಿಸಿ",
   },
 });
 
@@ -65,6 +75,12 @@ export function AppShell() {
   const theme = useTheme();
   const copy = SHELL_COPY[language];
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(storedCollapsed);
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    try { localStorage.setItem(COLLAPSE_KEY, String(next)); } catch { /* The choice still applies until the page is closed. */ }
+  }
   const [marketToolsOpen, setMarketToolsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -148,7 +164,7 @@ export function AppShell() {
   }, [menuOpen]);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${collapsed ? " app-shell-collapsed" : ""}`}>
       <a className="skip-link" href="#main-content">{copy.skip}</a>
       {menuOpen && <button className="mobile-scrim" tabIndex={-1} aria-label={copy.closeNavigation} onClick={() => setMenuOpen(false)} />}
       <aside ref={sidebar} id="main-navigation" aria-label={copy.navigation} role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen || undefined} className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
@@ -162,7 +178,9 @@ export function AppShell() {
               const available = routeAvailable(commodity, to);
               const unavailableText = copy.noSourceFor(currentCommodity);
               // The reason is visible as a badge and spoken in full, not only in a hover tooltip that touch and screen-reader users miss.
-              return <NavLink key={to} to={["/overview", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)} title={available ? undefined : unavailableText} className={({ isActive }) => `nav-link ${isActive ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
+              return <NavLink key={to} to={["/overview", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)}
+                // A collapsed menu shows icons only, so the name appears on hover; screen readers still read the hidden label.
+                title={collapsed ? `${language === "kn" ? kn : label}${available ? "" : ` · ${unavailableText}`}` : available ? undefined : unavailableText} className={({ isActive }) => `nav-link ${isActive ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
                 <Icon size={15} strokeWidth={1.8} /><span lang={language}>{language === "kn" ? kn : label}</span>
                 {!available && <><span className="nav-badge" aria-hidden="true">{copy.noSource}</span><span className="sr-only">({unavailableText})</span></>}
               </NavLink>;
@@ -170,7 +188,7 @@ export function AppShell() {
             return <>
               {links(primaryNavigation)}
               <details className="nav-advanced" open={advancedGroups.some((group) => group.items.some((item) => item.to === location.pathname)) || undefined}>
-                <summary>{copy.moreTools}</summary>
+                <summary title={collapsed ? copy.moreTools : undefined}><Ellipsis className="nav-advanced-icon" size={15} aria-hidden="true" /><span>{copy.moreTools}</span></summary>
                 {advancedGroups.map((group) => <div key={group.label} role="group" aria-label={language === "kn" ? group.kn : group.label}>
                   <div className="nav-group" aria-hidden="true">{language === "kn" ? group.kn : group.label}</div>
                   {links(group.items)}
@@ -186,6 +204,10 @@ export function AppShell() {
       <div className="main-column" ref={mainColumn}>
         <header className="topbar">
           <button ref={menuButton} className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label={copy.openMenu} aria-expanded={menuOpen} aria-controls="main-navigation"><Menu size={21} /></button>
+          {/* Desktop only, at the start of the top bar so it stays in view whatever the menu's height. */}
+          <button type="button" className="icon-button sidebar-collapse" onClick={toggleCollapsed} aria-label={collapsed ? copy.expand : copy.collapse} title={collapsed ? copy.expand : copy.collapse} aria-controls="main-navigation">
+            {collapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
+          </button>
           <Link to="/" className="topbar-brand" aria-label={BRAND_LABEL}><img src={theme === "dark" ? appIcon : brandIcon} alt="" width={36} height={28} /></Link>
           <div className="breadcrumb"><span>{currentCommodity}</span><span className="breadcrumb-sep">/</span><strong>{currentPage}</strong></div>
           {!growerPage && <button type="button" className="button-secondary market-tools-toggle" aria-expanded={marketToolsOpen} aria-controls="header-market-tools" onClick={() => setMarketToolsOpen((open) => !open)}>{copy.marketTools}</button>}
@@ -224,6 +246,8 @@ const BRAND_LABEL = "Areca Pulse · Market Intelligence";
 function BrandLockup() {
   const theme = useTheme();
   return <Link to="/" className="brand-lockup" aria-label={BRAND_LABEL}>
+    {/* Shown instead of the lockup when the desktop menu is collapsed. */}
+    <img className="brand-collapsed-icon" src={theme === "dark" ? appIcon : brandIcon} alt="" width={36} height={28} />
     {theme === "dark" ? <img className="brand-dark-logo" src={darkLogo} alt="" /> :
     <span className="brand-lockup-row">
       <img className="brand-icon" src={brandIcon} alt="" width={40} height={31} />
