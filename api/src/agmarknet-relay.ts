@@ -3,10 +3,13 @@
  * out from GitHub's runners and was unreachable from a Worker running in Marseille, but answers from Mumbai. Deployed
  * separately through wrangler.relay.toml, so the main API does not have to move.
  *
- * It only serves GET requests for one dataset and needs the ingestion token, so it cannot be used as an open proxy.
+ * It only serves GET requests for the two datasets below and needs the ingestion token, so it cannot be used as an open proxy.
  * The data.gov.in key travels in the query string, so this Worker logs nothing and keeps observability off.
  */
 export const RELAY_RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070";
+/** Variety-wise daily history, read by data-platform/connectors/agmarknet/history.py. */
+export const RELAY_HISTORY_RESOURCE_ID = "35985678-0d79-46b4-9ed6-6f13308a1d24";
+const RELAY_RESOURCES = new Set([RELAY_RESOURCE_ID, RELAY_HISTORY_RESOURCE_ID]);
 export const RELAY_TOKEN_HEADER = "X-ANI-Relay-Token";
 const UPSTREAM = "https://api.data.gov.in/resource/";
 const UPSTREAM_TIMEOUT_MS = 50_000;
@@ -27,11 +30,12 @@ async function sameToken(a: string, b: string): Promise<boolean> {
 export async function handleRelay(request: Request, env: RelayEnv, fetcher: typeof fetch = fetch): Promise<Response> {
   if (request.method !== "GET") return failure(405, "Only GET is supported.");
   const url = new URL(request.url);
-  if (url.pathname !== `/resource/${RELAY_RESOURCE_ID}`) return failure(404, "Unknown resource.");
+  const resource = /^\/resource\/([0-9a-f-]{36})$/.exec(url.pathname)?.[1];
+  if (!resource || !RELAY_RESOURCES.has(resource)) return failure(404, "Unknown resource.");
   if (!env.INGESTION_TOKEN) return failure(503, "The relay token is not configured.");
   if (!await sameToken(request.headers.get(RELAY_TOKEN_HEADER) ?? "", env.INGESTION_TOKEN)) return failure(401, "A valid relay token is required.");
   try {
-    const upstream = await fetcher(`${UPSTREAM}${RELAY_RESOURCE_ID}${url.search}`, {
+    const upstream = await fetcher(`${UPSTREAM}${resource}${url.search}`, {
       headers: { Accept: "application/json", "User-Agent": "ANI-agmarknet-relay/1.0" },
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });

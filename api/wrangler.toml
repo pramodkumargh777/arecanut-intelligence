@@ -17,6 +17,12 @@ TSS_SCHEDULE_ENABLED = "true"
 TUMCOS_SCHEDULE_ENABLED = "true"
 # Publish scheduled quotations that pass every check (src/cooperative-auto-publish.ts). The rest wait for review.
 COOPERATIVE_AUTO_PUBLISH = "true"
+# AGMARKNET current-daily feed: verify rows that pass every check at import (src/auto-verify.ts). The 09:00 IST cron
+# also verifies eligible rows still waiting. Flagged rows wait for review. "false" restores review of every row.
+AGMARKNET_DAILY_AUTO_VERIFY = "true"
+# AGMARKNET daily history (docs/AGMARKNET_HISTORY.md): verify history records that pass every check at import.
+# Flagged records wait for review. "false" sends every history record to the review queue instead.
+AGMARKNET_HISTORY_AUTO_VERIFY = "true"
 # Daily weather and official-news capture at 09:00 IST. Open-Meteo's free endpoint is non-commercial: get its paid
 # plan before charging users, or set OPEN_METEO_ENABLED = "false".
 INTELLIGENCE_SCHEDULE_ENABLED = "true"

@@ -34,6 +34,17 @@ const ingest = (rows = [record()]) => post("/admin/import", { source_key: "agmar
 const review = (id: string, action = "approve") => post(`/admin/observations/${id}/review`, { action }, "review");
 
 describe("actual daily handlers with migrated SQLite", () => {
+  it("counts a correction once when D1 also reports rows written by triggers", async () => {
+    expect((await ingest()).status).toBe(201);
+    expect((await review("a")).status).toBe(200);
+    // Superseding a verified row fires the summary-cache trigger, which D1 includes in meta.changes.
+    db.sqlite.exec("DELETE FROM market_summary_dirty");
+    db.countTriggerChanges = true;
+    const corrected = await ingest([record("b", 45000)]);
+    expect(await corrected.json()).toMatchObject({ inserted_count: 1, corrected_count: 1 });
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM market_summary_dirty").get()).toEqual({ count: 1 });
+  });
+
   it("supports A → B → A replay and idempotent repeats without losing the current record", async () => {
     expect((await ingest()).status).toBe(201);
     expect((await review("a")).status).toBe(200);
