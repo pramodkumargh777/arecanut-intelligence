@@ -1,0 +1,73 @@
+# Areca Pulse brand in the product
+
+**Areca Pulse** · Market Intelligence — *Know the market. See the opportunity.*
+
+The approved vector assets are in [docs/brand/](brand/). This page is the brand guide for the product: where each
+asset is used, the palette, and the usage rules.
+
+**Positioning:** a clear, dependable view of arecanut market prices, movements and intelligence. Calm and premium,
+inspired by the arecanut palm landscape, without looking like a conventional agriculture portal.
+
+## Where each asset is used
+
+| Asset | Used for | File in the app |
+|---|---|---|
+| `icon.svg` | Sidebar lockup and the mobile top-bar home link | `frontend/src/assets/areca-pulse-icon.svg` |
+| `favicon.svg` | Browser tab | `frontend/public/favicon.svg` |
+| `app-icon` (PNG export) | iOS home-screen icon | `frontend/public/apple-touch-icon.png` |
+| `logo-horizontal-light.svg` | Not shown in the app; for wide placements on light backgrounds | `docs/brand/` |
+| `logo-horizontal-dark.svg`, `logo-stacked-light.svg` | Not used yet: the app has no dark brand surface or centred splash | `docs/brand/` |
+
+The sidebar does not shrink the full horizontal logo. At sidebar width its descriptor and tagline would be about
+4px tall, and an SVG loaded through `<img>` cannot use the app's Inter font. The sidebar instead pairs `icon.svg`
+with a live-text wordmark in the logo's colours (`BrandLockup` in `frontend/src/components/AppShell.tsx`). The guide
+asks for exactly this at small sizes.
+
+## Logo usage
+
+- Light logo on white or pale surfaces; dark (reversed) logo on forest-green or dark surfaces.
+- Keep proportions; never stretch, skew, outline, shadow or add gradients or extra taglines.
+- At small sizes use `icon.svg`, `app-icon.svg` or `favicon.svg` instead of shrinking the wordmark.
+- Keep clear space around the mark of about the height of the capital "A".
+- Avoid busy photography behind the logo; use a solid or quiet background.
+
+## Typography
+
+- Inter for Latin text (already bundled through `@fontsource-variable/inter`).
+- Noto Sans Kannada, or a tested system fallback, for Kannada.
+- Tabular numerals for prices and aligned data columns.
+
+## Colour tokens
+
+The kit's palette is merged into the existing tokens in `frontend/src/styles.css`. There is no second stylesheet.
+
+| App token | Brand colour | Notes |
+|---|---|---|
+| `--brand` | Forest Green `#0B3D2E` | Identity, primary actions, selected states |
+| `--brand-deep` | Deep Forest `#06271E` | Dark surfaces |
+| `--brand-leaf` | Leaf Green `#6E9F43` | 3.1:1 on white: only large or bold text (e.g. "Pulse" in the wordmark) and graphics |
+| `--brand-leaf-light`, `--brand-sap`, `--brand-ivory`, `--brand-cocoa` | Supporting accents | Use sparingly |
+| `--ink` / `--muted` / `--subtle` | `#17211D` / `#525F57` / `#65736B` | 16.5:1, 6.7:1 and 5.0:1 on white |
+| `--line` / `--surface-2` | `#DDE4DD` / `#F6F8F4` | Borders and soft surfaces |
+
+Data surfaces stay neutral. Price rises and falls always carry an arrow and a word ("up", "down"). They are currently
+also coloured green (`#166534`) and red (`--bad-ink`). The guide warns against equating direction with benefit, since
+a rise helps a seller and costs a buyer. Whether to make them neutral is an open product decision (see below).
+
+## Naming
+
+Use **Areca Pulse** in anything a customer reads: the UI, page titles, downloads, assistant answers and documentation.
+Keep internal identifiers unchanged unless a separate migration is approved. These include the repository and
+package names, `ANI_*` environment variables, the `X-ANI-Relay-Token` header, database, migration and source keys
+(`ani-reference-index:…`), log messages, and browser storage keys (`ani-language`, `ani-admin-token`). Renaming the
+storage keys would reset every reader's saved language.
+
+## Open items
+
+- Decide whether price-direction colours (`.hold-up` / `.hold-down` in `styles.css`) should become neutral, per the
+  guide's "price direction must not be equated with financial benefit".
+- Kannada text uses the system's Kannada font (Noto Sans Kannada, Kannada Sangam MN or Nirmala UI, whichever the
+  device has). Bundling Noto Sans Kannada would make it consistent, but it adds a font package and download weight.
+- The concept board in the original kit (nut-and-leaf mark, different greens) is not a production asset and does not
+  match the approved SVGs. Follow the SVGs and this palette.
+- The SVG logos still have live `<text>`. Before print use, outline the text as the guide describes.

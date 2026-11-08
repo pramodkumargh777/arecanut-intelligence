@@ -2,14 +2,14 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "ANI: build and typecheck",
+			"label": "Areca Pulse: build and typecheck",
 			"type": "shell",
 			"command": "npm run build",
 			"problemMatcher": [],
 			"group": "build"
 		},
 		{
-			"label": "ANI: local development",
+			"label": "Areca Pulse: local development",
 			"type": "shell",
 			"command": "npm run dev",
 			"isBackground": true,

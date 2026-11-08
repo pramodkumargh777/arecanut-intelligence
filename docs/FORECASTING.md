@@ -1,4 +1,4 @@
-# ANI forecasting engine (experimental)
+# Areca Pulse forecasting engine (experimental)
 
 `data-platform/forecasting` is an independent and reproducible experimentation and evaluation engine. It **does not replace** the
 Worker's `monthly-baselines-v1` reference (`/forecasts`). That baseline stays live and stays labelled as a reference estimate.
@@ -173,3 +173,55 @@ The engine reads the local Miniflare D1 SQLite file, which it discovers automati
 - **Prospective validation:** this needs at least 6 future monthly outcomes per model and horizon. Until then, nothing is `validated`.
 - **No direction claims:** no output states that prices will rise or fall. Every interval is empirical and is not a guarantee.
 - **Synthetic data:** `tests/data/test_forecasting.py` uses synthetic series only. Their `synthetic_test` provenance makes `build_payload` refuse them.
+
+## Evaluated monthly forecast baselines (operations)
+
+### Evaluated monthly forecast baselines
+
+An independent experimental engine (`data-platform/forecasting`, dashboard `/forecasts/evaluation`) benchmarks statistical, LightGBM and Chronos-2 models against these baselines with walk-forward evaluation. See [docs/FORECASTING.md](FORECASTING.md). It does not replace the baselines below.
+
+Open `http://localhost:5173/forecasts`. To evaluate and persist snapshots:
+
+```sh
+npm run evaluate:forecasts                # Rashi
+npm run evaluate:forecasts -- --all        # all varieties in latest monthly report
+```
+
+The same reviewer-protected operation is available in the UI. Evaluations use
+only exact-variety Karnataka monthly weighted prices with archived capture
+provenance. No monthly/daily blending or TSS prices enter these monthly baselines.
+Production, weather and news are not predictive features in this baseline.
+
+- Require at least 60 consecutive positive calendar-month prices and data
+  through the latest completed month. Missing, zero, stale or absent history
+  keeps forecasts unavailable.
+- Walk forward chronologically. Initial history is followed by 12 validation
+  targets, 12 interval-calibration targets and 12 holdout targets.
+- Compare last-value and seasonal-naive models; choose by validation MAE,
+  never calibration or holdout performance. Predict only one reporting month.
+- Calibrate an 80%-nominal empirical absolute-error interval on the 12
+  pre-holdout errors. Show actual holdout coverage, MAE, RMSE and sMAPE.
+  Small samples, serial dependence and selection prevent guaranteed coverage.
+- Publish only if the selected model does not deteriorate against the
+  last-value holdout benchmark on all three error measures. A published
+  last-value baseline means **no demonstrated predictive edge**, not an AI
+  prediction with proven profitability.
+- Save immutable inputs, source references/fingerprint, formula version,
+  scores, gates and results. A changed month, price or unit, or a calendar
+  rollover, suppresses the displayed forecast until re-evaluation. Re-fetching
+  an unchanged report adds a capture record but does not suppress the forecast,
+  so the daily refresh leaves valid forecasts published.
+
+Initial real-data evaluation: **28 varieties evaluated, 11 published
+last-value baselines, 17 withheld**. Rashi uses 70 months and its November
+2026 baseline is 47,174.91 INR/quintal, empirical interval
+43,048.37–51,301.45. Its twelve-target holdout MAE is 919.28 INR/quintal,
+RMSE 1,238.89, sMAPE 1.75%, and interval coverage 12/12. Skill versus the
+last-value benchmark is exactly zero. These are retrospective measurements,
+not promised future accuracy.
+
+Backtests use **currently revised history**, not period-by-period as-of
+vintages; vintage leakage is not ruled out. Holdout results gate publication
+and can be reused by subsequent evaluations. There is no prospective trading
+validation, multi-step model, predictive sell/hold recommendation or grounded
+AI chat. CSV holdout exports and full evaluation JSON support inspection.

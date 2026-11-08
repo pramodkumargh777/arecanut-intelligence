@@ -1,4 +1,4 @@
-# ANI — Supply, production and agricultural-risk analytics
+# Areca Pulse — Supply, production and agricultural-risk analytics
 
 Migration `0018_supply_production_risk.sql`, `api/src/supply.ts` (pure logic), `api/src/supply-routes.ts`
 (routes) and the frontend page `/supply` (`frontend/src/pages/SupplyPage.tsx`).

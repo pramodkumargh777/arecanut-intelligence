@@ -82,7 +82,7 @@ supplyRoutes.get("/supply/production", async (c) => {
     districts: {
       available: new Set(districtRows.map((row) => row.district)).size,
       message: districtRows.length ? null
-        : "No original district-level production records have been imported for this geography. ANI never apportions state totals to districts.",
+        : "No original district-level production records have been imported for this geography. Areca Pulse never apportions state totals to districts.",
     },
     forecast: forecastEligibility("production", years.length),
     notes: [
@@ -679,6 +679,6 @@ supplyRoutes.get("/supply/risk/advisories", async (c) => {
     weather_basis: { days: days.length, data_types: [...new Set(days.map((row) => row.data_type))].map((type) => ({ type, label: DATA_TYPE_LABELS[type] ?? type })),
       period: days.length ? { from: days[0].day, to: days.at(-1)!.day } : null },
     message: published.length ? null : "No crop-risk rule has been approved by a qualified expert, so no advisory is issued.",
-    disclaimer: "ANI advisories are not diagnoses. Weather can indicate conditions that published research associates with a hazard; only field inspection and laboratory confirmation can establish presence. Consult ICAR-CPCRI or the State Horticulture Department before applying any treatment.",
+    disclaimer: "Areca Pulse advisories are not diagnoses. Weather can indicate conditions that published research associates with a hazard; only field inspection and laboratory confirmation can establish presence. Consult ICAR-CPCRI or the State Horticulture Department before applying any treatment.",
   });
 });

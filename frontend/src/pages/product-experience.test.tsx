@@ -1,36 +1,59 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FALLBACK_CATALOG } from "../../../shared/commodities";
 import { HomePage } from "./HomePage";
 import { MarketDataPage } from "./CooperativeMarketPage";
 import { ComparePage } from "./ComparePage";
 import { AppShell } from "../components/AppShell";
+import { PricesPage } from "./PricesPage";
+import { readPage, readPreset, readSort, withoutFilters, withParams } from "../services/priceFilters";
+import { NotFoundPage } from "./NotFoundPage";
+import { LanguageContext } from "../services/language";
+import { SourceSlot } from "../components/SourceSlot";
+import { VARIETIES } from "../services/varieties";
+import { TSS_VARIETIES } from "../../../shared/tss-varieties";
+import { AssistantPage } from "./AssistantPage";
+import { AnalyticsPage } from "./AnalyticsPage";
+import { OverviewPage } from "./OverviewPage";
+import { MonthlyTrendsPage } from "./MonthlyTrendsPage";
+import { HistoricalAnalyticsPage } from "./HistoricalAnalyticsPage";
+import { DecisionToolsPage } from "./DecisionToolsPage";
+import { IntelligencePage } from "./IntelligencePage";
+import { QualityInspectionsPage } from "./QualityInspectionsPage";
+import { SupplyPage } from "./SupplyPage";
+import { ForecastsPage } from "./ForecastsPage";
+import { ForecastEvaluationPage } from "./ForecastEvaluationPage";
+import { WorkspacePage } from "./WorkspacePage";
+import { DataQualityPage } from "./DataQualityPage";
+import { SellOrHoldPage } from "./SellOrHoldPage";
 
 const state = vi.hoisted(() => ({
   cooperative: [] as object[],
   official: {} as object,
   comparison: [] as object[],
   cooperativePage: {} as object,
+  intelligence: {} as object,
   language: "en" as "en" | "kn",
 }));
 
 vi.mock("@tanstack/react-query", () => ({
+  useMutation: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, data: undefined, error: null }),
+  useQueryClient: () => ({ invalidateQueries: vi.fn(), removeQueries: vi.fn() }),
   useQueries: () => state.cooperative,
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
     if (queryKey[0] === "home-official-prices") return state.official;
     if (queryKey[0] === "varieties") return { data: ["Rashi"], isLoading: false };
     if (queryKey[0] === "market-comparison") return { data: { data: state.comparison }, isLoading: false };
     if (queryKey[0] === "cooperative") return state.cooperativePage;
+    if (queryKey[0] === "intelligence") return state.intelligence;
+    // A real query is still loading until it has data, so pages never see "finished with no data" for these.
+    if (queryKey[0] === "history") return { data: undefined, isLoading: true, isPending: true };
     return { data: undefined, isLoading: false };
   },
 }));
 vi.mock("../services/commodity", () => ({
   useCommodity: () => ({ code: "arecanut", commodity: FALLBACK_CATALOG.commodities[0], catalog: FALLBACK_CATALOG, unit: "INR / QUINTAL" }),
-}));
-vi.mock("../services/language", async (importOriginal) => ({
-  ...await importOriginal<typeof import("../services/language")>(),
-  useLanguage: () => ({ language: state.language }),
 }));
 vi.mock("../components/LazyCharts", () => ({ LazyRangeChart: ({ rows }: { rows: { label: string }[] }) => <div>Same-date chart: {rows.map((row) => row.label).join(", ")}</div> }));
 
@@ -44,15 +67,17 @@ const failed = { isPending: false, isError: true, error: new Error("offline"), r
 const cooperativeQuote = (source: string, branch: string, variety: string) => ({
   id: source, source_key: source, branch, variety, reporting_date: "2026-10-01",
   average_price: 48000, minimum_price: 47000, maximum_price: 49000,
-  source_url: "https://example.test/", unit_status: "source_confirmed",
+  source_url: "https://example.test/", unit_status: "source_confirmed", fetched_at: "2026-10-01T10:00:00Z",
 });
-const render = (node: React.ReactNode, path = "/") => renderToStaticMarkup(<MemoryRouter initialEntries={[path]}>{node}</MemoryRouter>);
+const render = (node: React.ReactNode, path = "/") => renderToStaticMarkup(
+  <LanguageContext.Provider value={{ language: state.language, setLanguage: () => undefined }}><MemoryRouter initialEntries={[path]}>{node}</MemoryRouter></LanguageContext.Provider>);
 
 beforeEach(() => {
   state.cooperative = [failed, ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] })];
   state.official = ready({ data: [quote] });
   state.comparison = [];
   state.language = "en";
+  state.intelligence = { data: undefined, isLoading: true };
   state.cooperativePage = ready({
     data: [], latest_by_branch: [], branches: [], varieties: [], series: [], counts: [], recent_fetches: [],
     publication: { awaiting_review_count: 2, blocked_reason: null, latest_archived_reporting_date: "2026-09-30" },
@@ -61,6 +86,30 @@ beforeEach(() => {
 });
 
 describe("market experience", () => {
+  it.each([
+    ["weather", ["Maximum (°C)", "Minimum (°C)", "Rain (mm)"]],
+    ["production", ["Area (&#x27;000 ha)", "Production (&#x27;000 tonnes)", "Yield (kg/ha)"]],
+    ["trade", ["Quantity (tonnes)", "Value (INR lakh)"]],
+  ])("aligns numeric %s record headers with numeric data", (domain, numericHeaders) => {
+    state.intelligence = ready({ data: [{ capture_id: "one", source_key: "test", source_url: "https://example.test", fetched_at: "2026-10-01T10:00:00Z", publication_period: null, content_hash: "hash", ...(domain === "weather"
+      ? { date: "2026-10-01", kind: "recent_model", temperature_max_c: 30, temperature_min_c: 19, precipitation_mm: 0, grid_latitude: 14, grid_longitude: 74, elevation_m: 500 }
+      : domain === "production"
+        ? { geography: "Karnataka", period: "2026", estimate_status: "final", area_thousand_hectares: 1, production_thousand_tonnes: 2, yield_kg_hectare: 3 }
+        : { partner: "India", period: "2026", direction: "Import", quantity_tonnes: 1, value_inr_lakh: 2 }) }], attempts: [] });
+    const html = render(<Routes><Route path="/intelligence/:domain" element={<IntelligencePage />} /></Routes>, `/intelligence/${domain}`);
+    for (const header of numericHeaders) expect(html).toContain(`class="numeric">${header}</th>`);
+    expect(html).toContain('class="evidence-column"');
+  });
+
+  it("allows bulletin titles and source evidence to wrap independently", () => {
+    state.intelligence = ready({ data: [{ capture_id: "one", source_key: "pib", source_url: "https://example.test", fetched_at: "2026-10-01T10:00:00Z", publication_period: "2026-10-01", content_hash: "hash", release_id: "1", title: "A lengthy official policy release", published_on: "2026-10-01", is_policy: 1 }], attempts: [] });
+    const html = render(<Routes><Route path="/intelligence/:domain" element={<IntelligencePage />} /></Routes>, "/intelligence/policy");
+    expect(html).toContain('class="bulletin-table"');
+    expect(html).toContain('class="bulletin-title"');
+    expect(html).toContain('class="evidence-column"');
+    expect(html).toContain("A lengthy official policy release");
+  });
+
   it("reports a failed cooperative separately while showing dated official modal prices", () => {
     const html = render(<HomePage />);
     expect(html).toContain("Could not load the rates");
@@ -69,8 +118,8 @@ describe("market experience", () => {
     expect(html).toContain("AGMARKNET");
     expect(html).toContain("modal price, ₹/quintal");
     expect(html).toContain('href="/prices?feed=official"');
-    expect(html).toContain('href="/prices?feed=mamcos"');
-    expect(html).toContain('href="/prices?feed=tss"');
+    expect(html).toContain('href="/prices?feed=mamcos&amp;variety=RASHI%20EDI"');
+    expect(html).toContain('href="/prices?feed=tss&amp;variety=RASHI"');
     expect(html).toContain('href="/prices?feed=tumcos"');
   });
 
@@ -106,9 +155,50 @@ describe("market experience", () => {
   });
 
   it("keeps the official feed selectable even when it has no published prices", () => {
-    const html = render(<MarketDataPage official={<p>Official empty state</p>} />, "/prices?feed=official");
+    const html = render(<MarketDataPage official={<><SourceSlot /><p>Official empty state</p></>} />, "/prices?feed=official");
     expect(html).toContain("Official empty state");
     expect(html).toContain('value="official"');
+  });
+
+  it.each(["official", "mamcos", "tss", "tumcos"])("clears search without losing %s feed or URL context", (feed) => {
+    const original = new URLSearchParams(`feed=${feed}&commodity=arecanut&variety=RASHI&search=Sirsi&view=table`);
+    const result = withParams(original, { search: null });
+    expect(result.toString()).toBe(`feed=${feed}&commodity=arecanut&variety=RASHI&view=table`);
+    expect(original.get("search")).toBe("Sirsi");
+  });
+
+  it("keeps the essential official filters visible and places advanced filters in a disclosure", () => {
+    const html = render(<PricesPage />, "/prices?feed=official");
+    expect(html).toContain("Variety (exact)");
+    expect(html).toContain("More filters");
+    expect(html).toContain("Reporting period");
+    expect(html).toContain("Export all matching");
+  });
+
+  it("shows links to each independent price section on the homepage", () => {
+    const html = render(<HomePage />);
+    for (const source of ["mamcos", "tss", "tumcos", "official"]) {
+      expect(html).toContain(`href="#rates-${source}"`);
+      expect(html).toContain(`id="rates-${source}"`);
+    }
+  });
+
+  it("organizes source quotations by price type and keeps exact cooperative labels visible in Kannada", () => {
+    state.language = "kn";
+    state.cooperative = [
+      ready({ latest_by_branch: [cooperativeQuote("mamcos", "Sagara", "RASHI EDI")], data: [] }),
+      ready({ latest_by_branch: [cooperativeQuote("tss", "Sirsi", "RASHI")], data: [] }),
+      ready({ latest_by_branch: [cooperativeQuote("tumcos", "Channagiri", "areca")], data: [] }),
+    ];
+    const html = render(<HomePage />);
+    expect(html).toContain("ಸಹಕಾರಿ ಶಾಖೆಗಳ ದರಗಳು");
+    expect(html).toContain("ಇತರ ಮಾರುಕಟ್ಟೆ ದರಗಳು");
+    expect(html).toContain("ಇತ್ತೀಚಿನ ಸಹಕಾರಿ ವರದಿ");
+    expect(html).toContain("RASHI EDI");
+    expect(html).toContain("ಘಟಕ ಊಹಿಸಲಾಗಿದೆ");
+    expect(html).toContain("AGMARKNET");
+    expect(html.indexOf('id="rates-tumcos"')).toBeGreaterThan(html.indexOf('id="other-prices-heading"'));
+    expect(html.indexOf('id="rates-official"')).toBeGreaterThan(html.indexOf('id="other-prices-heading"'));
   });
 
   it("distinguishes retrieved data awaiting review from published observations", () => {
@@ -136,6 +226,11 @@ describe("market experience", () => {
 
   it("keeps advanced routes in a disclosure and displays both navigation languages", () => {
     const english = render(<AppShell />);
+    expect(english).toContain('aria-label="Areca Pulse · Market Intelligence"');
+    expect(english).toContain('class="brand-icon"');
+    expect(english).toContain("Market Intelligence");
+    expect(english).toContain("Areca Pulse · Market Intelligence");
+    expect(english).not.toContain("Arecanut Intelligence");
     expect(english).toContain("Explore prices");
     expect(english).toContain("More tools");
     expect(english).toContain('href="/data-quality"');
@@ -145,5 +240,144 @@ describe("market experience", () => {
     expect(kannada).toContain("ಮಾರುಕಟ್ಟೆ ದರಗಳು");
     expect(kannada).toContain("ಹೆಚ್ಚಿನ ಸಾಧನಗಳು");
     expect(render(<HomePage />)).toContain("ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆ ದರಗಳು");
+  });
+
+  it("keeps price filters in the URL and resets them without losing feed, commodity or context", () => {
+    const params = new URLSearchParams("feed=official&commodity=arecanut&variety=Rashi&search=Sirsi&district=Shivamogga&from=2026-01-01&period=custom&sort=modal_price&dir=asc&page=3");
+    expect(withoutFilters(params).toString()).toBe("feed=official&commodity=arecanut&variety=Rashi");
+    expect(withoutFilters(params, ["variety"]).toString()).toBe("feed=official&commodity=arecanut");
+    expect(withParams(params, { page: null, district: "", grade: "A" }).get("page")).toBeNull();
+    expect(withParams(params, { district: "" }).has("district")).toBe(false);
+    expect(withParams(params, { grade: "A" }).get("grade")).toBe("A");
+    expect(readPage(params)).toBe(2);
+    expect(readPage(new URLSearchParams("page=-4"))).toBe(0);
+    expect(readPage(new URLSearchParams("page=abc"))).toBe(0);
+    const fallback = { key: "reporting_date", direction: "desc" } as const;
+    expect(readSort(params, ["reporting_date", "modal_price"] as const, fallback)).toEqual({ key: "modal_price", direction: "asc" });
+    expect(readSort(new URLSearchParams("sort=injected"), ["reporting_date"] as const, fallback)).toEqual(fallback);
+    expect(readPreset(params)).toBe("custom");
+    expect(readPreset(new URLSearchParams("period=30d"))).toBe("30d");
+    expect(readPreset(new URLSearchParams("period=bogus"))).toBe("all");
+  });
+
+  it("restores official price filters from a shared link and has its own search box", () => {
+    const html = render(<PricesPage />, "/prices?feed=official&search=Sirsi&district=Shivamogga");
+    expect(html).toContain("Search market, district or variety");
+    expect(html).toContain('value="Sirsi"');
+    expect(html).toContain("More filters · active");
+    expect(html).toContain("Clear all filters");
+  });
+
+  it("restores cooperative branch filters from the URL", () => {
+    state.cooperativePage = ready({
+      data: [cooperativeQuote("mamcos", "Sagara", "RASHI EDI"), { ...cooperativeQuote("mamcos", "Sirsi", "RASHI EDI"), id: "two" }],
+      latest_by_branch: [], branches: ["Sagara", "Sirsi"], varieties: ["RASHI EDI"], variety: "RASHI EDI", series: [], counts: [], recent_fetches: [],
+      publication: { awaiting_review_count: 0, blocked_reason: null, latest_archived_reporting_date: null },
+      last_fetch: null, latest_reporting_date: "2026-10-01",
+    });
+    const html = render(<MarketDataPage official={<p>Official</p>} />, "/prices?feed=mamcos&branch=Sirsi");
+    expect(html).toContain("1 matching observation");
+    expect(html).toContain('<td class="table-market">Sirsi</td>');
+    expect(html).not.toContain('<td class="table-market">Sagara</td>');
+  });
+
+  it("shows a not-found page for unknown addresses instead of silently going home", () => {
+    const shell = render(<AppShell />, "/no-such-page");
+    expect(shell).toContain("Page not found");
+    expect(render(<NotFoundPage />, "/no-such-page")).toContain("There is no page at /no-such-page");
+    state.language = "kn";
+    expect(render(<NotFoundPage />, "/no-such-page")).toContain("ಪುಟ ಸಿಗಲಿಲ್ಲ");
+  });
+
+  it("shows the shell in Kannada on every page and hides the duplicate search on the prices page", () => {
+    state.language = "kn";
+    const prices = render(<AppShell />, "/prices");
+    expect(prices).not.toContain('lang="en"><div');
+    expect(prices).not.toContain('role="search"');
+    expect(prices).toContain("ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ");
+    expect(render(<AppShell />, "/analytics")).toContain('role="search"');
+  });
+
+  it("answers in the site language by default", () => {
+    state.language = "kn";
+    expect(render(<AssistantPage />, "/assistant")).toMatch(/<option value="kn"[^>]*selected="">/);
+    state.language = "en";
+    expect(render(<AssistantPage />, "/assistant")).toMatch(/<option value="en"[^>]*selected="">/);
+  });
+
+  it("lays the home price cards out in one grid with the comparison note after it", () => {
+    const html = render(<HomePage />);
+    expect(html).toContain('class="rate-grid"');
+    const grid = html.slice(html.indexOf('class="rate-grid"'));
+    for (const source of ["mamcos", "tss", "tumcos", "official"]) expect(grid).toContain(`id="rates-${source}"`);
+    expect(html.indexOf("rates-official")).toBeLessThan(html.indexOf("compare rates directly"));
+  });
+
+  it("keeps methodology collapsed and drops repeated banner text on cooperative pages", () => {
+    const html = render(<MarketDataPage official={<p>Official</p>} />, "/analytics?feed=tss");
+    expect(html).toContain('<details class="about-data">');
+    expect(html).toContain("branch averages · ₹/quintal (unit assumed)");
+    expect(html).not.toContain('class="eyebrow"');
+    expect(html).not.toContain("Supported sources are listed even when no prices are published");
+    expect(html).not.toContain("No variety aliases are merged.");
+  });
+
+  it("only lists TSS labels the importer captures, and keeps fresh nut apart from dried grades", () => {
+    const captured = new Set<string>(TSS_VARIETIES);
+    for (const variety of VARIETIES) for (const label of variety.labels.tss ?? []) expect(captured.has(label), label).toBe(true);
+    expect(VARIETIES.find((item) => item.key === "new-rashi")?.labels.tss).toEqual(["NEW RASHI"]);
+    expect(VARIETIES.filter((item) => item.labels.tss?.includes("FRESH RED ARECANUT")).map((item) => item.key)).toEqual(["fresh-red"]);
+  });
+
+  it("shows only the cooperatives that publish a variety and names the others in one line", () => {
+    state.cooperative = [ready({ latest_by_branch: [cooperativeQuote("tss", "Sirsi", "CHURU")], data: [] })];
+    const html = render(<HomePage />, "/?v=churu");
+    expect(html).toContain('id="rates-tss"');
+    expect(html).not.toContain('id="rates-mamcos"');
+    expect(html).not.toContain('id="rates-tumcos"');
+    expect(html).toContain("MAMCOS does not publish this variety.");
+    expect(html).toContain('href="/prices?feed=tss&amp;variety=CHURU"');
+    expect(html).toContain("More varieties");
+  });
+
+  it("explains that fresh red arecanut is undried nut", () => {
+    state.cooperative = [ready({ latest_by_branch: [], data: [] })];
+    expect(render(<HomePage />, "/?v=fresh-red")).toContain("Fresh, undried nuts");
+  });
+
+  it.each([
+    ["/", () => <HomePage />], ["/sell-or-hold", () => <SellOrHoldPage />], ["/prices", () => <PricesPage />], ["/overview", () => <OverviewPage />],
+    ["/analytics", () => <AnalyticsPage />], ["/compare", () => <ComparePage />], ["/prices?feed=mamcos", () => <MarketDataPage official={<p />} />],
+    ["/monthly-trends", () => <MonthlyTrendsPage />], ["/history", () => <HistoricalAnalyticsPage />], ["/decision-tools", () => <DecisionToolsPage />],
+    ["/intelligence/production", () => <IntelligencePage />], ["/intelligence/quality", () => <QualityInspectionsPage />], ["/supply", () => <SupplyPage />],
+    ["/forecasts", () => <ForecastsPage />], ["/forecasts/evaluation", () => <ForecastEvaluationPage />], ["/assistant", () => <AssistantPage />],
+    ["/workspace", () => <WorkspacePage />], ["/data-quality", () => <DataQualityPage />], ["/no-such-page", () => <NotFoundPage />],
+  ] as [string, () => React.ReactNode][])("renders %s in Kannada", (path, page) => {
+    state.language = "kn";
+    state.cooperative = [ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] })];
+    const html = render(page(), path);
+    const heading = /<h1[^>]*>(.*?)<\/h1>/.exec(html)?.[1] ?? "";
+    expect(heading, `${path} heading`).toMatch(/[\u0C80-\u0CFF]/);
+  });
+
+  it("places the source dropdown in the page heading row instead of a separate row", () => {
+    const html = render(<MarketDataPage official={<p />} />, "/prices?feed=mamcos");
+    const heading = html.slice(html.indexOf('class="page-heading"'), html.indexOf("</section>", html.indexOf('class="page-heading"')));
+    expect(heading).toContain('class="heading-controls"');
+    expect(heading).toContain("source-control");
+    expect(html).not.toContain("source-bar");
+  });
+
+  it("shows six branches per card with a toggle for the rest, and the latest report as a pill", () => {
+    const branches = ["Sagara", "Sirsi", "Koppa", "Birur", "Soraba", "Tarikere", "Sringeri", "Jayapura"];
+    state.cooperative = [
+      ready({ latest_by_branch: branches.map((branch, index) => ({ ...cooperativeQuote("mamcos", branch, "RASHI EDI"), id: `m${index}`, average_price: 48000 - index })), data: [] }),
+      ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] }),
+    ];
+    const html = render(<HomePage />);
+    expect((html.match(/class="rate-row/g) ?? []).length).toBe(6 + 1);
+    expect(html).toContain("Show all 8 branches");
+    expect(html).toContain('class="home-date-pill');
+    expect(html).toContain("Latest report");
   });
 });

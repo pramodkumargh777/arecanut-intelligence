@@ -1,4 +1,4 @@
-# ANI — Implementation Roadmap
+# Areca Pulse — Roadmap
 
 This sequence is ordered to fix data correctness before broadening data
 coverage, preserve the current Hono/Worker/D1 and React/Vite architecture, and
@@ -203,3 +203,46 @@ observable failure handling.
 alerts and rollback are verified in the target Cloudflare account. The
 repository's current all-zero D1 ID and localhost-only CORS settings must
 remain deployment blockers until then.
+
+## Current scope and limitations
+
+- Implemented now: market overview, market-price explorer, exact-variety reference-index analytics, same-date cooperative comparison, data-quality review, monthly historical analytics with revisions/coverage, actual-input realization/profit/hold tools, independently sourced production/weather/trade/policy/news records, real-report quality workflow, evaluated one-month price baselines, AGMARKNET CSV and configurable data.gov.in ingestion.
+- Not yet implemented: advanced taxonomy/mapping tools, advanced/prospectively validated forecasting, financial recommendations, complete/live trade or news coverage, measured lot data without real reports, individual authentication/roles, production alerts, cloud deployment validation, and automated browser/E2E tests.
+- Imported markets keep source names and remain unverified until a reviewer approves an observation. Variety labels are retained as reported and never merged automatically.
+- Monthly and cooperative source access/imports were verified locally. Official daily APMC access/backfill remains blocked on human CAPTCHA or authorized access; cooperative quotations are published separately, not as official modal prices.
+- Split the initial Worker module into route and explicit repository interfaces as additional backend domains are added.
+- The JavaScript entry bundle is approximately 260 KB minified (82 KB gzip); the accessible ECharts line-chart bundle is lazy-loaded at 539 KB minified (183 KB gzip) and should be revisited before production.
+- Python unit tests use the standard library. Pandas, DuckDB and forecasting dependencies are not needed for this first ingestion slice.
+
+## Open product and UI items
+
+Carried over from the November 2026 UI review (the review documents themselves were retired once their fixes landed).
+
+- **Source freshness (P0):** show, per feed, how far Areca Pulse lags the publisher (report date, fetch, review and
+  publication state). Investigate authorised fetch, monitoring and review workflow; never auto-approve.
+- **Release parity:** confirm the deployed build and API configuration match the intended release before judging
+  deployed behaviour.
+- **Kannada:** every page, chart, table, message and date is available in Kannada and English. Each page keeps
+  both languages side by side (`defineCopy`), and TypeScript fails the build if a Kannada line is missing. Still in
+  English by design or pending: the assistant's detailed fact/tool/assumption lists (server, `api/src/assistant/tools.ts`),
+  expert-approved crop-risk advisory wording, forecasting-engine metadata, and source data itself (market and variety
+  names). All Kannada text needs a native-speaker review before release.
+- **Price-direction colours:** rises are green and falls red; the brand guide asks that direction not read as
+  good or bad. Decide whether to make them neutral (see [BRAND.md](BRAND.md)).
+- **Kannada font:** consider bundling Noto Sans Kannada for consistent rendering.
+- **Charts:** validate gaps, single points, changing coverage and the data-table fallback on touch and keyboard.
+- **Decision tools and weather/forecasts:** keep assumptions, captured time and experimental status next to results.
+- **Type scale:** proposed but not adopted: body 16/24, compact 14/20, captions at least 12/18, h1 26/34, h2 19/27.
+- **Navigation:** user-test the primary links (Home, Prices, Analytics, Intelligence) with growers in both languages.
+- **Interaction tests:** frontend tests render static HTML; add jsdom and Testing Library for clicks, the drawer and
+  URL-driven filters.
+
+### Verification checklist for UI changes
+
+- Every feed in each state: success, independent failure, empty, pending review, old and unavailable dates.
+- Comparisons rank only same-date, same-scope observations; mixed dates stay unranked.
+- Trends show true gaps and never interpolate.
+- Routes, deep links, Back, source and variety context, and unknown URLs behave correctly.
+- Viewports 360×800, 390×844, 430×932, 768×1024, 1366×768, 1440×900 and 1920×1080 without page-level overflow.
+- Keyboard and screen reader: skip link, focus, drawer trap and Escape, labelled controls, announcements, contrast.
+- Native-language review of English and Kannada text, dates, prices, units and errors.

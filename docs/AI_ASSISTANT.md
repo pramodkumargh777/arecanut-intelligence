@@ -1,4 +1,4 @@
-# ANI AI Intelligence Assistant
+# Areca Pulse AI Intelligence Assistant
 
 The assistant answers questions about arecanut markets, supply and crop health from **verified ANI data**. It does not use the language model's own knowledge.
 
@@ -258,3 +258,13 @@ These ran against local D1 with `qwen3.5:4b` and `bge-m3:567m` on Ollama:
 - **PIB access.** PIB returns HTTP 403 to automated fetches, so PIB documents need operator-saved copies via `--local-dir`.
 - **Commodity scope.** The assistant covers arecanut only. Other configured commodities are not yet supported.
 - **Answer content.** Answers are reference information, not financial advice or crop diagnosis.
+
+## Quick start
+
+### AI assistant (optional)
+
+`/assistant` answers English or Kannada questions using only ANI tool results (prices, index, forecasts, arrivals,
+production, trade, weather, advisories and calculators) and cited document excerpts (CPCRI, DASD). The LLM explains
+facts but never supplies numbers, and ungrounded answers fall back to a rule-based answer. It is off by default
+(`ASSISTANT_LLM_PROVIDER=none`), and the rest of ANI does not depend on it. Local setup with Ollama
+(`qwen3.5:4b`, `bge-m3`), document ingestion and limitations: [docs/AI_ASSISTANT.md](AI_ASSISTANT.md).

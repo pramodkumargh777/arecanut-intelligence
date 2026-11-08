@@ -1,4 +1,4 @@
-# ANI — Data Retention, Backup and Restore
+# Areca Pulse — Data Retention, Backup and Restore
 
 ANI keeps source evidence permanently. Storage is reduced only by moving verified copies to an
 optional R2 archive, never by deleting historical records. See [ARCHITECTURE.md](./ARCHITECTURE.md)
@@ -137,3 +137,20 @@ For local development, restore by replacing `api/.wrangler/state` from a copy, o
 
 Removing the binding later makes offloaded evidence unavailable (503), but never lost: the R2 object
 and its registry row remain.
+
+## Performance, archive and backups (overview)
+
+### Performance, archive and backups
+
+Migration `0015` adds compound indexes, a trigger-maintained daily summary cache, idempotent import
+keys, `operational_errors`, an `archive_objects` registry and no-delete guards on evidence tables.
+Migration `0016` lets verified R2 offload clear a cooperative snapshot without allowing any rewrite.
+Public list and chart endpoints are bounded and paginated; the browser never loads the full history.
+
+```sh
+npm run db:backup                                   # wrangler d1 export + SHA-256 manifest
+npm run db:restore-check -- backups/<name>.manifest.json
+npm run retention:temp                              # dry-run purge of data/tmp (add -- --apply)
+```
+
+R2 is optional and off by default; local development needs no R2 configuration.

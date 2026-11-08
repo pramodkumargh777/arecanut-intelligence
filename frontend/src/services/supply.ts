@@ -63,19 +63,6 @@ export type SupplyAdvisories = { state: string; district: string; as_of: string;
   rules: { total_versions: number; published: number; awaiting_review: number };
   weather_basis: { days: number; data_types: { type: string; label: string }[]; period: Period }; message: string | null; disclaimer: string };
 
-export const ADVISORY_LABEL: Record<Advisory["level"], string> = {
-  field_reported: "Verified field reports", weather_watch: "Weather watch (not a diagnosis)", insufficient_data: "Insufficient weather data", no_advisory: "No advisory",
-};
-
-export function formatPeriod(period: Period | undefined): string {
-  if (!period) return "No records in range";
-  return period.from === period.to ? period.from : `${period.from} to ${period.to}`;
-}
-
-export function estimateBadge(row: Pick<ProductionEstimate, "estimate_type" | "estimate_label">): string {
-  return row.estimate_type === "final" ? "Final" : row.estimate_type === "unspecified" ? "Stage not stated" : row.estimate_label;
-}
-
 /** Merge per-measure buckets into rows keyed by bucket without ever summing arrival and traded quantities. */
 export function arrivalRows(measures: SupplyArrivals["measures"]) {
   const map = new Map<string, { bucket: string; arrival: ArrivalBucket | null; traded: ArrivalBucket | null }>();

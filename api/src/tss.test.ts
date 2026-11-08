@@ -17,11 +17,17 @@ describe("TSS reported averages with explicit unit assumption", () => {
     });
     expect(JSON.parse(parsed.quotes[0].raw_record)).toEqual(row);
   });
-  it("archives but excludes pepper, ambiguous and unsupported items without alias merging", async () => {
-    const parsed = await parse(report([row, ...["PEPPER", "RAW PEPPER", "SHAN BALE", "K.G.", "NEW RASHI", "FRESH RAW ARECA"].map((iname) => ({ ...row, iname, iname_en: iname }))]));
-    expect(parsed.received_count).toBe(7);
-    expect(parsed.excluded_count).toBe(6);
+  it("archives but excludes pepper, by-products and unknown items without alias merging", async () => {
+    const parsed = await parse(report([row, ...["PEPPER", "RAW PEPPER", "SHAN BALE", "COCONUT", "FRESH RAW ARECA"].map((iname) => ({ ...row, iname, iname_en: iname }))]));
+    expect(parsed.received_count).toBe(6);
+    expect(parsed.excluded_count).toBe(5);
     expect(parsed.quotes).toHaveLength(1);
+  });
+  it("captures every listed arecanut grade under its exact TSS label", async () => {
+    const labels = ["NEW RASHI", "K.G.", "B.G.", "11-CHALI", "LA B GOT", "FRESH RED ARECANUT"];
+    const parsed = await parse(report(labels.map((iname, index) => ({ ...row, itemcode: index + 10, iname, iname_en: iname }))));
+    expect(parsed.quotes.map((quote) => quote.variety)).toEqual(labels);
+    expect(parsed.excluded_count).toBe(0);
   });
   it("does not substitute normal rates for missing or zero averages", async () => {
     const parsed = await parse(report([{ ...row, avgrate: 0 }]));

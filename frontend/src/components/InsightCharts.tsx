@@ -3,18 +3,23 @@ import * as echarts from "echarts/core";
 import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-import { AXIS_LABEL, AXIS_LINE, CHART_FONT, CROSSHAIR, GRID_LINE, INK, monthAxisInterval, SERIES_COLORS, TOOLTIP, tooltipHtml } from "./chartPalette";
+import { AXIS_LABEL, AXIS_LINE, BRAND, BRAND_AREA, CHART_FONT, CROSSHAIR, GRID_LINE, INK, monthAxisInterval, SERIES_COLORS, TOOLTIP, tooltipHtml } from "./chartPalette";
+import { defineCopy, useCopy } from "../services/language";
+
+const CHART = defineCopy({
+  en: { notReported: "Not reported", notAvailable: "Not available", isolated: " (isolated)", range: "Minimum – maximum", minimum: "Minimum", maximum: "Maximum" },
+  kn: { notReported: "ವರದಿಯಾಗಿಲ್ಲ", notAvailable: "ಲಭ್ಯವಿಲ್ಲ", isolated: " (ಒಂಟಿ ವರದಿ)", range: "ಕನಿಷ್ಠ – ಗರಿಷ್ಠ", minimum: "ಕನಿಷ್ಠ", maximum: "ಗರಿಷ್ಠ" },
+});
 
 echarts.use([BarChart, LineChart, ScatterChart, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent, AriaComponent, CanvasRenderer]);
 
 export { SERIES_COLORS };
-const inr = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "Not reported" : `₹${Math.round(value).toLocaleString("en-IN")}`;
+const inr = (value: number | null | undefined, missing = CHART.en.notReported) => value == null || !Number.isFinite(value) ? missing : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const axisInr = (value: number) => `₹${Math.round(value).toLocaleString("en-IN")}`;
 const base = (description: string) => ({
   animation: false, useUTC: true, aria: { enabled: true, label: { description } }, textStyle: { fontFamily: CHART_FONT, color: INK[900] },
   legend: { top: 0, left: 0, itemWidth: 22, itemHeight: 8, itemGap: 16, itemStyle: { opacity: 0 }, textStyle: { color: INK[600], fontSize: 12, fontFamily: CHART_FONT } },
 });
-const ISOLATED = " (isolated)";
 
 export type LineSeries = { name: string; values: (number | null)[]; color?: string; dashed?: boolean; dotted?: boolean; markers?: boolean; width?: number };
 export type ChartRegion = { from: string; to: string; label: string };
@@ -28,7 +33,9 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
   categories: string[]; series: LineSeries[]; band?: { name: string; lower: (number | null)[]; upper: (number | null)[] };
   valueFormat?: "inr" | "percent" | "index"; description: string; height?: number; referenceLine?: { value: number; label: string }; regions?: ChartRegion[]; endLabel?: boolean;
 }) {
-  const format = (value: number | null | undefined) => value == null ? "Not reported" : valueFormat === "inr" ? inr(value) : valueFormat === "percent" ? `${value.toFixed(1)}%` : value.toFixed(1);
+  const t = useCopy(CHART);
+  const ISOLATED = t.isolated;
+  const format = (value: number | null | undefined) => value == null ? t.notReported : valueFormat === "inr" ? inr(value) : valueFormat === "percent" ? `${value.toFixed(1)}%` : value.toFixed(1);
   const single = series.length === 1;
   const whiskers = band ? categories.flatMap((category, index) => band.lower[index] !== null && band.upper[index] !== null
     ? [[{ xAxis: category, yAxis: band.lower[index] }, { xAxis: category, yAxis: band.upper[index] }]] : []) : [];
@@ -65,7 +72,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
           showSymbol: markers, symbol: "circle", symbolSize: markers ? 6 : 7,
           itemStyle: { color, borderColor: INK.surface, borderWidth: 1.5 }, emphasis: { scale: false },
           lineStyle: { color, width: item.width ?? (index === 0 ? 2 : 1.5), type: item.dotted ? "dotted" : item.dashed ? "dashed" : "solid", cap: "round", join: "round" },
-          ...(single ? { areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "rgba(24,24,27,.10)" }, { offset: 1, color: "rgba(24,24,27,0)" }]) } } : {}),
+          ...(single ? { areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: BRAND_AREA[0] }, { offset: 1, color: BRAND_AREA[1] }]) } } : {}),
           ...(showEnd ? { endLabel: { show: true, color: INK[900], fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, distance: 6, formatter: ({ value }: { value: number }) => format(value) } } : {}),
           ...(index === 0 && regions.length ? { markArea: { silent: true, itemStyle: { color: "rgba(24,24,27,.045)" }, label: { color: INK[500], fontSize: 11, position: "insideTop", distance: 6, fontFamily: CHART_FONT }, data: regions.map((region) => [{ xAxis: region.from, name: region.label }, { xAxis: region.to }]) } } : {}),
           ...(index === 0 && (referenceLine || whiskers.length) ? { markLine: { silent: true, symbol: "none", animation: false, data: [
@@ -82,11 +89,12 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
 }
 
 /** Vertical category bars (histograms, seasonal indices, error comparisons). Null bars are omitted, not zero-filled. */
-export function CategoryBarChart({ categories, values, name, color = INK[900], valueFormat = "inr", description, height = 280, referenceLine, horizontal = false, tooltipLabels }: {
+export function CategoryBarChart({ categories, values, name, color = BRAND, valueFormat = "inr", description, height = 280, referenceLine, horizontal = false, tooltipLabels }: {
   categories: string[]; values: (number | null)[]; name: string; color?: string | ((index: number) => string); valueFormat?: "inr" | "percent" | "count" | "index" | "ratio";
   description: string; height?: number; referenceLine?: { value: number; label?: string }; horizontal?: boolean; tooltipLabels?: string[];
 }) {
-  const format = (value: number | null | undefined) => value == null ? "Not available" : valueFormat === "inr" ? inr(value)
+  const t = useCopy(CHART);
+  const format = (value: number | null | undefined) => value == null ? t.notAvailable : valueFormat === "inr" ? inr(value)
     : valueFormat === "percent" ? `${value.toFixed(1)}%` : valueFormat === "count" ? String(value) : valueFormat === "ratio" ? value.toFixed(2) : value.toFixed(1);
   const categoryAxis = { type: "category", data: categories, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, hideOverlap: !horizontal, interval: horizontal ? 0 : monthAxisInterval(categories), color: horizontal ? INK[700] : INK[500] }, axisLine: { ...AXIS_LINE, onZero: false }, inverse: horizontal };
   const valueAxis = { type: "value", scale: valueFormat === "index", splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: valueFormat === "inr" ? axisInr : valueFormat === "percent" ? (value: number) => `${value}%` : undefined }, splitLine: GRID_LINE };
@@ -117,28 +125,29 @@ function niceBounds(lowest: number, highest: number) {
 
 /** Horizontal ranked chart: a min–max bar per row with the central value (modal or reported average) as a labelled marker. */
 export function RankedRangeChart({ rows, centralLabel, description }: { rows: RangeRow[]; centralLabel: string; description: string }) {
+  const t = useCopy(CHART);
   const labels = rows.map((row) => row.label);
   const hasRange = rows.map((row) => row.minimum !== null && row.maximum !== null && row.maximum >= row.minimum);
   const lowest = Math.min(...rows.flatMap((row) => [row.minimum ?? row.central, row.central]));
   const highest = Math.max(...rows.flatMap((row) => [row.maximum ?? row.central, row.central]));
   const option = {
     ...base(description),
-    legend: { ...base(description).legend, icon: "roundRect", itemWidth: 14, itemHeight: 6, itemStyle: { opacity: 1 }, data: ["Minimum – maximum", centralLabel] },
+    legend: { ...base(description).legend, icon: "roundRect", itemWidth: 14, itemHeight: 6, itemStyle: { opacity: 1 }, data: [t.range, centralLabel] },
     grid: { top: 36, right: 24, bottom: 4, left: 4, containLabel: true },
     tooltip: {
       ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(24,24,27,.04)" } },
       formatter: (items: { dataIndex: number }[]) => {
         const row = rows[items[0]?.dataIndex ?? 0];
-        return row ? tooltipHtml(row.label, [{ label: "Minimum", value: inr(row.minimum) }, { label: centralLabel, value: inr(row.central) }, { label: "Maximum", value: inr(row.maximum) }], row.detail) : "";
+        return row ? tooltipHtml(row.label, [{ label: t.minimum, value: inr(row.minimum, t.notReported) }, { label: centralLabel, value: inr(row.central, t.notReported) }, { label: t.maximum, value: inr(row.maximum, t.notReported) }], row.detail) : "";
       },
     },
     yAxis: { type: "category", data: labels, inverse: true, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, color: INK[700], interval: 0, width: 120, overflow: "truncate" }, axisLine: AXIS_LINE },
     xAxis: { type: "value", ...niceBounds(lowest, highest), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: axisInr }, splitLine: GRID_LINE },
     series: [
       { name: "range-base", type: "bar", stack: "range", silent: true, itemStyle: { color: "transparent" }, data: rows.map((row, index) => hasRange[index] ? row.minimum : null), tooltip: { show: false } },
-      { name: "Minimum – maximum", type: "bar", stack: "range", barMaxWidth: 10, color: INK[200], itemStyle: { color: INK[200], borderRadius: 3 },
+      { name: t.range, type: "bar", stack: "range", barMaxWidth: 10, color: INK[200], itemStyle: { color: INK[200], borderRadius: 3 },
         data: rows.map((row, index) => hasRange[index] ? row.maximum! - row.minimum! : null) },
-      { name: centralLabel, type: "scatter", symbol: "circle", symbolSize: 10, color: INK[900], itemStyle: { color: INK[900], borderColor: INK.surface, borderWidth: 2 }, data: rows.map((row) => row.central), z: 3,
+      { name: centralLabel, type: "scatter", symbol: "circle", symbolSize: 10, color: BRAND, itemStyle: { color: BRAND, borderColor: INK.surface, borderWidth: 2 }, data: rows.map((row) => row.central), z: 3,
         label: { show: rows.length <= 16, position: "top", distance: 4, color: INK[900], fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, formatter: ({ value }: { value: number }) => inr(value) } },
     ],
   };

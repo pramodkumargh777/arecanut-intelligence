@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 190" role="img" aria-labelledby="title desc">
+<title id="title">Areca Pulse</title><desc id="desc">Areca Pulse Market Intelligence logo with arecanut palms and a curved horizon.</desc>
+<g transform="translate(18 8)"><g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Tall arecanut palm -->
+      <path d="M66 134 C70 105 73 72 75 38" stroke="#F8F6EE" stroke-width="5"/>
+      <!-- crown ribs -->
+      <g stroke="#6E9F43" stroke-width="3.4">
+        <path d="M75 39 C55 14 34 8 11 17"/>
+        <path d="M75 39 C65 11 51 0 34 1"/>
+        <path d="M75 39 C80 10 97 0 116 4"/>
+        <path d="M75 39 C101 19 124 19 143 31"/>
+        <path d="M75 39 C104 42 124 56 133 72"/>
+        <path d="M75 39 C56 40 38 50 27 66"/>
+      </g>
+      <!-- pinnate leaflets on the fronds -->
+      <g stroke="#9FBE67" stroke-width="2.4">
+        <path d="M61 27 Q57 14 47 9 M61 27 Q48 21 39 23 M48 19 Q43 8 32 6 M48 19 Q36 15 27 18 M34 15 Q27 7 16 9 M34 15 Q22 13 14 16"/>
+        <path d="M68 24 Q67 12 59 4 M68 24 Q57 17 49 18 M58 17 Q57 7 51 1 M58 17 Q47 13 41 14"/>
+        <path d="M83 25 Q87 12 99 6 M83 25 Q96 17 105 18 M96 17 Q104 7 115 8 M96 17 Q108 13 117 17"/>
+        <path d="M91 27 Q104 17 119 18 M91 27 Q104 25 113 31 M108 26 Q121 19 131 24 M108 26 Q120 30 126 38"/>
+        <path d="M94 42 Q111 34 127 39 M94 42 Q108 48 115 57 M112 47 Q127 42 136 49 M112 47 Q122 58 124 66"/>
+        <path d="M61 42 Q47 35 34 42 M61 42 Q49 51 46 60 M45 45 Q31 39 22 47 M45 45 Q37 56 37 64"/>
+      </g>
+      <!-- Smaller companion palm -->
+      <path d="M139 137 C140 118 142 99 143 79" stroke="#F8F6EE" stroke-width="4"/>
+      <g stroke="#6E9F43" stroke-width="2.8">
+        <path d="M143 80 Q128 62 111 66"/><path d="M143 80 Q137 58 125 53"/>
+        <path d="M143 80 Q150 58 165 58"/><path d="M143 80 Q165 70 178 80"/>
+        <path d="M143 80 Q164 87 170 100"/>
+      </g>
+      <g stroke="#9FBE67" stroke-width="2">
+        <path d="M134 72 Q127 63 119 62 M134 72 Q123 72 117 76 M138 67 Q135 57 130 55 M138 67 Q130 63 123 63"/>
+        <path d="M149 69 Q155 60 163 60 M149 69 Q159 66 166 69 M156 74 Q168 67 176 74 M156 74 Q166 78 170 84"/>
+        <path d="M154 84 Q166 81 174 88 M154 84 Q164 92 165 98"/>
+      </g>
+      <!-- rolling horizon -->
+      <path d="M2 151 C40 132 83 134 115 141 C150 149 179 143 211 124" stroke="#B6D279" stroke-width="6"/>
+      <path d="M2 151 C54 164 112 161 163 151 C184 147 199 138 214 127" stroke="#F8F6EE" stroke-width="2.5" opacity=".85"/>
+    </g></g>
+<g font-family="Inter, Avenir Next, Segoe UI, Arial, sans-serif">
+  <text x="260" y="91" font-size="70" font-weight="650" letter-spacing="-2.3" fill="#F8F6EE">Areca</text>
+  <text x="468" y="91" font-size="70" font-weight="650" letter-spacing="-2.3" fill="#B6D279">Pulse</text>
+  <text x="263" y="128" font-size="17" font-weight="600" letter-spacing="4.2" fill="#E2E9D9">MARKET INTELLIGENCE</text>
+  <text x="263" y="161" font-size="17" font-weight="400" letter-spacing=".15" fill="#C2D0C3">Know the market. See the opportunity.</text>
+</g></svg>

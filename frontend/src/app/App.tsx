@@ -21,6 +21,7 @@ const ForecastEvaluationPage = lazy(() => import("../pages/ForecastEvaluationPag
 const SupplyPage = lazy(() => import("../pages/SupplyPage").then((module) => ({ default: module.SupplyPage })));
 const AssistantPage = lazy(() => import("../pages/AssistantPage").then((module) => ({ default: module.AssistantPage })));
 const WorkspacePage = lazy(() => import("../pages/WorkspacePage").then((module) => ({ default: module.WorkspacePage })));
+const NotFoundPage = lazy(() => import("../pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
 const ForecastsPage = lazy(() => import("../pages/ForecastsPage").then((module) => ({ default: module.ForecastsPage })));
 
 export function App() {
@@ -46,7 +47,7 @@ export function App() {
           <Route path="compare" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<ComparePage />} /></Suspense>} />
           <Route path="workspace" element={<Suspense fallback={<LoadingState />}><WorkspacePage /></Suspense>} />
           <Route path="data-quality" element={<Suspense fallback={<LoadingState />}><DataQualityPage /></Suspense>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Suspense fallback={<LoadingState />}><NotFoundPage /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter></LanguageProvider>

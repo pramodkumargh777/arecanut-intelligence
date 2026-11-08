@@ -1,4 +1,4 @@
-# ANI — Architecture
+# Areca Pulse — Architecture
 
 This document describes the storage and query architecture as implemented in the repository
 (migrations `0001`–`0019`). Source-specific behaviour is documented separately in

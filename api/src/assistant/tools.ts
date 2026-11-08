@@ -75,7 +75,7 @@ export const TOOL_DESCRIPTIONS: Record<ToolName, string> = {
   get_current_prices: "Latest verified arecanut prices, listed separately by source and price basis (AGMARKNET daily APMC, AGMARKNET monthly state average, MAMCOS/TSS/TUMCOS cooperative averages).",
   get_historical_prices: "AGMARKNET Karnataka monthly arrival-weighted modal price history for one exact variety, with rolling and year-on-year statistics.",
   compare_markets: "Compare markets or cooperative branches for one variety, within one source only.",
-  get_market_index: "ANI reference index: median verified AGMARKNET modal price across markets for one variety and date.",
+  get_market_index: "Areca Pulse reference index: median verified AGMARKNET modal price across markets for one variety and date.",
   get_market_arrivals: "Arrival and traded quantities from authorized imports (kept as separate measures).",
   get_price_forecast: "Monthly reference forecast with interval, evaluation results and limitations.",
   get_production_statistics: "DASD area, production and yield by reporting year and estimate stage.",
@@ -84,7 +84,7 @@ export const TOOL_DESCRIPTIONS: Record<ToolName, string> = {
   get_advisories: "Expert-approved crop-risk advisories (never a diagnosis).",
   calculate_net_realization: "Net sale proceeds from user-stated quantity, price or variety, commission and transport cost.",
   calculate_sell_hold: "Sell-now vs hold comparison from user-stated holding costs; reports break-even hold price.",
-  search_industry_news: "Search curated official news and policy releases ingested by ANI.",
+  search_industry_news: "Search curated official news and policy releases ingested by Areca Pulse.",
   search_agricultural_documents: "Search CPCRI, DASD and government documents (keyword + BGE-M3 semantic retrieval).",
 };
 
@@ -212,7 +212,7 @@ function rankingLine(language: Language, source: string, variety: string, rows: 
 
 function resolveVariety(target: ToolResult, requested: string | undefined, available: string[]): string | null {
   if (!requested) {
-    target.assumptions.push(`No variety was named; ANI's default reference variety "${DEFAULT_VARIETY}" is shown. Ask about another variety by name.`);
+    target.assumptions.push(`No variety was named; Areca Pulse's default reference variety "${DEFAULT_VARIETY}" is shown. Ask about another variety by name.`);
     return matchVariety(DEFAULT_VARIETY, available) ?? DEFAULT_VARIETY;
   }
   const match = matchVariety(requested, available);
@@ -438,17 +438,17 @@ async function compareMarkets(ctx: ToolContext, args: ToolArgs<"compare_markets"
 }
 
 async function getMarketIndex(ctx: ToolContext, args: ToolArgs<"get_market_index">): Promise<ToolResult> {
-  const target = result("get_market_index", args, "ANI reference index");
+  const target = result("get_market_index", args, "Areca Pulse reference index");
   const monthly = await monthlySnapshot(ctx);
   const variety = args.variety ? matchVariety(args.variety, monthly.varieties) ?? args.variety : (resolveVariety(target, undefined, monthly.varieties) ?? DEFAULT_VARIETY);
   const body = await getJson(ctx, `/analytics/reference-index?${new URLSearchParams({ variety })}`);
   const rows: Json[] = body?.data ?? [];
   if (body?.methodology) target.limitations.push(body.methodology);
-  const key = addSource(target, { key: `ani-reference-index:${variety}`, kind: "data", label: `ANI reference index from verified AGMARKNET daily modal prices, ${variety}`,
+  const key = addSource(target, { key: `ani-reference-index:${variety}`, kind: "data", label: `Areca Pulse reference index from verified AGMARKNET daily modal prices, ${variety}`,
     publisher: "ArecaNut Intelligence (derived from AGMARKNET)", url: null, reporting_period: rows.at(-1)?.reporting_date ?? null, retrieved_at: null });
   for (const row of rows.slice(-2).reverse()) {
     target.facts.push({ label: `Reference index – ${variety}`, value: row.median_modal_price, unit: "INR/quintal", basis: "APMC_MODAL_MEDIAN",
-      reporting_period: row.reporting_date, source_key: key, source_name: "ANI reference index", note: `${row.market_count} verified markets` });
+      reporting_period: row.reporting_date, source_key: key, source_name: "Areca Pulse reference index", note: `${row.market_count} verified markets` });
   }
   if (!rows.length) {
     target.sources = [];
@@ -476,7 +476,7 @@ async function getPriceForecast(ctx: ToolContext, args: ToolArgs<"get_price_fore
   const evaluation = results?.evaluation;
   const forecast = body?.forecast;
   const key = addSource(target, {
-    key: `ani-forecast:${variety}`, kind: "data", label: `ANI monthly forecast evaluation (${results?.formula_version ?? "monthly baselines"}), ${variety}`,
+    key: `ani-forecast:${variety}`, kind: "data", label: `Areca Pulse monthly forecast evaluation (${results?.formula_version ?? "monthly baselines"}), ${variety}`,
     publisher: "ArecaNut Intelligence (from AGMARKNET monthly prices)", url: null,
     reporting_period: results?.history ? `history ${results.history.from} to ${results.history.through}` : null, retrieved_at: body?.snapshot?.evaluated_at ?? null,
   });
@@ -504,12 +504,12 @@ async function getPriceForecast(ctx: ToolContext, args: ToolArgs<"get_price_fore
   }
   if (status === "stale") target.uncertainty.push(`The forecast snapshot is stale: ${(body?.stale_reasons ?? []).join("; ")}`);
   for (const limitation of results?.limitations ?? []) target.limitations.push(limitation);
-  target.limitations.push("ANI's monthly forecast is an experimental reference baseline without demonstrated predictive improvement. It does not predict whether prices will rise or fall.");
+  target.limitations.push("Areca Pulse's monthly forecast is an experimental reference baseline without demonstrated predictive improvement. It does not predict whether prices will rise or fall.");
 
   const predictions = await getJson(ctx, `/forecasting/predictions?${new URLSearchParams({ series_id: `KA|${variety}` })}`).catch(() => null);
   const rows: Json[] = (predictions?.data ?? []).filter((row: Json) => row.actual_value == null).slice(0, 3);
   if (rows.length) {
-    const experiment = addSource(target, { key: `ani-forecasting-engine:${variety}`, kind: "data", label: `ANI forecasting engine experiment ${predictions.experiment_id ?? ""}`.trim(),
+    const experiment = addSource(target, { key: `ani-forecasting-engine:${variety}`, kind: "data", label: `Areca Pulse forecasting engine experiment ${predictions.experiment_id ?? ""}`.trim(),
       publisher: "ArecaNut Intelligence forecasting engine", url: null, reporting_period: `origin ${rows[0].origin_period}`, retrieved_at: rows[0].forecast_created_at ?? null });
     for (const row of rows) {
       target.facts.push({ label: `Engine ${row.model} median, horizon ${row.horizon} (${row.publication})`, value: round2(row.median), unit: row.unit ?? "INR/quintal",
@@ -673,7 +673,7 @@ async function getAdvisories(ctx: ToolContext, args: ToolArgs<"get_advisories">)
   const params = new URLSearchParams();
   if (args.district) params.set("district", args.district);
   const body = await getJson(ctx, `/supply/risk/advisories?${params}`);
-  const key = addSource(target, { key: `advisories:${body?.district}:${body?.as_of}`, kind: "data", label: `ANI expert-reviewed crop-risk rules, ${body?.district}`,
+  const key = addSource(target, { key: `advisories:${body?.district}:${body?.as_of}`, kind: "data", label: `Areca Pulse expert-reviewed crop-risk rules, ${body?.district}`,
     publisher: "ArecaNut Intelligence (expert-approved rules)", url: null, reporting_period: body?.as_of ?? null, retrieved_at: null });
   for (const advisory of body?.advisories ?? []) {
     target.facts.push({ label: `${advisory.hazard_name}`, value: advisory.level, unit: null, basis: "RULE_BASED_ADVISORY", reporting_period: body.as_of, source_key: key, note: advisory.message });
@@ -749,7 +749,7 @@ async function calculate(ctx: ToolContext, tool: "calculate_net_realization" | "
   if (tool === "calculate_sell_hold") await addHoldHistory(ctx, target, args.variety);
   if (missing.length || !price) {
     target.status = "needs_input";
-    target.missing.push(`To calculate, state: ${missing.join(", ")}. ANI does not assume costs you have not given.`);
+    target.missing.push(`To calculate, state: ${missing.join(", ")}. Areca Pulse does not assume costs you have not given.`);
     target.summary = target.missing[0];
     return target;
   }
@@ -770,7 +770,7 @@ async function calculate(ctx: ToolContext, tool: "calculate_net_realization" | "
     ? { key: `calc-price:${snapshot.reference_id ?? snapshot.reporting_period}`, kind: "data", label: `${snapshot.source} ${snapshot.variety ?? ""} ${snapshot.reporting_period ?? ""}`.trim(),
       publisher: AGMARKNET, url: snapshot.source_url, reporting_period: snapshot.reporting_period, retrieved_at: snapshot.fetched_at }
     : { key: "calc-user-input", kind: "data", label: "Values stated in the question", publisher: null, url: null, reporting_period: null, retrieved_at: null });
-  const formulaKey = addSource(target, { key: `formula:${response.formula_version}`, kind: "data", label: `ANI decision calculator (${response.formula_version})`,
+  const formulaKey = addSource(target, { key: `formula:${response.formula_version}`, kind: "data", label: `Areca Pulse decision calculator (${response.formula_version})`,
     publisher: "ArecaNut Intelligence", url: null, reporting_period: null, retrieved_at: null });
   const inr = (label: string, value: number, note: string | null = null, source = formulaKey) =>
     target.facts.push({ label, value: round2(value), unit: "INR", basis: "CALCULATED", reporting_period: snapshot.reporting_period, source_key: source, note });
@@ -790,7 +790,7 @@ async function calculate(ctx: ToolContext, tool: "calculate_net_realization" | "
       target.assumptions.push(`Scenario price after holding: INR ${args.scenario_price} per quintal, as stated in the question. This is a user scenario, not a forecast.`);
       inr("Net realization after holding at the scenario price", results.hold_net_realization);
       inr("Difference versus selling now at the scenario price", results.hold_advantage);
-    } else target.missing.push("No future price scenario was stated, so only the break-even price and the unchanged-price outcome are shown. ANI does not predict the future price.");
+    } else target.missing.push("No future price scenario was stated, so only the break-even price and the unchanged-price outcome are shown. Areca Pulse does not predict the future price.");
     target.uncertainty.push("Holding outcomes depend on the future price, which is unknown. The calculation does not recommend selling or holding.");
   }
   target.limitations.push("Formula: gross = quantity × price; selling costs = commission % × gross + transport + other selling costs; net = gross − selling costs.");
@@ -912,7 +912,7 @@ export async function runTool(name: ToolName, rawArgs: unknown, ctx: ToolContext
       case "search_agricultural_documents": return await searchAgriculturalDocuments(ctx, args);
     }
   } catch (error) {
-    const message = error instanceof ToolHttpError ? `ANI data service returned ${error.status} for this request: ${error.message}` : "The ANI data service could not be reached for this tool.";
+    const message = error instanceof ToolHttpError ? `Areca Pulse data service returned ${error.status} for this request: ${error.message}` : "The Areca Pulse data service could not be reached for this tool.";
     if (!(error instanceof ToolHttpError)) console.error("assistant tool failure", name, error);
     return result(name, validated.args, name, { status: error instanceof ToolHttpError ? "error" : "unavailable", summary: message, missing: [message] });
   }
