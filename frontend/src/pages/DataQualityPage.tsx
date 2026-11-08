@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { CooperativeReview } from "../components/CooperativeReview";
 import { SourceStatusPanel } from "../components/SourceStatusPanel";
 import { CooperativeSourceStatusPanel } from "../components/CooperativeSourceStatusPanel";
+import { IntelligenceSourceHealth } from "../components/IntelligenceSourceHealth";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 
 const COPY = defineCopy({
@@ -134,6 +135,7 @@ export function DataQualityPage() {
       {token && <SourceStatusPanel token={token} />}
       {token && <CooperativeSourceStatusPanel token={token} />}
       {token && evidence && evidence.length > 0 && <section className="panel"><div className="panel-heading"><div><h2>{t.evidenceTitle}</h2><p>{t.evidenceHint}</p></div></div><div className="monthly-details">{evidence}</div></section>}
+      <IntelligenceSourceHealth />
       <section className="quality-details"><div><span className="quality-detail-icon"><Check size={17} /></span><strong>{t.provenanceTitle}</strong><p>{t.provenanceText}</p></div><div><span className="quality-detail-icon"><Check size={17} /></span><strong>{t.assumptionsTitle}</strong><p>{t.assumptionsText}</p></div><div><span className="quality-detail-icon"><Check size={17} /></span><strong>{t.correctionsTitle}</strong><p>{t.correctionsText}</p></div></section>
     </div>
   );

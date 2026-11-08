@@ -9,7 +9,8 @@ import { COMMON } from "../services/commonCopy";
 import { EmptyState, ErrorState, LoadingState } from "./State";
 import { LazyBarChart, LazyLineChart } from "./LazyCharts";
 import { SourceLabel, StatusBadge } from "./Scorecard";
-import { INK, orderedRamp } from "./chartPalette";
+import { useChartPalette } from "./chartPalette";
+import { useTheme } from "../services/theme";
 
 const money = (value: number | null) => value == null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const HISTORY_FROM = "2021-01";
@@ -24,11 +25,13 @@ const COPY = defineCopy({
     variety: "Monthly variety", noMonths: "No observed months for this variety", notInterpolated: "Missing months are not interpolated.",
     summary: "Monthly distribution summary", observed: "Observed months", iqr: "Interquartile range", range: "Range", cv: "Coefficient of variation",
     byYear: "Seasonal price trend by year", byYearHint: "Each line is one calendar year, darkest for the most recent · gaps mark months without an observed value",
+    byYearDarkHint: "Each line is one calendar year, brightest for the most recent · gaps mark months without an observed value",
     byYearDescription: (variety: string) => `Monthly ${variety} prices overlaid by calendar year`,
     seasonal: "Seasonal index", seasonalHint: "Month average relative to its year's mean (100 = annual mean) · complete years only", needsYears: "Needs ≥3 complete years",
     withheld: "Seasonal index withheld", withheldHint: "At least three complete calendar years are required.", annualMean: "Annual mean",
     seasonalDescription: (variety: string) => `Seasonal index for ${variety}`, completeYears: (years: string) => `Complete years: ${years}`, none: "none",
     yoy: "Year-on-year change", yoyHint: "Change versus the same month of the previous year, dark for a rise and light for a fall · only where both months were observed",
+    yoyDarkHint: "Change versus the same month of the previous year, bright for a rise and muted for a fall · only where both months were observed",
     noPairs: "No comparable month pairs", yoyDescription: (variety: string) => `Year-on-year change for ${variety}`,
     volatility: "Market volatility", volatilityHint: "Annualised standard deviation of 12 monthly log returns · historical variation, not forecast risk",
     needs13: "Needs 13 consecutive observed months", volatilityName: "12-month volatility", volatilityDescription: (variety: string) => `Rolling volatility for ${variety}`,
@@ -54,11 +57,13 @@ const COPY = defineCopy({
     variety: "ತಿಂಗಳ ತಳಿ", noMonths: "ಈ ತಳಿಗೆ ದಾಖಲಿತ ತಿಂಗಳುಗಳಿಲ್ಲ", notInterpolated: "ಇಲ್ಲದ ತಿಂಗಳುಗಳನ್ನು ತುಂಬುವುದಿಲ್ಲ.",
     summary: "ತಿಂಗಳ ದರಗಳ ಹಂಚಿಕೆಯ ಸಾರಾಂಶ", observed: "ದಾಖಲಿತ ತಿಂಗಳುಗಳು", iqr: "ಮಧ್ಯದ ಅರ್ಧ ಶ್ರೇಣಿ", range: "ಶ್ರೇಣಿ", cv: "ಏರಿಳಿತದ ಗುಣಾಂಕ",
     byYear: "ವರ್ಷವಾರು ಋತುಮಾನ ದರ ಪ್ರವೃತ್ತಿ", byYearHint: "ಪ್ರತಿ ರೇಖೆ ಒಂದು ವರ್ಷ, ಇತ್ತೀಚಿನದು ಗಾಢ · ಖಾಲಿ ಜಾಗ = ದಾಖಲೆ ಇಲ್ಲದ ತಿಂಗಳು",
+    byYearDarkHint: "ಪ್ರತಿ ರೇಖೆ ಒಂದು ವರ್ಷ, ಇತ್ತೀಚಿನದು ಹೆಚ್ಚು ಪ್ರಕಾಶಮಾನ · ಖಾಲಿ ಜಾಗ = ದಾಖಲೆ ಇಲ್ಲದ ತಿಂಗಳು",
     byYearDescription: (variety: string) => `ವರ್ಷವಾರು ಜೋಡಿಸಿದ ${variety} ತಿಂಗಳ ದರಗಳು`,
     seasonal: "ಋತುಮಾನ ಸೂಚ್ಯಂಕ", seasonalHint: "ತಿಂಗಳ ಸರಾಸರಿ ಅದರ ವರ್ಷದ ಸರಾಸರಿಗೆ ಹೋಲಿಸಿ (100 = ವಾರ್ಷಿಕ ಸರಾಸರಿ) · ಪೂರ್ಣ ವರ್ಷಗಳು ಮಾತ್ರ", needsYears: "ಕನಿಷ್ಠ 3 ಪೂರ್ಣ ವರ್ಷ ಬೇಕು",
     withheld: "ಋತುಮಾನ ಸೂಚ್ಯಂಕ ತೋರಿಸಿಲ್ಲ", withheldHint: "ಕನಿಷ್ಠ ಮೂರು ಪೂರ್ಣ ಕ್ಯಾಲೆಂಡರ್ ವರ್ಷಗಳು ಬೇಕು.", annualMean: "ವಾರ್ಷಿಕ ಸರಾಸರಿ",
     seasonalDescription: (variety: string) => `${variety} ಋತುಮಾನ ಸೂಚ್ಯಂಕ`, completeYears: (years: string) => `ಪೂರ್ಣ ವರ್ಷಗಳು: ${years}`, none: "ಯಾವುದೂ ಇಲ್ಲ",
     yoy: "ವರ್ಷದಿಂದ ವರ್ಷದ ಬದಲಾವಣೆ", yoyHint: "ಕಳೆದ ವರ್ಷದ ಅದೇ ತಿಂಗಳಿಗೆ ಹೋಲಿಸಿ ಬದಲಾವಣೆ, ಏರಿಕೆ ಗಾಢ ಮತ್ತು ಇಳಿಕೆ ತಿಳಿ · ಎರಡೂ ತಿಂಗಳ ದಾಖಲೆ ಇದ್ದಲ್ಲಿ ಮಾತ್ರ",
+    yoyDarkHint: "ಕಳೆದ ವರ್ಷದ ಅದೇ ತಿಂಗಳಿಗೆ ಹೋಲಿಸಿ ಬದಲಾವಣೆ, ಏರಿಕೆ ಪ್ರಕಾಶಮಾನ ಮತ್ತು ಇಳಿಕೆ ಮಸುಕಾದ ಬಣ್ಣ · ಎರಡೂ ತಿಂಗಳ ದಾಖಲೆ ಇದ್ದಲ್ಲಿ ಮಾತ್ರ",
     noPairs: "ಹೋಲಿಸಬಹುದಾದ ತಿಂಗಳ ಜೋಡಿಗಳಿಲ್ಲ", yoyDescription: (variety: string) => `${variety} ವರ್ಷದಿಂದ ವರ್ಷದ ಬದಲಾವಣೆ`,
     volatility: "ಮಾರುಕಟ್ಟೆ ಏರಿಳಿತ", volatilityHint: "12 ತಿಂಗಳ ಲಾಗ್ ಬದಲಾವಣೆಗಳ ವಾರ್ಷಿಕ ಪ್ರಮಾಣಿತ ವಿಚಲನ · ಹಿಂದಿನ ಏರಿಳಿತ, ಮುನ್ಸೂಚನೆಯ ಅಪಾಯವಲ್ಲ",
     needs13: "ಸತತ 13 ದಾಖಲಿತ ತಿಂಗಳು ಬೇಕು", volatilityName: "12 ತಿಂಗಳ ಏರಿಳಿತ", volatilityDescription: (variety: string) => `${variety} ಚಲಿಸುವ ಏರಿಳಿತ`,
@@ -82,6 +87,8 @@ const COPY = defineCopy({
  * months only: gaps stay gaps, flagged months stay visible and no month is interpolated.
  */
 export function MonthlyInsights() {
+  const { INK, orderedRamp } = useChartPalette();
+  const dark = useTheme() === "dark";
   const t = useCopy(COPY);
   const c = useCopy(COMMON);
   const format = useFormat();
@@ -116,14 +123,14 @@ export function MonthlyInsights() {
         <div role="listitem"><span>{t.cv}</span><strong>{stats.cvPercent === null ? "—" : `${stats.cvPercent.toFixed(1)}%`}</strong></div>
       </div>
       <div className="chart-grid">
-        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.byYear}</h2><p>{t.byYearHint}</p></div></div>
+        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.byYear}</h2><p>{dark ? t.byYearDarkHint : t.byYearHint}</p></div></div>
           <LazyLineChart categories={t.months} series={years.map((year, index) => ({ name: `${year.year} (${year.observed}/12)`, values: year.values, color: yearColors[index], width: index === years.length - 1 ? 2.25 : 1.25 }))} description={t.byYearDescription(variety)} />
           <div className="chart-foot">{source}</div></article>
         <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.seasonal}</h2><p>{t.seasonalHint}</p></div>{!seasonalReady && <StatusBadge tone="warn">{t.needsYears}</StatusBadge>}</div>
           {!seasonalReady ? <EmptyState title={t.withheld}>{t.withheldHint}</EmptyState>
             : <LazyBarChart categories={t.months} values={data.seasonal.map((month) => month.index)} name={t.seasonal} valueFormat="index" referenceLine={{ value: 100, label: t.annualMean }} description={t.seasonalDescription(variety)} color={(index) => (data.seasonal[index]?.index ?? 100) >= 100 ? INK[900] : INK[400]} />}
           <div className="chart-foot"><SourceLabel>{t.completeYears(data.seasonal_years.join(", ") || t.none)}</SourceLabel></div></article>
-        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.yoy}</h2><p>{t.yoyHint}</p></div></div>
+        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.yoy}</h2><p>{dark ? t.yoyDarkHint : t.yoyHint}</p></div></div>
           {!yoy.length ? <EmptyState title={t.noPairs} /> : <LazyBarChart categories={yoy.map((point) => format.month(point.reporting_month))} values={yoy.map((point) => point.yoy_percent)} name={t.yoy} valueFormat="percent" referenceLine={{ value: 0 }} description={t.yoyDescription(variety)} color={(index) => (yoy[index]?.yoy_percent ?? 0) >= 0 ? INK[900] : INK[400]} />}
           <div className="chart-foot">{source}</div></article>
         <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.volatility}</h2><p>{t.volatilityHint}</p></div></div>

@@ -20,6 +20,7 @@ import { MonthlyTrendsPage } from "./MonthlyTrendsPage";
 import { HistoricalAnalyticsPage } from "./HistoricalAnalyticsPage";
 import { DecisionToolsPage } from "./DecisionToolsPage";
 import { IntelligencePage } from "./IntelligencePage";
+import { IntelligenceSourceDetails } from "../components/IntelligenceSourceHealth";
 import { QualityInspectionsPage } from "./QualityInspectionsPage";
 import { SupplyPage } from "./SupplyPage";
 import { ForecastsPage } from "./ForecastsPage";
@@ -27,6 +28,9 @@ import { ForecastEvaluationPage } from "./ForecastEvaluationPage";
 import { WorkspacePage } from "./WorkspacePage";
 import { DataQualityPage } from "./DataQualityPage";
 import { SellOrHoldPage } from "./SellOrHoldPage";
+import { chartPalette } from "../components/chartPalette";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 
 const state = vi.hoisted(() => ({
   cooperative: [] as object[],
@@ -86,6 +90,72 @@ beforeEach(() => {
 });
 
 describe("market experience", () => {
+  it("initializes the selected or system theme before the app loads", () => {
+    const script = readFileSync("frontend/public/theme-init.js", "utf8");
+    const initial = (saved: string | null, dark: boolean) => {
+      const document = { documentElement: { dataset: { theme: "" } } };
+      runInNewContext(script, { document, localStorage: { getItem: () => saved }, window: { matchMedia: () => ({ matches: dark }) }, console });
+      return document.documentElement.dataset.theme;
+    };
+    expect(initial(null, true)).toBe("dark");
+    expect(initial(null, false)).toBe("light");
+    expect(initial("light", true)).toBe("light");
+    expect(initial("dark", false)).toBe("dark");
+    expect(initial("invalid", true)).toBe("dark");
+  });
+
+  it("uses readable dark chart colours without changing the light palette or tooltip escaping", () => {
+    const light = chartPalette("light"), dark = chartPalette("dark");
+    expect(light.BRAND).toBe("#0b3d2e");
+    expect(dark.BRAND).not.toBe(light.BRAND);
+    expect(dark.TOOLTIP.backgroundColor).toBe(dark.INK.surface);
+    expect(dark.AXIS_LABEL.color).toBe(dark.INK[500]);
+    expect(dark.tooltipHtml("<source>", [{ value: "<rate>" }])).toContain("&#60;source&#62;");
+    expect(dark.tooltipHtml("<source>", [{ value: "<rate>" }])).not.toContain("<source>");
+  });
+
+  it.each(["production", "trade", "weather", "policy", "news"])("keeps operational controls off the %s customer page", (domain) => {
+    state.intelligence = ready({ data: [], attempts: [{ id: "attempt", source_key: "test-source", status: "failed", started_at: "2026-10-01T10:00:00Z", error_message: "capture failed" }] });
+    const html = render(<Routes><Route path="/intelligence/:domain" element={<IntelligencePage />} /></Routes>, `/intelligence/${domain}`);
+    expect(html).toContain("LATEST PLATFORM FETCH");
+    expect(html).toContain("No source records are available yet");
+    expect(html).not.toContain("Recent capture attempts");
+    expect(html).not.toContain("npm run refresh:intelligence");
+    expect(html).not.toContain("reviewer token");
+    expect(html).not.toContain("capture failed");
+  });
+
+  it.each(["production", "trade", "weather", "policy", "news"] as const)("retains %s capture history and refresh options in data quality", (domain) => {
+    state.intelligence = ready({ data: [], attempts: [{ id: "attempt", source_key: "test-source", status: "failed", started_at: "2026-10-01T10:00:00Z", error_message: "capture failed" }] });
+    const html = render(<IntelligenceSourceDetails domain={domain} />);
+    expect(html).toContain("Recent capture attempts");
+    expect(html).toContain("test-source");
+    expect(html).toContain("capture failed");
+    if (domain === "production" || domain === "trade") expect(html).toContain("npm run refresh:intelligence");
+    else {
+      expect(html).toContain("Source refresh reviewer token");
+      expect(html).toContain(domain === "weather" ? "Refresh Sirsi weather" : "Refresh official releases");
+    }
+    expect(render(<DataQualityPage />)).toContain("Intelligence source health");
+  });
+
+  it("shows customer and operator copy in Kannada", () => {
+    state.language = "kn";
+    state.intelligence = ready({ data: [], attempts: [] });
+    const customer = render(<Routes><Route path="/intelligence/:domain" element={<IntelligencePage />} /></Routes>, "/intelligence/weather");
+    expect(customer).toContain("ಇನ್ನೂ ಯಾವುದೇ ಮೂಲ ದಾಖಲೆಗಳು ಲಭ್ಯವಿಲ್ಲ");
+    expect(customer).not.toContain("ಮೂಲ ನವೀಕರಣ ಪರಿಶೀಲಕರ ಟೋಕನ್");
+    expect(render(<DataQualityPage />)).toContain("ಮಾಹಿತಿ ಮೂಲಗಳ ಸ್ಥಿತಿ");
+    expect(render(<IntelligenceSourceDetails domain="weather" />)).toContain("ಶಿರಸಿ ಹವಾಮಾನ ನವೀಕರಿಸಿ");
+  });
+
+  it("does not mistake an unavailable source history for an empty history", () => {
+    state.intelligence = { data: undefined, isLoading: false, error: new Error("Source history unavailable"), refetch: vi.fn() };
+    const html = render(<IntelligenceSourceDetails domain="weather" />);
+    expect(html).toContain("Source history unavailable");
+    expect(html).not.toContain("No attempts recorded.");
+  });
+
   it.each([
     ["weather", ["Maximum (°C)", "Minimum (°C)", "Rain (mm)"]],
     ["production", ["Area (&#x27;000 ha)", "Production (&#x27;000 tonnes)", "Yield (kg/ha)"]],
@@ -296,6 +366,25 @@ describe("market experience", () => {
     expect(prices).not.toContain('role="search"');
     expect(prices).toContain("ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ");
     expect(render(<AppShell />, "/analytics")).toContain('role="search"');
+  });
+
+  it("keeps language and theme preferences together after page-specific header controls", () => {
+    for (const language of ["en", "kn"] as const) {
+      state.language = language;
+      for (const path of ["/", "/prices", "/analytics", "/sell-or-hold"]) {
+        const html = render(<AppShell />, path);
+        const preferences = html.indexOf('class="topbar-preferences"');
+        expect(preferences).toBeGreaterThan(-1);
+        expect(html.indexOf('class="language-toggle"', preferences)).toBeGreaterThan(preferences);
+        expect(html.indexOf("theme-toggle", preferences)).toBeGreaterThan(preferences);
+        if (path === "/prices" || path === "/analytics") {
+          expect(html.indexOf('class="topbar-tools"')).toBeLessThan(preferences);
+          expect(html).toContain('class="commodity-select"');
+        } else {
+          expect(html).not.toContain('class="topbar-tools"');
+        }
+      }
+    }
   });
 
   it("answers in the site language by default", () => {

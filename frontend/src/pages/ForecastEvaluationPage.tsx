@@ -7,7 +7,8 @@ import { showsValues } from "../services/forecasting";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { LazyBarChart } from "../components/LazyCharts";
 import { SourceLabel, StatusBadge } from "../components/Scorecard";
-import { INK } from "../components/chartPalette";
+import { useChartPalette } from "../components/chartPalette";
+import { useTheme } from "../services/theme";
 import { AboutData } from "../components/AboutData";
 
 const num = (value: number | null | undefined, digits = 0) => value == null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: digits });
@@ -35,10 +36,12 @@ const COPY = defineCopy({
     pooledAria: "Pooled metrics", model: "Model", horizonCol: "Horizon", forecasts: "Forecasts", direction: "Direction", coverage80: "80% coverage", width: "Interval width", relative: "Relative MAE",
     relativeTitle: "Error relative to the best naive baseline",
     relativeHint: (horizon: string) => `Horizon ${horizon} · pooled MAE ÷ better of last value and seasonal naive · below 1.00 is lower error in backtests; dark bars beat the baseline, light bars match it or are worse`,
+    relativeDarkHint: (horizon: string) => `Horizon ${horizon} · pooled MAE ÷ better of last value and seasonal naive · below 1.00 is lower error in backtests; bright bars beat the baseline, muted bars match it or are worse`,
     beating: (n: number) => `${n} model${n === 1 ? "" : "s"} below 1.00 pooled · see per-series status`, noneBeating: "No model beats the baseline",
     noRelative: "No relative metrics for this horizon", baseline: "Baseline", relativeDescription: (horizon: string) => `Relative MAE by model at horizon ${horizon}`,
     backtestsSource: (id: string, mode: string) => `Walk-forward backtests · experiment ${id} · ${mode} vintages`,
     coverageTitle: "Prediction interval coverage", coverageHint: "Share of backtest actuals inside the 80% interval · dark bars are within 5 points of 80%; far below 80% means intervals are too narrow",
+    coverageDarkHint: "Share of backtest actuals inside the 80% interval · bright bars are within 5 points of 80%; far below 80% means intervals are too narrow",
     noIntervals: "No interval forecasts at this horizon", intervalCoverage: "Interval coverage", nominal: "Nominal 80%", coverageDescription: (horizon: string) => `Interval coverage by model at horizon ${horizon}`,
     widthSource: "Walk-forward backtests · interval width shown in the table above",
     perSeries: "Per-series evaluations", perSeriesHint: "Each model is compared with the better of last value and seasonal naive for the same series and horizon",
@@ -77,10 +80,12 @@ const COPY = defineCopy({
     pooledAria: "ಒಟ್ಟು ಅಂಕಿಗಳು", model: "ಮಾದರಿ", horizonCol: "ಅವಧಿ", forecasts: "ಮುನ್ಸೂಚನೆಗಳು", direction: "ದಿಕ್ಕು", coverage80: "80% ವ್ಯಾಪ್ತಿ", width: "ಶ್ರೇಣಿಯ ಅಗಲ", relative: "ಸಾಪೇಕ್ಷ MAE",
     relativeTitle: "ಉತ್ತಮ ಸರಳ ಅಂದಾಜಿಗೆ ಹೋಲಿಸಿದ ದೋಷ",
     relativeHint: (horizon: string) => `ಅವಧಿ ${horizon} · ಒಟ್ಟು MAE ÷ ಕೊನೆಯ ಮೌಲ್ಯ ಮತ್ತು ಋತುಮಾನ ಸರಳದಲ್ಲಿ ಉತ್ತಮದು · 1.00 ಕ್ಕಿಂತ ಕಡಿಮೆ = ಕಡಿಮೆ ದೋಷ; ಗಾಢ ಪಟ್ಟಿಗಳು ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿವೆ, ತಿಳಿ ಪಟ್ಟಿಗಳು ಸಮ ಅಥವಾ ಕೆಟ್ಟದು`,
+    relativeDarkHint: (horizon: string) => `ಅವಧಿ ${horizon} · ಒಟ್ಟು MAE ÷ ಉತ್ತಮ ಮೂಲ ಅಂದಾಜು · 1.00 ಕ್ಕಿಂತ ಕಡಿಮೆ = ಕಡಿಮೆ ದೋಷ; ಪ್ರಕಾಶಮಾನ ಪಟ್ಟಿಗಳು ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿವೆ, ಮಸುಕಾದವು ಸಮ ಅಥವಾ ಕೆಟ್ಟದು`,
     beating: (n: number) => `${n} ಮಾದರಿಗಳು ಒಟ್ಟಾರೆ 1.00 ಕ್ಕಿಂತ ಕಡಿಮೆ · ಸರಣಿವಾರು ಸ್ಥಿತಿ ನೋಡಿ`, noneBeating: "ಯಾವ ಮಾದರಿಯೂ ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿಲ್ಲ",
     noRelative: "ಈ ಅವಧಿಗೆ ಸಾಪೇಕ್ಷ ಅಂಕಿಗಳಿಲ್ಲ", baseline: "ಮೂಲ ಅಂದಾಜು", relativeDescription: (horizon: string) => `ಅವಧಿ ${horizon} ರಲ್ಲಿ ಮಾದರಿವಾರು ಸಾಪೇಕ್ಷ MAE`,
     backtestsSource: (id: string, mode: string) => `ಹಂತ ಹಂತದ ಪರೀಕ್ಷೆಗಳು · ಪ್ರಯೋಗ ${id} · ${mode} ಆವೃತ್ತಿಗಳು`,
     coverageTitle: "ಮುನ್ಸೂಚನಾ ಶ್ರೇಣಿ ವ್ಯಾಪ್ತಿ", coverageHint: "80% ಶ್ರೇಣಿಯೊಳಗೆ ಬಿದ್ದ ನಿಜವಾದ ದರಗಳ ಪಾಲು · ಗಾಢ ಪಟ್ಟಿಗಳು 80% ಗೆ 5 ಅಂಕಗಳೊಳಗೆ; 80% ಕ್ಕಿಂತ ತುಂಬಾ ಕಡಿಮೆ ಎಂದರೆ ಶ್ರೇಣಿ ತುಂಬಾ ಕಿರಿದು",
+    coverageDarkHint: "80% ಶ್ರೇಣಿಯೊಳಗೆ ಬಿದ್ದ ನಿಜವಾದ ದರಗಳ ಪಾಲು · ಪ್ರಕಾಶಮಾನ ಪಟ್ಟಿಗಳು 80% ಗೆ 5 ಅಂಕಗಳೊಳಗೆ; ತುಂಬಾ ಕಡಿಮೆ ಎಂದರೆ ಶ್ರೇಣಿ ತುಂಬಾ ಕಿರಿದು",
     noIntervals: "ಈ ಅವಧಿಗೆ ಶ್ರೇಣಿ ಮುನ್ಸೂಚನೆಗಳಿಲ್ಲ", intervalCoverage: "ಶ್ರೇಣಿ ವ್ಯಾಪ್ತಿ", nominal: "ಗುರಿ 80%", coverageDescription: (horizon: string) => `ಅವಧಿ ${horizon} ರಲ್ಲಿ ಮಾದರಿವಾರು ಶ್ರೇಣಿ ವ್ಯಾಪ್ತಿ`,
     widthSource: "ಹಂತ ಹಂತದ ಪರೀಕ್ಷೆಗಳು · ಶ್ರೇಣಿಯ ಅಗಲ ಮೇಲಿನ ಪಟ್ಟಿಯಲ್ಲಿದೆ",
     perSeries: "ಸರಣಿವಾರು ಮೌಲ್ಯಮಾಪನಗಳು", perSeriesHint: "ಪ್ರತಿ ಮಾದರಿಯನ್ನು ಅದೇ ಸರಣಿ ಮತ್ತು ಅವಧಿಗೆ ಕೊನೆಯ ಮೌಲ್ಯ ಮತ್ತು ಋತುಮಾನ ಸರಳದಲ್ಲಿ ಉತ್ತಮದರೊಂದಿಗೆ ಹೋಲಿಸಲಾಗಿದೆ",
@@ -102,6 +107,8 @@ const COPY = defineCopy({
 });
 
 export function ForecastEvaluationPage() {
+  const { INK } = useChartPalette();
+  const dark = useTheme() === "dark";
   const t = useCopy(COPY);
   const format = useFormat();
   const statusText = (value: string) => t.status[value] ?? label(value);
@@ -157,11 +164,11 @@ export function ForecastEvaluationPage() {
         const intervals = pooled.filter((row) => row.interval_coverage !== null);
         const beating = relative.filter((row) => row.relative_mae_vs_best_baseline! < 1).length;
         return <section className="chart-grid">
-          <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.relativeTitle}</h2><p>{t.relativeHint(horizon)}</p></div>
+          <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.relativeTitle}</h2><p>{dark ? t.relativeDarkHint(horizon) : t.relativeHint(horizon)}</p></div>
             <StatusBadge tone={beating ? "warn" : "bad"}>{beating ? t.beating(beating) : t.noneBeating}</StatusBadge></div>
             {!relative.length ? <EmptyState title={t.noRelative} /> : <LazyBarChart horizontal categories={relative.map((row) => row.model)} values={relative.map((row) => row.relative_mae_vs_best_baseline)} name={t.relative} valueFormat="ratio" referenceLine={{ value: 1, label: t.baseline }} description={t.relativeDescription(horizon)} color={(index) => { const value = relative[index]?.relative_mae_vs_best_baseline ?? 1; return value < 1 ? INK[900] : INK[400]; }} height={Math.max(220, relative.length * 34 + 60)} />}
             <div className="chart-foot"><SourceLabel>{t.backtestsSource(experiment.id, experiment.vintage_mode)}</SourceLabel></div></article>
-          <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.coverageTitle}</h2><p>{t.coverageHint}</p></div></div>
+          <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.coverageTitle}</h2><p>{dark ? t.coverageDarkHint : t.coverageHint}</p></div></div>
             {!intervals.length ? <EmptyState title={t.noIntervals} /> : <LazyBarChart horizontal categories={intervals.map((row) => row.model)} values={intervals.map((row) => (row.interval_coverage ?? 0) * 100)} name={t.intervalCoverage} valueFormat="percent" referenceLine={{ value: 80, label: t.nominal }} description={t.coverageDescription(horizon)} color={(index) => Math.abs((intervals[index]?.interval_coverage ?? 0) - 0.8) <= 0.05 ? INK[900] : INK[400]} height={Math.max(220, intervals.length * 34 + 60)} />}
             <div className="chart-foot"><SourceLabel>{t.widthSource}</SourceLabel></div></article>
         </section>;
