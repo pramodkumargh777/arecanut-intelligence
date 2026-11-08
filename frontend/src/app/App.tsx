@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { AppErrorBoundary } from "../components/AppErrorBoundary";
 import { LoadingState } from "../components/State";
 import { MarketDataPage } from "../pages/CooperativeMarketPage";
 import { LanguageProvider } from "../services/language";
@@ -27,7 +28,7 @@ const ForecastsPage = lazy(() => import("../pages/ForecastsPage").then((module) 
 export function App() {
   return (
     <LanguageProvider><BrowserRouter>
-      <Routes>
+      <AppErrorBoundary><Routes>
         <Route element={<AppShell />}>
           <Route index element={<Suspense fallback={<LoadingState />}><HomePage /></Suspense>} />
           <Route path="sell-or-hold" element={<Suspense fallback={<LoadingState />}><SellOrHoldPage /></Suspense>} />
@@ -49,7 +50,7 @@ export function App() {
           <Route path="data-quality" element={<Suspense fallback={<LoadingState />}><DataQualityPage /></Suspense>} />
           <Route path="*" element={<Suspense fallback={<LoadingState />}><NotFoundPage /></Suspense>} />
         </Route>
-      </Routes>
+      </Routes></AppErrorBoundary>
     </BrowserRouter></LanguageProvider>
   );
 }

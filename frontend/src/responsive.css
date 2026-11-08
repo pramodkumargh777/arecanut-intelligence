@@ -31,6 +31,11 @@
 }
 
 @media (max-width: 700px) {
+  .page-stack > form { grid-template-columns: minmax(0, 1fr); }
+  .calculator-grid { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+  .calculator-grid > * { min-width: 0; max-width: 100%; }
+  .calculator-grid textarea { width: 100%; min-width: 0; }
+  .example-chip { max-width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; text-align: left; }
   .heading-controls { width: 100%; justify-content: stretch; }
   .heading-controls > *, .source-control { flex: 1 1 100%; width: 100%; }
   .variety-chips button, .variety-more select { min-height: 44px; }

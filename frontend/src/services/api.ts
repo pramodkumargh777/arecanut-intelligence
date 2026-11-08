@@ -12,16 +12,32 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:878
 /** Client-side failure messages follow the page language (set on <html lang> by the language provider). */
 const kannada = () => typeof document !== "undefined" && document.documentElement.lang === "kn";
 
+function failureMessage(status: number): string {
+  if (kannada()) {
+    if (status === 401 || status === 403) return "ಈ ವಿನಂತಿಗೆ ಅನುಮತಿ ಇಲ್ಲ. ಪ್ರವೇಶ ವಿವರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
+    if (status === 429) return "ಹಲವು ವಿನಂತಿಗಳನ್ನು ಕಳುಹಿಸಲಾಗಿದೆ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
+    if (status === 404) return "ಈ ಮಾಹಿತಿ ಈಗ ಲಭ್ಯವಿಲ್ಲ.";
+    if (status === 409) return "ದತ್ತಾಂಶ ಬದಲಾಗಿದೆ. ಪುಟವನ್ನು ನವೀಕರಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
+    if (status === 400 || status === 422) return "ವಿನಂತಿಯ ವಿವರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
+    return status >= 500 ? "ಸೇವೆ ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ." : "ವಿನಂತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
+  }
+  if (status === 401 || status === 403) return "You don't have permission for this request. Check your access and try again.";
+  if (status === 429) return "Too many requests. Please wait a moment and try again.";
+  if (status === 404) return "That information isn't available right now.";
+  if (status === 409) return "The data has changed. Refresh the page and try again.";
+  if (status === 400 || status === 422) return "Please check the request details and try again.";
+  return status >= 500 ? "The service is temporarily unavailable. Please try again shortly." : "We couldn't complete that request. Please try again.";
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, init);
   } catch {
-    throw new Error(kannada() ? "Areca Pulse ಸೇವೆ ಈಗ ಲಭ್ಯವಿಲ್ಲ. ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ." : "The Areca Pulse API is unavailable. Start the API service and try again.");
+    throw new Error(kannada() ? "ಸಂಪರ್ಕಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ನಿಮ್ಮ ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ." : "We couldn't connect. Check your internet connection and try again.");
   }
   if (!response.ok) {
-    const body = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(body?.error ?? (kannada() ? `ವಿನಂತಿ ವಿಫಲವಾಯಿತು (${response.status}).` : `Request failed (${response.status}).`));
+    throw new Error(failureMessage(response.status));
   }
   return response.json() as Promise<T>;
 }
