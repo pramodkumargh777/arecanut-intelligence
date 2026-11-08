@@ -24,8 +24,8 @@ export const STRINGS = {
     uncertainty: "Uncertainty",
     missing: "Missing or unavailable data",
     sources: "Sources",
-    no_tools: "The question did not match an ANI data tool. Try asking about prices, history, markets, arrivals, forecasts, production, trade, weather, advisories, calculations or agricultural documents.",
-    disclaimer: "ANI reports published source data. It does not guarantee prices, give financial advice or diagnose crop disease.",
+    no_tools: "The question did not match an Areca Pulse data tool. Try asking about prices, history, markets, arrivals, forecasts, production, trade, weather, advisories, calculations or agricultural documents.",
+    disclaimer: "Areca Pulse reports published source data. It does not guarantee prices, give financial advice or diagnose crop disease.",
     rate_limited: "Too many assistant requests from this client. Try again later.",
   },
   kn: {
@@ -37,8 +37,8 @@ export const STRINGS = {
     uncertainty: "ಅನಿಶ್ಚಿತತೆ",
     missing: "ಲಭ್ಯವಿಲ್ಲದ ದತ್ತಾಂಶ",
     sources: "ಮೂಲಗಳು",
-    no_tools: "ಪ್ರಶ್ನೆಯು ಯಾವುದೇ ANI ದತ್ತಾಂಶ ಸಾಧನಕ್ಕೆ ಹೊಂದಲಿಲ್ಲ. ಬೆಲೆ, ಇತಿಹಾಸ, ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ, ಆವಕ, ಮುನ್ಸೂಚನೆ, ಉತ್ಪಾದನೆ, ವ್ಯಾಪಾರ, ಹವಾಮಾನ, ಸಲಹೆ, ಲೆಕ್ಕಾಚಾರ ಅಥವಾ ಕೃಷಿ ದಾಖಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಿ.",
-    disclaimer: "ANI ಪ್ರಕಟಿತ ಮೂಲ ದತ್ತಾಂಶವನ್ನು ವರದಿ ಮಾಡುತ್ತದೆ. ಇದು ಬೆಲೆಯನ್ನು ಖಾತರಿಪಡಿಸುವುದಿಲ್ಲ, ಹಣಕಾಸು ಸಲಹೆ ನೀಡುವುದಿಲ್ಲ ಅಥವಾ ಬೆಳೆ ರೋಗವನ್ನು ನಿರ್ಣಯಿಸುವುದಿಲ್ಲ.",
+    no_tools: "ಪ್ರಶ್ನೆಯು ಯಾವುದೇ Areca Pulse ದತ್ತಾಂಶ ಸಾಧನಕ್ಕೆ ಹೊಂದಲಿಲ್ಲ. ಬೆಲೆ, ಇತಿಹಾಸ, ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ, ಆವಕ, ಮುನ್ಸೂಚನೆ, ಉತ್ಪಾದನೆ, ವ್ಯಾಪಾರ, ಹವಾಮಾನ, ಸಲಹೆ, ಲೆಕ್ಕಾಚಾರ ಅಥವಾ ಕೃಷಿ ದಾಖಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಿ.",
+    disclaimer: "Areca Pulse ಪ್ರಕಟಿತ ಮೂಲ ದತ್ತಾಂಶವನ್ನು ವರದಿ ಮಾಡುತ್ತದೆ. ಇದು ಬೆಲೆಯನ್ನು ಖಾತರಿಪಡಿಸುವುದಿಲ್ಲ, ಹಣಕಾಸು ಸಲಹೆ ನೀಡುವುದಿಲ್ಲ ಅಥವಾ ಬೆಳೆ ರೋಗವನ್ನು ನಿರ್ಣಯಿಸುವುದಿಲ್ಲ.",
     rate_limited: "ಈ ಕ್ಲೈಂಟ್‌ನಿಂದ ಹೆಚ್ಚು ವಿನಂತಿಗಳು ಬಂದಿವೆ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಪ್ರಯತ್ನಿಸಿ.",
   },
 } as const satisfies Record<Language, Record<string, string>>;

@@ -6,7 +6,12 @@
   .sidebar { width: 216px; }
   .main-column { margin-left: 216px; }
   .page-content { padding: 26px; }
-  .topbar { padding-inline: 26px; }
+  .topbar { padding-inline: 26px; gap: 12px; flex-wrap: wrap; }
+  .breadcrumb { flex: 1 1 180px; min-width: 0; }
+  .topbar-tools { flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
+  .topbar-tools-grower { flex: 0 0 auto; }
+  .topbar-tools form { flex: 1 1 180px; min-width: 0; }
+  .search-field { width: 100%; }
   .site-footer { width: calc(100% - 52px); }
   .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .token-form { grid-template-columns: 36px 1fr; }
@@ -22,12 +27,14 @@
   .mobile-close { display: grid; margin-left: auto; }
   .main-column { margin-left: 0; }
   .menu-toggle { display: grid; }
-  .topbar { gap: 14px; }
-  .breadcrumb { flex: 1; }
+  .topbar-brand { display: block; }
   .region-pill { display: none; }
 }
 
 @media (max-width: 700px) {
+  .heading-controls { width: 100%; justify-content: stretch; }
+  .heading-controls > *, .source-control { flex: 1 1 100%; width: 100%; }
+  .variety-chips button, .variety-more select { min-height: 44px; }
   .page-content { padding: 24px 18px; }
   .page-stack { gap: 18px; }
   .topbar { position: static; padding: 12px 18px; flex-wrap: wrap; }
@@ -49,7 +56,8 @@
   .panel { padding: 16px; }
   .pulse-empty { padding-block: 20px; }
   .filter-bar { padding: 14px; gap: 12px; }
-  .filter-bar .filter-control, .source-bar .filter-control { flex: 1 1 100%; max-width: none; }
+  .filter-bar .filter-control { flex: 1 1 100%; max-width: none; }
+  .advanced-filter-fields .filter-control { flex: 1 1 100%; max-width: none; }
   .filter-bar > span { padding-top: 0; }
   .filter-control input, .filter-control select, .variety-select select, .period-select select, .token-form input { font-size: 16px; height: 44px; }
   .period-select { height: 44px; }
@@ -107,7 +115,14 @@
 
 @media (max-width: 640px) {
   .topbar-tools-grower { width: auto; margin-left: auto; }
-  .home-heading h1 { font-size: 25px; }
+  .home-heading h1, .home-hero h1 { font-size: 23px; }
+  .home-date-pill { white-space: normal; }
+  .home-price-section .home-section-heading { display: grid; gap: 3px; }
+  .rate-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .rate-card-foot a { min-height: 44px; }
+  .rate-list { padding: 0 14px; }
+  .rate-card-head, .market-breadth, .rate-card-foot { padding-left: 14px; padding-right: 14px; }
+  .rate-row-top::before { left: -14px; }
   .home-actions { grid-template-columns: 1fr 1fr; }
   .home-actions a { padding: 12px; column-gap: 6px; }
   .home-actions strong { font-size: 15px; line-height: 1.35; }

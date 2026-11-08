@@ -1,5 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowRight, ArrowUp, ExternalLink, Minus } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, ChevronDown, ExternalLink, Minus } from "lucide-react";
+import { useState } from "react";
+import { AboutData } from "../components/AboutData";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { calendarDateToTime, calendarTodayIST, DAY_MS, formatCalendarDate, formatPeriodKannada } from "../../../shared/dates";
 import { DEFAULT_COMMODITY } from "../../../shared/commodities";
@@ -8,16 +10,8 @@ import { ErrorState, LoadingState } from "../components/State";
 import { api } from "../services/api";
 import { useCommodity } from "../services/commodity";
 import type { CooperativeQuote, CooperativeSource } from "../services/cooperative";
-import { ageText, useLanguage, type Language } from "../services/language";
-
-/** A grower's word for a variety and the label each cooperative publishes it under. Labels stay visible on every row. */
-const VARIETIES: { key: string; kn: string; en: string; labels: Partial<Record<CooperativeSource, string[]>> }[] = [
-  { key: "rashi", kn: "ರಾಶಿ", en: "Rashi", labels: { mamcos: ["RASHI EDI"], tss: ["RASHI"] } },
-  { key: "new-rashi", kn: "ಹೊಸ ರಾಶಿ", en: "New Rashi", labels: { mamcos: ["NEW RASHIEDI", "NEWRASHIEDI"] } },
-  { key: "chali", kn: "ಚಾಲಿ", en: "Chali", labels: { mamcos: ["CHALI"], tss: ["CHALI"] } },
-  { key: "bette", kn: "ಬೆಟ್ಟೆ", en: "Bette", labels: { mamcos: ["BETTE"], tss: ["BETTE"] } },
-  { key: "gorabalu", kn: "ಗೊರಬಲು", en: "Gorabalu", labels: { mamcos: ["GORABALU"] } },
-];
+import { ageText, defineCopy, type Language, useLanguage } from "../services/language";
+import { VARIETIES, VARIETY_GROUPS } from "../services/varieties";
 
 const SOURCES: { key: CooperativeSource; kn: string; en: string; assumedUnit: boolean }[] = [
   { key: "mamcos", kn: "ಮ್ಯಾಮ್ಕೋಸ್ (MAMCOS)", en: "MAMCOS", assumedUnit: false },
@@ -30,24 +24,20 @@ const BRANCH_NAMES_KN: Record<string, string> = {
   TARIKERE: "ತರೀಕೆರೆ", THIRTHAHALLI: "ತೀರ್ಥಹಳ್ಳಿ", YELLAPUR: "ಯಲ್ಲಾಪುರ",
 };
 
-const COPY = {
+const COPY = defineCopy({
   kn: {
     title: "ಇತ್ತೀಚಿನ ಅಡಿಕೆ ಧಾರಣೆ",
-    intro: "ಸಹಕಾರಿ ಸಂಘ ಮತ್ತು ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳ ಪ್ರಕಟಿತ ದರಗಳು. ಪ್ರತಿ ದರದ ಪಕ್ಕ ಅದರ ದಿನಾಂಕ ಇದೆ.",
     choose: "ತಳಿ ಆಯ್ಕೆ ಮಾಡಿ",
-    latest: "ಸಹಕಾರಿ ಸಂಘಗಳ ಇತ್ತೀಚಿನ ವರದಿ",
     sellOrHold: "ಈಗ ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ?",
     sellOrHoldHint: "ಹಿಂದಿನ ವರ್ಷಗಳಲ್ಲಿ ಏನಾಯಿತು ನೋಡಿ",
     ask: "ಪ್ರಶ್ನೆ ಕೇಳಿ",
     askHint: "ದರ, ರೋಗ, ಹವಾಮಾನದ ಬಗ್ಗೆ",
-    perQuintal: "ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ಸರಾಸರಿ",
-    range: "ಕನಿಷ್ಠ – ಗರಿಷ್ಠ",
     highest: "ಈ ದಿನದ ಹೆಚ್ಚಿನ ದರ",
     source: "ಮೂಲ",
     noRows: "ಈ ತಳಿಗೆ ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
-    noVariety: "ಈ ತಳಿಗೆ ಈ ಸಂಸ್ಥೆಯ ಹೊಂದಾಣಿಕೆಯ ಹೆಸರು ಇಲ್ಲಿ ಪಟ್ಟಿ ಮಾಡಿಲ್ಲ.",
+    moreVarieties: "ಇನ್ನಷ್ಟು ತಳಿಗಳು",
+    notPublished: (names: string) => `${names} ಈ ತಳಿಯ ದರವನ್ನು ಪ್ರಕಟಿಸುವುದಿಲ್ಲ.`,
     assumedUnit: "ಮೂಲವು ಘಟಕವನ್ನು ತಿಳಿಸಿಲ್ಲ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ",
-    tumcos: "ಚನ್ನಗಿರಿ — ತುಮ್ಕೋಸ್ (TUMCOS)",
     tumcosNote: "ತುಮ್ಕೋಸ್ ತಳಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ, ಆದ್ದರಿಂದ ಇದು ಯಾವ ತಳಿಯ ದರ ಎಂದು ಹೇಳಲಾಗದು. ಮೂಲದ ಪುಟದಲ್ಲಿ “kg” ಎಂದಿದೆ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ.",
     notComparable: "ಪ್ರತಿ ಸಂಸ್ಥೆಯ ದರವನ್ನು ಬೇರೆ ರೀತಿಯಲ್ಲಿ ಲೆಕ್ಕ ಮಾಡಲಾಗುತ್ತದೆ, ಆದ್ದರಿಂದ ಬೇರೆ ಬೇರೆ ಸಂಸ್ಥೆಗಳ ದರಗಳನ್ನು ನೇರವಾಗಿ ಹೋಲಿಸಬೇಡಿ. ಇವು ಸರಾಸರಿ ದರಗಳು; ನಿಮ್ಮ ಮಾಲಿಗೆ ಸಿಗುವ ದರ ಬೇರೆ ಇರಬಹುದು.",
     loading: "ದರಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ",
@@ -56,38 +46,47 @@ const COPY = {
     versus: (when: string) => `${when} ವರದಿಗೆ ಹೋಲಿಸಿ`,
     yesterday: "ನಿನ್ನೆ",
     noChange: "ಬದಲಾವಣೆ ಇಲ್ಲ",
-    noComparison: "ಶಾಖೆಯ ಎರಡನೇ ವರದಿ ಬಂದ ನಂತರ ಏರಿಕೆ ಅಥವಾ ಇಳಿಕೆ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.",
     up: "ಏರಿಕೆ", down: "ಇಳಿಕೆ", flat: "ಬದಲಾವಣೆ ಇಲ್ಲ",
     marketOn: (date: string) => `${date} ರ ಮಾರುಕಟ್ಟೆ`,
     typical: "ಮಧ್ಯಮ ಬದಲಾವಣೆ",
     changeNote: "ಪ್ರತಿ ಶಾಖೆಯನ್ನು ಅದರದೇ ಹಿಂದಿನ ವರದಿಗೆ ಹೋಲಿಸಲಾಗಿದೆ.",
-    cooperativeRates: "ಸಹಕಾರಿ ಸಂಘಗಳ ದರಗಳು",
     officialRates: "ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆ ದರಗಳು",
-    officialCaption: "ಇತ್ತೀಚಿನ ವರದಿಗಳು · ಎಲ್ಲಾ ತಳಿಗಳು · ಮೋಡಲ್ ದರ, ₹/ಕ್ವಿಂಟಾಲ್ · AGMARKNET",
     officialEmpty: "ಪರಿಶೀಲಿಸಿದ ಎಪಿಎಂಸಿ ದರಗಳು ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ.",
     officialMore: "ಎಲ್ಲಾ ಎಪಿಎಂಸಿ ದರಗಳನ್ನು ನೋಡಿ",
     grade: "ದರ್ಜೆ",
     otherTools: "ಇನ್ನಷ್ಟು ಮಾಹಿತಿ",
     moreFrom: (source: string) => `${source} ದರಗಳನ್ನು ನೋಡಿ`,
     tumcosEmpty: "ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
+    subtitle: "ಸಹಕಾರಿ ಸಂಘ ಮತ್ತು ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳ ಪ್ರಕಟಿತ ದರಗಳು, ಪ್ರತಿ ದರದ ದಿನಾಂಕದೊಂದಿಗೆ.",
+    latestPill: "ಇತ್ತೀಚಿನ ಸಹಕಾರಿ ವರದಿ",
+    cardSub: (date: string, count: number) => `ಇತ್ತೀಚಿನ ವರದಿ: ${date} · ಒಟ್ಟು ${count} ಶಾಖೆಗಳು`,
+    cooperativeTitle: "ಸಹಕಾರಿ ಶಾಖೆಗಳ ದರಗಳು",
+    cooperativeHint: "ಆಯ್ದ ತಳಿಯ ದರಗಳು · ಪ್ರತಿ ಶಾಖೆಯ ದಿನಾಂಕ ಪರಿಶೀಲಿಸಿ",
+    otherMarketsTitle: "ಇತರ ಮಾರುಕಟ್ಟೆ ದರಗಳು",
+    otherMarketsHint: "ಎಪಿಎಂಸಿ ದರಗಳು ಎಲ್ಲಾ ತಳಿಗಳನ್ನು ಒಳಗೊಂಡಿವೆ; ತುಮ್ಕೋಸ್ ತಳಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ.",
+    topMark: "ಅತಿ ಹೆಚ್ಚು",
+    vs: (when: string) => `${when} ವರದಿಗೆ ಹೋಲಿಸಿ`,
+    showAll: (count: number) => `ಎಲ್ಲಾ ${count} ಶಾಖೆಗಳನ್ನು ತೋರಿಸಿ`,
+    showFewer: "ಕಡಿಮೆ ತೋರಿಸಿ",
+    unitFoot: (assumed: boolean) => `ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ಸರಾಸರಿ · ಕನಿಷ್ಠ – ಗರಿಷ್ಠ${assumed ? " · ಘಟಕ ಊಹಿಸಲಾಗಿದೆ" : ""}`,
+    tumcosSub: "ಚನ್ನಗಿರಿ · ತಳಿ ತಿಳಿಸಿಲ್ಲ · ಘಟಕ ಊಹಿಸಲಾಗಿದೆ",
+    officialSub: "AGMARKNET · ಮಾದರಿ ದರ · ಎಲ್ಲಾ ತಳಿಗಳು",
+    explore: "ಎಲ್ಲಾ ದರಗಳು",
+    about: "ಈ ದರಗಳ ಬಗ್ಗೆ",
   },
   en: {
     title: "Latest arecanut rates",
-    intro: "Published cooperative and APMC market rates, with the reporting date beside each price.",
     choose: "Choose a variety",
-    latest: "Latest cooperative report",
     sellOrHold: "Sell now or wait?",
     sellOrHoldHint: "See what happened in past years",
     ask: "Ask a question",
     askHint: "About rates, disease or weather",
-    perQuintal: "average per quintal",
-    range: "Minimum – maximum",
     highest: "Highest that day",
     source: "Source",
     noRows: "No published rate for this variety.",
-    noVariety: "No matching label is listed here for this cooperative.",
+    moreVarieties: "More varieties",
+    notPublished: (names: string) => `${names} ${names.includes(" and ") ? "do" : "does"} not publish this variety.`,
     assumedUnit: "The source states no unit; treated as per quintal",
-    tumcos: "Channagiri — TUMCOS",
     tumcosNote: "TUMCOS does not state the variety, so this cannot be matched to a grade. Its page says “kg”; treated as per quintal.",
     notComparable: "Each cooperative works out its rate differently, so don't compare rates directly between cooperatives. These are averages; the rate for your lot can differ.",
     loading: "Loading rates",
@@ -96,22 +95,35 @@ const COPY = {
     versus: (when: string) => `vs ${when}`,
     yesterday: "yesterday",
     noChange: "No change",
-    noComparison: "Rises and falls appear here once a branch has a second report.",
     up: "up", down: "down", flat: "unchanged",
     marketOn: (date: string) => `Market on ${date}`,
     typical: "Median change",
     changeNote: "Each branch is compared with its own previous report.",
-    cooperativeRates: "Cooperative rates",
     officialRates: "APMC market rates",
-    officialCaption: "Latest reports · all varieties · modal price, ₹/quintal · AGMARKNET",
     officialEmpty: "No verified APMC prices are available yet.",
     officialMore: "Explore all APMC prices",
     grade: "Grade",
     otherTools: "Explore further",
     moreFrom: (source: string) => `Explore ${source} prices`,
     tumcosEmpty: "No published rates available.",
+    subtitle: "Published cooperative and APMC market rates, each with its reporting date.",
+    latestPill: "Latest cooperative report",
+    cardSub: (date: string, count: number) => `Latest report: ${date} · ${count} branch${count === 1 ? "" : "es"} in total`,
+    cooperativeTitle: "Cooperative branch prices",
+    cooperativeHint: "Selected variety · check each branch's reporting date",
+    otherMarketsTitle: "Other market quotations",
+    otherMarketsHint: "APMC prices include all varieties; TUMCOS does not state a variety.",
+    topMark: "Highest",
+    vs: (when: string) => `compared with the ${when} report`,
+    showAll: (count: number) => `Show all ${count} branches`,
+    showFewer: "Show fewer",
+    unitFoot: (assumed: boolean) => `average per quintal · minimum – maximum${assumed ? " · unit assumed" : ""}`,
+    tumcosSub: "Channagiri · variety not stated · unit assumed",
+    officialSub: "AGMARKNET · modal price, ₹/quintal · all varieties",
+    explore: "All rates",
+    about: "About these rates",
   },
-} as const;
+});
 
 const rupees = (value: number | null) => value === null ? "—" : `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const dateText = (date: string, language: Language) => language === "kn" ? formatPeriodKannada(date) : formatCalendarDate(date);
@@ -124,12 +136,12 @@ function ChangeLine({ change, today, language }: { change: PriceChange | null; t
   const copy = COPY[language];
   if (!change) return null;
   const when = ageDays(change.previous_date, today) === 1 ? copy.yesterday : dateText(change.previous_date, language);
-  if (change.amount === 0) return <span className="rate-change"><Minus size={14} aria-hidden="true" />{copy.noChange} · {copy.versus(when)}</span>;
+  if (change.amount === 0) return <span className="rate-change" title={copy.vs(when)}><Minus size={13} aria-hidden="true" />{copy.noChange}</span>;
   const rising = change.amount > 0;
-  return <span className={`rate-change ${rising ? "hold-up" : "hold-down"}`}>
-    {rising ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />}
-    <b>{rising ? "+" : "−"}{rupees(Math.abs(change.amount))} ({signedPercent(change.percent).replace("-", "−")})</b>
-    <small>{copy.versus(when)}</small>
+  return <span className={`rate-change ${rising ? "hold-up" : "hold-down"}`} title={copy.vs(when)}>
+    {rising ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />}
+    {rising ? "+" : "−"}{rupees(Math.abs(change.amount))} ({signedPercent(change.percent).replace("-", "−")})
+    <span className="sr-only"> {copy.vs(when)}</span>
   </span>;
 }
 
@@ -148,23 +160,25 @@ function orderRows(all: CooperativeQuote[]) {
   return { latest, rows: [...usable].sort((a, b) => b.reporting_date.localeCompare(a.reporting_date) || (b.average_price! - a.average_price!) || a.branch.localeCompare(b.branch)) };
 }
 
+/** Two lines per branch: place, badge and date on the left; price, change and range on the right. */
 function RateRow({ row, today, language, highest, showLabel, change }: { row: CooperativeQuote; today: string; language: Language; highest: boolean; showLabel: boolean; change: PriceChange | null }) {
   const copy = COPY[language];
   const age = ageDays(row.reporting_date, today);
   return <li className={`rate-row${highest ? " rate-row-top" : ""}`}>
     <div className="rate-place">
-      <strong>{branchName(row.branch, language)}</strong>
-      <span className={`rate-date${age > 2 ? " rate-date-old" : ""}`}>{dateText(row.reporting_date, language)} · {ageText(age, language)}</span>
-      {showLabel && <span className="rate-label" lang="en">{row.variety}</span>}
-      {highest && <span className="rate-top-mark">{copy.highest}</span>}
+      <strong>{branchName(row.branch, language)}{highest && <span className="rate-top-mark" title={copy.highest}>{copy.topMark}</span>}</strong>
+      <span className="rate-meta"><span className={`rate-date${age > 2 ? " rate-date-old" : ""}`}>{dateText(row.reporting_date, language)} · {ageText(age, language)}</span>
+        {showLabel && <span className="rate-label" lang="en">{row.variety}</span>}</span>
     </div>
     <div className="rate-price">
       <strong>{rupees(row.average_price)}</strong>
-      <ChangeLine change={change} today={today} language={language} />
-      <span>{rupees(row.minimum_price)} – {rupees(row.maximum_price)}</span>
+      <span className="rate-sub"><ChangeLine change={change} today={today} language={language} /><span className="rate-range">{rupees(row.minimum_price)} – {rupees(row.maximum_price)}</span></span>
     </div>
   </li>;
 }
+
+/** The first rows of a long list, with a toggle for the rest, so one source does not push the others off the screen. */
+const VISIBLE_ROWS = 6;
 
 export function HomePage() {
   const { language } = useLanguage();
@@ -172,11 +186,14 @@ export function HomePage() {
   const [params, setParams] = useSearchParams();
   const copy = COPY[language];
   const today = calendarTodayIST();
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   // Enough reports to find each branch's previous one. Older ones are too old to show a change against anyway.
   const historyFrom = new Date(calendarDateToTime(today) - (MAX_CHANGE_GAP_DAYS + 7) * DAY_MS).toISOString().slice(0, 10);
   const variety = VARIETIES.find((item) => item.key === params.get("v")) ?? VARIETIES[0];
   const requests = SOURCES.flatMap((source) => (variety.labels[source.key] ?? []).map((label) => ({ source: source.key, label })));
-  const queries = useQueries({ queries: [...requests, { source: "tumcos" as const, label: "areca" }].map(({ source, label }) => ({
+  // TUMCOS never states a variety, so its single rate is shown only beside the everyday varieties.
+  const showTumcos = Boolean(variety.everyday);
+  const queries = useQueries({ queries: [...requests, ...(showTumcos ? [{ source: "tumcos" as const, label: "areca" }] : [])].map(({ source, label }) => ({
     queryKey: ["home-rates", source, label],
     queryFn: () => api.cooperativePrices(source, label, "arecanut", { from: historyFrom }),
     refetchInterval: 300_000,
@@ -197,79 +214,131 @@ export function HomePage() {
     const labels = variety.labels[source] ?? [];
     return labels.flatMap((label) => queries[requests.findIndex((request) => request.source === source && request.label === label)]?.data?.data ?? []);
   };
-  const tumcos = queries.at(-1)?.data?.latest_by_branch ?? [];
-  const tumcosHistory = queries.at(-1)?.data?.data ?? [];
+  const tumcosQuery = showTumcos ? queries.at(-1) : undefined;
+  const tumcos = tumcosQuery?.data?.latest_by_branch ?? [];
+  const tumcosHistory = tumcosQuery?.data?.data ?? [];
+  const publishing = SOURCES.filter((source) => variety.labels[source.key]?.length);
+  const notPublishing = SOURCES.filter((source) => !variety.labels[source.key]?.length);
+  const choose = (key: string) => { const next = new URLSearchParams(params); next.set("v", key); setParams(next, { replace: true }); };
+  const varietyName = (item: typeof variety) => language === "kn" ? item.kn : item.en;
   const allDates = [...SOURCES.flatMap((source) => rowsFor(source.key)), ...tumcos].map((row) => row.reporting_date).sort();
   const newest = allDates.at(-1);
+  const newestAge = newest ? ageDays(newest, today) : null;
+  const moreToggle = (key: string, total: number) => total > VISIBLE_ROWS && <button type="button" className="rate-more-toggle" aria-expanded={Boolean(expanded[key])}
+    onClick={() => setExpanded((current) => ({ ...current, [key]: !current[key] }))}>
+    {expanded[key] ? copy.showFewer : copy.showAll(total)}<ChevronDown size={15} aria-hidden="true" /></button>;
+  const visible = <T,>(key: string, rows: T[]) => expanded[key] ? rows : rows.slice(0, VISIBLE_ROWS);
   return <div className="page-stack home" lang={language}>
-    <section className="home-heading">
-      <h1>{copy.title}</h1>
-      <p>{copy.intro}</p>
-      {newest && <p className="home-latest">{copy.latest}: <strong>{dateText(newest, language)}</strong> ({ageText(ageDays(newest, today), language)})</p>}
+    <section className="home-hero">
+      <div><h1>{copy.title}</h1><p>{copy.subtitle}</p></div>
+      {newest && <p className={`home-date-pill${newestAge !== null && newestAge > 2 ? " home-date-pill-old" : ""}`}>
+        <span className="home-date-dot" aria-hidden="true" /><span>{copy.latestPill}: <strong>{dateText(newest, language)}</strong> · {ageText(newestAge ?? 0, language)}</span></p>}
     </section>
 
-    <div className="variety-chips" role="group" aria-label={copy.choose}>
-      {VARIETIES.map((item) => <button key={item.key} type="button" aria-pressed={item.key === variety.key}
-        onClick={() => { const next = new URLSearchParams(params); next.set("v", item.key); setParams(next, { replace: true }); }}>{language === "kn" ? item.kn : item.en}</button>)}
+    <div className="home-variety">
+    <div className="home-variety-label" id="home-variety-label">{copy.choose}</div>
+    <div className="variety-chips" role="group" aria-labelledby="home-variety-label">
+      {VARIETIES.filter((item) => item.everyday).map((item) => <button key={item.key} type="button" aria-pressed={item.key === variety.key}
+        onClick={() => choose(item.key)}>{varietyName(item)}</button>)}
+      <label className={`variety-more${variety.everyday ? "" : " variety-more-active"}`}>
+        <span className="sr-only">{copy.moreVarieties}</span>
+        <select value={variety.everyday ? "" : variety.key} onChange={(event) => choose(event.target.value)}>
+          <option value="" disabled>{copy.moreVarieties}</option>
+          {VARIETY_GROUPS.map((group) => {
+            const items = VARIETIES.filter((item) => !item.everyday && item.group === group.key);
+            return items.length ? <optgroup key={group.key} label={language === "kn" ? group.kn : group.en}>
+              {items.map((item) => <option key={item.key} value={item.key}>{varietyName(item)}</option>)}
+            </optgroup> : null;
+          })}
+        </select>
+      </label>
     </div>
+    </div>
+    {variety.note && <p className="home-note home-note-callout">{variety.note[language]}</p>}
 
-    <div className="home-section-heading"><h2>{copy.cooperativeRates}</h2></div>
-      {SOURCES.map((source) => {
-        const published = variety.labels[source.key];
+    <nav className="home-sections" aria-label={language === "kn" ? "ದರಗಳ ವಿಭಾಗಗಳು" : "Price sections"}>
+      {publishing.map((source) => <a key={source.key} href={`#rates-${source.key}`}>{source.en}</a>)}
+      {showTumcos && <a href="#rates-tumcos">TUMCOS</a>}
+      <a href="#rates-official">APMC</a>
+    </nav>
+
+    <section className="home-price-section" aria-labelledby="cooperative-prices-heading">
+    <div className="home-section-heading"><h2 id="cooperative-prices-heading">{copy.cooperativeTitle}</h2><p>{copy.cooperativeHint}</p></div>
+    <div className="rate-grid">
+      {publishing.map((source) => {
+        const published = variety.labels[source.key]!;
         const sourceQueries = requests.flatMap((request, index) => request.source === source.key ? [queries[index]] : []);
         const { latest, rows } = orderRows(rowsFor(source.key));
         const sameDay = rows.filter((row) => row.reporting_date === latest);
         const history = historyFor(source.key);
         const breadth = marketBreadth(sameDay.map((row) => priceChange(row, history)));
         return <section className="rate-card" key={source.key} aria-labelledby={`rates-${source.key}`}>
-          <header>
-            <h2 id={`rates-${source.key}`}>{language === "kn" ? source.kn : source.en}</h2>
-            {rows[0] && <a href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source} <ExternalLink size={13} aria-hidden="true" /></a>}
+          <header className="rate-card-head">
+            <div><h3 id={`rates-${source.key}`}>{language === "kn" ? source.kn : source.en}</h3>
+              <span className="rate-card-basis">{copy.unitFoot(source.assumedUnit)}</span>
+              {latest && <span className="rate-card-sub">{copy.cardSub(dateText(latest, language), rows.length)}</span>}</div>
+            {rows[0] && <a className="rate-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
           </header>
-          {!published ? <p className="rate-empty">{copy.noVariety}</p> : sourceQueries.some((query) => query.isPending) ? <LoadingState label={copy.loading} /> : <>
+          {sourceQueries.some((query) => query.isPending) ? <LoadingState label={copy.loading} /> : <>
             {sourceQueries.some((query) => query.isError) && <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => sourceQueries.filter((query) => query.isError).forEach((query) => void query.refetch())} />}
             {!rows.length && !sourceQueries.some((query) => query.isError) && <p className="rate-empty">{copy.noRows}</p>}
             {rows.length > 0 && <>
-            {latest && breadth.median_percent !== null && <div className="market-breadth">
-              <span className="market-breadth-title">{copy.marketOn(dateText(latest, language))}</span>
-              <span className="hold-up"><ArrowUp size={14} aria-hidden="true" /><b>{breadth.up}</b> {copy.up}</span>
-              <span className="hold-down"><ArrowDown size={14} aria-hidden="true" /><b>{breadth.down}</b> {copy.down}</span>
-              {breadth.flat > 0 && <span><Minus size={14} aria-hidden="true" /><b>{breadth.flat}</b> {copy.flat}</span>}
-              <span className={breadth.median_percent > 0 ? "hold-up" : breadth.median_percent < 0 ? "hold-down" : ""}>{copy.typical} <b>{signedPercent(breadth.median_percent).replace("-", "−")}</b></span>
+            {latest && breadth.median_percent !== null && <div className="market-breadth" aria-label={copy.marketOn(dateText(latest, language))}>
+              <span className="hold-up"><ArrowUp size={13} aria-hidden="true" /><b>{breadth.up}</b> {copy.up}</span>
+              <span className="hold-down"><ArrowDown size={13} aria-hidden="true" /><b>{breadth.down}</b> {copy.down}</span>
+              {breadth.flat > 0 && <span><Minus size={13} aria-hidden="true" /><b>{breadth.flat}</b> {copy.flat}</span>}
+              <span className={`market-breadth-median ${breadth.median_percent > 0 ? "hold-up" : breadth.median_percent < 0 ? "hold-down" : ""}`}>{copy.typical} <b>{signedPercent(breadth.median_percent).replace("-", "−")}</b></span>
             </div>}
-            <p className="rate-caption">{copy.perQuintal} · {copy.range}{source.assumedUnit ? ` · ${copy.assumedUnit}` : ""}. {rows.some((row) => priceChange(row, history)) ? copy.changeNote : copy.noComparison}</p>
-            <ul>{rows.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={published.length > 1 || language === "en"}
+            <ul className="rate-list">{visible(source.key, rows).map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel
               highest={sameDay.length > 1 && row === sameDay[0]} change={priceChange(row, history)} />)}</ul>
+            {moreToggle(source.key, rows.length)}
             </>}
           </>}
-          <Link className="home-more" to={`/prices?feed=${source.key}`}>{copy.moreFrom(source.en)} <ArrowRight size={15} aria-hidden="true" /></Link>
+          <footer className="rate-card-foot">
+            <Link to={`/prices?feed=${source.key}${published.length === 1 ? `&variety=${encodeURIComponent(published[0])}` : ""}`} aria-label={copy.moreFrom(source.en)}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
         </section>;
       })}
-      <section className="rate-card" aria-labelledby="rates-tumcos">
-        <header>
-          <h2 id="rates-tumcos">{copy.tumcos}</h2>
-          {tumcos[0] && <a href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source} <ExternalLink size={13} aria-hidden="true" /></a>}
+    </div>
+    {notPublishing.length > 0 && <p className="home-note">{copy.notPublished(notPublishing.map((source) => source.en).join(language === "kn" ? " ಮತ್ತು " : " and "))}</p>}
+    </section>
+
+    <section className="home-price-section" aria-labelledby="other-prices-heading">
+    <div className="home-section-heading"><h2 id="other-prices-heading">{copy.otherMarketsTitle}</h2>{showTumcos && <p>{copy.otherMarketsHint}</p>}</div>
+    <div className="rate-grid">
+      {showTumcos && <section className="rate-card" aria-labelledby="rates-tumcos">
+        <header className="rate-card-head">
+          <div><h3 id="rates-tumcos">TUMCOS</h3><span className="rate-card-basis">{copy.unitFoot(true)}</span><span className="rate-card-sub">{copy.tumcosSub}</span></div>
+          {tumcos[0] && <a className="rate-source" href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
         </header>
-        <p className="rate-caption">{copy.perQuintal} · {copy.range}. {copy.tumcosNote}</p>
-        {queries.at(-1)?.isPending ? <LoadingState label={copy.loading} /> : queries.at(-1)?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void queries.at(-1)?.refetch()} /> : tumcos.length ? <ul>{tumcos.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
-        <Link className="home-more" to="/prices?feed=tumcos">{copy.moreFrom("TUMCOS")} <ArrowRight size={15} aria-hidden="true" /></Link>
-      </section>
-      <p className="home-note">{copy.notComparable}</p>
+        {tumcosQuery?.isPending ? <LoadingState label={copy.loading} /> : tumcosQuery?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void tumcosQuery.refetch()} /> : tumcos.length ? <ul className="rate-list">{tumcos.map((row) => <RateRow key={row.id} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
+        <footer className="rate-card-foot"><Link to="/prices?feed=tumcos" aria-label={copy.moreFrom("TUMCOS")}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
+      </section>}
 
     <section className="rate-card" aria-labelledby="rates-official">
-      <header><h2 id="rates-official">{copy.officialRates}</h2></header>
-      <p className="rate-caption">{copy.officialCaption}</p>
+      <header className="rate-card-head"><div><h3 id="rates-official">{copy.officialRates}</h3><span className="rate-card-basis">{copy.officialSub}</span></div></header>
       {official.isPending ? <LoadingState label={copy.loading} /> : official.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void official.refetch()} /> : !official.data?.data.length ? <p className="rate-empty">{copy.officialEmpty}</p> :
-        <ul className="home-market-list">{official.data.data.map((row) => <li key={row.id}>
-          <div><strong>{row.market_name} · {row.district}</strong><span>{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""} · {row.source_name}</span><span>{dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span></div>
-          <strong>{rupees(row.modal_price)}</strong>
+        <ul className="rate-list">{official.data.data.map((row) => <li className="rate-row" key={row.id}>
+          <div className="rate-place"><strong>{row.market_name}</strong><span className="rate-meta"><span>{row.district} · {dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span><span className="rate-label" lang="en">{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""} · {row.source_name}</span></span></div>
+          <div className="rate-price"><strong>{rupees(row.modal_price)}</strong></div>
         </li>)}</ul>}
-      <Link className="home-more" to="/prices?feed=official">{copy.officialMore} <ArrowRight size={15} aria-hidden="true" /></Link>
+      <footer className="rate-card-foot"><Link to="/prices?feed=official" aria-label={copy.officialMore}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
     </section>
-    <div className="home-section-heading"><h2>{copy.otherTools}</h2></div>
+    </div>
+    </section>
+
+    <section className="home-price-section" aria-labelledby="home-tools-heading">
+    <div className="home-section-heading"><h2 id="home-tools-heading">{copy.otherTools}</h2></div>
     <nav className="home-actions" aria-label={copy.otherTools}>
       <Link to="/sell-or-hold"><strong>{copy.sellOrHold}</strong><span>{copy.sellOrHoldHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
       <Link to="/assistant"><strong>{copy.ask}</strong><span>{copy.askHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
     </nav>
+    </section>
+
+    <AboutData title={copy.about}>
+      <p>{copy.notComparable}</p>
+      <p>{copy.changeNote}</p>
+      <p>{copy.assumedUnit}.</p>
+      <p>{copy.tumcosNote}</p>
+    </AboutData>
   </div>;
 }

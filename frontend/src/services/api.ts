@@ -9,16 +9,19 @@ import type { ModuleDomain, ModuleData, Production, Trade, Weather, Bulletin, Qu
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8787/api/v1").replace(/\/$/, "");
 
+/** Client-side failure messages follow the page language (set on <html lang> by the language provider). */
+const kannada = () => typeof document !== "undefined" && document.documentElement.lang === "kn";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, init);
   } catch {
-    throw new Error("The ANI API is unavailable. Start the API service and try again.");
+    throw new Error(kannada() ? "Areca Pulse ಸೇವೆ ಈಗ ಲಭ್ಯವಿಲ್ಲ. ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ." : "The Areca Pulse API is unavailable. Start the API service and try again.");
   }
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(body?.error ?? `Request failed (${response.status}).`);
+    throw new Error(body?.error ?? (kannada() ? `ವಿನಂತಿ ವಿಫಲವಾಯಿತು (${response.status}).` : `Request failed (${response.status}).`));
   }
   return response.json() as Promise<T>;
 }

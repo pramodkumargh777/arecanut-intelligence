@@ -7,10 +7,14 @@ export const INK = {
   400: "#a1a1aa", 300: "#d4d4d8", 200: "#e4e4e7", 100: "#f4f4f5", surface: "#ffffff",
 } as const;
 
+/** Brand forest green for the primary series; supporting series stay grey so colour still means "the main line". */
+export const BRAND = "#0b3d2e";
+export const BRAND_AREA = ["rgba(11,61,46,.14)", "rgba(11,61,46,0)"] as const;
+
 export const CHART_FONT = '"Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 /** Default series order: strongest first. Further series also differ by dash pattern at the call site. */
-export const SERIES_COLORS = [INK[900], INK[500], INK[400], INK[300]];
+export const SERIES_COLORS = [BRAND, INK[500], INK[400], INK[300]];
 
 /** Ordered lightness ramp for ordered data such as calendar years: the newest entry is the darkest. */
 export function orderedRamp(count: number): string[] {

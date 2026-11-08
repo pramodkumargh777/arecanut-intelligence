@@ -75,17 +75,3 @@ export function showsValues(publication: Publication): boolean {
   return publication !== "not_published";
 }
 
-export const PUBLICATION_LABEL: Record<Publication, string> = {
-  validated_forecast: "Validated (prospective outcomes)",
-  experimental_candidate: "Experimental candidate · awaiting prospective confirmation",
-  reference_baseline: "Reference baseline estimate",
-  not_published: "Withheld · not better than baseline",
-};
-
-export const STATUS_LABEL: Record<string, string> = {
-  reference: "Reference baseline",
-  candidate: "Candidate",
-  not_better_than_baseline: "Not better than baseline",
-  validated: "Validated",
-  revoked: "Revoked",
-};

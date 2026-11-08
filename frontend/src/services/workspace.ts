@@ -11,11 +11,6 @@ export type WorkspaceRole = typeof WORKSPACE_ROLES[number];
 export const WORKSPACE_SECTIONS = ["scorecard", "latest_quotes", "monthly_insights", "forecast_status", "shortcuts"] as const;
 export type WorkspaceSection = typeof WORKSPACE_SECTIONS[number];
 
-export const SECTION_LABELS: Record<WorkspaceSection, string> = {
-  scorecard: "Intelligence scorecard", latest_quotes: "Latest reported quotes", monthly_insights: "Monthly seasonal and volatility analysis",
-  forecast_status: "Forecast validation status", shortcuts: "Filtered page shortcuts",
-};
-
 const FEEDS = ["official", "mamcos", "tss", "tumcos"] as const;
 const PRESETS = ["all", "7d", "30d", "90d", "365d", "ytd"] as const;
 

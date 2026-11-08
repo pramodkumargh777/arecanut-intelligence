@@ -20,11 +20,8 @@ export function sortRows<T>(rows: readonly T[], value: (row: T) => number | stri
 }
 
 export type DatePreset = "all" | "7d" | "30d" | "90d" | "365d" | "ytd" | "custom";
-export const DATE_PRESETS: { value: DatePreset; label: string }[] = [
-  { value: "all", label: "All reporting dates" }, { value: "7d", label: "Last 7 days" }, { value: "30d", label: "Last 30 days" },
-  { value: "90d", label: "Last 90 days" }, { value: "365d", label: "Last 12 months" }, { value: "ytd", label: "Year to date" },
-  { value: "custom", label: "Custom range" },
-];
+/** Reporting-period choices; their labels live in the shared copy (COMMON.datePresets) in both languages. */
+export const DATE_PRESETS: { value: DatePreset }[] = (["all", "7d", "30d", "90d", "365d", "ytd", "custom"] as const).map((value) => ({ value }));
 
 /** Inclusive calendar range for a preset, anchored to an IST market-calendar date (YYYY-MM-DD). */
 export function presetRange(preset: DatePreset, today: string): { from: string; to: string } | null {

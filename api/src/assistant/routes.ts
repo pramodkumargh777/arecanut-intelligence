@@ -168,7 +168,7 @@ export function createAssistantRoutes(caller: ApiCaller) {
       last_24_hours: recent.results,
       tools: TOOL_NAMES.length,
       guarantees: [
-        "Numbers, prices and forecasts come only from ANI tools and calculators; model text containing any other number is rejected.",
+        "Numbers, prices and forecasts come only from Areca Pulse tools and calculators; model text containing any other number is rejected.",
         "Without a language model the assistant still answers from verified data with a rule-based interpretation.",
         "Questions that look like prompt injection are answered without calling the language model.",
       ],

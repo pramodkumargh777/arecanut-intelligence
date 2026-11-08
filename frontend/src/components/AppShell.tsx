@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { routeAvailable } from "../../../shared/commodities";
 import { useCommodity } from "../services/commodity";
-import { LanguageToggle, useLanguage } from "../services/language";
+import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
 import { CommodityGate } from "./CommodityGate";
-import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, Leaf, MapPin, Menu, MessageSquareText, Search, TableProperties, X } from "lucide-react";
+import brandIcon from "../assets/areca-pulse-icon.svg";
+import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Search, TableProperties, X } from "lucide-react";
 
 const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
@@ -36,8 +37,27 @@ const navigation: { to: string; label: string; kn: string; icon: typeof Activity
 /** Grower pages are arecanut-only and short, so they leave out the commodity and market-search controls. */
 const GROWER_PAGES = ["/", "/sell-or-hold"];
 
+const SHELL_COPY = defineCopy({
+  en: {
+    skip: "Skip to content", openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation", navigation: "Main navigation",
+    moreTools: "More tools", commodity: "Commodity", search: "Search markets · Enter", searchLabel: "Search markets, press Enter to search",
+    region: "Karnataka", sourceTitle: "Reviewed source records", sourceHint: "Every quote has a source and date.",
+    footerNote: "Market observations · Not financial advice", notFound: "Page not found", noSource: "No data",
+    noSourceFor: (name: string) => `No integrated source for ${name}`, unknown: (code: string) => `Unknown: ${code}`, configured: "configured",
+  },
+  kn: {
+    skip: "ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ", openMenu: "ಮೆನು ತೆರೆಯಿರಿ", closeMenu: "ಮೆನು ಮುಚ್ಚಿ", closeNavigation: "ಮೆನು ಮುಚ್ಚಿ", navigation: "ಮುಖ್ಯ ಮೆನು",
+    moreTools: "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು", commodity: "ಬೆಳೆ", search: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ · Enter", searchLabel: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ, Enter ಒತ್ತಿ",
+    region: "ಕರ್ನಾಟಕ", sourceTitle: "ಪರಿಶೀಲಿಸಿದ ಮೂಲ ದಾಖಲೆಗಳು", sourceHint: "ಪ್ರತಿ ದರಕ್ಕೂ ಮೂಲ ಮತ್ತು ದಿನಾಂಕ ಇದೆ.",
+    footerNote: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ · ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ", notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
+    noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
+  },
+});
+
+
 export function AppShell() {
   const { language } = useLanguage();
+  const copy = SHELL_COPY[language];
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -46,8 +66,10 @@ export function AppShell() {
   const mainColumn = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const currentItem = navigation.find((item) => item.to === location.pathname || (item.to === "/intelligence" && location.pathname.startsWith("/intelligence/")));
-  const currentPage = currentItem ? (language === "kn" ? currentItem.kn : currentItem.label) : "Overview";
+  const currentPage = currentItem ? (language === "kn" ? currentItem.kn : currentItem.label) : copy.notFound;
   const growerPage = GROWER_PAGES.includes(location.pathname);
+  // The prices page has its own search box, so the top-bar one would be a second control for the same thing.
+  const showTopSearch = location.pathname !== "/prices";
   const marketParams = new URLSearchParams(location.search);
   const marketContext = new URLSearchParams();
   const { code: commodityCode, commodity, catalog, unit } = useCommodity();
@@ -65,6 +87,10 @@ export function AppShell() {
     if (next !== catalog.default_commodity) params.set("commodity", next);
     navigate(`${location.pathname}${params.toString() ? `?${params}` : ""}`);
   }
+
+  useEffect(() => {
+    document.title = `${currentPage} · Areca Pulse`;
+  }, [currentPage]);
 
   useEffect(() => {
     setSearch(new URLSearchParams(location.search).get("search") ?? "");
@@ -114,26 +140,28 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main-content">Skip to content</a>
-      {menuOpen && <button className="mobile-scrim" tabIndex={-1} aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-      <aside ref={sidebar} id="main-navigation" aria-label="Market intelligence navigation" role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen || undefined} className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
+      <a className="skip-link" href="#main-content">{copy.skip}</a>
+      {menuOpen && <button className="mobile-scrim" tabIndex={-1} aria-label={copy.closeNavigation} onClick={() => setMenuOpen(false)} />}
+      <aside ref={sidebar} id="main-navigation" aria-label={copy.navigation} role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen || undefined} className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
         <div className="brand">
-          <span className="brand-mark"><Leaf size={15} strokeWidth={2.2} /></span>
-          <span className="brand-copy"><strong>ANI</strong><small>Arecanut Intelligence</small></span>
-          <button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={19} /></button>
+          <BrandLockup />
+          <button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label={copy.closeMenu}><X size={19} /></button>
         </div>
-        <nav className="main-nav" aria-label="Main navigation">
+        <nav className="main-nav" aria-label={copy.navigation}>
           {(() => {
             const links = (items: typeof navigation) => items.map(({ to, label, kn, icon: Icon, end }) => {
               const available = routeAvailable(commodity, to);
-              return <NavLink key={to} to={["/overview", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)} title={available ? undefined : `No integrated source for ${commodity?.display_name ?? commodityCode}`} className={({ isActive }) => `nav-link ${isActive ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
+              const unavailableText = copy.noSourceFor(commodity?.display_name ?? commodityCode);
+              // The reason is visible as a badge and spoken in full, not only in a hover tooltip that touch and screen-reader users miss.
+              return <NavLink key={to} to={["/overview", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)} title={available ? undefined : unavailableText} className={({ isActive }) => `nav-link ${isActive ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
                 <Icon size={15} strokeWidth={1.8} /><span lang={language}>{language === "kn" ? kn : label}</span>
+                {!available && <><span className="nav-badge" aria-hidden="true">{copy.noSource}</span><span className="sr-only">({unavailableText})</span></>}
               </NavLink>;
             });
             return <>
               {links(primaryNavigation)}
               <details className="nav-advanced" open={advancedGroups.some((group) => group.items.some((item) => item.to === location.pathname)) || undefined}>
-                <summary>{language === "kn" ? "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು" : "More tools"}</summary>
+                <summary>{copy.moreTools}</summary>
                 {advancedGroups.map((group) => <div key={group.label} role="group" aria-label={language === "kn" ? group.kn : group.label}>
                   <div className="nav-group" aria-hidden="true">{language === "kn" ? group.kn : group.label}</div>
                   {links(group.items)}
@@ -143,32 +171,52 @@ export function AppShell() {
           })()}
         </nav>
         <div className="sidebar-bottom">
-          <div className="source-note"><span className="source-note-icon"><CircleHelp size={15} /></span><span><b>Reviewed source records</b><small>Every quote has a source and date.</small></span></div>
-          <div className="sidebar-foot">KARNATAKA · {unit}</div>
+          <div className="source-note"><span className="source-note-icon"><CircleHelp size={15} /></span><span><b>{copy.sourceTitle}</b><small>{copy.sourceHint}</small></span></div>
+          <div className="sidebar-foot">{language === "kn" ? copy.region : copy.region.toUpperCase()} · {unit}</div>
         </div>
       </aside>
       <div className="main-column" ref={mainColumn}>
         <header className="topbar">
-          <button ref={menuButton} className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="main-navigation"><Menu size={21} /></button>
+          <button ref={menuButton} className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label={copy.openMenu} aria-expanded={menuOpen} aria-controls="main-navigation"><Menu size={21} /></button>
+          <Link to="/" className="topbar-brand" aria-label={BRAND_LABEL}><img src={brandIcon} alt="" width={36} height={28} /></Link>
           <div className="breadcrumb"><span>{commodity?.display_name ?? commodityCode}</span><span className="breadcrumb-sep">/</span><strong>{currentPage}</strong></div>
           <div className={`topbar-tools${growerPage ? " topbar-tools-grower" : ""}`}>
             <LanguageToggle />
-            {!growerPage && <><label className="commodity-select"><span>Commodity</span><select aria-label="Commodity" value={commodity ? commodityCode : ""} onChange={(event) => selectCommodity(event.target.value)}>
-              {!commodity && <option value="" disabled>Unknown: {commodityCode}</option>}
-              {catalog.commodities.map((item) => <option key={item.code} value={item.code}>{item.display_name}{item.status === "production" ? "" : " · configured"}</option>)}
+            {!growerPage && <><label className="commodity-select"><span>{copy.commodity}</span><select aria-label={copy.commodity} value={commodity ? commodityCode : ""} onChange={(event) => selectCommodity(event.target.value)}>
+              {!commodity && <option value="" disabled>{copy.unknown(commodityCode)}</option>}
+              {catalog.commodities.map((item) => <option key={item.code} value={item.code}>{item.display_name}{item.status === "production" ? "" : ` · ${copy.configured}`}</option>)}
             </select></label>
-            <form role="search" onSubmit={(event) => {
+            {showTopSearch && <form role="search" onSubmit={(event) => {
               event.preventDefault();
               const next = new URLSearchParams(marketContext);
               if (search.trim()) next.set("search", search.trim());
               navigate(next.toString() ? `/prices?${next}` : "/prices");
-            }}><label className="search-field"><Search size={16} /><input type="search" aria-label="Search markets, press Enter to search" placeholder="Search markets · Enter" value={search} onChange={(event) => setSearch(event.target.value)} /></label></form>
-            <span className="region-pill"><MapPin size={13} /> Karnataka</span></>}
+            }}><label className="search-field"><Search size={16} /><input type="search" aria-label={copy.searchLabel} placeholder={copy.search} value={search} onChange={(event) => setSearch(event.target.value)} /></label></form>}
+            <span className="region-pill"><MapPin size={13} /> {copy.region}</span></>}
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><Outlet /></CommodityGate></main>
-        <footer className="site-footer"><span>Arecanut Intelligence</span><span>Market observations · Not financial advice</span></footer>
+        <footer className="site-footer"><span>Areca Pulse · Market Intelligence</span><span>{copy.footerNote}</span></footer>
       </div>
     </div>
   );
+}
+
+const BRAND_LABEL = "Areca Pulse · Market Intelligence";
+
+/**
+ * Compact lockup: the brand symbol beside a live-text wordmark. The full horizontal logo is not shrunk into the sidebar,
+ * because its descriptor and tagline become unreadably small (brand guide: use the icon at small sizes). Live text also
+ * renders in the app's own Inter, which an SVG loaded through <img> cannot use.
+ */
+function BrandLockup() {
+  return <Link to="/" className="brand-lockup" aria-label={BRAND_LABEL}>
+    <span className="brand-lockup-row">
+      <img className="brand-icon" src={brandIcon} alt="" width={40} height={31} />
+      <span className="brand-words" aria-hidden="true" lang="en">
+        <span className="brand-name">Areca <span className="brand-name-accent">Pulse</span></span>
+        <span className="brand-descriptor">Market Intelligence</span>
+      </span>
+    </span>
+  </Link>;
 }

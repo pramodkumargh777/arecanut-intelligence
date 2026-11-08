@@ -565,7 +565,7 @@ describe("sell-or-hold questions", () => {
     expect(body.interpretation.text).toContain("before storage, interest and weight loss");
     expect(body.facts.map((fact: any) => fact.label)).toContain("Rashi Karnataka monthly average: median change 3 months after November");
     expect(body.citations[0]).toMatchObject({ ref: "S1", publisher: expect.stringContaining("AGMARKNET") });
-    expect(body.missing.join()).toContain("ANI does not assume costs");
+    expect(body.missing.join()).toContain("Areca Pulse does not assume costs");
     expect(body.uncertainty.join()).toContain("Past years do not show what the price will do");
     vi.useRealTimers();
   });
@@ -814,7 +814,7 @@ describe("assistant query endpoint", () => {
   it("asks for inputs instead of assuming calculation costs", async () => {
     const { body } = await ask({ question: "Should I sell now or hold?" });
     expect(body.tools).toEqual([expect.objectContaining({ tool: "calculate_sell_hold", status: "needs_input" })]);
-    expect(body.missing[0]).toContain("ANI does not assume costs");
+    expect(body.missing[0]).toContain("Areca Pulse does not assume costs");
   });
 
   it("computes net realization deterministically from stated inputs", async () => {

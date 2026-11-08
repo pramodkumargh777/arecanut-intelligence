@@ -160,3 +160,16 @@ Coverage is in [`api/src/commodities.test.ts`](../api/src/commodities.test.ts):
 - An upgrade test that applies migrations 0001–0013, inserts rows, applies 0014 and checks the rows are identical apart from the basis.
 - Basis immutability.
 - HTTP scoping.
+
+## Multiple commodities in the app
+
+### Multiple commodities
+
+Arecanut is the production commodity. Migration `0014` adds a commodity master
+covering black pepper, coffee, cardamom, coconut/copra, cocoa and natural
+rubber, with commodity-specific varieties, grades and units. It also adds an
+immutable price-basis taxonomy on every observation. Use the topbar
+**Commodity** selector (or `?commodity=`) to switch.
+
+Commodities without an integrated source show their configured profile only.
+No prices are estimated. See [docs/COMMODITY_MODEL.md](COMMODITY_MODEL.md).
