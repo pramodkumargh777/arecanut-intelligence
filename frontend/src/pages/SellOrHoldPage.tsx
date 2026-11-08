@@ -4,7 +4,7 @@ import { calendarTodayIST, formatCalendarMonth, formatPeriodKannada, MONTH_NAMES
 import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS } from "../../../shared/hold-history";
 import { ErrorState, LoadingState } from "../components/State";
 import { api } from "../services/api";
-import { useLanguage, type Language } from "../services/language";
+import { defineCopy, type Language, useLanguage } from "../services/language";
 
 /** Common trade names first. Everything else the source reports follows, under its own name. */
 const COMMON_VARIETIES: { name: string; kn: string }[] = [
@@ -16,7 +16,7 @@ const COMMON_VARIETIES: { name: string; kn: string }[] = [
 /** A starting point for the reader to change. Weight loss and storage start at zero because they differ too much to guess. */
 const DEFAULT_INTEREST_PERCENT = 10;
 
-const COPY = {
+const COPY = defineCopy({
   kn: {
     title: "ಈಗ ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ?",
     intro: "ಹಿಂದಿನ ವರ್ಷಗಳಲ್ಲಿ ಈ ತಿಂಗಳ ನಂತರ ದರ ಏನಾಯಿತು ಎಂಬುದನ್ನು ಇಲ್ಲಿ ನೋಡಿ. ಇದು ಮುನ್ಸೂಚನೆ ಅಥವಾ ಸಲಹೆ ಅಲ್ಲ; ಮುಂದೆ ಏನಾಗುತ್ತದೆ ಎಂದು ಯಾರಿಗೂ ಖಚಿತವಾಗಿ ಹೇಳಲಾಗದು.",
@@ -57,7 +57,7 @@ const COPY = {
     loading: "Loading past prices",
     source: "Source: AGMARKNET monthly reports",
   },
-} as const;
+});
 
 const monthText = (month: string, language: Language) => language === "kn" ? formatPeriodKannada(month) : formatCalendarMonth(month);
 const signed = (value: number | null) => value === null ? "—" : `${value > 0 ? "+" : ""}${value}%`;

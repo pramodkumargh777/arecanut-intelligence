@@ -222,8 +222,11 @@ Carried over from the November 2026 UI review (the review documents themselves w
   publication state). Investigate authorised fetch, monitoring and review workflow; never auto-approve.
 - **Release parity:** confirm the deployed build and API configuration match the intended release before judging
   deployed behaviour.
-- **Kannada:** grower pages and the app shell are translated; market, analytics, forecast and assistant pages are
-  still English (marked `lang="en"`). Translate with native-speaker review.
+- **Kannada:** every page, chart, table, message and date is available in Kannada and English. Each page keeps
+  both languages side by side (`defineCopy`), and TypeScript fails the build if a Kannada line is missing. Still in
+  English by design or pending: the assistant's detailed fact/tool/assumption lists (server, `api/src/assistant/tools.ts`),
+  expert-approved crop-risk advisory wording, forecasting-engine metadata, and source data itself (market and variety
+  names). All Kannada text needs a native-speaker review before release.
 - **Price-direction colours:** rises are green and falls red; the brand guide asks that direction not read as
   good or bad. Decide whether to make them neutral (see [BRAND.md](BRAND.md)).
 - **Kannada font:** consider bundling Noto Sans Kannada for consistent rendering.

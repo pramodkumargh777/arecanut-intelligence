@@ -1,8 +1,8 @@
 import { ArrowRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useLanguage } from "../services/language";
+import { defineCopy, useLanguage } from "../services/language";
 
-const COPY = {
+const COPY = defineCopy({
   en: {
     title: "Page not found",
     body: (path: string) => `There is no page at ${path}. The link may be old or mistyped.`,
@@ -13,7 +13,7 @@ const COPY = {
     body: (path: string) => `${path} ಎಂಬ ಪುಟ ಇಲ್ಲ. ಲಿಂಕ್ ಹಳೆಯದಾಗಿರಬಹುದು ಅಥವಾ ತಪ್ಪಾಗಿರಬಹುದು.`,
     home: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", prices: "ಮಾರುಕಟ್ಟೆ ದರಗಳು",
   },
-} as const;
+});
 
 /** Shown for unknown addresses instead of silently redirecting, so a broken link is visible as one. */
 export function NotFoundPage() {

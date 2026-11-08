@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { routeAvailable } from "../../../shared/commodities";
 import { useCommodity } from "../services/commodity";
-import { LanguageToggle, useLanguage } from "../services/language";
+import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
 import { CommodityGate } from "./CommodityGate";
 import brandIcon from "../assets/areca-pulse-icon.svg";
 import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Search, TableProperties, X } from "lucide-react";
@@ -36,10 +36,8 @@ const advancedGroups = [
 const navigation: { to: string; label: string; kn: string; icon: typeof Activity; end?: boolean }[] = [...primaryNavigation, ...advancedGroups.flatMap((group) => group.items)];
 /** Grower pages are arecanut-only and short, so they leave out the commodity and market-search controls. */
 const GROWER_PAGES = ["/", "/sell-or-hold"];
-/** Pages whose body text is translated. Others are marked English so screen readers do not read them with a Kannada voice. */
-const TRANSLATED_PAGES = [...GROWER_PAGES];
 
-const SHELL_COPY = {
+const SHELL_COPY = defineCopy({
   en: {
     skip: "Skip to content", openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation", navigation: "Main navigation",
     moreTools: "More tools", commodity: "Commodity", search: "Search markets · Enter", searchLabel: "Search markets, press Enter to search",
@@ -54,12 +52,8 @@ const SHELL_COPY = {
     footerNote: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ · ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ", notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
     noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
   },
-} as const;
+});
 
-/** Every route the router knows. Anything else shows the not-found page. */
-function knownRoute(pathname: string): boolean {
-  return navigation.some((item) => item.to === pathname) || /^\/intelligence\/[a-z]+$/.test(pathname);
-}
 
 export function AppShell() {
   const { language } = useLanguage();
@@ -148,7 +142,7 @@ export function AppShell() {
     <div className="app-shell">
       <a className="skip-link" href="#main-content">{copy.skip}</a>
       {menuOpen && <button className="mobile-scrim" tabIndex={-1} aria-label={copy.closeNavigation} onClick={() => setMenuOpen(false)} />}
-      <aside ref={sidebar} id="main-navigation" aria-label="Market intelligence navigation" role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen || undefined} className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
+      <aside ref={sidebar} id="main-navigation" aria-label={copy.navigation} role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen || undefined} className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
         <div className="brand">
           <BrandLockup />
           <button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label={copy.closeMenu}><X size={19} /></button>
@@ -201,7 +195,7 @@ export function AppShell() {
             <span className="region-pill"><MapPin size={13} /> {copy.region}</span></>}
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className="page-content" lang={TRANSLATED_PAGES.includes(location.pathname) || !knownRoute(location.pathname) ? undefined : "en"}><CommodityGate><Outlet /></CommodityGate></main>
+        <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><Outlet /></CommodityGate></main>
         <footer className="site-footer"><span>Areca Pulse · Market Intelligence</span><span>{copy.footerNote}</span></footer>
       </div>
     </div>

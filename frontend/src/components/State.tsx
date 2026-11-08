@@ -1,12 +1,12 @@
 import { AlertCircle, Database, LoaderCircle } from "lucide-react";
 import type { ReactNode } from "react";
-import { useLanguage } from "../services/language";
+import { defineCopy, useLanguage } from "../services/language";
 
 /** Defaults follow the reader's language; pages that pass their own label decide its language themselves. */
-const STATE_COPY = {
+const STATE_COPY = defineCopy({
   en: { loading: "Loading market data", retry: "Retry" },
   kn: { loading: "ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶ ತರಲಾಗುತ್ತಿದೆ", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ" },
-} as const;
+});
 
 export function LoadingState({ label }: { label?: string }) {
   const { language } = useLanguage();

@@ -1,4 +1,4 @@
-import { formatCalendarDate } from "../../../shared/dates";
+import { formatDate, type Language } from "./formatting";
 
 export type CooperativeQuote = {
   id: string; source_key: string; branch: string; reporting_date: string; variety: string;
@@ -68,6 +68,20 @@ export function unitPublishable(row: Pick<CooperativeQuote, "unit_status" | "pri
   return row.price_unit === "INR/quintal" && (row.unit_status === "source_confirmed" || row.unit_status === "assumed");
 }
 
+const FRESHNESS_TEXT = {
+  en: { fresh: "Fresh", stale: "Stale", no_data: "No data", none: "No stored reporting dates",
+    line: (state: string, date: string, days: number) => `${state} · latest market reporting date ${date} (${days} day${days === 1 ? "" : "s"} old)` },
+  kn: { fresh: "ಹೊಸದು", stale: "ಹಳೆಯದು", no_data: "ದತ್ತಾಂಶವಿಲ್ಲ", none: "ಸಂಗ್ರಹಿತ ವರದಿ ದಿನಾಂಕಗಳಿಲ್ಲ",
+    line: (state: string, date: string, days: number) => `${state} · ಇತ್ತೀಚಿನ ಮಾರುಕಟ್ಟೆ ವರದಿ ದಿನಾಂಕ ${date} (${days} ದಿನ ಹಳೆಯದು)` },
+};
+
+/** Freshness is judged from the market reporting date, never from when the platform fetched it. */
+export function describeFreshness({ freshness }: { freshness: Freshness }, language: Language = "en"): string {
+  const text = language === "kn" ? FRESHNESS_TEXT.kn : FRESHNESS_TEXT.en;
+  if (freshness.state === "no_data" || !freshness.latest_reporting_date) return text.none;
+  return text.line(text[freshness.state], formatDate(freshness.latest_reporting_date, language), freshness.age_days ?? 0);
+}
+
 export function reviewFlags(value: string | null | undefined): string[] {
   if (!value) return [];
   try {
@@ -76,9 +90,3 @@ export function reviewFlags(value: string | null | undefined): string[] {
   } catch { return []; }
 }
 
-const FRESHNESS_LABEL: Record<Freshness["state"], string> = { fresh: "Fresh", stale: "Stale", no_data: "No data" };
-
-export function describeFreshness({ freshness }: { freshness: Freshness }): string {
-  if (freshness.state === "no_data" || !freshness.latest_reporting_date) return "No stored reporting dates";
-  return `${FRESHNESS_LABEL[freshness.state]} · latest market reporting date ${formatCalendarDate(freshness.latest_reporting_date)} (${freshness.age_days} day${freshness.age_days === 1 ? "" : "s"} old)`;
-}
