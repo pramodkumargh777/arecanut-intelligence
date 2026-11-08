@@ -483,14 +483,14 @@ th.numeric .sort-button span { order: -1; }
 .home-heading .home-latest { margin-top: 8px; font-size: 14px; color: var(--muted); }
 .home-heading .home-latest strong { color: var(--ink); font-weight: 600; }
 .variety-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.variety-chips button { min-height: 40px; padding: 6px 16px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 16px; cursor: pointer; }
+.variety-chips button { min-height: 34px; padding: 4px 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 14px; line-height: 1.3; cursor: pointer; }
 .variety-chips button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
 .variety-chips button:hover:not([aria-pressed="true"]) { border-color: var(--brand-leaf); background: var(--brand-tint); }
 .variety-chips button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* "More varieties" sits in the chip row as one more pill; it fills in when one of its varieties is chosen. */
 .variety-more { display: inline-flex; }
-.variety-more select { appearance: none; min-height: 40px; padding: 8px 36px 8px 16px; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 16px; cursor: pointer;
-  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; }
+.variety-more select { appearance: none; min-height: 34px; padding: 4px 32px 4px 14px; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 14px; line-height: 1.3; cursor: pointer;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center; }
 .variety-more select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .variety-more-active select { border-style: solid; border-color: var(--brand); background-color: var(--brand); color: #fff; font-weight: 600;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
