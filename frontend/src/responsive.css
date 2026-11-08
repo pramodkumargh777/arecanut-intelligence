@@ -20,6 +20,9 @@
 }
 
 @media (max-width: 960px) {
+  .rate-card ul.hold-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hold-summary > li:nth-last-child(2) { grid-column: auto / span 2; }
+  .hold-summary > li:last-child { grid-column: 2 / span 2; }
   .sidebar { width: 260px; transform: translateX(-100%); visibility: hidden; overflow-y: auto; }
   .sidebar-open { transform: none; visibility: visible; }
   .mobile-scrim { display: block; position: fixed; inset: 0; background: rgba(24, 24, 27, .4); border: 0; z-index: 29; }
@@ -31,6 +34,9 @@
 }
 
 @media (max-width: 700px) {
+  :root { --text-page-title: 25px; --text-section-title: 18px; --text-key-number: 26px; }
+  .rate-card ul.hold-summary { grid-template-columns: minmax(0, 1fr); }
+  .hold-summary > li, .hold-summary > li:nth-last-child(2), .hold-summary > li:last-child { grid-column: 1; }
   .page-stack > form { grid-template-columns: minmax(0, 1fr); }
   .calculator-grid { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
   .calculator-grid > * { min-width: 0; max-width: 100%; }
@@ -53,11 +59,8 @@
   .topbar-tools { order: 2; }
   .page-heading { gap: 16px; }
   .page-heading > div:first-child { flex-basis: 100%; }
-  .page-heading h1 { font-size: 24px; }
-  .page-heading p { font-size: 13px; }
   .updated-chip { width: 100%; }
   .snapshot-card { padding: 14px 16px; min-height: 0; }
-  .snapshot-value { font-size: 24px; }
   .content-grid { grid-template-columns: 1fr; }
   .panel { padding: 16px; }
   .pulse-empty { padding-block: 20px; }
@@ -120,7 +123,6 @@
 }
 
 @media (max-width: 640px) {
-  .home-heading h1, .home-hero h1 { font-size: 23px; }
   .home-date-pill { white-space: normal; }
   .home-price-section .home-section-heading { display: grid; gap: 3px; }
   .rate-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
