@@ -8,7 +8,7 @@ import brandIcon from "../assets/areca-pulse-icon.svg";
 import darkLogo from "../assets/areca-pulse-logo-dark.svg";
 import appIcon from "../assets/areca-pulse-app-icon.svg";
 import { setTheme, useTheme } from "../services/theme";
-import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, CircleHelp, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Moon, Search, Sun, TableProperties, X } from "lucide-react";
+import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, ClipboardCheck, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Moon, Search, Sun, TableProperties, X } from "lucide-react";
 
 const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
@@ -44,7 +44,7 @@ const SHELL_COPY = defineCopy({
   en: {
     skip: "Skip to content", openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation", navigation: "Main navigation",
     moreTools: "More tools", commodity: "Commodity", search: "Search markets · Enter", searchLabel: "Search markets, press Enter to search",
-    region: "Karnataka", sourceTitle: "Reviewed source records", sourceHint: "Every quote has a source and date.",
+    region: "Karnataka", tagline: "Know the market. See the opportunity.", taglineHint: "Prices, trends, and insights for your next move.",
     footerNote: "Market observations · Not financial advice", notFound: "Page not found", noSource: "No data",
     noSourceFor: (name: string) => `No integrated source for ${name}`, unknown: (code: string) => `Unknown: ${code}`, configured: "configured",
     switchDark: "Switch to dark mode", switchLight: "Switch to light mode",
@@ -52,7 +52,7 @@ const SHELL_COPY = defineCopy({
   kn: {
     skip: "ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ", openMenu: "ಮೆನು ತೆರೆಯಿರಿ", closeMenu: "ಮೆನು ಮುಚ್ಚಿ", closeNavigation: "ಮೆನು ಮುಚ್ಚಿ", navigation: "ಮುಖ್ಯ ಮೆನು",
     moreTools: "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು", commodity: "ಬೆಳೆ", search: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ · Enter", searchLabel: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ, Enter ಒತ್ತಿ",
-    region: "ಕರ್ನಾಟಕ", sourceTitle: "ಪರಿಶೀಲಿಸಿದ ಮೂಲ ದಾಖಲೆಗಳು", sourceHint: "ಪ್ರತಿ ದರಕ್ಕೂ ಮೂಲ ಮತ್ತು ದಿನಾಂಕ ಇದೆ.",
+    region: "ಕರ್ನಾಟಕ", tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.", taglineHint: "ನಿಮ್ಮ ಮುಂದಿನ ಹೆಜ್ಜೆಗೆ ದರಗಳು, ಪ್ರವೃತ್ತಿಗಳು ಮತ್ತು ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ.",
     footerNote: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ · ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ", notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
     noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
     switchDark: "ಡಾರ್ಕ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ", switchLight: "ಲೈಟ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ",
@@ -78,7 +78,7 @@ export function AppShell() {
   const showTopSearch = location.pathname !== "/prices";
   const marketParams = new URLSearchParams(location.search);
   const marketContext = new URLSearchParams();
-  const { code: commodityCode, commodity, catalog, unit } = useCommodity();
+  const { code: commodityCode, commodity, catalog } = useCommodity();
   const commodityContext = new URLSearchParams();
   if (marketParams.get("commodity")) commodityContext.set("commodity", commodityCode);
   for (const key of ["commodity", "feed", "variety"]) {
@@ -177,8 +177,7 @@ export function AppShell() {
           })()}
         </nav>
         <div className="sidebar-bottom">
-          <div className="source-note"><span className="source-note-icon"><CircleHelp size={15} /></span><span><b>{copy.sourceTitle}</b><small>{copy.sourceHint}</small></span></div>
-          <div className="sidebar-foot">{language === "kn" ? copy.region : copy.region.toUpperCase()} · {unit}</div>
+          <div className="sidebar-caption"><p>{copy.tagline}</p><small>{copy.taglineHint}</small></div>
         </div>
       </aside>
       <div className="main-column" ref={mainColumn}>
