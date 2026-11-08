@@ -74,9 +74,8 @@
   .heading-controls { width: 100%; justify-content: stretch; }
   .heading-controls > *, .source-control { flex: 1 1 100%; width: 100%; }
   /* Phones keep a 40px tap target; the select stays 16px so iOS does not zoom in when it opens. */
-  .variety-chips button, .variety-more select { min-height: 40px; }
+  .variety-chips button, .variety-more-face { min-height: 40px; }
   .variety-chips button { font-size: 15px; }
-  .variety-more select { font-size: 16px; }
   .page-content { padding: 24px 18px; }
   .page-stack { gap: 18px; }
   .topbar { position: static; padding: 12px 18px; flex-wrap: wrap; }
@@ -324,4 +323,61 @@
   .hold-fold > summary { padding: 0; min-height: 44px; }
   .hold-fold > summary h2 { margin: 0; }
   .hold-fold[open] > summary { margin-bottom: 10px; }
+}
+
+/* Phones: the two filter actions sit side by side as a matched pair. */
+@media (max-width: 640px) {
+  .filter-bar > .button-secondary, .filter-bar > .advanced-filters { flex: 1 1 calc(50% - 6px); min-width: 0; }
+  .filter-bar > .advanced-filters[open] { flex-basis: 100%; }
+  .filter-bar > .button-secondary, .filter-bar > .advanced-filters > summary { justify-content: center; width: 100%; height: 44px; min-height: 44px; padding: 0 12px;
+    font-size: 13.5px; font-weight: 600; border-radius: var(--radius-sm); text-align: center; }
+}
+
+/* ---- Phones: home page ------------------------------------------------------------------------------------------
+ * A calmer, denser layout: a plain status line under the title, a price board with one rhythm per tile, and branch
+ * rows that read left to right (place and date on the left, price on the right) instead of four stacked lines.
+ */
+@media (max-width: 640px) {
+  .home-hero { gap: 6px; }
+  .home-hero h1 { margin: 0; }
+  .home-date-pill { padding: 0; border: 0; background: none; box-shadow: none; }
+
+  .home-variety { padding: 4px 0 2px; }
+  .variety-phone select { height: 46px; border-radius: 12px; }
+
+  /* Price board. */
+  .glance { border-radius: 16px; }
+  .glance-head { padding: 14px 16px 12px; background: none; }
+  .glance-head h2 { font-size: 13.5px; font-weight: 600; color: var(--muted); }
+  .glance-tile { gap: 8px; padding: 16px; }
+  .glance-range { flex-wrap: nowrap; gap: 0 8px; font-size: 24px; white-space: nowrap; }
+  .glance-range small, .glance-branches { display: none; }
+  .glance-sub { display: block; margin: -4px 0 2px; font-size: 13px; color: var(--muted); }
+  .glance-tile-foot { justify-content: flex-start; }
+
+  /* Branch rows: two columns. */
+  .rate-card { border-radius: 16px; }
+  .rate-row { flex-direction: row; align-items: flex-start; gap: 12px; padding-block: 14px; }
+  .rate-place { flex: 1 1 auto; min-width: 0; }
+  .rate-place strong { font-size: 15.5px; }
+  /* Date on one line; age and variety label on the next, each kept whole. */
+  .rate-meta { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 3px; white-space: nowrap; }
+  .rate-date { display: contents; }
+  .rate-age::before { content: none; }
+  .rate-date-old .rate-age { color: inherit; }
+  /* Shortcuts below the rates, one per row. */
+  .home-actions { grid-template-columns: 1fr; gap: 10px; }
+  .home-actions a { padding: 14px 16px; }
+  .rate-price { flex: none; display: grid; justify-items: end; gap: 3px; text-align: right; }
+  .rate-price > strong { font-size: 20px; line-height: 1.2; }
+  .rate-sub { display: grid; justify-items: end; gap: 2px; }
+  .rate-row-top::before { left: -14px; }
+  .rate-card-head h3 { font-size: 17px; }
+  /* TUMCOS's own line already says per quintal and unit assumed. */
+  #rates-tumcos ~ .rate-card-basis { display: none; }
+}
+
+/* Desktop: page intros and panel notes use the full content width, so most read as one line instead of wrapping early. */
+@media (min-width: 961px) {
+  .page-heading p, .home-heading p, .home-hero p, .panel-heading p, .section-heading p, .methodology-note p, .quality-banner p { max-width: none; }
 }

@@ -554,7 +554,8 @@ describe("market experience", () => {
     expect(strip).toContain("₹47,000");
     expect(strip).toContain("₹48,500");
     expect(strip).toContain("/ quintal");
-    expect(strip).toContain("mostly down");
+    expect(strip).toMatch(/class="glance-trend hold-down">.*Down −/);
+    expect(strip).not.toContain("median");
     expect(strip).toContain("2 branches");
     expect(strip).toContain("1 Oct 2026");
     expect(strip).toContain("₹48,000");
