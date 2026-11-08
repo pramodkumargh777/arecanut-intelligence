@@ -30,6 +30,7 @@ const COPY = defineCopy({
     needed: "ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ", covered: "ಖರ್ಚು ಸರಿದೂಗಿದ ವರ್ಷಗಳು",
     ofYears: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count}`, notEnough: `${MIN_HOLD_YEARS} ವರ್ಷಗಳಿಗಿಂತ ಕಡಿಮೆ ದತ್ತಾಂಶ`,
     yearsTitle: "ವರ್ಷವಾರು ವಿವರ", start: "ಆರಂಭ ದರ", startMonth: "ಆರಂಭ",
+    scrollHint: "ಎಲ್ಲಾ ತಿಂಗಳ ವಿವರ ನೋಡಲು ಅಡ್ಡವಾಗಿ ಸ್ವೈಪ್ ಮಾಡಿ.",
     excluded: (months: string) => `ಬಿಟ್ಟಿರುವ ತಿಂಗಳು: ${months}. ಈ ತಿಂಗಳಲ್ಲಿ ದರ 20% ಕ್ಕಿಂತ ಹೆಚ್ಚು ಬದಲಾಗಿ ಮುಂದಿನ ತಿಂಗಳು ಮರಳಿ ಬಂದಿದೆ; ಇದು ದತ್ತಾಂಶದ ದೋಷ ಇರಬಹುದು.`,
     latestPrice: (price: string, month: string) => `ಇತ್ತೀಚಿನ ರಾಜ್ಯ ಸರಾಸರಿ: ${price}/ಕ್ವಿಂಟಾಲ್ (${month})`,
     caveat: "ಕೆಲವೇ ವರ್ಷಗಳ ದತ್ತಾಂಶ ಇದೆ. ಹಿಂದೆ ಆದದ್ದು ಈ ವರ್ಷವೂ ಆಗುತ್ತದೆ ಎಂದು ಹೇಳಲಾಗದು. ಮಾರಾಟದ ನಿರ್ಧಾರ ನಿಮ್ಮದು.",
@@ -50,6 +51,7 @@ const COPY = defineCopy({
     needed: "Rise needed to cover costs", covered: "Years that covered costs",
     ofYears: (count: number, years: number) => `${count} of ${years}`, notEnough: `Under ${MIN_HOLD_YEARS} years of data`,
     yearsTitle: "Year by year", start: "Starting price", startMonth: "From",
+    scrollHint: "Swipe sideways to see all months.",
     excluded: (months: string) => `Left out: ${months}. The price moved more than 20% that month and came straight back the next, which may be a data problem.`,
     latestPrice: (price: string, month: string) => `Latest state average: ${price}/quintal (${month})`,
     caveat: "These are only a few years of data. What happened before may not happen this year. The decision to sell is yours.",
@@ -128,7 +130,8 @@ export function SellOrHoldPage() {
 
       <section className="rate-card" aria-labelledby="hold-years">
         <header><h2 id="hold-years">{copy.yearsTitle}</h2></header>
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="hold-years"><table>
+        <p id="hold-years-scroll-hint" className="table-scroll-hint">{copy.scrollHint}</p>
+        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="hold-years" aria-describedby="hold-years-scroll-hint"><table>
           <thead><tr><th scope="col">{copy.startMonth}</th><th scope="col" className="numeric">{copy.start}</th>{HOLD_HORIZONS.map((months) => <th scope="col" className="numeric" key={months}>{copy.months(months)}</th>)}</tr></thead>
           <tbody>{history.years.map((year) => <tr key={year.start_month}>
             <td>{monthText(year.start_month, language)}</td><td className="numeric">{rupees(year.start_price)}</td>

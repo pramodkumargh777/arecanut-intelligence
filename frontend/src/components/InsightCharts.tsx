@@ -1,4 +1,5 @@
 import ReactEChartsCore from "echarts-for-react/lib/core";
+import { useResponsiveChart } from "./useResponsiveChart";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
@@ -34,6 +35,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
   valueFormat?: "inr" | "percent" | "index"; description: string; height?: number; referenceLine?: { value: number; label: string }; regions?: ChartRegion[]; endLabel?: boolean;
 }) {
   const t = useCopy(CHART);
+  const onChartReady = useResponsiveChart();
   const { AXIS_LABEL, AXIS_LINE, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, SERIES_COLORS, TOOLTIP, tooltipHtml, regionShade } = useChartPalette();
   const ISOLATED = t.isolated;
   const format = (value: number | null | undefined) => value == null ? t.notReported : valueFormat === "inr" ? inr(value) : valueFormat === "percent" ? `${value.toFixed(1)}%` : value.toFixed(1);
@@ -86,7 +88,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
       ...(band ? [{ name: band.name, type: "line", data: [], color: INK[300], lineStyle: { color: INK[300], width: 6 }, showSymbol: false }] : []),
     ],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
 
 /** Vertical category bars (histograms, seasonal indices, error comparisons). Null bars are omitted, not zero-filled. */
@@ -95,6 +97,7 @@ export function CategoryBarChart({ categories, values, name, color: givenColor, 
   description: string; height?: number; referenceLine?: { value: number; label?: string }; horizontal?: boolean; tooltipLabels?: string[];
 }) {
   const t = useCopy(CHART);
+  const onChartReady = useResponsiveChart();
   const { AXIS_LABEL, AXIS_LINE, BRAND, GRID_LINE, INK, TOOLTIP, tooltipHtml, shade } = useChartPalette();
   const color = givenColor ?? BRAND;
   const format = (value: number | null | undefined) => value == null ? t.notAvailable : valueFormat === "inr" ? inr(value)
@@ -113,7 +116,7 @@ export function CategoryBarChart({ categories, values, name, color: givenColor, 
       ...(referenceLine ? { markLine: { silent: true, symbol: "none", animation: false, label: labelled ? { formatter: referenceLine.label, color: INK[500], fontSize: 11, position: horizontal ? "start" : "end" } : { show: false }, lineStyle: { color: INK[400], width: 1, type: "solid" }, data: [horizontal ? { xAxis: referenceLine.value } : { yAxis: referenceLine.value }] } } : {}),
     }],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
 
 export type RangeRow = { label: string; detail?: string; minimum: number | null; central: number; maximum: number | null };
@@ -129,6 +132,7 @@ function niceBounds(lowest: number, highest: number) {
 /** Horizontal ranked chart: a min–max bar per row with the central value (modal or reported average) as a labelled marker. */
 export function RankedRangeChart({ rows, centralLabel, description }: { rows: RangeRow[]; centralLabel: string; description: string }) {
   const t = useCopy(CHART);
+  const onChartReady = useResponsiveChart();
   const { AXIS_LABEL, AXIS_LINE, BRAND, GRID_LINE, INK, TOOLTIP, tooltipHtml, shade } = useChartPalette();
   const labels = rows.map((row) => row.label);
   const hasRange = rows.map((row) => row.minimum !== null && row.maximum !== null && row.maximum >= row.minimum);
@@ -155,5 +159,5 @@ export function RankedRangeChart({ rows, centralLabel, description }: { rows: Ra
         label: { show: rows.length <= 16, position: "top", distance: 4, color: INK[900], fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, formatter: ({ value }: { value: number }) => inr(value) } },
     ],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate style={{ height: Math.max(200, rows.length * 46 + 72), width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: Math.max(200, rows.length * 46 + 72), width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
