@@ -71,7 +71,10 @@
   .example-chip { max-width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; text-align: left; }
   .heading-controls { width: 100%; justify-content: stretch; }
   .heading-controls > *, .source-control { flex: 1 1 100%; width: 100%; }
-  .variety-chips button, .variety-more select { min-height: 44px; }
+  /* Phones keep a 40px tap target; the select stays 16px so iOS does not zoom in when it opens. */
+  .variety-chips button, .variety-more select { min-height: 40px; }
+  .variety-chips button { font-size: 15px; }
+  .variety-more select { font-size: 16px; }
   .page-content { padding: 24px 18px; }
   .page-stack { gap: 18px; }
   .topbar { position: static; padding: 12px 18px; flex-wrap: wrap; }
