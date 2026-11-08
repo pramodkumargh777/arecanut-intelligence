@@ -126,7 +126,7 @@ export function AssistantPage() {
 
   const chat = status.data?.chat;
   return <div className="page-stack">
-    <section className="page-heading"><div><h1>{t.title}</h1><p>{t.intro}</p></div></section>
+    <section className="page-heading"><div><h1>{t.title}</h1><p className="page-intro">{t.intro}</p></div></section>
 
     {status.error ? <div className="data-disclosure">{t.statusUnavailable(status.error.message)}</div>
       : status.data && <AboutData title={t.howMade}><p>{t.howMadeText}</p><p>

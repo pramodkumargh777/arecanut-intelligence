@@ -350,6 +350,21 @@ describe("market experience", () => {
     expect(matchSuggestions(Array.from({ length: 20 }, (_, i) => marketSuggestion("official", `Sa ${i}`, { marketId: String(i) })), "sa")).toHaveLength(8);
   });
 
+  it("links every page's footer to WhatsApp for reporting a wrong price, with the page address in the message", () => {
+    const html = render(<AppShell />);
+    expect(html).toContain("Spotted a wrong price or a missing market?");
+    expect(html).toContain('href="https://wa.me/918660862841?text=');
+    expect(html).toContain(encodeURIComponent("Page: /"));
+  });
+
+  it("gives phones a variety dropdown that starts on the chosen variety", () => {
+    const html = render(<HomePage />);
+    const phone = html.slice(html.indexOf('class="variety-phone"'));
+    expect(phone).toContain('aria-labelledby="home-variety-label"');
+    expect(phone).toMatch(/<option value="rashi" selected="">Rashi<\/option>/);
+    expect(phone).toContain('label="Everyday varieties"');
+  });
+
   it("offers a menu collapse button that starts expanded", () => {
     const html = render(<AppShell />);
     expect(html).toContain('class="app-shell"');

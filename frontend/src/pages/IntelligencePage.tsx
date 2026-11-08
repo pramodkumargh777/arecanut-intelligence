@@ -151,7 +151,7 @@ export function IntelligencePage() {
   const columns = t.columns[columnType];
   const numericFrom = columnType === "production" || columnType === "trade" ? 3 : columnType === "weather" ? 2 : columns.length;
   return <div className="page-stack">
-    <section className="page-heading"><div><h1>{title}</h1><p>{t.intro}</p></div></section>
+    <section className="page-heading"><div><h1>{title}</h1><p className="page-intro">{t.intro}</p></div></section>
     <IntelligenceNavigation current={domain} />
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
       <AboutData><p>{t.coverage[coverageKey]}</p></AboutData>
@@ -166,7 +166,7 @@ export function IntelligencePage() {
         <label className="filter-control"><span>{domain === "trade" ? t.partner : t.geography}</span><select value={geography} onChange={(event) => setGeography(event.target.value)}><option value="">{t.allAvailable}</option>{[...new Set([...places, ...(domain === "production" ? ["Karnataka"] : [])])].sort().map((value) => <option key={value}>{value}</option>)}</select></label>
         <button className="button-secondary" onClick={() => { setPeriod(""); setGeography(defaultGeography(domain)); }}>{c.resetFilters}</button>
       </section>}
-      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.records}</h2><p>{t.displayed(filtered.length)} · {domain === "production" || domain === "trade" ? t.yearLabels : t.independent}</p></div><button className="button-secondary" disabled={!filtered.length} onClick={exportRows}>{t.exportDomain(t.tabs[domain as Domain] ?? domain)}</button></div>
+      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.records}</h2><p className="phone-hide">{t.displayed(filtered.length)} · {domain === "production" || domain === "trade" ? t.yearLabels : t.independent}</p></div><button className="button-secondary" disabled={!filtered.length} onClick={exportRows}>{t.exportDomain(t.tabs[domain as Domain] ?? domain)}</button></div>
         {!filtered.length ? <EmptyState title={rows.length ? t.noMatch : t.noCaptured}>{rows.length ? t.resetHint : t.refreshHint}</EmptyState> :
           <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recordsAria(title)}><table className={columnType === "bulletin" ? "bulletin-table" : undefined}>
             {/* The weather caption says what the numbers are; elsewhere it would only repeat the page title, so only screen readers get it. */}
