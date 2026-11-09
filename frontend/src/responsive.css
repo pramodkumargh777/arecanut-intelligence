@@ -197,6 +197,8 @@
   .home-hero > * { min-width: 0; max-width: 100%; }
   .home-date-pill { max-width: 100%; padding: 6px 9px; gap: 5px; font-size: 12px !important; white-space: nowrap; overflow: hidden; }
   .home-date-pill > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* The import figure sits under its heading, left-aligned, rather than floating at the right edge. */
+  .imports-figure { justify-items: start; text-align: left; }
   /* One dropdown beside its label instead of the picture pills, which would take two rows. */
   .home-variety { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; }
   .variety-cards { display: none; }

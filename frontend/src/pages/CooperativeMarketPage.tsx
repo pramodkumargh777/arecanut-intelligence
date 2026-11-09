@@ -10,10 +10,11 @@ import { SourceLabel } from "../components/Scorecard";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import type { CooperativeCommodity, CooperativeData, CooperativeQuote, CooperativeSource } from "../services/cooperative";
 import { calendarTodayIST } from "../../../shared/dates";
-import { capabilityStatus, marketFeeds, type MarketFeed } from "../../../shared/commodities";
+import { capabilityStatus, DEFAULT_COMMODITY, marketFeeds, type MarketFeed } from "../../../shared/commodities";
 import { commodityName, useCommodity } from "../services/commodity";
 import { IntelligenceScorecard } from "../components/Scorecard";
 import { AboutData } from "../components/AboutData";
+import { ImportsPanel } from "../components/ImportsPanel";
 import { SourceControl, SourceSlot } from "../components/SourceSlot";
 import { pageParam, readPage, readPreset, readSort, sortParams, withoutFilters, withParams } from "../services/priceFilters";
 import { defineCopy, useCopy, useFormat, useLanguage } from "../services/language";
@@ -238,6 +239,8 @@ export function MarketDataPage({ official }: { official: ReactNode }) {
   return <SourceControl.Provider value={sourceSelect}>
     {!supported ? <div className="page-stack"><div className="heading-controls"><SourceSlot /></div><ErrorState error={new Error(t.unsupported(name, feeds.map((value) => t.feeds[value].split(" · ")[0]).join(", ")))} /></div>
       : feed === "official" ? official : <CooperativeMarketPage key={`${location.pathname}:${feed}:${commodity?.code}`} source={feed === "tss" || feed === "tumcos" ? feed : "mamcos"} />}
+    {/* Price trends carry the one supply signal published for arecanut: yearly imports. */}
+    {supported && location.pathname === "/analytics" && code === DEFAULT_COMMODITY && <div className="page-stack page-stack-follow"><ImportsPanel /></div>}
   </SourceControl.Provider>;
 }
 
