@@ -6,6 +6,7 @@ import type { Calculation, CalculationInputs, PriceReference } from "../services
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { AboutData } from "../components/AboutData";
+import { useReviewerAccess } from "../components/useReviewerAccess";
 
 type NumericKey = Exclude<keyof CalculationInputs, "name" | "price">;
 type Section = "net" | "farm" | "hold";
@@ -132,7 +133,8 @@ export function DecisionToolsPage() {
   const format = useFormat();
   const [values, setValues] = useState(emptyValues), [name, setName] = useState("");
   const [selection, setSelection] = useState(""), [manualPrice, setManualPrice] = useState("");
-  const [token, setToken] = useState(""), [unlocked, setUnlocked] = useState(false);
+  const access = useReviewerAccess(["saved-calculations"]);
+  const { token, unlocked } = access;
   const [result, setResult] = useState<Calculation | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const client = useQueryClient();
@@ -229,8 +231,8 @@ export function DecisionToolsPage() {
       </div>
     </section>}
     <section className="panel"><div className="panel-heading"><div><h2>{t.savedTitle}</h2><p>{t.savedHint}</p></div></div><div className="monthly-details">
-      {!unlocked ? <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); setUnlocked(true); }}><label className="filter-control"><span>{t.storageToken}</span><input type="password" autoComplete="off" value={token} required onChange={(event) => setToken(event.target.value)} /></label><button className="button-secondary">{t.unlock}</button></form> : <>
-        <div className="monthly-refresh"><button className="button-secondary" disabled={busy} onClick={() => { client.removeQueries({ queryKey: ["saved-calculations"] }); setToken(""); setUnlocked(false); setResult(null); setValues(emptyValues()); setName(""); setSelection(""); setManualPrice(""); setError(null); save.reset(); }}>{t.lock}</button>
+      {!unlocked ? <form className="monthly-refresh" onSubmit={access.unlock}><label className="filter-control"><span>{t.storageToken}</span><input type="password" autoComplete="off" value={access.draft} required onChange={(event) => access.setDraft(event.target.value)} /></label><button className="button-secondary" disabled={!access.canUnlock}>{t.unlock}</button></form> : <>
+        <div className="monthly-refresh"><button className="button-secondary" disabled={busy} onClick={() => { access.lock(); setResult(null); setValues(emptyValues()); setName(""); setSelection(""); setManualPrice(""); setError(null); save.reset(); }}>{t.lock}</button>
           <button className="button-primary" disabled={busy || !result || Boolean(result.id) || !saved.isSuccess} onClick={() => { if (result) { setError(null); save.mutate(result.inputs); } }}>{t.saveScenario}</button></div>
         {saved.isLoading ? <LoadingState /> : saved.error ? <ErrorState error={saved.error} onRetry={() => void saved.refetch()} /> : !saved.data?.data.length ? <EmptyState title={t.noSaved}>{t.noSavedHint}</EmptyState> : <ul>{saved.data.data.map((value) => <li key={value.id}><button className="text-button" disabled={busy} onClick={() => load(value)}>{value.inputs.name} · {value.created_at ? format.timestamp(value.created_at) : ""}</button></li>)}</ul>}
       </>}

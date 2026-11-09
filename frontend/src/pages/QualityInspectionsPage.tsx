@@ -5,6 +5,7 @@ import type { QualityInput } from "../services/modules";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { IntelligenceNavigation, exportModule } from "./IntelligencePage";
 import { AboutData } from "../components/AboutData";
+import { useReviewerAccess } from "../components/useReviewerAccess";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 
 const TEXT_KEYS = ["lot_id", "variety", "location", "sampled_on", "reported_on", "laboratory", "report_reference", "evidence_url", "notes"] as const;
@@ -63,7 +64,9 @@ export function QualityInspectionsPage() {
   const format = useFormat();
   const day = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? format.date(value) : value;
   const client = useQueryClient();
-  const [token, setToken] = useState(""), [unlocked, setUnlocked] = useState(false), [values, setValues] = useState(empty);
+  const access = useReviewerAccess(["inspection-queue"]);
+  const { token, unlocked } = access;
+  const [values, setValues] = useState(empty);
   const [moisture, setMoisture] = useState(""), [defects, setDefects] = useState(""), [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [error, setError] = useState<Error | null>(null);
   const publicQuery = useQuery({ queryKey: ["inspections"], queryFn: api.qualityInspections });
@@ -86,8 +89,8 @@ export function QualityInspectionsPage() {
         : <div className="table-scroll" tabIndex={0} role="region" aria-label={t.tableAria}><table><caption>{t.tableCaption}</caption><thead><tr><th>{t.lotVariety}</th><th>{t.dates}</th><th>{t.moisture}</th><th>{t.defects}</th><th>{t.evidence}</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>{row.lot_id} · {row.variety}<small className="quote-fetch">{row.location}</small></td><td>{day(row.sampled_on)}<small className="quote-fetch">{t.reportedOn(day(row.reported_on))}</small></td><td className="numeric">{row.moisture_percent ?? t.notMeasured}</td><td className="numeric">{row.defects_percent ?? t.notMeasured}</td><td><a href={row.evidence_url} target="_blank" rel="noreferrer">{row.laboratory} · {row.report_reference}</a><small className="quote-fetch">{row.notes}</small><small className="quote-fetch">{t.reviewNote(row.review_note ?? "", row.reviewed_at ? format.timestamp(row.reviewed_at) : "")}</small></td></tr>)}</tbody></table></div>}
     </section>}
     <section className="panel"><div className="panel-heading"><div><h2>{t.workflow}</h2><p>{t.workflowHint}</p></div></div><div className="monthly-details">
-      {!unlocked ? <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); setUnlocked(true); }}><label className="filter-control"><span>{t.token}</span><input type="password" autoComplete="off" value={token} onChange={(event) => setToken(event.target.value)} required /></label><button className="button-secondary">{t.unlock}</button></form> : <>
-        <button className="button-secondary" disabled={busy} onClick={() => { setUnlocked(false); setToken(""); setValues(empty()); setMoisture(""); setDefects(""); setReviewNotes({}); setError(null); submit.reset(); review.reset(); client.removeQueries({ queryKey: ["inspection-queue"] }); }}>{t.lock}</button>
+      {!unlocked ? <form className="monthly-refresh" onSubmit={access.unlock}><label className="filter-control"><span>{t.token}</span><input type="password" autoComplete="off" value={access.draft} onChange={(event) => access.setDraft(event.target.value)} required /></label><button className="button-secondary" disabled={!access.canUnlock}>{t.unlock}</button></form> : <>
+        <button className="button-secondary" disabled={busy} onClick={() => { access.lock(); setValues(empty()); setMoisture(""); setDefects(""); setReviewNotes({}); setError(null); submit.reset(); review.reset(); }}>{t.lock}</button>
         {queue.isPending ? <LoadingState /> : queue.error ? <ErrorState error={queue.error} onRetry={() => void queue.refetch()} /> : <>
           <form className="page-stack" onSubmit={(event) => { event.preventDefault(); setError(null); const input = { ...values, moisture_percent: moisture === "" ? null : Number(moisture), defects_percent: defects === "" ? null : Number(defects) }; if (input.moisture_percent === null && input.defects_percent === null) { setError(new Error(t.atLeastOne)); return; } submit.mutate(input); }}>
             <div className="calculator-grid">{TEXT_KEYS.map((key) => <label key={key} className="filter-control"><span>{t.fields[key]}</span><input required disabled={busy} type={key.endsWith("_on") ? "date" : key === "evidence_url" ? "url" : "text"} maxLength={key === "notes" ? 2000 : key === "evidence_url" ? 1000 : 160} value={values[key]} onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
