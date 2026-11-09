@@ -29,7 +29,7 @@ const advancedGroups = [
     { to: "/supply", label: "Supply & weather", kn: "ಉತ್ಪಾದನೆ ಮತ್ತು ಹವಾಮಾನ", icon: MapPin },
   ] },
   { label: "Forecasting", kn: "ಮುನ್ಸೂಚನೆ", items: [
-    { to: "/forecasts", label: "Experimental baselines", kn: "ಪ್ರಾಯೋಗಿಕ ಅಂದಾಜು", icon: FlaskConical, end: true },
+    { to: "/forecasts", label: "Price outlook", kn: "ದರ ಮುನ್ನೋಟ", icon: FlaskConical, end: true },
     { to: "/forecasts/evaluation", label: "Forecast evaluation", kn: "ಅಂದಾಜಿನ ಪರಿಶೀಲನೆ", icon: Gauge },
   ] },
   { label: "Workspace", kn: "ಕಾರ್ಯಕ್ಷೇತ್ರ", items: [

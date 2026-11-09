@@ -14,7 +14,7 @@ from typing import Any, Protocol
 import numpy as np
 import pandas as pd
 
-from .config import CHRONOS_MODEL_ID, CHRONOS_REVISION, ExperimentConfig
+from .config import CHRONOS_MODEL_ID, CHRONOS_REVISION, ENSEMBLE_MEMBERS, TIMESFM_MODEL_ID, TIMESFM_REVISION, ExperimentConfig
 from .features import log_panel, supervised
 
 PREDICTION_COLUMNS = ["series_id", "horizon", "median", "lower", "upper"]
@@ -77,11 +77,15 @@ class StatsForecastModels:
 
 @dataclass
 class LightGBMDirect:
-    """Global direct multi-horizon quantile regression on log returns, pooled over the dataset's series."""
+    """Global direct multi-horizon quantile regression on log returns, pooled over the dataset's series.
+
+    With `covariates` (lightgbm_x) each row also carries the outside data published by its origin month.
+    """
 
     config: ExperimentConfig
     name: str = "lightgbm"
     min_history: int = 13
+    covariates: pd.DataFrame | None = None
     feature_columns_: dict[int, list[str]] = field(default_factory=dict)
 
     def predict(self, view: dict[str, pd.Series], horizons: tuple[int, ...], level: int) -> pd.DataFrame:
@@ -95,7 +99,7 @@ class LightGBMDirect:
             train_x, train_y, final_x = [], [], {}
             for series_id, history in view.items():
                 x, y, last = supervised(history, horizon, series_id=series_id, panel=panel,
-                                        season_length=self.config.season_length)
+                                        season_length=self.config.season_length, covariates=self.covariates)
                 keep = x.index.isin(history.index[self.min_history - 1:])
                 train_x.append(x[keep])
                 train_y.append(y[keep])
@@ -125,6 +129,7 @@ class Chronos2ZeroShot:
 
     name: str = "chronos2"
     context_length: int | None = None
+    covariates: pd.DataFrame | None = None
     _pipeline: Any = None
 
     def _load(self):
@@ -145,7 +150,13 @@ class Chronos2ZeroShot:
         tail = (100 - level) / 200
         quantiles = [round(tail, 4), 0.5, round(1 - tail, 4)]
         ids = list(view)
-        inputs = [view[s].to_numpy(dtype=np.float32) for s in ids]
+        inputs: list[Any] = [view[s].to_numpy(dtype=np.float32) for s in ids]
+        if self.covariates is not None:
+            # chronos2_x: the outside data as past covariates, aligned to each history month. Gaps are carried
+            # forward (then zero) because the model needs complete covariate rows.
+            inputs = [{"target": values, "past_covariates": {
+                column: self.covariates[column].reindex(view[s].index).ffill().fillna(0.0).to_numpy(dtype=np.float32)
+                for column in self.covariates.columns}} for s, values in zip(ids, inputs)]
         quantile_out, _ = pipeline.predict_quantiles(inputs, prediction_length=max(horizons), quantile_levels=quantiles)
         rows = []
         for series_id, tensor in zip(ids, quantile_out):
@@ -154,6 +165,53 @@ class Chronos2ZeroShot:
                 low, mid, high = values[horizon - 1]
                 rows.append({"series_id": series_id, "horizon": horizon, "median": mid, "lower": low, "upper": high})
         return pd.DataFrame(rows, columns=PREDICTION_COLUMNS)
+
+
+@dataclass
+class TimesFM25ZeroShot:
+    """Experimental pretrained benchmark: Google TimesFM 2.5 (200M). CPU only, pinned checkpoint, no fine-tuning."""
+
+    name: str = "timesfm25"
+    _model: Any = None
+
+    def _load(self, horizon: int):
+        if self._model is None:
+            try:
+                import timesfm
+                import torch
+            except ImportError as error:  # optional dependency
+                raise RuntimeError("TimesFM is optional; install timesfm[torch]==3.0.2") from error
+            torch.manual_seed(0)
+            model = timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+                os.environ.get("ANI_TIMESFM_MODEL", TIMESFM_MODEL_ID), revision=TIMESFM_REVISION, torch_compile=False)
+            model.compile(timesfm.ForecastConfig(max_context=512, max_horizon=max(horizon, 16), normalize_inputs=True,
+                                                 use_continuous_quantile_head=True, fix_quantile_crossing=True,
+                                                 infer_is_positive=True))
+            self._model = model
+        return self._model
+
+    def predict(self, view: dict[str, pd.Series], horizons: tuple[int, ...], level: int) -> pd.DataFrame:
+        if level != 80:
+            raise ValueError("TimesFM's quantile head gives deciles; only the 80% interval (q10–q90) is supported.")
+        model = self._load(max(horizons))
+        ids = list(view)
+        _, quantiles = model.forecast(horizon=max(horizons), inputs=[view[s].to_numpy(dtype=np.float32) for s in ids])
+        rows = []
+        for series_id, q in zip(ids, np.asarray(quantiles, dtype=float)):
+            for horizon in horizons:
+                # Columns are the mean, then the 10th..90th percentiles.
+                low, mid, high = np.sort([q[horizon - 1, 1], q[horizon - 1, 5], q[horizon - 1, 9]])
+                rows.append({"series_id": series_id, "horizon": horizon, "median": mid, "lower": low, "upper": high})
+        return pd.DataFrame(rows, columns=PREDICTION_COLUMNS)
+
+
+def median_ensemble(members: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Equal-weight median of the members' medians and of their bounds, per series and horizon."""
+    stacked = pd.concat(members.values(), ignore_index=True)
+    combined = stacked.groupby(["series_id", "horizon"], as_index=False)[["median", "lower", "upper"]].median()
+    combined["lower"] = np.minimum(combined["lower"], combined["median"])
+    combined["upper"] = np.maximum(combined["upper"], combined["median"])
+    return combined[PREDICTION_COLUMNS]
 
 
 def run_models(view: dict[str, pd.Series], config: ExperimentConfig, horizons: tuple[int, ...],
@@ -169,16 +227,31 @@ def run_models(view: dict[str, pd.Series], config: ExperimentConfig, horizons: t
         except Exception as error:  # noqa: BLE001 - recorded per model and origin
             errors.update({name: f"{type(error).__name__}: {error}" for name in stats_names})
     for name in models:
-        if name in stats_names:
+        if name in stats_names or name == "ensemble":
             continue
         try:
+            if name in ("lightgbm_x", "chronos2_x") and cache.get("covariates") is None:
+                raise ValueError("No covariates were loaded for this run.")
             if name == "lightgbm":
                 model = LightGBMDirect(config)
+            elif name == "lightgbm_x":
+                model = LightGBMDirect(config, name="lightgbm_x", covariates=cache["covariates"])
             elif name == "chronos2":
                 model = cache.setdefault("chronos2", Chronos2ZeroShot())
+            elif name == "chronos2_x":
+                shared = cache.setdefault("chronos2", Chronos2ZeroShot())
+                model = Chronos2ZeroShot(name="chronos2_x", covariates=cache["covariates"], _pipeline=shared._load())
+            elif name == "timesfm25":
+                model = cache.setdefault("timesfm25", TimesFM25ZeroShot())
             else:
                 raise ValueError(f"Unknown model {name}")
             results[name] = model.predict(view, horizons, config.interval_level)
         except Exception as error:  # noqa: BLE001
             errors[name] = f"{type(error).__name__}: {error}"
+    if "ensemble" in models:
+        missing = [m for m in ENSEMBLE_MEMBERS if m not in results]
+        if missing:
+            errors["ensemble"] = f"MissingMembers: {', '.join(missing)}"
+        else:
+            results["ensemble"] = median_ensemble({m: results[m] for m in ENSEMBLE_MEMBERS})
     return results, errors

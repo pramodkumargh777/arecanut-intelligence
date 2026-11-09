@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
@@ -10,16 +9,19 @@ import { LazyBarChart, LazyLineChart } from "../components/LazyCharts";
 import { SourceLabel, StatusBadge } from "../components/Scorecard";
 import { useChartPalette } from "../components/chartPalette";
 import { AboutData } from "../components/AboutData";
+import { PriceOutlook } from "../components/PriceOutlook";
 
 const percentOf = (value: number) => `${Math.round(value)}%`;
 
 const COPY = defineCopy({
   en: {
     unavailable: "Unavailable",
-    title: "Experimental monthly forecasting baselines", intro: "One reporting month ahead, for an exact Karnataka variety. Reference calculations, not proven predictive models.",
+    title: "Monthly price outlook", intro: "Next month's likely price range for each variety, from the official Karnataka monthly average.",
+    technical: "Technical details", technicalHint: "Evaluation blocks, checks, holdout data and exports",
+    reviewer: "For reviewers", reviewerHint: "Re-run the evaluation for this variety",
     compareLink: "Compare with the forecasting engine experiments",
     about: "The last-value baseline simply repeats the latest observed monthly price; seasonal naive repeats the same month last year. Retrospective evaluation does not establish prospective predictive accuracy or a trading edge. Current revised history, reused holdouts, small calibration samples and serial dependence limit the evaluation. These references do not incorporate weather, production or news.",
-    variety: "Exact forecast variety",
+    variety: "Variety",
     status: { not_evaluated: "not evaluated", stale: "stale", published: "published", withheld: "withheld" } as Record<string, string>,
     statusLine: "Status:", scope: "This forecasts an official monthly state-level weighted price, not a local daily quote or an executable sale price. It does not use weather, production, news or TSS data as predictive features.",
     reasons: {
@@ -75,10 +77,12 @@ const COPY = defineCopy({
   },
   kn: {
     unavailable: "ಲಭ್ಯವಿಲ್ಲ",
-    title: "ಪ್ರಾಯೋಗಿಕ ತಿಂಗಳ ಮುನ್ಸೂಚನೆಯ ಮೂಲ ಅಂದಾಜುಗಳು", intro: "ಕರ್ನಾಟಕದ ನಿಖರ ತಳಿಗೆ ಒಂದು ವರದಿ ತಿಂಗಳು ಮುಂದಕ್ಕೆ. ಉಲ್ಲೇಖದ ಲೆಕ್ಕಾಚಾರಗಳು, ಸಾಬೀತಾದ ಮುನ್ಸೂಚನಾ ಮಾದರಿಗಳಲ್ಲ.",
+    title: "ತಿಂಗಳ ದರ ಮುನ್ನೋಟ", intro: "ಅಧಿಕೃತ ಕರ್ನಾಟಕ ತಿಂಗಳ ಸರಾಸರಿಯಿಂದ, ಪ್ರತಿ ತಳಿಯ ಮುಂದಿನ ತಿಂಗಳ ಸಾಧ್ಯ ದರ ಶ್ರೇಣಿ.",
+    technical: "ತಾಂತ್ರಿಕ ವಿವರಗಳು", technicalHint: "ಮೌಲ್ಯಮಾಪನ ಭಾಗಗಳು, ಪರಿಶೀಲನೆಗಳು, ಪರೀಕ್ಷಾ ದತ್ತಾಂಶ ಮತ್ತು ರಫ್ತು",
+    reviewer: "ಪರಿಶೀಲಕರಿಗೆ", reviewerHint: "ಈ ತಳಿಗೆ ಮೌಲ್ಯಮಾಪನವನ್ನು ಮರುನಡೆಸಿ",
     compareLink: "ಮುನ್ಸೂಚನಾ ವ್ಯವಸ್ಥೆಯ ಪ್ರಯೋಗಗಳೊಂದಿಗೆ ಹೋಲಿಸಿ",
     about: "‘ಕೊನೆಯ ಮೌಲ್ಯ’ ವಿಧಾನವು ಇತ್ತೀಚಿನ ತಿಂಗಳ ದರವನ್ನೇ ಪುನರಾವರ್ತಿಸುತ್ತದೆ; ‘ಋತುಮಾನ ಸರಳ’ ವಿಧಾನವು ಕಳೆದ ವರ್ಷದ ಅದೇ ತಿಂಗಳನ್ನು ಪುನರಾವರ್ತಿಸುತ್ತದೆ. ಹಿಂದಿನ ದತ್ತಾಂಶದ ಪರೀಕ್ಷೆಯು ಮುಂದಿನ ನಿಖರತೆ ಅಥವಾ ವ್ಯಾಪಾರ ಲಾಭವನ್ನು ಸಾಬೀತುಪಡಿಸುವುದಿಲ್ಲ. ತಿದ್ದಿದ ಇತಿಹಾಸ, ಮರುಬಳಕೆಯಾದ ಪರೀಕ್ಷಾ ಅವಧಿ, ಸಣ್ಣ ಮಾದರಿ ಮತ್ತು ಸರಣಿ ಅವಲಂಬನೆ ಮೌಲ್ಯಮಾಪನವನ್ನು ಮಿತಿಗೊಳಿಸುತ್ತವೆ. ಹವಾಮಾನ, ಉತ್ಪಾದನೆ ಅಥವಾ ಸುದ್ದಿಯನ್ನು ಬಳಸುವುದಿಲ್ಲ.",
-    variety: "ಮುನ್ಸೂಚನೆಯ ನಿಖರ ತಳಿ",
+    variety: "ತಳಿ",
     status: { not_evaluated: "ಮೌಲ್ಯಮಾಪನವಾಗಿಲ್ಲ", stale: "ಹಳೆಯದು", published: "ಪ್ರಕಟಿಸಲಾಗಿದೆ", withheld: "ತಡೆಹಿಡಿಯಲಾಗಿದೆ" },
     statusLine: "ಸ್ಥಿತಿ:", scope: "ಇದು ಅಧಿಕೃತ ತಿಂಗಳ ರಾಜ್ಯ ಮಟ್ಟದ ತೂಕದ ಸರಾಸರಿ ದರದ ಮುನ್ಸೂಚನೆ, ಸ್ಥಳೀಯ ದೈನಂದಿನ ದರ ಅಥವಾ ಖಚಿತ ಮಾರಾಟ ದರವಲ್ಲ. ಹವಾಮಾನ, ಉತ್ಪಾದನೆ, ಸುದ್ದಿ ಅಥವಾ TSS ದತ್ತಾಂಶವನ್ನು ಬಳಸುವುದಿಲ್ಲ.",
     reasons: {
@@ -159,14 +163,18 @@ export function ForecastsPage() {
   const data = query.data, snapshot = data?.snapshot, results = snapshot?.results, evaluation = results?.evaluation;
   const label = evaluation ? t.labels?.[evaluation.selected_model] ?? evaluation.label : undefined;
   return <div className="page-stack">
-    <section className="page-heading"><div><h1>{t.title}</h1><p>{t.intro} <Link to="/forecasts/evaluation">{t.compareLink}</Link>.</p></div></section>
-    <AboutData><p className="phone-only">{t.scope}</p><p>{t.about}</p></AboutData>
-    <section className="filter-bar"><label className="filter-control"><span>{t.variety}</span><select value={variety} disabled={evaluate.isPending} onChange={(event) => { setVariety(event.target.value); evaluate.reset(); }}><option>Rashi</option>{prices.data?.data.filter((row) => row.variety_name !== "Rashi").map((row) => <option key={row.variety_name} lang="en">{row.variety_name}</option>)}</select></label></section>
+    <section className="page-heading"><div><h1>{t.title}</h1><p>{t.intro}</p></div></section>
+    <div className="fx-toolbar"><label className="fx-select"><span>{t.variety}</span><select value={variety} disabled={evaluate.isPending} onChange={(event) => { setVariety(event.target.value); evaluate.reset(); }}><option>Rashi</option>{prices.data?.data.filter((row) => row.variety_name !== "Rashi").map((row) => <option key={row.variety_name} lang="en">{row.variety_name}</option>)}</select></label></div>
     {prices.error && <ErrorState error={prices.error} />}
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
-      <div className="data-disclosure">{t.statusLine} <strong>{t.status[data.status] ?? data.status.replace(/_/g, " ")}</strong>.<span className="phone-hide"> {t.scope}</span></div>
       {data.stale && <div role="alert" className="data-disclosure">{t.staleSnapshot(reasonText(data.stale_reasons))}</div>}
       {!snapshot ? <EmptyState title={t.noSnapshot}>{t.noSnapshotHint}</EmptyState> : <>
+        {data.forecast || data.outlook ? <PriceOutlook variety={variety} outlook={data.outlook ?? null} forecast={data.forecast} evaluation={evaluation ?? null} prices={snapshot.inputs.prices} historyCount={results?.history.count ?? 0} />
+          : <EmptyState title={t.forecastUnavailable}>{(results?.reasons.length ? reasonText(results.reasons) : "") || (data.stale ? t.sourceChanged : t.requirementsNotMet)}</EmptyState>}
+        {/* The full evaluation record stays available, folded, for readers who want the method and the numbers. */}
+        <details className="fx-technical"><summary>{t.technical}<small>{t.technicalHint}</small></summary><div className="page-stack">
+        <div className="data-disclosure">{t.statusLine} <strong>{t.status[data.status] ?? data.status.replace(/_/g, " ")}</strong>. {t.scope}</div>
+        <AboutData><p>{t.about}</p></AboutData>
         <section className="snapshot-grid">
           <article className="snapshot-card"><div className="card-kicker">{t.historyUsed}</div><div className="snapshot-value">{t.months(results?.history.count ?? 0)}</div><p>{results?.history.from ? `${month(results.history.from)} – ${results.history.through ? month(results.history.through) : ""}` : t.noUsable}</p></article>
           <article className="snapshot-card"><div className="card-kicker">{t.nextMonth}</div><div className="snapshot-value">{data.forecast ? month(data.forecast.reporting_month) : t.notPublished}</div><p>{label ?? t.failedEvaluation}</p></article>
@@ -174,8 +182,7 @@ export function ForecastsPage() {
           <article className="snapshot-card"><div className="card-kicker">{t.coverage}</div><div className="snapshot-value">{evaluation ? percentOf(evaluation.holdout.interval_coverage * 100) : t.unavailable}</div><p>{t.covered(evaluation ? `${evaluation.holdout.covered} / ${evaluation.holdout.selected.count}` : t.noHoldout)}</p></article>
         </section>
         {evaluation && <BacktestPanels evaluation={evaluation} forecast={data.forecast} publishable={Boolean(results?.publishable)} variety={variety} inputs={snapshot.inputs.prices} />}
-        {data.forecast ? <section className="panel"><div className="panel-heading"><div><h2>{t.estimateTitle(month(data.forecast.reporting_month))}</h2><p>{t.estimateHint(label ?? "")}</p></div></div><div className="monthly-details"><p className="forecast-estimate">{number(data.forecast.point)} <span>{t.perQuintal}</span></p><p>{t.interval} <strong>{number(data.forecast.lower)}–{number(data.forecast.upper)}</strong> {t.perQuintal}.</p><p>{t.methodLine(t.method ?? data.forecast.method, evaluation?.calibration.count ?? 0)}</p></div></section>
-          : <EmptyState title={t.forecastUnavailable}>{(results?.reasons.length ? reasonText(results.reasons) : "") || (data.stale ? t.sourceChanged : t.requirementsNotMet)}</EmptyState>}
+        {data.forecast && <section className="panel"><div className="panel-heading"><div><h2>{t.estimateTitle(month(data.forecast.reporting_month))}</h2><p>{t.estimateHint(label ?? "")}</p></div></div><div className="monthly-details"><p className="forecast-estimate">{number(data.forecast.point)} <span>{t.perQuintal}</span></p><p>{t.interval} <strong>{number(data.forecast.lower)}–{number(data.forecast.upper)}</strong> {t.perQuintal}.</p><p>{t.methodLine(t.method ?? data.forecast.method, evaluation?.calibration.count ?? 0)}</p></div></section>}
         <section className="panel"><div className="panel-heading"><div><h2>{t.checks}</h2><p>{t.checksHint(format.timestamp(snapshot.evaluated_at), snapshot.formula_version)}</p></div></div><div className="monthly-details">
           <ul className="check-list">{Object.entries(results?.gates ?? {}).map(([key, passed]) => <li key={key}><span>{t.gates[key] ?? key.replace(/_/g, " ")}</span><StatusBadge tone={passed ? "good" : "warn"}>{passed ? t.passed : t.notPassed}</StatusBadge></li>)}</ul>
           <ul>{(t.limitations ?? results?.limitations ?? []).map((value) => <li key={value}>{value}</li>)}</ul>
@@ -190,9 +197,12 @@ export function ForecastsPage() {
           ], "areca-pulse-forecast-holdout.csv")}>{t.exportHoldout}</button></div><div className="table-scroll" tabIndex={0} role="region" aria-label={t.holdoutAria}><table><caption>{t.holdoutCaption}</caption><thead><tr><th>{t.target}</th><th>{t.trainingThrough}</th><th className="numeric">{t.actual}</th><th className="numeric">{t.lastValue}</th><th className="numeric">{t.seasonalNaive}</th></tr></thead><tbody>{evaluation.holdout.points.map((row) => <tr key={row.reporting_month}><td>{month(row.reporting_month)}</td><td>{month(row.training_through)}</td><td className="numeric">{number(row.actual)}</td><td className="numeric">{number(row.last_value)}</td><td className="numeric">{number(row.seasonal_naive)}</td></tr>)}</tbody></table></div></section>
         </>}
         <section className="panel"><div className="panel-heading"><div><h2>{t.snapshotTitle}</h2><p>{t.snapshotHint(snapshot.id, snapshot.source_fingerprint)}</p></div></div><div className="monthly-details"><button className="button-secondary" onClick={() => { const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "areca-pulse-evaluated-forecast.json"; anchor.click(); URL.revokeObjectURL(url); }}>{t.exportJson}</button><details><summary>{t.inputs}</summary><ul>{snapshot.inputs.prices.map((row) => <li key={row.reporting_month}>{t.inputLine(month(row.reporting_month), number(row.weighted_price), format.timestamp(row.fetched_at))} <a href={api.monthlySnapshotUrl(row.refresh_run_id)}>{t.archivedReport}</a></li>)}</ul></details></div></section>
+        </div></details>
       </>}
     </>}
+    <details className="fx-technical"><summary>{t.reviewer}<small>{t.reviewerHint}</small></summary><div className="page-stack">
     <section className="panel"><div className="panel-heading"><div><h2>{t.runTitle}</h2><p>{t.runHint}</p></div></div><div className="monthly-details"><form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); evaluate.mutate(); }}><label className="filter-control"><span>{t.token}</span><input type="password" autoComplete="off" value={token} required disabled={evaluate.isPending} onChange={(event) => setToken(event.target.value)} /></label><button className="button-secondary" disabled={evaluate.isPending}>{evaluate.isPending ? t.evaluating : t.evaluate}</button><button type="button" className="button-secondary" disabled={evaluate.isPending} onClick={() => { setToken(""); evaluate.reset(); }}>{t.clearToken}</button></form>{evaluate.error && <ErrorState error={evaluate.error} />}{evaluate.isSuccess && <p role="status">{t.stored(t.status[evaluate.data.status] ?? evaluate.data.status)}</p>}</div></section>
+    </div></details>
   </div>;
 }
 

@@ -10,6 +10,8 @@ import { SourceLabel, StatusBadge } from "../components/Scorecard";
 import { useChartPalette } from "../components/chartPalette";
 import { useTheme } from "../services/theme";
 import { AboutData } from "../components/AboutData";
+import { ForecastShowcase } from "../components/ForecastShowcase";
+import type { ModelEvaluation } from "../services/forecasting";
 
 const num = (value: number | null | undefined, digits = 0) => value == null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: digits });
 const pct = (value: number | null | undefined) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -23,7 +25,7 @@ const COPY = defineCopy({
     status: { reference: "Reference baseline", candidate: "Candidate", not_better_than_baseline: "Not better than baseline", validated: "Validated", revoked: "Revoked" } as Record<string, string>,
     publication: { validated_forecast: "Validated (prospective outcomes)", experimental_candidate: "Experimental candidate · awaiting prospective confirmation", reference_baseline: "Reference baseline estimate", not_published: "Withheld · not better than baseline" } as Record<string, string>,
     title: "Forecast model evaluation",
-    intro: "Walk-forward backtests of statistical, machine-learning and foundation models against naive baselines. Nothing here states that prices will rise or fall.",
+    intro: "How well can arecanut prices be forecast? Statistical, machine-learning and AI models are tested month by month on past prices against simple rules.",
     existing: "Existing monthly reference baselines", unchanged: "remain unchanged.",
     about: "Models are compared only within one price basis. Official monthly state-weighted prices, daily APMC modal prices, MAMCOS cooperative averages and TSS tender prices are never pooled. A model is labelled validated only after enough prospective outcomes, recorded after the forecast was saved, beat its baseline.",
     noExperiment: "No forecasting experiment published", runFrom: "Run", runAfter: "from data-platform against real observations. No results are invented to fill this page.",
@@ -31,7 +33,7 @@ const COPY = defineCopy({
     execution: "FORECAST EXECUTION", lastPeriod: (period: string) => `Last market period used: ${period}. Not a market reporting date.`,
     evaluationStatus: "EVALUATION STATUS", candidates: (n: number) => `${n} candidates`,
     outcomes: "PROSPECTIVE OUTCOMES", events: (validated: number, revoked: number) => `${validated} validated · ${revoked} revoked model events`,
-    datasets: "Datasets by price basis", datasetsHint: (version: string, tests: string) => `Input data version ${version} · ${tests}`, holm: "Holm-adjusted Diebold-Mariano tests",
+    datasets: "Datasets by price basis",
     datasetsAria: "Forecasting datasets", dataset: "Dataset", priceBasis: "Price basis", frequencyUnit: "Frequency / unit", series: "Series (eligible)", observations: "Observations", statusCol: "Status",
     suppressed: (reasons: string) => `Suppressed: ${reasons}`, evaluated: "Evaluated", notEligible: "Not publication eligible",
     horizon: "Horizon (months)", all: "All", evaluationStatusFilter: "Evaluation status",
@@ -60,14 +62,16 @@ const COPY = defineCopy({
     outcomesCol: "Outcomes", baselineMae: "Baseline MAE", ratio: "MAE ratio",
     legacy: "Comparison with the existing monthly baseline", legacyHint: "Legacy holdout MAE versus engine MAE on the same holdout months (INR/quintal, horizon 1)", legacyAria: "Legacy comparison",
     legacyModel: "Legacy model", holdoutMonths: "Holdout months", legacyMae: "Legacy MAE", withheld: " (withheld)",
-    limitations: "Limitations, data availability and licences", payload: (hash: string, time: string) => `Payload SHA-256 ${hash} · received ${time}`,
-    strict: (n: number, skipped: string) => `Strict as-of evaluation: ${n} origin(s) evaluated; skipped: ${skipped}.`, none: "none", used: "used", notUsed: "not used",
+    technical: "Technical details", technicalHint: "Every metric, dataset and stored prediction behind the summary above",
+    limitations: "Limitations",
+    essentials: ["Experimental: tested on past prices only, not a promise of future accuracy.", "Forecasts are 80% ranges, not buy or sell signals.", "Each price source is evaluated on its own and never combined with another."],
+    openSource: "Built with open-source tools:",
   },
   kn: {
     status: { reference: "ಉಲ್ಲೇಖ ಮೂಲ ಅಂದಾಜು", candidate: "ಪ್ರಾಯೋಗಿಕ ಅಭ್ಯರ್ಥಿ", not_better_than_baseline: "ಮೂಲ ಅಂದಾಜಿಗಿಂತ ಉತ್ತಮವಲ್ಲ", validated: "ದೃಢೀಕರಿಸಲಾಗಿದೆ", revoked: "ಹಿಂಪಡೆಯಲಾಗಿದೆ" },
     publication: { validated_forecast: "ದೃಢೀಕರಿಸಲಾಗಿದೆ (ಮುಂದಿನ ಫಲಿತಾಂಶಗಳು)", experimental_candidate: "ಪ್ರಾಯೋಗಿಕ ಅಭ್ಯರ್ಥಿ · ಮುಂದಿನ ದೃಢೀಕರಣಕ್ಕೆ ಕಾಯುತ್ತಿದೆ", reference_baseline: "ಉಲ್ಲೇಖ ಮೂಲ ಅಂದಾಜು", not_published: "ತಡೆಹಿಡಿಯಲಾಗಿದೆ · ಮೂಲ ಅಂದಾಜಿಗಿಂತ ಉತ್ತಮವಲ್ಲ" },
     title: "ಮುನ್ಸೂಚನಾ ಮಾದರಿಗಳ ಮೌಲ್ಯಮಾಪನ",
-    intro: "ಸಾಂಖ್ಯಿಕ, ಯಂತ್ರ ಕಲಿಕೆ ಮತ್ತು ಮೂಲ ಮಾದರಿಗಳನ್ನು ಸರಳ ಮೂಲ ಅಂದಾಜುಗಳ ವಿರುದ್ಧ ಹಂತ ಹಂತವಾಗಿ ಪರೀಕ್ಷಿಸಲಾಗಿದೆ. ದರ ಏರುತ್ತದೆ ಅಥವಾ ಇಳಿಯುತ್ತದೆ ಎಂದು ಇಲ್ಲಿ ಎಲ್ಲೂ ಹೇಳುವುದಿಲ್ಲ.",
+    intro: "ಅಡಿಕೆ ದರವನ್ನು ಎಷ್ಟು ನಿಖರವಾಗಿ ಊಹಿಸಬಹುದು? ಸಾಂಖ್ಯಿಕ, ಯಂತ್ರ ಕಲಿಕೆ ಮತ್ತು AI ಮಾದರಿಗಳನ್ನು ಹಿಂದಿನ ದರಗಳಲ್ಲಿ ತಿಂಗಳು ತಿಂಗಳು ಸರಳ ನಿಯಮಗಳ ವಿರುದ್ಧ ಪರೀಕ್ಷಿಸಲಾಗಿದೆ.",
     existing: "ಈಗಿನ ತಿಂಗಳ ಉಲ್ಲೇಖ ಅಂದಾಜುಗಳು", unchanged: "ಬದಲಾಗದೆ ಉಳಿದಿವೆ.",
     about: "ಮಾದರಿಗಳನ್ನು ಒಂದೇ ದರದ ಆಧಾರದೊಳಗೆ ಮಾತ್ರ ಹೋಲಿಸಲಾಗುತ್ತದೆ. ಅಧಿಕೃತ ತಿಂಗಳ ರಾಜ್ಯ ಸರಾಸರಿ, ದೈನಂದಿನ ಎಪಿಎಂಸಿ ಮಾದರಿ ದರ, MAMCOS ಸರಾಸರಿ ಮತ್ತು TSS ಟೆಂಡರ್ ದರಗಳನ್ನು ಎಂದೂ ಬೆರೆಸುವುದಿಲ್ಲ. ಮುನ್ಸೂಚನೆ ಉಳಿಸಿದ ನಂತರ ದಾಖಲಾದ ಸಾಕಷ್ಟು ಫಲಿತಾಂಶಗಳು ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿದಾಗ ಮಾತ್ರ ಮಾದರಿಯನ್ನು ದೃಢೀಕರಿಸಲಾಗುತ್ತದೆ.",
     noExperiment: "ಯಾವುದೇ ಮುನ್ಸೂಚನಾ ಪ್ರಯೋಗ ಪ್ರಕಟವಾಗಿಲ್ಲ", runFrom: "ನಿಜವಾದ ದಾಖಲೆಗಳ ಮೇಲೆ data-platform ಇಂದ", runAfter: "ನಡೆಸಿ. ಈ ಪುಟ ತುಂಬಲು ಯಾವುದೇ ಫಲಿತಾಂಶ ಕಲ್ಪಿಸುವುದಿಲ್ಲ.",
@@ -75,7 +79,7 @@ const COPY = defineCopy({
     execution: "ಮುನ್ಸೂಚನೆ ನಡೆಸಿದ ಸಮಯ", lastPeriod: (period: string) => `ಬಳಸಿದ ಕೊನೆಯ ಮಾರುಕಟ್ಟೆ ಅವಧಿ: ${period}. ಇದು ಮಾರುಕಟ್ಟೆ ವರದಿ ದಿನಾಂಕವಲ್ಲ.`,
     evaluationStatus: "ಮೌಲ್ಯಮಾಪನ ಸ್ಥಿತಿ", candidates: (n: number) => `${n} ಅಭ್ಯರ್ಥಿಗಳು`,
     outcomes: "ಮುಂದಿನ ಫಲಿತಾಂಶಗಳು", events: (validated: number, revoked: number) => `${validated} ದೃಢೀಕೃತ · ${revoked} ಹಿಂಪಡೆದ ಮಾದರಿ ಘಟನೆಗಳು`,
-    datasets: "ದರದ ಆಧಾರವಾರು ದತ್ತಾಂಶ", datasetsHint: (version: string, tests: string) => `ದತ್ತಾಂಶ ಆವೃತ್ತಿ ${version} · ${tests}`, holm: "Holm ಹೊಂದಿಸಿದ Diebold-Mariano ಪರೀಕ್ಷೆಗಳು",
+    datasets: "ದರದ ಆಧಾರವಾರು ದತ್ತಾಂಶ",
     datasetsAria: "ಮುನ್ಸೂಚನಾ ದತ್ತಾಂಶ", dataset: "ದತ್ತಾಂಶ", priceBasis: "ದರದ ಆಧಾರ", frequencyUnit: "ಆವರ್ತನ / ಘಟಕ", series: "ಸರಣಿಗಳು (ಅರ್ಹ)", observations: "ದಾಖಲೆಗಳು", statusCol: "ಸ್ಥಿತಿ",
     suppressed: (reasons: string) => `ತಡೆಹಿಡಿಯಲಾಗಿದೆ: ${reasons}`, evaluated: "ಮೌಲ್ಯಮಾಪನವಾಗಿದೆ", notEligible: "ಪ್ರಕಟಣೆಗೆ ಅರ್ಹವಲ್ಲ",
     horizon: "ಮುಂದಿನ ಅವಧಿ (ತಿಂಗಳು)", all: "ಎಲ್ಲಾ", evaluationStatusFilter: "ಮೌಲ್ಯಮಾಪನ ಸ್ಥಿತಿ",
@@ -104,8 +108,10 @@ const COPY = defineCopy({
     outcomesCol: "ಫಲಿತಾಂಶಗಳು", baselineMae: "ಮೂಲ ಅಂದಾಜಿನ MAE", ratio: "MAE ಅನುಪಾತ",
     legacy: "ಈಗಿನ ತಿಂಗಳ ಮೂಲ ಅಂದಾಜಿನೊಂದಿಗೆ ಹೋಲಿಕೆ", legacyHint: "ಅದೇ ಪರೀಕ್ಷಾ ತಿಂಗಳುಗಳಲ್ಲಿ ಹಳೆಯ MAE ಮತ್ತು ಹೊಸ ವ್ಯವಸ್ಥೆಯ MAE (₹/ಕ್ವಿಂಟಾಲ್, ಅವಧಿ 1)", legacyAria: "ಹಳೆಯ ಹೋಲಿಕೆ",
     legacyModel: "ಹಳೆಯ ಮಾದರಿ", holdoutMonths: "ಪರೀಕ್ಷಾ ತಿಂಗಳುಗಳು", legacyMae: "ಹಳೆಯ MAE", withheld: " (ತಡೆಹಿಡಿಯಲಾಗಿದೆ)",
-    limitations: "ಮಿತಿಗಳು, ದತ್ತಾಂಶ ಲಭ್ಯತೆ ಮತ್ತು ಪರವಾನಗಿಗಳು", payload: (hash: string, time: string) => `ದತ್ತಾಂಶ SHA-256 ${hash} · ಸ್ವೀಕರಿಸಿದ್ದು ${time}`,
-    strict: (n: number, skipped: string) => `ಕಟ್ಟುನಿಟ್ಟಾದ ಆಗಿನ-ದತ್ತಾಂಶ ಮೌಲ್ಯಮಾಪನ: ${n} ಆರಂಭ ಬಿಂದು(ಗಳು); ಬಿಟ್ಟವು: ${skipped}.`, none: "ಯಾವುದೂ ಇಲ್ಲ", used: "ಬಳಸಲಾಗಿದೆ", notUsed: "ಬಳಸಿಲ್ಲ",
+    technical: "ತಾಂತ್ರಿಕ ವಿವರಗಳು", technicalHint: "ಮೇಲಿನ ಸಾರಾಂಶದ ಹಿಂದಿನ ಎಲ್ಲ ಅಳತೆಗಳು, ದತ್ತಾಂಶ ಮತ್ತು ಉಳಿಸಿದ ಅಂದಾಜುಗಳು",
+    limitations: "ಮಿತಿಗಳು",
+    essentials: ["ಪ್ರಾಯೋಗಿಕ: ಹಿಂದಿನ ದರಗಳ ಮೇಲೆ ಮಾತ್ರ ಪರೀಕ್ಷಿಸಲಾಗಿದೆ, ಮುಂದಿನ ನಿಖರತೆಯ ಭರವಸೆ ಅಲ್ಲ.", "ಅಂದಾಜುಗಳು 80% ಶ್ರೇಣಿಗಳು, ಖರೀದಿ ಅಥವಾ ಮಾರಾಟ ಸಲಹೆ ಅಲ್ಲ.", "ಪ್ರತಿ ದರ ಮೂಲವನ್ನು ಪ್ರತ್ಯೇಕವಾಗಿ ಪರೀಕ್ಷಿಸಲಾಗುತ್ತದೆ; ಬೇರೆ ಮೂಲದೊಂದಿಗೆ ಬೆರೆಸುವುದಿಲ್ಲ."],
+    openSource: "ಬಳಸಿದ ಮುಕ್ತ ತಂತ್ರಾಂಶ:",
   },
 });
 
@@ -128,6 +134,20 @@ export function ForecastEvaluationPage() {
   });
   const predictions = useQuery({ queryKey: ["forecasting-predictions", experimentId], enabled: Boolean(experimentId), queryFn: () => api.forecastingPredictions({ experiment_id: experimentId, limit: "500" }) });
   const performance = useQuery({ queryKey: ["forecasting-performance"], queryFn: () => api.forecastingPerformance() });
+  // Every evaluation of the experiment (a few hundred rows), for the verdicts and leaderboard.
+  const allEvaluations = useQuery({
+    queryKey: ["forecasting-evaluations-all", experimentId], enabled: Boolean(experimentId),
+    queryFn: async () => {
+      const rows: ModelEvaluation[] = [];
+      let after: number | null | undefined;
+      do {
+        const page = await api.forecastingEvaluations({ experiment_id: experimentId, limit: "500", after: after?.toString() });
+        rows.push(...page.data);
+        after = page.next_after;
+      } while (after != null && rows.length < 5000);
+      return rows;
+    },
+  });
 
   const resetPaging = () => setCursors([undefined]);
   const experiment = overview.data?.experiment, meta = experiment?.metadata;
@@ -141,6 +161,12 @@ export function ForecastEvaluationPage() {
       <p>{t.intro} <Link to="/forecasts">{t.existing}</Link> {t.unchanged}</p></div></section>
     <AboutData><p>{t.about}</p></AboutData>
     {overview.isLoading ? <LoadingState /> : overview.error ? <ErrorState error={overview.error} onRetry={() => void overview.refetch()} /> : !experiment ? <EmptyState title={t.noExperiment}>{t.runFrom} <code>python -m forecasting run --publish</code> {t.runAfter}</EmptyState> : <>
+      {allEvaluations.isLoading ? <LoadingState /> : allEvaluations.error ? <ErrorState error={allEvaluations.error} onRetry={() => void allEvaluations.refetch()} />
+        : <ForecastShowcase evaluations={allEvaluations.data ?? []} track={meta?.track?.series} trackModel={meta?.track?.model}
+          predictions={predictions.data?.data ?? []} performance={performance.data} />}
+
+      {/* Everything below is the full record for readers who want the statistics; it stays folded by default. */}
+      <details className="fx-technical"><summary>{t.technical}<small>{t.technicalHint}</small></summary><div className="page-stack">
       <section className="snapshot-grid">
         <article className="snapshot-card"><div className="card-kicker">{t.experiment}</div><div className="snapshot-value">{t.origins(experiment.origins_evaluated)}</div><p>{experiment.id} · {experiment.engine_version} · {t.vintages(experiment.vintage_mode)}</p></article>
         <article className="snapshot-card"><div className="card-kicker">{t.execution}</div><div className="snapshot-value snapshot-date">{format.timestamp(experiment.created_at)}</div><p>{t.lastPeriod(experiment.origin_period)}</p></article>
@@ -148,7 +174,7 @@ export function ForecastEvaluationPage() {
         <article className="snapshot-card"><div className="card-kicker">{t.outcomes}</div><div className="snapshot-value">{overview.data?.totals.outcomes ?? 0}</div><p>{t.events(overview.data?.totals.validated_events ?? 0, overview.data?.totals.revoked_events ?? 0)}</p></article>
       </section>
 
-      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.datasets}</h2><p>{t.datasetsHint(experiment.input_data_version.slice(0, 12), meta?.multiple_testing ?? t.holm)}</p></div></div>
+      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.datasets}</h2></div></div>
         <div className="table-scroll" tabIndex={0} role="region" aria-label={t.datasetsAria}><table><thead><tr><th>{t.dataset}</th><th>{t.priceBasis}</th><th>{t.frequencyUnit}</th><th>{t.series}</th><th>{t.observations}</th><th>{t.statusCol}</th></tr></thead><tbody>
           {(meta?.datasets ?? []).map((row) => <tr key={row.key}><td>{row.key}<br /><small lang="en">{row.provenance}</small></td><td>{label(row.price_basis)}</td><td>{row.frequency} · {row.unit} ({label(row.unit_status)})</td><td>{row.series_total} ({row.series_eligible})</td><td>{num(row.observations)}</td>
             <td>{row.suppressed ? t.suppressed(row.suppression_reasons.map(label).join(", ")) : row.publication_eligible ? t.evaluated : t.notEligible}</td></tr>)}
@@ -208,14 +234,15 @@ export function ForecastEvaluationPage() {
         <div className="table-scroll" tabIndex={0} role="region" aria-label={t.legacyAria}><table><thead><tr><th>{t.variety}</th><th>{t.legacyModel}</th><th>{t.holdoutMonths}</th><th>{t.legacyMae}</th>{engineModels.map((model) => <th key={model} lang="en">{model}</th>)}</tr></thead><tbody>
           {meta.legacy_comparison.map((row) => <tr key={row.variety}><td lang="en">{row.variety}</td><td lang="en">{row.legacy_model}{row.legacy_publishable ? "" : t.withheld}</td><td>{row.holdout_months}</td><td>{num(row.legacy_mae)}</td>{engineModels.map((model) => <td key={model}>{num(row.engine_mae[model])}</td>)}</tr>)}
         </tbody></table></div></section>}
+      </div></details>
 
-      <section className="panel"><div className="panel-heading"><div><h2>{t.limitations}</h2><p>{t.payload(experiment.payload_sha256.slice(0, 16), format.timestamp(experiment.received_at))}</p></div></div><div className="monthly-details">
-        {/* Limitations, exogenous-data reasons and licences are written by the forecasting engine and shown as published. */}
-        <ul lang="en">{overview.data?.limitations.map((value) => <li key={value}>{value}</li>)}</ul>
-        {meta?.strict_vintage && <p>{t.strict(meta.strict_vintage.origins_evaluated, Object.entries(meta.strict_vintage.origins_skipped).map(([key, value]) => `${label(key)} ${value}`).join(", ") || t.none)}</p>}
-        {meta?.exogenous && <ul>{Object.entries(meta.exogenous).map(([key, value]) => <li key={key}>{key}: {value.usable_in_backtest ? t.used : t.notUsed} — <span lang="en">{value.reason}</span></li>)}</ul>}
-        {meta?.environment?.licences && <ul lang="en">{Object.entries(meta.environment.licences).map(([key, value]) => <li key={key}>{key}: {value}</li>)}</ul>}
-      </div></section>
+      {/* Only what a reader needs: what the numbers are, that sources stay separate, and credit for the open-source tools.
+          Test statistics, hashes and engine internals stay in the published payload, not on the page. */}
+      <section className="fx-card fx-limits" aria-labelledby="fx-limits"><header className="fx-card-head"><h2 id="fx-limits">{t.limitations}</h2></header>
+        <ul>{t.essentials.map((line) => <li key={line}>{line}</li>)}</ul>
+        {meta?.environment?.licences && <p className="table-note">{t.openSource} <span lang="en">{Object.entries(meta.environment.licences)
+          .filter(([key]) => key !== "chronos-forecasting" && key !== "timesfm").map(([key, value]) => `${key.replace(/^(amazon|google)\//, "")} (${value.replace(/\s*\(.*\)$/, "")})`).join(" · ")}</span></p>}
+      </section>
     </>}
   </div>;
 }

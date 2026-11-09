@@ -12,6 +12,9 @@ import { NotFoundPage } from "./NotFoundPage";
 import { LanguageContext } from "../services/language";
 import { SourceSlot } from "../components/SourceSlot";
 import { VARIETIES } from "../services/varieties";
+import { ForecastShowcase } from "../components/ForecastShowcase";
+import { PriceOutlook } from "../components/PriceOutlook";
+import type { ModelEvaluation } from "../services/forecasting";
 import { TSS_VARIETIES } from "../../../shared/tss-varieties";
 import { AssistantPage } from "./AssistantPage";
 import { AnalyticsPage } from "./AnalyticsPage";
@@ -64,7 +67,9 @@ vi.mock("../services/commodity", async (importOriginal) => ({
   ...await importOriginal<typeof import("../services/commodity")>(),
   useCommodity: () => ({ code: "arecanut", commodity: FALLBACK_CATALOG.commodities[0], catalog: FALLBACK_CATALOG, unit: "INR / QUINTAL" }),
 }));
-vi.mock("../components/LazyCharts", () => ({ LazyRangeChart: ({ rows }: { rows: { label: string }[] }) => <div>Same-date chart: {rows.map((row) => row.label).join(", ")}</div> }));
+vi.mock("../components/LazyCharts", () => ({ LazyRangeChart: ({ rows }: { rows: { label: string }[] }) => <div>Same-date chart: {rows.map((row) => row.label).join(", ")}</div>,
+  LazyTrackChart: ({ periods }: { periods: string[] }) => <div>Track chart: {periods.length} months</div>,
+  LazyOutlookChart: ({ periods }: { periods: string[] }) => <div>Outlook chart: {periods.length} months</div> }));
 
 const quote = {
   id: "official-1", market_id: "one", market_name: "Market One", district: "District",
@@ -639,5 +644,56 @@ describe("market experience", () => {
     expect(html).toContain("Show all 8 branches");
     expect(html).toContain('class="home-date-pill');
     expect(html).toContain("Latest report");
+  });
+});
+
+describe("forecast evaluation summary", () => {
+  const evaluation = (model: string, mae: number, status: ModelEvaluation["status"] = "not_better_than_baseline"): ModelEvaluation => ({
+    id: mae, series_id: "KA|Rashi", variety: "Rashi", market: "Karnataka", grade: null, horizon: 1, model, model_version: "1",
+    baseline_model: "last_value", status: model === "last_value" ? "reference" : status, reasons: [], n: 34, mae, rmse: null,
+    wape: mae / 48000, mase: null, directional_accuracy: null, interval_coverage: 0.88, interval_width: null, dm_statistic: null,
+    p_value: null, p_value_holm: null, mae_skill_vs_baseline: null, coverage_status: "consistent_with_nominal",
+  });
+  const show = (rows: ModelEvaluation[]) => render(<ForecastShowcase evaluations={rows} track={[{ series_id: "KA|Rashi", variety: "Rashi",
+    periods: ["2026-01", "2026-02"], actual: [1, 2], baseline: [1, 2], median: [1, 2], lower: [0, 1], upper: [2, 3] }]} trackModel="theta"
+    predictions={[]} performance={undefined} />);
+
+  it("says plainly when no model beats last month's price, and names no winner", () => {
+    const html = show([evaluation("last_value", 2065), evaluation("chronos2", 2106), evaluation("theta", 2223)]);
+    expect(html).toContain("Not yet better than “Last month&#x27;s price”");
+    expect(html).toContain("±₹2,065");
+    expect(html).toContain("Chronos-2");
+    expect(html).toContain("2.0% further off");
+    expect(html).not.toContain("Promising");
+    expect(html).toContain("Track chart: 2 months");
+  });
+
+  it("calls a model promising only when it passed the backtest gate", () => {
+    const html = show([evaluation("last_value", 2065), evaluation("ensemble", 1900, "candidate")]);
+    expect(html).toContain("Promising");
+    expect(html).toContain("Ensemble");
+    expect(html).toContain("Passed");
+    expect(html).not.toContain("Not yet better");
+  });
+});
+
+describe("price outlook", () => {
+  it("leads with the published range and counts how often past ranges held", () => {
+    const points = [{ reporting_month: "2026-09", training_through: "2026-08", actual: 47805, last_value: 50637, seasonal_naive: 1 },
+      { reporting_month: "2026-10", training_through: "2026-09", actual: 47175, last_value: 47805, seasonal_naive: 1 }];
+    const evaluation = {
+      selected_model: "last_value" as const, label: "", selection_rule: "", initial_training_months: 36,
+      validation: { points: [], metrics: { last_value: { count: 0, mae: 0, rmse: 0, smape_percent: 0 }, seasonal_naive: { count: 0, mae: 0, rmse: 0, smape_percent: 0 } } },
+      calibration: { count: 12, absolute_residual_radius: 2000, nominal_coverage: 0.8, quantile_rank: 10 },
+      holdout: { points, selected: { count: 2, mae: 1730, rmse: 0, smape_percent: 0 }, naive: { count: 2, mae: 1730, rmse: 0, smape_percent: 0 }, covered: 1, interval_coverage: 0.5, mae_skill_vs_naive: 0 },
+    };
+    const html = render(<PriceOutlook variety="Rashi" historyCount={70} evaluation={evaluation} outlook={null}
+      forecast={{ reporting_month: "2026-11", model: "last_value", point: 47175, lower: 43048, upper: 51301, nominal_coverage: 0.8, method: "" }}
+      prices={[{ reporting_month: "2026-09", weighted_price: 47805 }, { reporting_month: "2026-10", weighted_price: 47175 }]} />);
+    expect(html).toContain("Likely between ₹43,048 and ₹51,301");
+    expect(html).toContain("Most likely around ₹47,175 per quintal.");
+    expect(html).toContain("1 of 2 months");
+    expect(html).toContain("Outside range");
+    expect(html).toContain("Outlook chart: 2 months");
   });
 });

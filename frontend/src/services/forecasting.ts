@@ -30,6 +30,13 @@ export type ExperimentMetadata = {
   multiple_testing?: string;
   environment?: { git?: { sha?: string; dirty?: boolean }; packages?: Record<string, string | null>; licences?: Record<string, string> };
   config?: { horizons: number[]; interval_level?: number };
+  /** One-step backtest record per series for the strongest pooled model (absent on experiments before 2026-11-09). */
+  track?: { model: string; horizon: number; series: TrackSeries[] };
+};
+
+export type TrackSeries = {
+  series_id: string; variety: string; periods: string[];
+  actual: number[]; baseline: number[]; median: number[]; lower: number[]; upper: number[];
 };
 
 export type ForecastingOverview = {

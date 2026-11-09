@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Env } from "./index";
 import { calendarDateToTime, completedMonthIST, shiftCalendarMonth, timestampToTime } from "../../shared/dates";
 import { bearerMatches } from "./auth";
+import { loadOutlook } from "./outlook";
 
 export const FORECAST_VERSION = "monthly-baselines-v1";
 export const FORECAST_STATE = "Karnataka";
@@ -241,9 +242,13 @@ forecastRoutes.get("/forecasts", async (c) => {
   const row = await c.env.DB.prepare(`SELECT * FROM forecast_snapshots WHERE state=? AND variety_name=?
     ORDER BY evaluated_at DESC,rowid DESC LIMIT 1`).bind(FORECAST_STATE, parsed.data.variety).first<SnapshotRow>();
   if (!row) return c.json({ status: "not_evaluated", state: FORECAST_STATE, variety: parsed.data.variety,
-    snapshot: null, stale: false, stale_reasons: [], forecast: null });
+    snapshot: null, stale: false, stale_reasons: [], forecast: null, outlook: null });
   const asOf = new Date().toISOString();
   const current = await loadInputs(c.env.DB, parsed.data.variety, asOf);
+  // The 1–6 month outlook is built from today's prices with the engine's calibration, so it does not wait for a
+  // baseline re-evaluation. It is additive: without a published calibration, or if it cannot be built, it is null and
+  // the baseline response is served unchanged.
+  const outlook = await loadOutlook(c.env.DB, parsed.data.variety, current.prices).catch(() => null);
   const reasons = snapshotStaleReasons(row, await sourceFingerprint(current), current, asOf);
   const results = JSON.parse(row.results_json) as ReturnType<typeof evaluateForecast>;
   return c.json({
@@ -253,7 +258,7 @@ forecastRoutes.get("/forecasts", async (c) => {
       formula_version: row.formula_version, source_fingerprint: row.source_fingerprint,
       inputs: JSON.parse(row.inputs_json) as ForecastInputs, results,
     },
-    stale: reasons.length > 0, stale_reasons: reasons, forecast: reasons.length ? null : results.forecast,
+    stale: reasons.length > 0, stale_reasons: reasons, forecast: reasons.length ? null : results.forecast, outlook,
   });
 });
 async function storeEvaluation(db: D1Database, variety: string, evaluatedAt: string) {
