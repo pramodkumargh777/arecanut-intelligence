@@ -111,13 +111,14 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
   // A monthly point stands for its whole month, so an event in the last plotted month still belongs on the chart.
   const events = showEvents && first && latest ? eventsBetween(first.reporting_date, monthly ? `${latest.reporting_date.slice(0, 7)}-31` : latest.reporting_date) : [];
   // Events closer than a few percent of the span would print their numbers on top of each other, so the first of a close
-  // run carries every number (such as "2·3") and the rest keep only their dashed line.
+  // run carries every number (such as "2·3") and the rest keep only their dashed line. A desktop plot is several times
+  // wider, so events there must be much closer before their badges collide.
   const eventSpan = first && latest ? calendarDateToTime(latest.reporting_date) - calendarDateToTime(first.reporting_date) : 0;
   const eventMarks: { xAxis: number; label: { show?: boolean; formatter?: string; width?: number } }[] = [];
   let lead: { at: number; label: { formatter?: string; width?: number } } | undefined;
   events.forEach((event, index) => {
     const at = calendarDateToTime(event.date);
-    if (lead && at - lead.at < eventSpan * 0.06) {
+    if (lead && at - lead.at < eventSpan * (phone ? 0.06 : 0.02)) {
       lead.label.formatter = `${lead.label.formatter}·${index + 1}`;
       lead.label.width = 10 + lead.label.formatter.length * 6;
       eventMarks.push({ xAxis: at, label: { show: false } });
