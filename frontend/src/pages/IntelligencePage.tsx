@@ -151,11 +151,11 @@ export function IntelligencePage() {
   const columnType = domain === "production" || domain === "trade" || domain === "weather" ? domain : "bulletin";
   const columns = t.columns[columnType];
   const numericFrom = columnType === "production" || columnType === "trade" ? 3 : columnType === "weather" ? 2 : columns.length;
-  return <div className="page-stack">
+  return <div className="page-stack intelligence-page">
     <section className="page-heading"><div><h1>{title}</h1><p className="page-intro">{t.intro}</p></div></section>
-    <IntelligenceNavigation current={domain} />
+    {/* The section tabs and the methodology note share a row; the note takes the full width once opened. */}
+    <div className="intelligence-toolbar"><IntelligenceNavigation current={domain} />{data && <AboutData><p>{t.coverage[coverageKey]}</p></AboutData>}</div>
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
-      <AboutData><p>{t.coverage[coverageKey]}</p></AboutData>
       {staleWeather && <div role="alert" className="data-disclosure">{t.staleWeather}</div>}
       <section className="snapshot-grid snapshot-grid-even">
         <article className="snapshot-card"><div className="card-kicker">{t.selected}</div><div className="snapshot-value">{filtered.length}</div><p>{t.captures(new Set(filtered.map((row) => row.capture_id)).size)}</p></article>

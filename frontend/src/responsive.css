@@ -471,3 +471,42 @@
 
   .home-actions a { padding: 11px 16px; }
 }
+
+/* ---- Desktop and tablet: market intelligence --------------------------------------------------------------------
+ * Same parts, packed tighter: the section tabs and "About this data" share a row, stat figures fit on one line and the
+ * filter bar and source column lose spare height. Phones keep their own rules above.
+ */
+@media (min-width: 641px) {
+  .intelligence-page { gap: 12px; }
+  .intelligence-page .page-heading h1 { margin-bottom: 2px; }
+  .intelligence-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+  .intelligence-toolbar .about-data[open] { flex-basis: 100%; }
+  .intelligence-page .snapshot-card { padding: 11px 16px 12px; }
+  .intelligence-page .snapshot-grid-even .snapshot-value { margin-top: 4px; font-size: 20px; }
+  .intelligence-page .snapshot-grid-even .snapshot-date { font-size: 17px; }
+  .intelligence-page .snapshot-card > p { margin-top: 2px; }
+  .intelligence-page .filter-bar { padding: 10px 14px; }
+  .intelligence-page .table-panel .panel-heading { margin-bottom: 8px; }
+  /* Publisher, archived copy and fetch time read across one wider cell instead of three stacked lines. */
+  .intelligence-page .evidence-column { min-width: 300px; }
+  .intelligence-page .evidence-column .quote-fetch { display: inline; }
+  .intelligence-page .evidence-column .evidence-fetched::before { content: ""; display: block; }
+  .intelligence-page .evidence-column .evidence-fetched + .quote-fetch::before { content: " · "; }
+}
+
+/* Phones: market intelligence filters, the two dropdowns side by side with the reset button under them. */
+@media (max-width: 640px) {
+  .intelligence-page .filter-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
+  .intelligence-page .filter-bar > .filter-control { min-width: 0; }
+  .intelligence-page .filter-bar select { min-width: 0; width: 100%; text-overflow: ellipsis; }
+  .intelligence-page .filter-bar > button { grid-column: 1 / -1; min-height: 40px; }
+}
+
+/* Phones: the growth table's year and three figures fit the screen without sideways scrolling. */
+@media (max-width: 640px) {
+  .growth-table { min-width: 0; width: 100%; }
+  .growth-table th, .growth-table td { padding-inline: 5px; font-size: 13px; }
+  .growth-table th:first-child, .growth-table td:first-child { min-width: 0; padding-left: 8px; }
+  .growth-table th[scope="row"] { padding-right: 4px; }
+  .growth-table tfoot th[scope="row"] { white-space: normal; max-width: 96px; line-height: 1.35; }
+}

@@ -807,3 +807,32 @@ a.rate-more-toggle { text-decoration: none; }
   .rate-row-updated { background-color: var(--brand-tint); }
   .rate-row-out { opacity: 0; }
 }
+
+/* Supply: year-on-year growth, one year per row, compound growth as the closing row. */
+.growth-table th[scope="row"] { font-weight: 500; white-space: nowrap; }
+/* Wide layout: the table spans the panel and every cell stays one line. */
+.growth-table-wide { width: 100%; }
+.growth-table-wide th, .growth-table-wide td { padding: 9px 10px; white-space: nowrap; }
+.growth-table-wide th[scope="row"] { font-weight: 600; }
+.growth-table-wide .growth-cagr { border-left: 1px solid var(--line); font-weight: 650; }
+.growth-table-wide thead .growth-cagr small { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; }
+.growth-table td.growth-up { color: #166534; }
+.growth-table td.growth-down { color: var(--bad-ink); }
+:root[data-theme="dark"] .growth-table td.growth-up { color: #a9d2a4; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .growth-table td.growth-up { color: #a9d2a4; } }
+.growth-table tfoot th, .growth-table tfoot td { border-top: 1px solid var(--line); font-weight: 650; }
+.growth-table tfoot small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.table-scroll + .table-note { margin-top: 6px; }
+
+/* Monthly history: a review flag sits as a small chip under its status; the source cell is two short lines (link and fetch day, then
+   the evidence toggle) instead of three long ones. */
+.status-flag { display: table; margin-top: 3px; padding: 1px 7px; border-radius: 6px; background: var(--warn-bg); color: var(--warn-ink, var(--muted)); font-size: 11.5px; font-weight: 600; vertical-align: 1px; cursor: help; }
+td.month-source { white-space: nowrap; }
+td.month-source small { display: inline; white-space: nowrap; margin-left: 8px; color: var(--muted); font-size: 12.5px; cursor: help; }
+td.month-source details { margin-top: 2px; }
+td.month-source details > summary { font-size: 12.5px; }
+td.month-source details[open] { white-space: normal; min-width: 320px; }
+/* Column headings wrap onto two lines so the figures, not the headings, set each column's width. */
+.month-history thead th { white-space: normal; vertical-align: bottom; line-height: 1.35; }
+.month-history thead th.numeric { max-width: 96px; }
+.month-history th, .month-history td { padding-left: 10px; padding-right: 10px; }
