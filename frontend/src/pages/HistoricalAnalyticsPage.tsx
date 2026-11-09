@@ -9,6 +9,7 @@ import { calendarDateToTime, calendarTodayIST, completedMonthIST, DAY_MS, MONTH_
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { COMMON } from "../services/commonCopy";
 import { MonthlyRefresh, MonthlySnapshot } from "./MonthlyTrendsPage";
+import { MonthYearPicker } from "../components/MonthYearPicker";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
@@ -139,8 +140,8 @@ export function HistoricalAnalyticsPage() {
   return <div className="page-stack">
     <section className="page-heading"><div><h1>{t.title}</h1><p className="page-intro">{t.intro}</p></div></section>
     <section className="filter-bar">
-      <label className="filter-control"><span>{t.fromMonth}</span><input type="month" min="2010-01" max={completed()} value={from} onChange={(event) => setFrom(event.target.value)} /></label>
-      <label className="filter-control"><span>{t.throughMonth}</span><input type="month" min="2010-01" max={completed()} value={to} onChange={(event) => setTo(event.target.value)} /></label>
+      <MonthYearPicker label={t.fromMonth} min="2010-01" max={completed()} value={from} onChange={setFrom} />
+      <MonthYearPicker label={t.throughMonth} min="2010-01" max={completed()} value={to} onChange={setTo} />
       <label className="filter-control"><span>{t.monthlyVariety}</span><select value={variety} onChange={(event) => setVariety(event.target.value)}>{[...new Set([variety, ...(data?.varieties ?? [])])].map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
     </section>
     {!valid ? <ErrorState error={new Error(t.invalid)} /> : query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>

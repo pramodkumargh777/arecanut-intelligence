@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../services/api";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
+import { usePhone } from "../components/usePhone";
 import { arrivalRows, type Advisory, type ForecastGate, type Granularity, type ProductionEstimate, type SupplySource } from "../services/supply";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 
@@ -23,10 +24,10 @@ const COPY = defineCopy({
     } as Record<string, string>,
     dataTypeNames: { station_measurement: "station measurement", reanalysis: "reanalysis", model_grid: "model grid", official_forecast: "official forecast" } as Record<string, string>,
     freshness: { fresh: "fresh", stale: "stale", missing: "missing" } as Record<string, string>,
-    provenance: (period: string) => `Reporting period: ${period}. Source:`, document: "document", published: (date: string) => `, published ${date}`, noneRecorded: "none recorded",
+    provenance: (period: string) => `Reporting period: ${period}. Source:`, sourceWord: "Source", document: "document", published: (date: string) => `, published ${date}`, noneRecorded: "none recorded",
     forecastNotice: (subject: string, points: number) => `${subject} forecast: ${points} points available; eligible for evaluation only, not published.`,
     title: "Supply and weather", intro: "Government production estimates and weather datasets. Every table states its source and reporting period.",
-    production: "Production intelligence", productionHint: "Area, production and yield by agricultural year, with estimate stage and revision history.", geography: "Geography",
+    production: "Production", productionHint: "Area, production and yield by agricultural year, with estimate stage and revision history.", geography: "Geography",
     noEstimates: "No production estimates", noEstimatesHint: (geography: string) => `No published estimates have been captured for ${geography}.`,
     agriculturalYears: (period: string) => `${period} (agricultural years)`,
     estimatesAria: "Production estimates", year: "Year", estimateStage: "Estimate stage", area: (unit: string) => `Area (${unit})`, productionCol: (unit: string) => `Production (${unit})`,
@@ -42,7 +43,7 @@ const COPY = defineCopy({
     districtAnalysis: "District analysis:", selectState: "select a state.", districtRecords: (n: number, period: string) => `${n} original district records (${period}).`,
     noDistricts: "No original district-level production records have been imported for this geography. Areca Pulse never apportions state totals to districts.",
     productionSubject: "Production", arrivalSubject: "Arrival",
-    arrivals: "Market arrivals and traded quantity", arrivalsHint: "Arrival and traded quantities are separate measures and are never added together.", period: "Period",
+    arrivals: "Market arrivals", arrivalsHint: "Arrival and traded quantities are separate measures and are never added together.", period: "Period",
     granularity: { daily: "daily", weekly: "weekly", monthly: "monthly", seasonal: "seasonal" } as Record<Granularity, string>,
     arrivalsMeta: (period: string, from: string, to: string, sources: string, unit: string) => `Reporting period: ${period} (requested ${from} to ${to}). Sources: ${sources}. Unit: ${unit}.`,
     imported: (name: string, time: string) => `${name} (imported ${time})`, noneImported: "none imported",
@@ -51,7 +52,7 @@ const COPY = defineCopy({
     arrivalsAria: "Arrivals", arrivalsT: "Arrivals (t)", arrivalMarkets: "Arrival markets", tradedT: "Traded (t)", tradedMarkets: "Traded markets", unknownUnit: "Unknown-unit rows",
     arrivalNotes: ["Arrivals and traded quantities are separate measures and are never added together.",
       "Weekly buckets start on Monday; seasons follow IMD meteorological seasons, not the arecanut harvest calendar."],
-    weather: "Weather observations and forecasts", weatherHint: "Model-derived grid estimates are never labelled as station observations. Observations and forecasts are kept separate.", district: "District",
+    weather: "Weather", weatherHint: "Model-derived grid estimates are never labelled as station observations. Observations and forecasts are kept separate.", district: "District",
     weatherPeriod: (period: string) => `Reporting period: ${period}.`, latestCapture: (time: string, status: string) => ` Latest model capture ${time} (${status}).`,
     lastImported: (dataset: string, time: string) => ` ${dataset} last imported ${time}.`,
     noWeather: "No weather records",
@@ -83,10 +84,10 @@ const COPY = defineCopy({
     },
     dataTypeNames: { station_measurement: "ಕೇಂದ್ರದ ಅಳತೆ", reanalysis: "ಮರುವಿಶ್ಲೇಷಣೆ", model_grid: "ಮಾದರಿ ಗ್ರಿಡ್", official_forecast: "ಅಧಿಕೃತ ಮುನ್ಸೂಚನೆ" },
     freshness: { fresh: "ಹೊಸದು", stale: "ಹಳೆಯದು", missing: "ಇಲ್ಲ" },
-    provenance: (period: string) => `ವರದಿ ಅವಧಿ: ${period}. ಮೂಲ:`, document: "ದಾಖಲೆ", published: (date: string) => `, ಪ್ರಕಟಣೆ ${date}`, noneRecorded: "ದಾಖಲಾಗಿಲ್ಲ",
+    provenance: (period: string) => `ವರದಿ ಅವಧಿ: ${period}. ಮೂಲ:`, sourceWord: "ಮೂಲ", document: "ದಾಖಲೆ", published: (date: string) => `, ಪ್ರಕಟಣೆ ${date}`, noneRecorded: "ದಾಖಲಾಗಿಲ್ಲ",
     forecastNotice: (subject: string, points: number) => `${subject} ಮುನ್ಸೂಚನೆ: ${points} ದಾಖಲೆಗಳು ಲಭ್ಯ; ಮೌಲ್ಯಮಾಪನಕ್ಕೆ ಮಾತ್ರ ಅರ್ಹ, ಪ್ರಕಟಿಸಿಲ್ಲ.`,
     title: "ಉತ್ಪಾದನೆ ಮತ್ತು ಹವಾಮಾನ", intro: "ಸರ್ಕಾರದ ಉತ್ಪಾದನಾ ಅಂದಾಜುಗಳು ಮತ್ತು ಹವಾಮಾನ ದತ್ತಾಂಶ. ಪ್ರತಿ ಪಟ್ಟಿಯೂ ಅದರ ಮೂಲ ಮತ್ತು ವರದಿ ಅವಧಿಯನ್ನು ತಿಳಿಸುತ್ತದೆ.",
-    production: "ಉತ್ಪಾದನಾ ಮಾಹಿತಿ", productionHint: "ಕೃಷಿ ವರ್ಷವಾರು ವಿಸ್ತೀರ್ಣ, ಉತ್ಪಾದನೆ ಮತ್ತು ಇಳುವರಿ, ಅಂದಾಜಿನ ಹಂತ ಮತ್ತು ತಿದ್ದುಪಡಿ ಇತಿಹಾಸದೊಂದಿಗೆ.", geography: "ಪ್ರದೇಶ",
+    production: "ಉತ್ಪಾದನೆ", productionHint: "ಕೃಷಿ ವರ್ಷವಾರು ವಿಸ್ತೀರ್ಣ, ಉತ್ಪಾದನೆ ಮತ್ತು ಇಳುವರಿ, ಅಂದಾಜಿನ ಹಂತ ಮತ್ತು ತಿದ್ದುಪಡಿ ಇತಿಹಾಸದೊಂದಿಗೆ.", geography: "ಪ್ರದೇಶ",
     noEstimates: "ಉತ್ಪಾದನಾ ಅಂದಾಜುಗಳಿಲ್ಲ", noEstimatesHint: (geography: string) => `${geography} ಗೆ ಯಾವುದೇ ಪ್ರಕಟಿತ ಅಂದಾಜು ಸಂಗ್ರಹವಾಗಿಲ್ಲ.`,
     agriculturalYears: (period: string) => `${period} (ಕೃಷಿ ವರ್ಷಗಳು)`,
     estimatesAria: "ಉತ್ಪಾದನಾ ಅಂದಾಜುಗಳು", year: "ವರ್ಷ", estimateStage: "ಅಂದಾಜಿನ ಹಂತ", area: (unit: string) => `ವಿಸ್ತೀರ್ಣ (${unit})`, productionCol: (unit: string) => `ಉತ್ಪಾದನೆ (${unit})`,
@@ -102,7 +103,7 @@ const COPY = defineCopy({
     districtAnalysis: "ಜಿಲ್ಲಾ ವಿಶ್ಲೇಷಣೆ:", selectState: "ರಾಜ್ಯವನ್ನು ಆಯ್ಕೆಮಾಡಿ.", districtRecords: (n: number, period: string) => `${n} ಮೂಲ ಜಿಲ್ಲಾ ದಾಖಲೆಗಳು (${period}).`,
     noDistricts: "ಈ ಪ್ರದೇಶಕ್ಕೆ ಮೂಲ ಜಿಲ್ಲಾ ಮಟ್ಟದ ಉತ್ಪಾದನಾ ದಾಖಲೆಗಳು ಆಮದಾಗಿಲ್ಲ. Areca Pulse ರಾಜ್ಯದ ಒಟ್ಟನ್ನು ಜಿಲ್ಲೆಗಳಿಗೆ ಎಂದೂ ಹಂಚುವುದಿಲ್ಲ.",
     productionSubject: "ಉತ್ಪಾದನೆ", arrivalSubject: "ಆವಕ",
-    arrivals: "ಮಾರುಕಟ್ಟೆ ಆವಕ ಮತ್ತು ವಹಿವಾಟಿನ ಪ್ರಮಾಣ", arrivalsHint: "ಆವಕ ಮತ್ತು ವಹಿವಾಟಿನ ಪ್ರಮಾಣಗಳು ಬೇರೆ ಬೇರೆ ಅಳತೆಗಳು; ಎಂದೂ ಕೂಡಿಸುವುದಿಲ್ಲ.", period: "ಅವಧಿ",
+    arrivals: "ಮಾರುಕಟ್ಟೆ ಆವಕ", arrivalsHint: "ಆವಕ ಮತ್ತು ವಹಿವಾಟಿನ ಪ್ರಮಾಣಗಳು ಬೇರೆ ಬೇರೆ ಅಳತೆಗಳು; ಎಂದೂ ಕೂಡಿಸುವುದಿಲ್ಲ.", period: "ಅವಧಿ",
     granularity: { daily: "ದೈನಂದಿನ", weekly: "ವಾರದ", monthly: "ತಿಂಗಳ", seasonal: "ಋತುವಾರು" },
     arrivalsMeta: (period: string, from: string, to: string, sources: string, unit: string) => `ವರದಿ ಅವಧಿ: ${period} (ಕೇಳಿದ್ದು ${from} ರಿಂದ ${to}). ಮೂಲಗಳು: ${sources}. ಘಟಕ: ${unit}.`,
     imported: (name: string, time: string) => `${name} (ಆಮದು ${time})`, noneImported: "ಯಾವುದೂ ಆಮದಾಗಿಲ್ಲ",
@@ -111,7 +112,7 @@ const COPY = defineCopy({
     arrivalsAria: "ಆವಕ", arrivalsT: "ಆವಕ (ಟನ್)", arrivalMarkets: "ಆವಕದ ಮಾರುಕಟ್ಟೆಗಳು", tradedT: "ವಹಿವಾಟು (ಟನ್)", tradedMarkets: "ವಹಿವಾಟಿನ ಮಾರುಕಟ್ಟೆಗಳು", unknownUnit: "ಘಟಕ ತಿಳಿಯದ ಸಾಲುಗಳು",
     arrivalNotes: ["ಆವಕ ಮತ್ತು ವಹಿವಾಟಿನ ಪ್ರಮಾಣಗಳು ಬೇರೆ ಬೇರೆ ಅಳತೆಗಳು; ಎಂದೂ ಕೂಡಿಸುವುದಿಲ್ಲ.",
       "ವಾರಗಳು ಸೋಮವಾರದಿಂದ ಆರಂಭ; ಋತುಗಳು IMD ಹವಾಮಾನ ಋತುಗಳು, ಅಡಿಕೆ ಕೊಯ್ಲಿನ ಕ್ಯಾಲೆಂಡರ್ ಅಲ್ಲ."],
-    weather: "ಹವಾಮಾನ ಅಳತೆಗಳು ಮತ್ತು ಮುನ್ಸೂಚನೆಗಳು", weatherHint: "ಮಾದರಿ ಆಧಾರಿತ ಗ್ರಿಡ್ ಅಂದಾಜುಗಳನ್ನು ಎಂದೂ ಕೇಂದ್ರದ ಅಳತೆ ಎಂದು ಕರೆಯುವುದಿಲ್ಲ. ಅಳತೆ ಮತ್ತು ಮುನ್ಸೂಚನೆಗಳನ್ನು ಪ್ರತ್ಯೇಕವಾಗಿ ಇಡಲಾಗಿದೆ.", district: "ಜಿಲ್ಲೆ",
+    weather: "ಹವಾಮಾನ", weatherHint: "ಮಾದರಿ ಆಧಾರಿತ ಗ್ರಿಡ್ ಅಂದಾಜುಗಳನ್ನು ಎಂದೂ ಕೇಂದ್ರದ ಅಳತೆ ಎಂದು ಕರೆಯುವುದಿಲ್ಲ. ಅಳತೆ ಮತ್ತು ಮುನ್ಸೂಚನೆಗಳನ್ನು ಪ್ರತ್ಯೇಕವಾಗಿ ಇಡಲಾಗಿದೆ.", district: "ಜಿಲ್ಲೆ",
     weatherPeriod: (period: string) => `ವರದಿ ಅವಧಿ: ${period}.`, latestCapture: (time: string, status: string) => ` ಇತ್ತೀಚಿನ ಮಾದರಿ ಸಂಗ್ರಹ ${time} (${status}).`,
     lastImported: (dataset: string, time: string) => ` ${dataset} ಕೊನೆಯ ಆಮದು ${time}.`,
     noWeather: "ಹವಾಮಾನ ದಾಖಲೆಗಳಿಲ್ಲ",
@@ -138,8 +139,14 @@ const periodText = (t: Copy, period: Period) => !period ? t.noRecordsInRange : p
 const stageText = (t: Copy, row: Pick<ProductionEstimate, "estimate_type" | "estimate_label">) => t.stage[row.estimate_type] ?? row.estimate_label;
 const typeName = (t: Copy, type: string) => t.dataTypeNames[type] ?? label(type);
 
+/** "Directorate of Arecanut and Spices Development (DASD)" → "DASD": the short name a phone line has room for. */
+const shortPublisher = (publisher: string) => /\(([^)]+)\)\s*$/.exec(publisher)?.[1] ?? publisher;
+
 function Provenance({ sources, period }: { sources: SupplySource[]; period: string }) {
   const t = useCopy(COPY);
+  // Phones get one line: the period, then each source by its short name, still linked and dated.
+  if (usePhone()) return <p className="data-disclosure">{period} · {t.sourceWord}: {sources.length ? sources.map((source, index) => <span key={`${source.source_url}-${index}`}>
+    {index ? ", " : ""}<a href={source.source_url} target="_blank" rel="noreferrer">{shortPublisher(source.publisher)}{source.publication_date ? ` ${source.publication_date}` : ""}</a></span>) : t.noneRecorded}</p>;
   return <p className="data-disclosure">{t.provenance(period)} {sources.length ? sources.map((source, index) => <span key={`${source.source_url}-${index}`}>
     {index ? "; " : ""}{source.publisher} (<a href={source.source_url} target="_blank" rel="noreferrer">{t.document}</a>{source.publication_date ? t.published(source.publication_date) : ""})</span>) : t.noneRecorded}.</p>;
 }
@@ -183,8 +190,9 @@ function ProductionSection() {
           <td>{num(row.change_production_thousand_tonnes, 3)}</td><td>{num(row.change_area_thousand_hectares, 3)}</td><td>{num(row.change_yield_kg_hectare, 0)}</td>
           <td><a href={row.source_url} target="_blank" rel="noreferrer">{row.publication_date ?? t.document}</a></td></tr>)}
       </tbody></table></div> : <p>{t.noRevisions}</p>}
-      <ul>{t.productionNotes.map((note) => <li key={note}>{note}</li>)}<li>{t.mixedNote}</li></ul>
-      <p className="data-disclosure">{t.districtAnalysis} {geography === "All India" ? t.selectState : districts.data?.districts.length ? t.districtRecords(districts.data.districts.length, periodText(t, districts.data.reporting_period)) : t.noDistricts}</p>
+      {/* Method notes are for reviewers; phones skip them, and the tables above still carry every value and stage. */}
+      <ul className="phone-hide">{t.productionNotes.map((note) => <li key={note}>{note}</li>)}<li>{t.mixedNote}</li></ul>
+      <p className="data-disclosure phone-hide">{t.districtAnalysis} {geography === "All India" ? t.selectState : districts.data?.districts.length ? t.districtRecords(districts.data.districts.length, periodText(t, districts.data.reporting_period)) : t.noDistricts}</p>
       <ForecastNotice gate={data.forecast} subject={t.productionSubject} />
     </>}
   </section>;
@@ -209,7 +217,7 @@ function ArrivalsSection() {
           {rows.map((row) => <tr key={row.bucket}><td>{row.bucket}</td><td>{num(row.arrival?.quantity_tonnes, 3)}</td><td>{row.arrival?.markets_reporting ?? "—"}</td>
             <td>{num(row.traded?.quantity_tonnes, 3)}</td><td>{row.traded?.markets_reporting ?? "—"}</td><td>{(row.arrival?.unknown_unit_records ?? 0) + (row.traded?.unknown_unit_records ?? 0)}</td></tr>)}
         </tbody></table></div>}
-      <ul>{t.arrivalNotes.map((note) => <li key={note}>{note}</li>)}</ul>
+      <ul className="phone-hide">{t.arrivalNotes.map((note) => <li key={note}>{note}</li>)}</ul>
       <ForecastNotice gate={data.forecast} subject={t.arrivalSubject} />
     </>}
   </section>;
@@ -220,12 +228,14 @@ function WeatherSection({ district, districts, setDistrict }: { district: string
   const format = useFormat();
   const weather = useQuery({ queryKey: ["supply-weather", district], queryFn: () => api.supplyWeather({ district }) });
   const data = weather.data, recent = (data?.history ?? []).slice(-14).reverse();
+  const phone = usePhone();
   return <section className="panel table-panel" aria-labelledby="supply-weather">
     <div className="panel-heading"><div><h2 id="supply-weather">{t.weather}</h2><p>{t.weatherHint}</p></div>
       <label className="filter-control"><span>{t.district}</span><select value={district} onChange={(event) => setDistrict(event.target.value)}>
         {(districts.length ? districts : [district]).map((value) => <option key={value}>{value}</option>)}</select></label></div>
     {weather.isLoading ? <LoadingState /> : weather.error ? <ErrorState error={weather.error} onRetry={() => void weather.refetch()} /> : !data ? null : <>
-      <p className="data-disclosure">{t.weatherPeriod(periodText(t, data.reporting_period))} {Object.keys(data.data_types).map((key) => `${typeName(t, key)}: ${t.dataTypes[key] ?? data.data_types[key]}`).join(" ")}
+      {/* Phones skip the long data-type and import note; each row still names its data type and date. */}
+      <p className="data-disclosure phone-hide">{t.weatherPeriod(periodText(t, data.reporting_period))} {Object.keys(data.data_types).map((key) => `${typeName(t, key)}: ${t.dataTypes[key] ?? data.data_types[key]}`).join(" ")}
         {data.freshness.model_capture ? t.latestCapture(data.freshness.model_capture.latest ? format.timestamp(data.freshness.model_capture.latest) : "—", t.freshness[data.freshness.model_capture.status] ?? data.freshness.model_capture.status) : ""}
         {data.freshness.imports.map((item) => t.lastImported(label(item.dataset), format.timestamp(item.latest))).join("")}</p>
       {!data.history.length ? <EmptyState title={t.noWeather}>{t.noWeatherHint(district)}</EmptyState> : <>
@@ -233,16 +243,21 @@ function WeatherSection({ district, districts, setDistrict }: { district: string
           {data.seasonal.map((row) => <tr key={`${row.key}-${row.data_type}`}><td>{row.label}</td><td>{typeName(t, row.data_type)}</td><td>{t.daysCoverage(row.days_with_data, row.expected_days, row.complete)}</td>
             <td>{num(row.rainfall_total_mm)}</td><td>{row.rainy_days_2_5mm}</td><td>{num(row.mean_humidity_pct)}</td></tr>)}
         </tbody></table></div>
+        {/* Phones fold the day-by-day table; the season summary above is the quick read. */}
+        {phone ? <details className="phone-fold"><summary>{t.recentAria}</summary>
         <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recentAria}><table><thead><tr><th>{t.date}</th><th>{t.dataType}</th><th>{t.rain}</th><th>{t.max}</th><th>{t.min}</th><th>{t.humidityShort}</th></tr></thead><tbody>
           {recent.map((row) => <tr key={`${row.day}-${row.data_type}`}><td>{format.date(row.day)}</td><td>{typeName(t, row.data_type)}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{num(row.relative_humidity_pct)}</td></tr>)}
-        </tbody></table></div></>}
+        </tbody></table></div></details> : <>
+        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recentAria}><table><thead><tr><th>{t.date}</th><th>{t.dataType}</th><th>{t.rain}</th><th>{t.max}</th><th>{t.min}</th><th>{t.humidityShort}</th></tr></thead><tbody>
+          {recent.map((row) => <tr key={`${row.day}-${row.data_type}`}><td>{format.date(row.day)}</td><td>{typeName(t, row.data_type)}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{num(row.relative_humidity_pct)}</td></tr>)}
+        </tbody></table></div></>}</>}
       {(data.forecasts.official.length > 0 || data.forecasts.model.length > 0) && <h3>{t.forecasts}</h3>}
       {data.forecasts.official.length > 0 && <p>{t.officialDays(data.forecasts.official.length)}</p>}
-      {data.forecasts.model.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={t.modelAria}><table><thead><tr><th>{t.target}</th><th>{t.type}</th><th>{t.rain}</th><th>{t.max}</th><th>{t.min}</th><th>{t.issued}</th></tr></thead><tbody>
-        {data.forecasts.model.map((row) => <tr key={`${row.target_date}-${row.provider}`}><td>{format.date(row.target_date)}</td><td>{t.forecastType(typeName(t, row.data_type))}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{format.timestamp(row.issued_at)}</td></tr>)}
+      {data.forecasts.model.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={t.modelAria}><table><thead><tr><th>{t.target}</th><th className="phone-hide">{t.type}</th><th>{t.rain}</th><th>{t.max}</th><th>{t.min}</th><th className="phone-hide">{t.issued}</th></tr></thead><tbody>
+        {data.forecasts.model.map((row) => <tr key={`${row.target_date}-${row.provider}`}><td>{format.date(row.target_date)}</td><td className="phone-hide">{t.forecastType(typeName(t, row.data_type))}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td className="phone-hide">{format.timestamp(row.issued_at)}</td></tr>)}
       </tbody></table></div> : null}
       {data.warnings.length > 0 && <><h3>{t.warnings}</h3><ul>{data.warnings.map((row) => <li key={`${row.issued_at}-${row.valid_from}-${row.phenomena}`}>{t.warning(row.valid_from, row.valid_to, row.warning_level, row.phenomena, row.provider, format.timestamp(row.issued_at))}</li>)}</ul></>}
-      <ul>{t.weatherNotes.map((note) => <li key={note}>{note}</li>)}</ul>
+      <ul className="phone-hide">{t.weatherNotes.map((note) => <li key={note}>{note}</li>)}</ul>
     </>}
   </section>;
 }

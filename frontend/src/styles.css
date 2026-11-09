@@ -263,6 +263,13 @@ small { font-size: 11px; color: var(--muted); }
 .panel > .monthly-details + .table-scroll, .panel > .table-scroll + .monthly-details { margin-top: 14px; }
 details > summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ink); }
 details > summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* Phones: a folded table opens from one full-width row. */
+.phone-fold { margin: 12px 0 0; border-top: 1px solid var(--line); }
+.phone-fold > summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; }
+.phone-fold > summary { list-style: none; }
+.phone-fold > summary::-webkit-details-marker { display: none; }
+.phone-fold > summary::after { content: ""; width: 8px; height: 8px; margin: 0 4px 4px auto; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s ease; }
+.phone-fold[open] > summary::after { transform: rotate(-135deg); margin-bottom: -4px; }
 details[open] > summary { margin-bottom: 8px; }
 .review-evidence { margin: 12px 0; }
 .review-evidence pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
@@ -383,6 +390,10 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 .filter-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .filter-bar > span { flex: 1 1 240px; align-self: center; padding-top: 18px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
 .filter-bar .filter-control { flex: 1 1 170px; max-width: 280px; }
+/* Month and year side by side inside one filter; the month gets the wider share for its name. */
+.month-year-fields { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 6px; }
+.month-year select { width: 100%; height: 34px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 6px; font-size: 13px; }
+.month-year select:focus-visible { outline: 0; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .advanced-filters { flex: 0 0 auto; min-width: 0; align-self: flex-end; }
 .advanced-filters[open] { flex-basis: 100%; }
 .advanced-filters summary { cursor: pointer; display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink-2); font-size: 13px; font-weight: 550; }
@@ -549,25 +560,23 @@ th.numeric .sort-button span { order: -1; }
 .home-heading .home-latest strong { color: var(--ink); font-weight: 600; }
 /* Variety picker: a compact pill per everyday variety with a small cut-out photo of the dried nut, then "More varieties". */
 .variety-cards { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.variety-card { position: relative; display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 3px 16px 3px 3px; border: 1px solid var(--line-strong); border-radius: 999px;
+.variety-card { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px 0 8px; border: 1px solid var(--line-strong); border-radius: 999px;
   background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
   transition: border-color .15s ease, box-shadow .2s ease, transform .1s ease, background-color .15s ease; }
-.variety-card-photo { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 50%; overflow: hidden;
-  background: radial-gradient(circle at 50% 42%, var(--surface), var(--surface-2) 75%); }
-.variety-card-photo img { width: 100%; height: 100%; object-fit: contain; padding: 3px; filter: drop-shadow(0 2px 2px rgb(40 22 10 / 25%));
+.variety-card-photo { display: grid; place-items: center; width: 24px; height: 24px; flex: none; }
+.variety-card-photo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 1px rgb(40 22 10 / 22%));
   transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
 .variety-card-name { font-size: 14px; font-weight: 500; line-height: 1.3; white-space: nowrap; }
 .variety-card:hover:not([aria-pressed="true"]) { border-color: var(--brand-leaf); background: var(--brand-tint); }
-.variety-card:hover .variety-card-photo img { transform: scale(1.08); }
+.variety-card:hover .variety-card-photo img { transform: scale(1.1); }
 .variety-card:active { transform: scale(.97); }
 .variety-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.variety-card[aria-pressed="true"] { border-color: var(--brand); background: var(--brand); color: #fff; box-shadow: 0 4px 12px rgb(11 61 46 / 16%); }
+.variety-card[aria-pressed="true"] { border-color: var(--brand); background: var(--brand); color: #fff; }
 .variety-card[aria-pressed="true"] .variety-card-name { font-weight: 600; }
-.variety-card[aria-pressed="true"] .variety-card-photo { background: radial-gradient(circle at 50% 42%, #fff, #e8efe4 75%); }
 /* "More varieties" is one more pill in the row; it fills in when one of its varieties is chosen. The real select lies
    invisibly over the face, which is only as wide as its own label (a select is as wide as its longest option). */
 .variety-more { position: relative; display: inline-flex; }
-.variety-more-face { display: inline-flex; align-items: center; height: 46px; padding: 0 34px 0 16px; border: 1px dashed var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 14px; line-height: 1.3; white-space: nowrap; cursor: pointer;
+.variety-more-face { display: inline-flex; align-items: center; height: 34px; padding: 0 30px 0 14px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 14px; line-height: 1.3; white-space: nowrap; cursor: pointer;
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; }
 .variety-more select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
 .variety-more:hover .variety-more-face { border-color: var(--brand-leaf); }
@@ -668,6 +677,7 @@ td.cell-wrap { white-space: normal; }
 .glance-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
 .glance-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
 .glance-head p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.glance-share { display: none; }
 .glance-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); margin: 0; padding: 0; list-style: none; }
 /* Dividers drawn on the left and top edges, so they fall between tiles whether the row wraps or not; the outer ones are clipped. */
 .glance-tile { display: grid; align-content: start; gap: 12px; min-width: 0; padding: 18px 20px 20px; box-shadow: -1px 0 0 var(--line), 0 -1px 0 var(--line); }
@@ -740,9 +750,6 @@ a.rate-more-toggle { text-decoration: none; }
 :root[data-theme="dark"] .approve-button,
 :root[data-theme="dark"] .language-toggle button[aria-pressed="true"],
 :root[data-theme="dark"] .variety-card[aria-pressed="true"], :root[data-theme="dark"] .variety-more-active .variety-more-face { color: #10251a; }
-:root[data-theme="dark"] .variety-card[aria-pressed="true"] { box-shadow: 0 4px 14px rgb(0 0 0 / 30%); }
-:root[data-theme="dark"] .variety-card-photo { background: radial-gradient(circle at 50% 42%, #2c4036, #1d2c25 75%); }
-:root[data-theme="dark"] .variety-card[aria-pressed="true"] .variety-card-photo { background: radial-gradient(circle at 50% 42%, #2c4036, #16231d 75%); }
 :root[data-theme="dark"] .variety-more-face, :root[data-theme="dark"] .variety-phone select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b3c2b5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
@@ -754,6 +761,8 @@ a.rate-more-toggle { text-decoration: none; }
 :root[data-theme="dark"] .rate-change.hold-up,
 :root[data-theme="dark"] .glance-trend.hold-up { color: #a9d2a4; }
 .rate-card-foot a:hover { text-decoration: underline !important; }
+/* Phone-only parts of a cooperative card (see responsive.css): the source beside each branch, the price key, the footer source. */
+.rate-source-tag, .rate-key, .rate-foot-source, .rate-card-note { display: none; }
 .rate-share { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; margin-right: auto; padding: 0 2px; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
 .rate-share:hover { text-decoration: underline; }
 .rate-share:disabled { cursor: progress; opacity: .7; }

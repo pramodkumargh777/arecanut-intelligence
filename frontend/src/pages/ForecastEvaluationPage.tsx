@@ -15,6 +15,9 @@ const num = (value: number | null | undefined, digits = 0) => value == null ? "�
 const pct = (value: number | null | undefined) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
 const label = (value: string) => value.replace(/_/g, " ");
 
+/** Kannada names for the data-vintage modes the API reports ("revised" or "strict"). */
+const VINTAGE_KN: Record<string, string> = { revised: "ಪರಿಷ್ಕೃತ", strict: "ಮೂಲ ಪ್ರಕಟಿತ" };
+
 const COPY = defineCopy({
   en: {
     status: { reference: "Reference baseline", candidate: "Candidate", not_better_than_baseline: "Not better than baseline", validated: "Validated", revoked: "Revoked" } as Record<string, string>,
@@ -68,7 +71,7 @@ const COPY = defineCopy({
     existing: "ಈಗಿನ ತಿಂಗಳ ಉಲ್ಲೇಖ ಅಂದಾಜುಗಳು", unchanged: "ಬದಲಾಗದೆ ಉಳಿದಿವೆ.",
     about: "ಮಾದರಿಗಳನ್ನು ಒಂದೇ ದರದ ಆಧಾರದೊಳಗೆ ಮಾತ್ರ ಹೋಲಿಸಲಾಗುತ್ತದೆ. ಅಧಿಕೃತ ತಿಂಗಳ ರಾಜ್ಯ ಸರಾಸರಿ, ದೈನಂದಿನ ಎಪಿಎಂಸಿ ಮಾದರಿ ದರ, MAMCOS ಸರಾಸರಿ ಮತ್ತು TSS ಟೆಂಡರ್ ದರಗಳನ್ನು ಎಂದೂ ಬೆರೆಸುವುದಿಲ್ಲ. ಮುನ್ಸೂಚನೆ ಉಳಿಸಿದ ನಂತರ ದಾಖಲಾದ ಸಾಕಷ್ಟು ಫಲಿತಾಂಶಗಳು ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿದಾಗ ಮಾತ್ರ ಮಾದರಿಯನ್ನು ದೃಢೀಕರಿಸಲಾಗುತ್ತದೆ.",
     noExperiment: "ಯಾವುದೇ ಮುನ್ಸೂಚನಾ ಪ್ರಯೋಗ ಪ್ರಕಟವಾಗಿಲ್ಲ", runFrom: "ನಿಜವಾದ ದಾಖಲೆಗಳ ಮೇಲೆ data-platform ಇಂದ", runAfter: "ನಡೆಸಿ. ಈ ಪುಟ ತುಂಬಲು ಯಾವುದೇ ಫಲಿತಾಂಶ ಕಲ್ಪಿಸುವುದಿಲ್ಲ.",
-    experiment: "ಪ್ರಯೋಗ", origins: (n: number) => `${n} ಆರಂಭ ಬಿಂದುಗಳು`, vintages: (mode: string) => `${mode} ಆವೃತ್ತಿಗಳು`,
+    experiment: "ಪ್ರಯೋಗ", origins: (n: number) => `${n} ಆರಂಭ ಬಿಂದುಗಳು`, vintages: (mode: string) => `${VINTAGE_KN[mode] ?? mode} ಆವೃತ್ತಿಗಳು`,
     execution: "ಮುನ್ಸೂಚನೆ ನಡೆಸಿದ ಸಮಯ", lastPeriod: (period: string) => `ಬಳಸಿದ ಕೊನೆಯ ಮಾರುಕಟ್ಟೆ ಅವಧಿ: ${period}. ಇದು ಮಾರುಕಟ್ಟೆ ವರದಿ ದಿನಾಂಕವಲ್ಲ.`,
     evaluationStatus: "ಮೌಲ್ಯಮಾಪನ ಸ್ಥಿತಿ", candidates: (n: number) => `${n} ಅಭ್ಯರ್ಥಿಗಳು`,
     outcomes: "ಮುಂದಿನ ಫಲಿತಾಂಶಗಳು", events: (validated: number, revoked: number) => `${validated} ದೃಢೀಕೃತ · ${revoked} ಹಿಂಪಡೆದ ಮಾದರಿ ಘಟನೆಗಳು`,
@@ -81,9 +84,9 @@ const COPY = defineCopy({
     relativeTitle: "ಉತ್ತಮ ಸರಳ ಅಂದಾಜಿಗೆ ಹೋಲಿಸಿದ ದೋಷ",
     relativeHint: (horizon: string) => `ಅವಧಿ ${horizon} · ಒಟ್ಟು MAE ÷ ಕೊನೆಯ ಮೌಲ್ಯ ಮತ್ತು ಋತುಮಾನ ಸರಳದಲ್ಲಿ ಉತ್ತಮದು · 1.00 ಕ್ಕಿಂತ ಕಡಿಮೆ = ಕಡಿಮೆ ದೋಷ; ಗಾಢ ಪಟ್ಟಿಗಳು ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿವೆ, ತಿಳಿ ಪಟ್ಟಿಗಳು ಸಮ ಅಥವಾ ಕೆಟ್ಟದು`,
     relativeDarkHint: (horizon: string) => `ಅವಧಿ ${horizon} · ಒಟ್ಟು MAE ÷ ಉತ್ತಮ ಮೂಲ ಅಂದಾಜು · 1.00 ಕ್ಕಿಂತ ಕಡಿಮೆ = ಕಡಿಮೆ ದೋಷ; ಪ್ರಕಾಶಮಾನ ಪಟ್ಟಿಗಳು ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿವೆ, ಮಸುಕಾದವು ಸಮ ಅಥವಾ ಕೆಟ್ಟದು`,
-    beating: (n: number) => `${n} ಮಾದರಿಗಳು ಒಟ್ಟಾರೆ 1.00 ಕ್ಕಿಂತ ಕಡಿಮೆ · ಸರಣಿವಾರು ಸ್ಥಿತಿ ನೋಡಿ`, noneBeating: "ಯಾವ ಮಾದರಿಯೂ ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿಲ್ಲ",
+    beating: (n: number) => `${n} ${n === 1 ? "ಮಾದರಿ" : "ಮಾದರಿಗಳು"} ಒಟ್ಟಾರೆ 1.00 ಕ್ಕಿಂತ ಕಡಿಮೆ · ಸರಣಿವಾರು ಸ್ಥಿತಿ ನೋಡಿ`, noneBeating: "ಯಾವ ಮಾದರಿಯೂ ಮೂಲ ಅಂದಾಜನ್ನು ಮೀರಿಲ್ಲ",
     noRelative: "ಈ ಅವಧಿಗೆ ಸಾಪೇಕ್ಷ ಅಂಕಿಗಳಿಲ್ಲ", baseline: "ಮೂಲ ಅಂದಾಜು", relativeDescription: (horizon: string) => `ಅವಧಿ ${horizon} ರಲ್ಲಿ ಮಾದರಿವಾರು ಸಾಪೇಕ್ಷ MAE`,
-    backtestsSource: (id: string, mode: string) => `ಹಂತ ಹಂತದ ಪರೀಕ್ಷೆಗಳು · ಪ್ರಯೋಗ ${id} · ${mode} ಆವೃತ್ತಿಗಳು`,
+    backtestsSource: (id: string, mode: string) => `ಹಂತ ಹಂತದ ಪರೀಕ್ಷೆಗಳು · ಪ್ರಯೋಗ ${id} · ${VINTAGE_KN[mode] ?? mode} ಆವೃತ್ತಿಗಳು`,
     coverageTitle: "ಮುನ್ಸೂಚನಾ ಶ್ರೇಣಿ ವ್ಯಾಪ್ತಿ", coverageHint: "80% ಶ್ರೇಣಿಯೊಳಗೆ ಬಿದ್ದ ನಿಜವಾದ ದರಗಳ ಪಾಲು · ಗಾಢ ಪಟ್ಟಿಗಳು 80% ಗೆ 5 ಅಂಕಗಳೊಳಗೆ; 80% ಕ್ಕಿಂತ ತುಂಬಾ ಕಡಿಮೆ ಎಂದರೆ ಶ್ರೇಣಿ ತುಂಬಾ ಕಿರಿದು",
     coverageDarkHint: "80% ಶ್ರೇಣಿಯೊಳಗೆ ಬಿದ್ದ ನಿಜವಾದ ದರಗಳ ಪಾಲು · ಪ್ರಕಾಶಮಾನ ಪಟ್ಟಿಗಳು 80% ಗೆ 5 ಅಂಕಗಳೊಳಗೆ; ತುಂಬಾ ಕಡಿಮೆ ಎಂದರೆ ಶ್ರೇಣಿ ತುಂಬಾ ಕಿರಿದು",
     noIntervals: "ಈ ಅವಧಿಗೆ ಶ್ರೇಣಿ ಮುನ್ಸೂಚನೆಗಳಿಲ್ಲ", intervalCoverage: "ಶ್ರೇಣಿ ವ್ಯಾಪ್ತಿ", nominal: "ಗುರಿ 80%", coverageDescription: (horizon: string) => `ಅವಧಿ ${horizon} ರಲ್ಲಿ ಮಾದರಿವಾರು ಶ್ರೇಣಿ ವ್ಯಾಪ್ತಿ`,

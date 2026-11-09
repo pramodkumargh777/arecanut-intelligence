@@ -110,7 +110,7 @@
   .filter-bar .filter-control { flex: 1 1 100%; max-width: none; }
   .advanced-filter-fields .filter-control { flex: 1 1 100%; max-width: none; }
   .filter-bar > span { padding-top: 0; }
-  .filter-control input, .filter-control select, .variety-select select, .period-select select, .token-form input { font-size: 16px; height: 44px; }
+  .filter-control input, .filter-control select, .variety-select select, .period-select select, .token-form input, .month-year select { font-size: 16px; height: 44px; }
   .period-select { height: 44px; }
   .variety-select { min-width: 0; width: 100%; }
   .variety-select select { max-width: none; }
@@ -308,6 +308,26 @@
   /* Explanatory captions and footnotes: the heading and the numbers say enough on a small screen. Dates, units and
      source basis lines (.page-meta) are not marked, so they stay. */
   .phone-hide, .snapshot-card > p, .page-heading > div:first-child > p:not(.page-meta), .panel-heading p, .price-chart-caption { display: none; }
+  /* Long status pills (often Kannada) wrap inside their card instead of running past its edge. */
+  .status-pill { max-width: 100%; white-space: normal; line-height: 1.45; padding: 3px 9px; border-radius: 12px; }
+  /* A panel title and its one filter; the filter's label stays for screen readers only. */
+  /* A short title keeps the filter beside it; a long one pushes the filter onto its own full-width row. */
+  .panel-heading:has(> .filter-control) { flex-wrap: wrap; align-items: center; }
+  .panel-heading:has(> .filter-control) > div { flex: 0 1 auto; min-width: 0; }
+  .panel-heading:has(> .filter-control) h2 { overflow-wrap: normal; }
+  .panel-heading > .filter-control { flex: 1 1 150px; min-width: 150px; }
+  .panel-heading > .filter-control > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* Stat cards two to a row: each holds one short figure, so a full row each wasted most of the screen. An odd last card
+     takes the whole row. */
+  .snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .snapshot-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+  .snapshot-grid > :last-child:nth-child(odd) .snapshot-value { margin-top: 0; }
+  /* A panel's title and its one action (such as an export) share a row; a long title wraps beside the button. */
+  .panel-heading:has(> .button-secondary) { flex-wrap: nowrap; align-items: center; }
+  .panel-heading:has(> .button-secondary) > div { flex: 1 1 auto; min-width: 0; }
+  .panel-heading > .button-secondary { flex: none; min-height: 40px; height: auto; padding: 6px 12px; font-size: 13.5px; }
+  .snapshot-card { padding: 12px 14px; }
+  .snapshot-card .snapshot-value, .snapshot-grid-even .snapshot-value { font-size: 19px; margin-top: 6px; }
   .row-warnings { display: flex; margin-top: 4px; }
   /* Sell or wait: folded cost inputs and year table. */
   .hold-costs { grid-column: 1 / -1; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
@@ -345,13 +365,21 @@
 
   /* Price board. */
   .glance { border-radius: 16px; }
-  .glance-head { padding: 14px 16px 12px; background: none; }
+  .glance-head { flex-wrap: nowrap; align-items: center; padding: 8px 8px 8px 16px; background: none; }
+  .glance-share { display: inline-flex; margin-left: auto; }
+  .glance-share .rate-share { min-height: 40px; margin: 0; padding: 0 8px; }
   .glance-head h2 { font-size: 13.5px; font-weight: 600; color: var(--muted); }
-  .glance-tile { gap: 8px; padding: 16px; }
+  /* Each tile is three tight lines: source and date, the range, then unit and branches with the trend at the right.
+     The trend drops under them only when the row is too narrow, as with a long Kannada label. */
+  .glance-tile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 16px 14px; }
+  .glance-tile-top, .glance-range { flex: 1 1 100%; }
+  .glance-source { padding: 2px 8px; padding-block: 2px; font-size: 11px; letter-spacing: .05em; }
+  .glance-date { font-size: 12.5px; }
   .glance-range { flex-wrap: nowrap; gap: 0 8px; font-size: 24px; white-space: nowrap; }
   .glance-range small, .glance-branches { display: none; }
-  .glance-sub { display: block; margin: -4px 0 2px; font-size: 13px; color: var(--muted); }
-  .glance-tile-foot { justify-content: flex-start; }
+  .glance-sub { display: block; flex: 1 1 auto; margin: 0; font-size: 13px; color: var(--muted); }
+  .glance-tile-foot { flex: 0 0 auto; margin-left: auto; }
+  .glance-trend { padding: 3px 9px; font-size: 12px; }
 
   /* Branch rows: two columns. */
   .rate-card { border-radius: 16px; }
@@ -371,6 +399,15 @@
   .rate-sub { display: grid; justify-items: end; gap: 2px; }
   .rate-row-top::before { left: -14px; }
   .rate-card-head h3 { font-size: 17px; }
+  /* Cooperative cards drop their header: each row names the source, the price key sits under the range and the source
+     link moves to the footer. The heading stays for screen readers and as the target of the summary's links. */
+  .rate-card-coop { position: relative; }
+  .rate-card-coop .rate-card-head { position: absolute; top: 0; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  .rate-card-coop .rate-row:first-child { border-top: 0; }
+  .rate-source-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; background: var(--brand-tint); color: var(--brand); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; line-height: 1.5; }
+  .rate-key { display: block; color: var(--subtle); font-size: 11.5px; line-height: 1.35; white-space: nowrap; }
+  .rate-card-note { display: block; margin: 0; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+  .rate-foot-source { display: inline-flex; color: var(--muted) !important; font-weight: 500 !important; }
   /* TUMCOS's own line already says per quintal and unit assumed. */
   #rates-tumcos ~ .rate-card-basis { display: none; }
 }

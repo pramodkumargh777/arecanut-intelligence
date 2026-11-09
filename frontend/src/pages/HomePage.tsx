@@ -26,7 +26,9 @@ const VARIETY_IMAGES: Record<string, string> = { rashi: rashiImage, chali: chali
 
 const SOURCES: { key: CooperativeSource; kn: string; en: string; assumedUnit: boolean }[] = [
   { key: "mamcos", kn: "ಮ್ಯಾಮ್ಕೋಸ್ (MAMCOS)", en: "MAMCOS", assumedUnit: false },
-  { key: "tss", kn: "ಟಿಎಸ್ಎಸ್ (TSS)", en: "TSS", assumedUnit: true },
+  // TSS states no unit and its rates are read as per quintal. The home page shows them without a caveat (an owner's
+  // decision); Explore prices still marks the unit as assumed.
+  { key: "tss", kn: "ಟಿಎಸ್ಎಸ್ (TSS)", en: "TSS", assumedUnit: false },
 ];
 
 const COPY = defineCopy({
@@ -75,14 +77,16 @@ const COPY = defineCopy({
     showAll: (count: number) => `ಎಲ್ಲಾ ${count} ಶಾಖೆಗಳನ್ನು ತೋರಿಸಿ`,
     showFewer: "ಕಡಿಮೆ ತೋರಿಸಿ",
     unitFoot: (assumed: boolean) => `ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ಸರಾಸರಿ · ಕನಿಷ್ಠ – ಗರಿಷ್ಠ${assumed ? " · ಘಟಕ ಊಹಿಸಲಾಗಿದೆ" : ""}`,
-    tumcosSub: "ಚನ್ನಗಿರಿ · ತಳಿ ತಿಳಿಸಿಲ್ಲ · ಘಟಕ ಊಹಿಸಲಾಗಿದೆ",
+    rowKey: "ಸರಾಸರಿ · ಕನಿಷ್ಠ–ಗರಿಷ್ಠ /ಕ್ವಿಂ",
+    assumedNote: (source: string) => `${source} ಘಟಕ ತಿಳಿಸುವುದಿಲ್ಲ; ದರಗಳನ್ನು ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ.`,
+    tumcosSub: "ಚನ್ನಗಿರಿ · ತಳಿ ತಿಳಿಸಿಲ್ಲ · ಘಟಕ ಊಹಿಸಲಾಗಿದೆ", tumcosLabel: "ತಳಿ ತಿಳಿಸಿಲ್ಲ",
     officialSub: "AGMARKNET · ಮಾದರಿ ದರ · ಎಲ್ಲಾ ತಳಿಗಳು",
     explore: "ಎಲ್ಲಾ ದರಗಳು",
     about: "ಈ ದರಗಳ ಬಗ್ಗೆ",
     glanceTitle: (variety: string) => `${variety} — ಒಂದು ನೋಟ`,
     glanceHint: "ಪ್ರತಿ ಸಂಸ್ಥೆಯ ಇತ್ತೀಚಿನ ವರದಿಯ ಶಾಖಾ ಸರಾಸರಿಗಳ ವ್ಯಾಪ್ತಿ",
     glanceBranches: (count: number) => `${count} ಶಾಖೆಗಳು`, perQuintal: "/ ಕ್ವಿಂಟಾಲ್", perQuintalWord: "ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್", to: "ರಿಂದ",
-    noCompare: "ಹೋಲಿಸಲು ಹಿಂದಿನ ವರದಿ ಇಲ್ಲ",
+    noCompare: "ಹಿಂದಿನ ವರದಿ ಇಲ್ಲ", noCompareHint: "ಬದಲಾವಣೆ ತೋರಿಸಲು ಹಿಂದಿನ ವರದಿ ಇಲ್ಲ",
     mostlyUp: "ಏರಿಕೆ", mostlyDown: "ಇಳಿಕೆ", mixed: "ಏರಿಳಿತ ಮಿಶ್ರ", unchanged: "ಬದಲಾವಣೆ ಇಲ್ಲ",
     share: "ಹಂಚಿಕೊಳ್ಳಿ", shareOpening: "ತೆರೆಯಲಾಗುತ್ತಿದೆ…", shareDone: "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ", shareWhatsapp: "ವಾಟ್ಸ್‌ಆ್ಯಪ್ ತೆರೆಯಲಾಗಿದೆ",
     shareAria: (source: string) => `${source} ದರಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ`,
@@ -90,6 +94,9 @@ const COPY = defineCopy({
     shareReport: (date: string) => `ವರದಿ: ${date}`,
     shareMore: (count: number) => `…ಇನ್ನೂ ${count} ಶಾಖೆಗಳು`,
     shareBasis: (assumed: boolean) => `ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ಸರಾಸರಿ ದರ${assumed ? " (ಘಟಕ ಊಹಿಸಲಾಗಿದೆ)" : ""}. ನಿಮ್ಮ ಮಾಲಿನ ದರ ಬೇರೆ ಇರಬಹುದು.`,
+    shareGlanceTitle: (variety: string) => `${variety} ಅಡಿಕೆ ಧಾರಣೆ · ಸಹಕಾರಿ ಸಂಘಗಳು`,
+    shareGlanceAria: "ಈ ನೋಟವನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
+    shareGlanceNote: (assumed: string) => `ಪ್ರತಿ ಸಂಸ್ಥೆಯ ಇತ್ತೀಚಿನ ವರದಿಯ ಶಾಖಾ ಸರಾಸರಿಗಳ ವ್ಯಾಪ್ತಿ, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ${assumed ? ` (${assumed}: ಘಟಕ ಊಹಿಸಲಾಗಿದೆ)` : ""}. ನಿಮ್ಮ ಮಾಲಿನ ದರ ಬೇರೆ ಇರಬಹುದು.`,
     shareTumcosTitle: "ಅಡಿಕೆ ಧಾರಣೆ · ತುಮ್ಕೋಸ್ ಚನ್ನಗಿರಿ",
     shareTumcosNote: "ತಳಿ ತಿಳಿಸಿಲ್ಲ; ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ. ನಿಮ್ಮ ಮಾಲಿನ ದರ ಬೇರೆ ಇರಬಹುದು.",
     shareOfficialTitle: "ಅಡಿಕೆ ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆ ದರಗಳು",
@@ -141,14 +148,16 @@ const COPY = defineCopy({
     showAll: (count: number) => `Show all ${count} branches`,
     showFewer: "Show fewer",
     unitFoot: (assumed: boolean) => `average per quintal · minimum – maximum${assumed ? " · unit assumed" : ""}`,
-    tumcosSub: "Channagiri · variety not stated · unit assumed",
+    rowKey: "avg · min–max / qtl",
+    assumedNote: (source: string) => `${source} does not state its unit; rates are treated as per quintal.`,
+    tumcosSub: "Channagiri · variety not stated · unit assumed", tumcosLabel: "variety not stated",
     officialSub: "AGMARKNET · modal price, ₹/quintal · all varieties",
     explore: "All rates",
     about: "About these rates",
     glanceTitle: (variety: string) => `${variety} at a glance`,
     glanceHint: "Range of branch averages in each cooperative's latest report",
     glanceBranches: (count: number) => `${count} branch${count === 1 ? "" : "es"}`, perQuintal: "/ quintal", perQuintalWord: "per quintal", to: "to",
-    noCompare: "No earlier report to compare",
+    noCompare: "No prior report", noCompareHint: "No earlier report to show a change against",
     mostlyUp: "Up", mostlyDown: "Down", mixed: "Mixed", unchanged: "Unchanged",
     share: "Share", shareOpening: "Opening…", shareDone: "Shared", shareWhatsapp: "WhatsApp opened",
     shareAria: (source: string) => `Share ${source} rates`,
@@ -156,6 +165,9 @@ const COPY = defineCopy({
     shareReport: (date: string) => `Report: ${date}`,
     shareMore: (count: number) => `…and ${count} more branch${count === 1 ? "" : "es"}`,
     shareBasis: (assumed: boolean) => `Average rate per quintal${assumed ? " (unit assumed)" : ""}. The rate for your lot can differ.`,
+    shareGlanceTitle: (variety: string) => `${variety} arecanut rates · cooperatives`,
+    shareGlanceAria: "Share this summary",
+    shareGlanceNote: (assumed: string) => `Range of branch averages per quintal in each cooperative's latest report${assumed ? ` (${assumed}: unit assumed)` : ""}. The rate for your lot can differ.`,
     shareTumcosTitle: "Arecanut rate · TUMCOS Channagiri",
     shareTumcosNote: "Variety not stated; treated as per quintal. The rate for your lot can differ.",
     shareOfficialTitle: "Arecanut APMC market rates",
@@ -205,7 +217,11 @@ function orderRows(all: CooperativeQuote[]) {
 }
 
 /** Two lines per branch: place, badge and date on the left; price, change and range on the right. */
-function RateRow({ row, today, language, highest, showLabel, change, reveal }: { row: CooperativeQuote; today: string; language: Language; highest: boolean; showLabel: boolean; change: PriceChange | null; reveal?: "in" | "out" }) {
+/**
+ * One branch. On phones the card header is hidden, so `sourceTag` names the cooperative beside the branch and `priceKey`
+ * says which figure is the average and which the range; desktop keeps both in the card header and hides these.
+ */
+function RateRow({ row, today, language, highest, showLabel, change, reveal, sourceTag, priceKey, label }: { row: CooperativeQuote; today: string; language: Language; highest: boolean; showLabel: boolean; change: PriceChange | null; reveal?: "in" | "out"; sourceTag?: string; priceKey?: string; label?: string }) {
   const copy = COPY[language];
   const age = ageDays(row.reporting_date, today);
   // A refresh that brings a new report or price for this branch marks the row briefly. It is visual only: announcing
@@ -215,11 +231,12 @@ function RateRow({ row, today, language, highest, showLabel, change, reveal }: {
     <div className="rate-place">
       <strong>{branchName(row.branch, language)}{highest && <span className="rate-top-mark" title={copy.highest}>{copy.topMark}</span>}</strong>
       <span className="rate-meta"><span className={`rate-date${age > 2 ? " rate-date-old" : ""}`}>{dateText(row.reporting_date, language)} <span className="rate-age">{ageText(age, language)}</span></span>
-        {showLabel && <span className="rate-label" lang="en">{row.variety}</span>}</span>
+        {showLabel && <span className="rate-label" lang={label ? language : "en"}>{label ?? row.variety}</span>}{sourceTag && <span className="rate-source-tag" lang="en">{sourceTag}</span>}</span>
     </div>
     <div className="rate-price">
       <strong>{rupees(row.average_price)}</strong>
       <span className="rate-sub"><ChangeLine change={change} today={today} language={language} /><span className="rate-range">{rupees(row.minimum_price)} – {rupees(row.maximum_price)}</span></span>
+      {priceKey && <span className="rate-key">{priceKey}</span>}
     </div>
   </li>;
 }
@@ -367,7 +384,14 @@ export function HomePage() {
     {variety.note && <p className="home-note home-note-callout">{variety.note[language]}</p>}
 
     {glance.length > 0 && <section className="glance" aria-labelledby="glance-heading">
-      <header className="glance-head"><h2 id="glance-heading">{copy.glanceTitle(varietyName(variety))}</h2><p>{copy.glanceHint}</p></header>
+      <header className="glance-head"><h2 id="glance-heading">{copy.glanceTitle(varietyName(variety))}</h2><p>{copy.glanceHint}</p>
+        {/* Phones: the summary is what most people forward, so it gets its own share at the top. Desktop shares per card. */}
+        <span className="glance-share"><ShareButton labels={shareLabels} ariaLabel={copy.shareGlanceAria} title={copy.shareGlanceTitle(varietyName(variety))} message={() => shareMessage({
+          title: copy.shareGlanceTitle(varietyName(variety)),
+          // Each cooperative stays on its own line with its own date; their averages are never combined.
+          lines: glance.map(({ source, latest, low, high }) => ({ place: source.en, price: low === high ? rupees(low) : `${rupees(low)} – ${rupees(high)}`, date: dateText(latest, language) })),
+          more: copy.shareMore, note: copy.shareGlanceNote(glance.filter(({ source }) => source.assumedUnit).map(({ source }) => source.en).join(", ")), url: varietyShareUrl(variety.key),
+        })} /></span></header>
       {/* One tile per cooperative, never merged: each works out its average differently. */}
       <ul className="glance-tiles">{glance.map(({ source, latest, low, high, count, breadth }) => {
         const trend = breadth.median_percent === null ? null
@@ -389,7 +413,7 @@ export function HomePage() {
           <p className="glance-sub">{copy.perQuintalWord} · {copy.glanceBranches(count)}</p>
           <div className="glance-tile-foot">
             {trend ? <span className={`glance-trend ${trend.className}`}><trend.Icon size={13} aria-hidden="true" />{trend.text} {signedPercent(breadth.median_percent!).replace("-", "−")}</span>
-              : <span className="glance-trend">{copy.noCompare}</span>}
+              : <span className="glance-trend" title={copy.noCompareHint}>{copy.noCompare}</span>}
             <span className="glance-branches">{copy.glanceBranches(count)}</span>
           </div>
         </li>;
@@ -414,7 +438,7 @@ export function HomePage() {
         const history = historyFor(source.key);
         const breadth = marketBreadth(sameDay.map((row) => priceChange(row, history)));
         const collapsed = collapsedRows(rows, FEATURED_BRANCHES[source.key]);
-        return <section className="rate-card" key={source.key} aria-labelledby={`rates-${source.key}`}>
+        return <section className="rate-card rate-card-coop" key={source.key} aria-labelledby={`rates-${source.key}`}>
           <header className="rate-card-head">
             <div><h3 id={`rates-${source.key}`}>{language === "kn" ? source.kn : source.en}</h3>
               <span className="rate-card-basis">{copy.unitFoot(source.assumedUnit)}</span>
@@ -432,8 +456,10 @@ export function HomePage() {
               <span className={`market-breadth-median ${breadth.median_percent > 0 ? "hold-up" : breadth.median_percent < 0 ? "hold-down" : ""}`}>{copy.typical} <b>{signedPercent(breadth.median_percent).replace("-", "−")}</b></span>
             </div>}
             <ul className="rate-list">{(cards[source.key] ? rows : collapsed).map((row) => <RateRow key={`${row.branch}|${varietyKey(row.variety)}`} reveal={reveal(source.key, row, collapsed)} row={row} today={today} language={language} showLabel
-              highest={sameDay.length > 1 && row === sameDay[0]} change={priceChange(row, history)} />)}</ul>
+              highest={sameDay.length > 1 && row === sameDay[0]} change={priceChange(row, history)} sourceTag={source.en} priceKey={copy.rowKey} />)}</ul>
             {moreToggle(source.key, rows.length)}
+            {/* Phones hide the header that says so; the assumed unit is stated once here instead of on every row. */}
+            {source.assumedUnit && <p className="rate-card-note">{copy.assumedNote(source.en)}</p>}
             </>}
           </>}
           <footer className="rate-card-foot">
@@ -442,6 +468,8 @@ export function HomePage() {
               lines: sameDay.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
               more: copy.shareMore, note: copy.shareBasis(source.assumedUnit), url: varietyShareUrl(variety.key),
             })} />}
+            {/* Phones hide the header, so its source link moves down here. */}
+            {rows[0] && <a className="rate-foot-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
             <Link to={`/prices?feed=${source.key}${published.length === 1 ? `&variety=${encodeURIComponent(published[0])}` : ""}`} aria-label={copy.moreFrom(source.en)}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
         </section>;
       })}
@@ -452,17 +480,20 @@ export function HomePage() {
     <section className="home-price-section" aria-labelledby="other-prices-heading">
     <div className="home-section-heading"><h2 id="other-prices-heading">{copy.otherMarketsTitle}</h2>{showTumcos && <p>{copy.otherMarketsHint}</p>}</div>
     <div className="rate-grid rate-grid-even">
-      {showTumcos && <section className="rate-card" aria-labelledby="rates-tumcos">
+      {showTumcos && <section className="rate-card rate-card-coop" aria-labelledby="rates-tumcos">
         <header className="rate-card-head">
           <div><h3 id="rates-tumcos">TUMCOS</h3><span className="rate-card-basis">{copy.unitFoot(true)}</span><span className="rate-card-sub">{copy.tumcosSub}</span></div>
           {tumcos[0] && <a className="rate-source" href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
         </header>
-        {tumcosQuery?.isPending ? <SkeletonRows label={copy.loading} rows={1} /> : tumcosQuery?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void tumcosQuery.refetch()} /> : tumcos.length ? <ul className="rate-list">{tumcos.map((row) => <RateRow key={row.branch} row={row} today={today} language={language} showLabel={false} highest={false} change={priceChange(row, tumcosHistory)} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
+        {tumcosQuery?.isPending ? <SkeletonRows label={copy.loading} rows={1} /> : tumcosQuery?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void tumcosQuery.refetch()} /> : tumcos.length ? <ul className="rate-list">{tumcos.map((row) => <RateRow key={row.branch} row={row} today={today} language={language} showLabel highest={false} change={priceChange(row, tumcosHistory)}
+          label={copy.tumcosLabel} sourceTag="TUMCOS" priceKey={copy.rowKey} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
+        {tumcos.length > 0 && <p className="rate-card-note">{copy.assumedNote("TUMCOS")}</p>}
         <footer className="rate-card-foot">{tumcos[0] && <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("TUMCOS")} title={copy.shareTumcosTitle} message={() => shareMessage({
           title: copy.shareTumcosTitle, date: copy.shareReport(dateText(tumcos[0].reporting_date, language)),
           lines: tumcos.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
           more: copy.shareMore, note: copy.shareTumcosNote, url: varietyShareUrl(variety.key),
-        })} />}<Link to="/prices?feed=tumcos" aria-label={copy.moreFrom("TUMCOS")}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
+        })} />}{tumcos[0] && <a className="rate-foot-source" href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
+          <Link to="/prices?feed=tumcos" aria-label={copy.moreFrom("TUMCOS")}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
       </section>}
 
     <section className="rate-card" aria-labelledby="rates-official">

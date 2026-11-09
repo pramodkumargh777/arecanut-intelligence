@@ -1,5 +1,6 @@
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import { useResponsiveChart } from "./useResponsiveChart";
+import { usePhone } from "./usePhone";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
@@ -37,6 +38,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
   const t = useCopy(CHART);
   const onChartReady = useResponsiveChart();
   const { AXIS_LABEL, AXIS_LINE, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, SERIES_COLORS, TOOLTIP, tooltipHtml, regionShade } = useChartPalette();
+  const phone = usePhone();
   const ISOLATED = t.isolated;
   const format = (value: number | null | undefined) => value == null ? t.notReported : valueFormat === "inr" ? inr(value) : valueFormat === "percent" ? `${value.toFixed(1)}%` : value.toFixed(1);
   const single = series.length === 1;
@@ -50,8 +52,9 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
   const showEnd = endLabel && single && series[0].values.at(-1) != null;
   const option = {
     ...base(description, INK),
-    legend: { ...base(description, INK).legend, show: !single, data: [...series.map((item) => item.name), ...(band ? [band.name] : [])] },
-    grid: { top: single ? 16 : series.length > 4 ? 68 : 40, right: showEnd ? 60 : 16, bottom: 4, left: 4, containLabel: true },
+    // On phones a legend wraps onto rows the grid never reserved, so it scrolls along one row instead.
+    legend: { ...base(description, INK).legend, show: !single, ...(phone ? { type: "scroll", pageIconSize: 10, pageTextStyle: { color: INK[500], fontSize: 11 } } : {}), data: [...series.map((item) => item.name), ...(band ? [band.name] : [])] },
+    grid: { top: single ? 16 : phone ? 36 : series.length > 4 ? 68 : 40, right: showEnd ? 60 : 16, bottom: 4, left: 4, containLabel: true },
     tooltip: {
       ...TOOLTIP, trigger: "axis", axisPointer: CROSSHAIR,
       formatter: (items: { seriesName: string; value: number | null; axisValueLabel: string; color: string; dataIndex: number }[]) => {
