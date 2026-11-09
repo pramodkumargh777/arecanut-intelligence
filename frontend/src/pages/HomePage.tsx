@@ -229,9 +229,9 @@ function RateRow({ row, today, language, highest, showLabel, change, reveal, sou
   const updated = useChangeFlash(`${row.reporting_date}|${row.average_price}`);
   return <li className={`rate-row${highest ? " rate-row-top" : ""}${updated ? " rate-row-updated" : ""}${reveal ? ` rate-row-${reveal}` : ""}`}>
     <div className="rate-place">
-      <strong>{branchName(row.branch, language)}{highest && <span className="rate-top-mark" title={copy.highest}>{copy.topMark}</span>}</strong>
+      <strong>{branchName(row.branch, language)}{highest && <span className="rate-top-mark" title={copy.highest}>{copy.topMark}</span>}{sourceTag && <span className="rate-source-tag" lang="en">{sourceTag}</span>}</strong>
       <span className="rate-meta"><span className={`rate-date${age > 2 ? " rate-date-old" : ""}`}>{dateText(row.reporting_date, language)} <span className="rate-age">{ageText(age, language)}</span></span>
-        {showLabel && <span className="rate-label" lang={label ? language : "en"}>{label ?? row.variety}</span>}{sourceTag && <span className="rate-source-tag" lang="en">{sourceTag}</span>}</span>
+        {showLabel && <span className="rate-label" lang={label ? language : "en"}>{label ?? row.variety}</span>}</span>
     </div>
     <div className="rate-price">
       <strong>{rupees(row.average_price)}</strong>

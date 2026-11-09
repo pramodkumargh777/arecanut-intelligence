@@ -3,11 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../services/api";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { usePhone } from "../components/usePhone";
-import { arrivalRows, type Advisory, type ForecastGate, type Granularity, type ProductionEstimate, type SupplySource } from "../services/supply";
+import { arrivalRows, type Advisory, type ForecastGate, type Granularity, type Growth, type ProductionEstimate, type SupplySource } from "../services/supply";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 
 const num = (value: number | null | undefined, digits = 1) => value == null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: digits });
-const signed = (value: number | null | undefined) => value == null ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
 const label = (value: string) => value.replace(/_/g, " ");
 type Period = { from: string; to: string } | null | undefined;
 
@@ -33,8 +32,9 @@ const COPY = defineCopy({
     estimatesAria: "Production estimates", year: "Year", estimateStage: "Estimate stage", area: (unit: string) => `Area (${unit})`, productionCol: (unit: string) => `Production (${unit})`,
     yieldCol: (unit: string) => `Yield (${unit})`, comparisonProduction: (geography: string) => `${geography} production`, share: "Share", publication: "Publication",
     revised: " · revised", stageUpdated: " · stage updated", dateNotStated: "date not stated",
-    growthAria: "Production growth", measure: "Measure", yoyChanges: "Year-on-year changes", cagr: "Compound annual growth", mixedStages: " *mixed estimate stages",
-    measures: { production: "production", area: "area", yield: "yield" } as Record<string, string>,
+    growthAria: "Production growth", growthTitle: "Year-on-year growth", cagr: "Compound annual growth", revisionsTitle: "Revisions",
+    advanceUnnumbered: "Advance estimate",
+    measures: { production: "Production", area: "Area", yield: "Yield" } as Record<string, string>,
     revisionsAria: "Revision history", revision: "Revision", productionChange: "Production change", areaChange: "Area change", yieldChange: "Yield change", source: "Source",
     noRevisions: "No revisions recorded between estimate vintages.",
     productionNotes: ["Current values use the most mature estimate stage available (final > third > second > first advance > unspecified).",
@@ -93,7 +93,8 @@ const COPY = defineCopy({
     estimatesAria: "ಉತ್ಪಾದನಾ ಅಂದಾಜುಗಳು", year: "ವರ್ಷ", estimateStage: "ಅಂದಾಜಿನ ಹಂತ", area: (unit: string) => `ವಿಸ್ತೀರ್ಣ (${unit})`, productionCol: (unit: string) => `ಉತ್ಪಾದನೆ (${unit})`,
     yieldCol: (unit: string) => `ಇಳುವರಿ (${unit})`, comparisonProduction: (geography: string) => `${geography} ಉತ್ಪಾದನೆ`, share: "ಪಾಲು", publication: "ಪ್ರಕಟಣೆ",
     revised: " · ತಿದ್ದಲಾಗಿದೆ", stageUpdated: " · ಹಂತ ಬದಲಾಗಿದೆ", dateNotStated: "ದಿನಾಂಕ ತಿಳಿಸಿಲ್ಲ",
-    growthAria: "ಉತ್ಪಾದನಾ ಬೆಳವಣಿಗೆ", measure: "ಅಳತೆ", yoyChanges: "ವರ್ಷದಿಂದ ವರ್ಷದ ಬದಲಾವಣೆ", cagr: "ಸಂಯುಕ್ತ ವಾರ್ಷಿಕ ಬೆಳವಣಿಗೆ", mixedStages: " *ಬೇರೆ ಬೇರೆ ಅಂದಾಜು ಹಂತಗಳು",
+    growthAria: "ಉತ್ಪಾದನಾ ಬೆಳವಣಿಗೆ", growthTitle: "ವರ್ಷದಿಂದ ವರ್ಷದ ಬೆಳವಣಿಗೆ", cagr: "ಸಂಯುಕ್ತ ವಾರ್ಷಿಕ ಬೆಳವಣಿಗೆ", revisionsTitle: "ತಿದ್ದುಪಡಿಗಳು",
+    advanceUnnumbered: "ಮುಂಗಡ ಅಂದಾಜು",
     measures: { production: "ಉತ್ಪಾದನೆ", area: "ವಿಸ್ತೀರ್ಣ", yield: "ಇಳುವರಿ" },
     revisionsAria: "ತಿದ್ದುಪಡಿ ಇತಿಹಾಸ", revision: "ತಿದ್ದುಪಡಿ", productionChange: "ಉತ್ಪಾದನೆ ಬದಲಾವಣೆ", areaChange: "ವಿಸ್ತೀರ್ಣ ಬದಲಾವಣೆ", yieldChange: "ಇಳುವರಿ ಬದಲಾವಣೆ", source: "ಮೂಲ",
     noRevisions: "ಅಂದಾಜಿನ ಆವೃತ್ತಿಗಳ ನಡುವೆ ಯಾವುದೇ ತಿದ್ದುಪಡಿ ದಾಖಲಾಗಿಲ್ಲ.",
@@ -136,7 +137,45 @@ const COPY = defineCopy({
 
 type Copy = typeof COPY.en;
 const periodText = (t: Copy, period: Period) => !period ? t.noRecordsInRange : period.from === period.to ? period.from : t.periodTo(period.from, period.to);
-const stageText = (t: Copy, row: Pick<ProductionEstimate, "estimate_type" | "estimate_label">) => t.stage[row.estimate_type] ?? row.estimate_label;
+// An advance estimate whose number (first, second…) the source does not state is stored as unspecified, but still
+// reads as an advance estimate rather than "stage not stated".
+const stageText = (t: Copy, row: Pick<ProductionEstimate, "estimate_type" | "estimate_label">) =>
+  row.estimate_type === "unspecified" && /^advance estimate/i.test(row.estimate_label) ? t.advanceUnnumbered : t.stage[row.estimate_type] ?? row.estimate_label;
+const MEASURES = ["production", "area", "yield"] as const;
+const percent = (value: number | null | undefined) => value == null ? "—" : `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value).toFixed(1)}%`;
+
+/**
+ * Year-on-year change for each measure with compound annual growth. Wide screens read across: one row per measure, the
+ * years as columns and compound growth last. Phones read down: one row per year, the measures as columns.
+ */
+function GrowthTable({ growth }: { growth: Record<(typeof MEASURES)[number], Growth> }) {
+  const t = useCopy(COPY);
+  const phone = usePhone();
+  const years = [...new Set(MEASURES.flatMap((measure) => growth[measure].yoy.map((row) => row.to)))].sort();
+  const cagr = MEASURES.map((measure) => growth[measure].cagr).find(Boolean);
+  const mixed = MEASURES.some((measure) => growth[measure].cagr?.mixed_estimate_types || growth[measure].yoy.some((row) => row.mixed_estimate_types));
+  const yoy = (measure: (typeof MEASURES)[number], year: string) => growth[measure].yoy.find((item) => item.to === year);
+  const cell = (key: string, value: number | null | undefined, mixed: boolean | undefined, extra = "") =>
+    <td key={key} className={`numeric${value == null ? "" : value > 0 ? " growth-up" : value < 0 ? " growth-down" : ""}${extra}`}>{percent(value)}{mixed ? "*" : ""}</td>;
+  const cagrLabel = cagr && <>{t.cagr}<small>{cagr.from} – {cagr.to}</small></>;
+  return <>
+    <h3>{t.growthTitle}</h3>
+    <div className="table-scroll" tabIndex={0} role="region" aria-label={t.growthAria}>{phone
+      ? <table className="growth-table">
+        <thead><tr><th scope="col">{t.year}</th>{MEASURES.map((measure) => <th scope="col" key={measure} className="numeric">{t.measures[measure]}</th>)}</tr></thead>
+        <tbody>{years.map((year) => <tr key={year}><th scope="row">{year}</th>{MEASURES.map((measure) => cell(measure, yoy(measure, year)?.percent, yoy(measure, year)?.mixed_estimate_types))}</tr>)}</tbody>
+        {cagr && <tfoot><tr><th scope="row">{cagrLabel}</th>{MEASURES.map((measure) => cell(measure, growth[measure].cagr?.percent, growth[measure].cagr?.mixed_estimate_types))}</tr></tfoot>}
+      </table>
+      : <table className="growth-table growth-table-wide">
+        <thead><tr><th scope="col"><span className="sr-only">{t.year}</span></th>{years.map((year) => <th scope="col" key={year} className="numeric">{year}</th>)}
+          {cagr && <th scope="col" className="numeric growth-cagr">{cagrLabel}</th>}</tr></thead>
+        <tbody>{MEASURES.map((measure) => <tr key={measure}><th scope="row">{t.measures[measure]}</th>
+          {years.map((year) => cell(year, yoy(measure, year)?.percent, yoy(measure, year)?.mixed_estimate_types))}
+          {cagr && cell("cagr", growth[measure].cagr?.percent, growth[measure].cagr?.mixed_estimate_types, " growth-cagr")}</tr>)}</tbody>
+      </table>}</div>
+    {mixed && <p className="table-note">{t.mixedNote}</p>}
+  </>;
+}
 const typeName = (t: Copy, type: string) => t.dataTypeNames[type] ?? label(type);
 
 /** "Directorate of Arecanut and Spices Development (DASD)" → "DASD": the short name a phone line has room for. */
@@ -180,18 +219,15 @@ function ProductionSection() {
           {compare ? <><td>{num(comparison.get(row.reporting_year)?.production_thousand_tonnes, 3)}</td><td>{share.get(row.reporting_year)?.percent == null ? "—" : `${share.get(row.reporting_year)!.percent}%`}</td></> : null}
           <td><a href={row.source_url} target="_blank" rel="noreferrer">{row.publication_date ?? t.dateNotStated}</a></td></tr>)}
       </tbody></table></div>
-      <div className="table-scroll" tabIndex={0} role="region" aria-label={t.growthAria}><table><thead><tr><th>{t.measure}</th><th>{t.yoyChanges}</th><th>{t.cagr}</th></tr></thead><tbody>
-        {(["production", "area", "yield"] as const).map((measure) => { const growth = data.growth[measure]; return <tr key={measure}><td>{t.measures[measure]}</td>
-          <td>{growth.yoy.map((row) => `${row.to}: ${signed(row.percent)}${row.mixed_estimate_types ? "*" : ""}`).join(" · ") || "—"}</td>
-          <td>{growth.cagr ? `${signed(growth.cagr.percent)} (${growth.cagr.from}–${growth.cagr.to})${growth.cagr.mixed_estimate_types ? t.mixedStages : ""}` : "—"}</td></tr>; })}
-      </tbody></table></div>
+      <GrowthTable growth={data.growth} />
+      <h3>{t.revisionsTitle}</h3>
       {data.revisions.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={t.revisionsAria}><table><thead><tr><th>{t.year}</th><th>{t.revision}</th><th>{t.productionChange}</th><th>{t.areaChange}</th><th>{t.yieldChange}</th><th>{t.source}</th></tr></thead><tbody>
         {data.revisions.map((row) => <tr key={`${row.reporting_year}-${row.evidence_id}`}><td>{row.reporting_year}</td><td>{row.previous_estimate_type ? t.stage[row.previous_estimate_type] ?? label(row.previous_estimate_type) : "—"} → {stageText(t, row)}</td>
           <td>{num(row.change_production_thousand_tonnes, 3)}</td><td>{num(row.change_area_thousand_hectares, 3)}</td><td>{num(row.change_yield_kg_hectare, 0)}</td>
           <td><a href={row.source_url} target="_blank" rel="noreferrer">{row.publication_date ?? t.document}</a></td></tr>)}
       </tbody></table></div> : <p>{t.noRevisions}</p>}
       {/* Method notes are for reviewers; phones skip them, and the tables above still carry every value and stage. */}
-      <ul className="phone-hide">{t.productionNotes.map((note) => <li key={note}>{note}</li>)}<li>{t.mixedNote}</li></ul>
+      <ul className="phone-hide">{t.productionNotes.map((note) => <li key={note}>{note}</li>)}</ul>
       <p className="data-disclosure phone-hide">{t.districtAnalysis} {geography === "All India" ? t.selectState : districts.data?.districts.length ? t.districtRecords(districts.data.districts.length, periodText(t, districts.data.reporting_period)) : t.noDistricts}</p>
       <ForecastNotice gate={data.forecast} subject={t.productionSubject} />
     </>}
