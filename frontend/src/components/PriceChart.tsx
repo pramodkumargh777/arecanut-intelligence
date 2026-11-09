@@ -1,5 +1,6 @@
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import { useResponsiveChart } from "./useResponsiveChart";
+import { usePhone } from "./usePhone";
 import * as echarts from "echarts/core";
 import { LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
@@ -60,6 +61,9 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
 }) {
   const t = useCopy(COPY);
   const onChartReady = useResponsiveChart();
+  // On phones the latest price is already the first figure above the chart, so the line drops its end label and the
+  // plot takes the width that label reserved.
+  const phone = usePhone();
   const { AXIS_LABEL, AXIS_LINE, BRAND, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
   const { language } = useLanguage();
   const label = givenLabel ?? t.defaultLabel;
@@ -130,7 +134,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
     animation: false,
     aria: { enabled: true, label: { description: t.aria(label, unitNote, coverage, Boolean(quotePoints)) } },
     textStyle: { fontFamily: CHART_FONT },
-    grid: { top: events.length ? 26 : 16, right: 64, bottom: 4, left: 4, containLabel: true },
+    grid: { top: events.length ? 26 : 16, right: phone ? 12 : 64, bottom: 4, left: 4, containLabel: true },
     tooltip: {
       ...TOOLTIP, trigger: "axis", axisPointer: CROSSHAIR,
       formatter: (params: { data: [number, number | null] }[]) => {
@@ -180,7 +184,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
       lineStyle: { color: BRAND, width: 2, cap: "round", join: "round" },
       areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: BRAND_AREA[0] }, { offset: 1, color: BRAND_AREA[1] }]) },
       emphasis: { scale: false },
-      endLabel: { show: true, color: BRAND, fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, distance: 6, formatter: ({ value }: { value: [number, number] }) => rupees(value[1]) },
+      endLabel: { show: !phone, color: BRAND, fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, distance: 6, formatter: ({ value }: { value: [number, number] }) => rupees(value[1]) },
       ...(events.length ? { markLine: {
         silent: true, symbol: "none", animation: false,
         lineStyle: { color: INK[400], type: "dashed", width: 1 },

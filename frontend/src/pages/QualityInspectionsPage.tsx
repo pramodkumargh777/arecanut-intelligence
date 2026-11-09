@@ -7,6 +7,7 @@ import { IntelligenceNavigation, exportModule } from "./IntelligencePage";
 import { AboutData } from "../components/AboutData";
 import { useReviewerAccess } from "../components/useReviewerAccess";
 import { defineCopy, useCopy, useFormat } from "../services/language";
+import { ExportButton } from "../components/ExportButton";
 
 const TEXT_KEYS = ["lot_id", "variety", "location", "sampled_on", "reported_on", "laboratory", "report_reference", "evidence_url", "notes"] as const;
 type TextKey = typeof TEXT_KEYS[number];
@@ -81,10 +82,10 @@ export function QualityInspectionsPage() {
     <IntelligenceNavigation current="quality" />
     {!rows.length && <p className="page-meta">{t.noneYet}</p>}
     <AboutData><p>{t.about}</p></AboutData>
-    {publicQuery.isLoading ? <LoadingState /> : publicQuery.error ? <ErrorState error={publicQuery.error} onRetry={() => void publicQuery.refetch()} /> : <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.reviewed}</h2><p>{t.reviewedHint(publicQuery.data?.limit ?? 500)}</p></div><button className="button-secondary" disabled={!rows.length} onClick={() => exportModule([
+    {publicQuery.isLoading ? <LoadingState /> : publicQuery.error ? <ErrorState error={publicQuery.error} onRetry={() => void publicQuery.refetch()} /> : <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.reviewed}</h2><p>{t.reviewedHint(publicQuery.data?.limit ?? 500)}</p></div><ExportButton label={t.exportCsv} disabled={!rows.length} onClick={() => exportModule([
       ["lot_id", "variety", "location", "sampled_on", "reported_on", "laboratory", "report_reference", "moisture_percent", "defects_percent", "notes", "evidence_url", "review_note", "reviewed_at"],
       ...rows.map((row) => [row.lot_id, row.variety, row.location, row.sampled_on, row.reported_on, row.laboratory, row.report_reference, row.moisture_percent, row.defects_percent, row.notes, row.evidence_url, row.review_note, row.reviewed_at]),
-    ], "areca-pulse-quality-inspections.csv")}>{t.exportCsv}</button></div>
+    ], "areca-pulse-quality-inspections.csv")} /></div>
       {!rows.length ? <EmptyState title={t.noReports}>{t.noReportsHint}</EmptyState>
         : <div className="table-scroll" tabIndex={0} role="region" aria-label={t.tableAria}><table><caption>{t.tableCaption}</caption><thead><tr><th>{t.lotVariety}</th><th>{t.dates}</th><th>{t.moisture}</th><th>{t.defects}</th><th>{t.evidence}</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>{row.lot_id} · {row.variety}<small className="quote-fetch">{row.location}</small></td><td>{day(row.sampled_on)}<small className="quote-fetch">{t.reportedOn(day(row.reported_on))}</small></td><td className="numeric">{row.moisture_percent ?? t.notMeasured}</td><td className="numeric">{row.defects_percent ?? t.notMeasured}</td><td><a href={row.evidence_url} target="_blank" rel="noreferrer">{row.laboratory} · {row.report_reference}</a><small className="quote-fetch">{row.notes}</small><small className="quote-fetch">{t.reviewNote(row.review_note ?? "", row.reviewed_at ? format.timestamp(row.reviewed_at) : "")}</small></td></tr>)}</tbody></table></div>}
     </section>}

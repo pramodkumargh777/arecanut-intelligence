@@ -49,12 +49,14 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
     const points = item.values.flatMap((value, position) => value !== null && item.values[position - 1] == null && item.values[position + 1] == null ? [[categories[position], value]] : []);
     return points.length ? [{ name: `${item.name}${ISOLATED}`, type: "scatter", data: points, symbolSize: 6, itemStyle: { color: colorOf(item, index) }, silent: true, z: 3 }] : [];
   });
+  const legendItems = series.length + (band ? 1 : 0);
   const showEnd = endLabel && single && series[0].values.at(-1) != null;
   const option = {
     ...base(description, INK),
-    // On phones a legend wraps onto rows the grid never reserved, so it scrolls along one row instead.
-    legend: { ...base(description, INK).legend, show: !single, ...(phone ? { type: "scroll", pageIconSize: 10, pageTextStyle: { color: INK[500], fontSize: 11 } } : {}), data: [...series.map((item) => item.name), ...(band ? [band.name] : [])] },
-    grid: { top: single ? 16 : phone ? 36 : series.length > 4 ? 68 : 40, right: showEnd ? 60 : 16, bottom: 4, left: 4, containLabel: true },
+    // On phones up to four legend entries wrap onto two rows the grid reserves, so every line (and the forecast range)
+    // is named without paging; longer legends scroll along one row.
+    legend: { ...base(description, INK).legend, show: !single, ...(phone ? { itemGap: 12, ...(legendItems > 4 ? { type: "scroll", pageIconSize: 10, pageTextStyle: { color: INK[500], fontSize: 11 } } : {}) } : {}), data: [...series.map((item) => item.name), ...(band ? [band.name] : [])] },
+    grid: { top: single ? 16 : phone ? (legendItems > 2 && legendItems <= 4 ? 58 : 36) : series.length > 4 ? 68 : 40, right: showEnd ? 60 : 16, bottom: 4, left: 4, containLabel: true },
     tooltip: {
       ...TOOLTIP, trigger: "axis", axisPointer: CROSSHAIR,
       formatter: (items: { seriesName: string; value: number | null; axisValueLabel: string; color: string; dataIndex: number }[]) => {
@@ -108,15 +110,19 @@ export function CategoryBarChart({ categories, values, name, color: givenColor, 
   const categoryAxis = { type: "category", data: categories, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, hideOverlap: !horizontal, interval: horizontal ? 0 : monthAxisInterval(categories), color: horizontal ? INK[700] : INK[500] }, axisLine: { ...AXIS_LINE, onZero: false }, inverse: horizontal };
   const valueAxis = { type: "value", scale: valueFormat === "index", splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: valueFormat === "inr" ? axisInr : valueFormat === "percent" ? (value: number) => `${value}%` : undefined }, splitLine: GRID_LINE };
   const labelled = Boolean(referenceLine?.label);
+  // On phones a vertical chart's reference label sits above its line at the left, on a backing so a bar behind it
+  // cannot hide it, instead of in a margin that took a quarter of the width.
+  const phone = usePhone();
+  const labelInside = phone && !horizontal;
   const option = {
     ...base(description, INK), legend: { show: false },
-    grid: { top: horizontal && labelled ? 28 : 12, right: !horizontal && labelled ? 84 : 24, bottom: 4, left: 4, containLabel: true },
+    grid: { top: horizontal && labelled ? 28 : 12, right: !horizontal && labelled && !labelInside ? 84 : phone ? 8 : 24, bottom: 4, left: 4, containLabel: true },
     tooltip: { ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: shade } }, formatter: (items: { name: string; value: number | null; dataIndex: number }[]) => tooltipHtml(tooltipLabels?.[items[0]?.dataIndex] ?? items[0]?.name ?? "", [{ label: name, value: format(items[0]?.value) }]) },
     xAxis: horizontal ? valueAxis : categoryAxis, yAxis: horizontal ? categoryAxis : valueAxis,
     series: [{
       name, type: "bar", barMaxWidth: horizontal ? 14 : 22, barCategoryGap: "32%",
       data: values.map((value, index) => ({ value, itemStyle: { color: typeof color === "function" ? color(index) : color, borderRadius: horizontal ? [0, 3, 3, 0] : (value ?? 0) < 0 ? [0, 0, 3, 3] : [3, 3, 0, 0] } })),
-      ...(referenceLine ? { markLine: { silent: true, symbol: "none", animation: false, label: labelled ? { formatter: referenceLine.label, color: INK[500], fontSize: 11, position: horizontal ? "start" : "end" } : { show: false }, lineStyle: { color: INK[400], width: 1, type: "solid" }, data: [horizontal ? { xAxis: referenceLine.value } : { yAxis: referenceLine.value }] } } : {}),
+      ...(referenceLine ? { markLine: { silent: true, symbol: "none", animation: false, label: labelled ? { formatter: referenceLine.label, color: INK[500], fontSize: 11, position: horizontal ? "start" : labelInside ? "insideStartTop" : "end", ...(labelInside ? { backgroundColor: INK.surface, padding: [1, 4], borderRadius: 3 } : {}) } : { show: false }, lineStyle: { color: INK[400], width: 1, type: "solid" }, data: [horizontal ? { xAxis: referenceLine.value } : { yAxis: referenceLine.value }] } } : {}),
     }],
   };
   return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;

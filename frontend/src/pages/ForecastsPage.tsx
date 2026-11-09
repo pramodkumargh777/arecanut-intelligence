@@ -160,11 +160,11 @@ export function ForecastsPage() {
   const label = evaluation ? t.labels?.[evaluation.selected_model] ?? evaluation.label : undefined;
   return <div className="page-stack">
     <section className="page-heading"><div><h1>{t.title}</h1><p>{t.intro} <Link to="/forecasts/evaluation">{t.compareLink}</Link>.</p></div></section>
-    <AboutData><p>{t.about}</p></AboutData>
+    <AboutData><p className="phone-only">{t.scope}</p><p>{t.about}</p></AboutData>
     <section className="filter-bar"><label className="filter-control"><span>{t.variety}</span><select value={variety} disabled={evaluate.isPending} onChange={(event) => { setVariety(event.target.value); evaluate.reset(); }}><option>Rashi</option>{prices.data?.data.filter((row) => row.variety_name !== "Rashi").map((row) => <option key={row.variety_name} lang="en">{row.variety_name}</option>)}</select></label></section>
     {prices.error && <ErrorState error={prices.error} />}
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
-      <div className="data-disclosure">{t.statusLine} <strong>{t.status[data.status] ?? data.status.replace(/_/g, " ")}</strong>. {t.scope}</div>
+      <div className="data-disclosure">{t.statusLine} <strong>{t.status[data.status] ?? data.status.replace(/_/g, " ")}</strong>.<span className="phone-hide"> {t.scope}</span></div>
       {data.stale && <div role="alert" className="data-disclosure">{t.staleSnapshot(reasonText(data.stale_reasons))}</div>}
       {!snapshot ? <EmptyState title={t.noSnapshot}>{t.noSnapshotHint}</EmptyState> : <>
         <section className="snapshot-grid">
