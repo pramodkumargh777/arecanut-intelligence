@@ -15,7 +15,7 @@ MONTHLY_BASIS = "MONTHLY_STATE_WEIGHTED_AVERAGE"
 PRICE_BASES = {"APMC_MODAL", "COOPERATIVE_AVERAGE", "COOPERATIVE_TENDER_AVERAGE", MONTHLY_BASIS}
 
 BASELINE_MODELS = ("last_value", "seasonal_naive")
-CANDIDATE_MODELS = ("auto_arima", "auto_ets", "theta", "lightgbm", "chronos2", "timesfm25", "ensemble")
+CANDIDATE_MODELS = ("auto_arima", "auto_ets", "theta", "lightgbm", "chronos2", "timesfm25", "ensemble", "lightgbm_x", "chronos2_x")
 # Members of the equal-weight ensemble, fixed before the run that first evaluated it (chosen as the three strongest
 # individual models in fx-20261104T192118Z-5839b847aa). The ensemble takes the median of their medians and bounds.
 ENSEMBLE_MEMBERS = ("theta", "auto_ets", "chronos2")
@@ -30,6 +30,8 @@ MODEL_VERSIONS = {
     "chronos2": "chronos2-zero-shot-1",
     "timesfm25": "timesfm-2.5-200m-zero-shot-1",
     "ensemble": "median-ensemble-theta-ets-chronos2-1",
+    "lightgbm_x": "lightgbm-direct-quantile-logreturn-covariates-1",
+    "chronos2_x": "chronos2-zero-shot-past-covariates-1",
 }
 
 # Verified 2026-11-05 from PyPI metadata and the Hugging Face model card/API (license: apache-2.0).
@@ -59,7 +61,8 @@ class SufficiencyRule:
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    horizons: tuple[int, ...] = (1, 2, 3)
+    # 1–6 months: the window a grower weighs when deciding whether to sell now or hold.
+    horizons: tuple[int, ...] = (1, 2, 3, 4, 5, 6)
     interval_level: int = INTERVAL_LEVEL
     season_length: int = 12
     initial_training_periods: int = 36

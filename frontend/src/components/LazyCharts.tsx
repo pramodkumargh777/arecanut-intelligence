@@ -11,14 +11,17 @@ function ChartLoading() {
 const Line = lazy(() => import("./InsightCharts").then((module) => ({ default: module.LineSeriesChart })));
 const Bar = lazy(() => import("./InsightCharts").then((module) => ({ default: module.CategoryBarChart })));
 const Range = lazy(() => import("./InsightCharts").then((module) => ({ default: module.RankedRangeChart })));
+const Outlook = lazy(() => import("./InsightCharts").then((module) => ({ default: module.OutlookChart })));
 const Track = lazy(() => import("./InsightCharts").then((module) => ({ default: module.TrackRecordChart })));
 
 type LineProps = ComponentProps<typeof import("./InsightCharts").LineSeriesChart>;
 type BarProps = ComponentProps<typeof import("./InsightCharts").CategoryBarChart>;
 type RangeProps = ComponentProps<typeof import("./InsightCharts").RankedRangeChart>;
+type OutlookProps = ComponentProps<typeof import("./InsightCharts").OutlookChart>;
 type TrackProps = ComponentProps<typeof import("./InsightCharts").TrackRecordChart>;
 
 export function LazyLineChart(props: LineProps) { return <Suspense fallback={<ChartLoading />}><Line {...props} /></Suspense>; }
 export function LazyBarChart(props: BarProps) { return <Suspense fallback={<ChartLoading />}><Bar {...props} /></Suspense>; }
 export function LazyRangeChart(props: RangeProps) { return <Suspense fallback={<ChartLoading />}><Range {...props} /></Suspense>; }
 export function LazyTrackChart(props: TrackProps) { return <Suspense fallback={<ChartLoading />}><Track {...props} /></Suspense>; }
+export function LazyOutlookChart(props: OutlookProps) { return <Suspense fallback={<ChartLoading />}><Outlook {...props} /></Suspense>; }

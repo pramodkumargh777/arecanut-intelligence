@@ -76,6 +76,7 @@ def _actual(dataset: ForecastDataset, series_id: str, target, mode: VintageMode)
 
 def walk_forward(dataset: ForecastDataset, config: ExperimentConfig, *, models: tuple[str, ...] | None = None,
                  mode: VintageMode = "revised", origins: list | None = None,
+                 covariates: pd.DataFrame | None = None,
                  progress: Callable[[str], None] | None = None) -> BacktestResult:
     if dataset.frequency != "monthly":
         raise ValueError("Walk-forward evaluation is implemented for monthly datasets; daily datasets are suppressed "
@@ -88,7 +89,7 @@ def walk_forward(dataset: ForecastDataset, config: ExperimentConfig, *, models: 
     rows: list[dict[str, Any]] = []
     skipped: dict[str, int] = {}
     errors: list[dict[str, Any]] = []
-    cache: dict[str, Any] = {}
+    cache: dict[str, Any] = {"covariates": covariates}
     for number, origin in enumerate(origins, 1):
         view = build_view(dataset, origin, mode, config)
         if not view:

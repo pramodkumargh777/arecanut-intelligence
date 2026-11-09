@@ -77,11 +77,15 @@ class StatsForecastModels:
 
 @dataclass
 class LightGBMDirect:
-    """Global direct multi-horizon quantile regression on log returns, pooled over the dataset's series."""
+    """Global direct multi-horizon quantile regression on log returns, pooled over the dataset's series.
+
+    With `covariates` (lightgbm_x) each row also carries the outside data published by its origin month.
+    """
 
     config: ExperimentConfig
     name: str = "lightgbm"
     min_history: int = 13
+    covariates: pd.DataFrame | None = None
     feature_columns_: dict[int, list[str]] = field(default_factory=dict)
 
     def predict(self, view: dict[str, pd.Series], horizons: tuple[int, ...], level: int) -> pd.DataFrame:
@@ -95,7 +99,7 @@ class LightGBMDirect:
             train_x, train_y, final_x = [], [], {}
             for series_id, history in view.items():
                 x, y, last = supervised(history, horizon, series_id=series_id, panel=panel,
-                                        season_length=self.config.season_length)
+                                        season_length=self.config.season_length, covariates=self.covariates)
                 keep = x.index.isin(history.index[self.min_history - 1:])
                 train_x.append(x[keep])
                 train_y.append(y[keep])
@@ -125,6 +129,7 @@ class Chronos2ZeroShot:
 
     name: str = "chronos2"
     context_length: int | None = None
+    covariates: pd.DataFrame | None = None
     _pipeline: Any = None
 
     def _load(self):
@@ -145,7 +150,13 @@ class Chronos2ZeroShot:
         tail = (100 - level) / 200
         quantiles = [round(tail, 4), 0.5, round(1 - tail, 4)]
         ids = list(view)
-        inputs = [view[s].to_numpy(dtype=np.float32) for s in ids]
+        inputs: list[Any] = [view[s].to_numpy(dtype=np.float32) for s in ids]
+        if self.covariates is not None:
+            # chronos2_x: the outside data as past covariates, aligned to each history month. Gaps are carried
+            # forward (then zero) because the model needs complete covariate rows.
+            inputs = [{"target": values, "past_covariates": {
+                column: self.covariates[column].reindex(view[s].index).ffill().fillna(0.0).to_numpy(dtype=np.float32)
+                for column in self.covariates.columns}} for s, values in zip(ids, inputs)]
         quantile_out, _ = pipeline.predict_quantiles(inputs, prediction_length=max(horizons), quantile_levels=quantiles)
         rows = []
         for series_id, tensor in zip(ids, quantile_out):
@@ -219,10 +230,17 @@ def run_models(view: dict[str, pd.Series], config: ExperimentConfig, horizons: t
         if name in stats_names or name == "ensemble":
             continue
         try:
+            if name in ("lightgbm_x", "chronos2_x") and cache.get("covariates") is None:
+                raise ValueError("No covariates were loaded for this run.")
             if name == "lightgbm":
                 model = LightGBMDirect(config)
+            elif name == "lightgbm_x":
+                model = LightGBMDirect(config, name="lightgbm_x", covariates=cache["covariates"])
             elif name == "chronos2":
                 model = cache.setdefault("chronos2", Chronos2ZeroShot())
+            elif name == "chronos2_x":
+                shared = cache.setdefault("chronos2", Chronos2ZeroShot())
+                model = Chronos2ZeroShot(name="chronos2_x", covariates=cache["covariates"], _pipeline=shared._load())
             elif name == "timesfm25":
                 model = cache.setdefault("timesfm25", TimesFM25ZeroShot())
             else:

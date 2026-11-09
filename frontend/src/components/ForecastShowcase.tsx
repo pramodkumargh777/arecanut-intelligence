@@ -14,7 +14,7 @@ const BASELINES = new Set(["last_value", "seasonal_naive"]);
 type Kind = "rule" | "stats" | "ml" | "ai" | "blend";
 const KIND: Record<string, Kind> = {
   last_value: "rule", seasonal_naive: "rule", auto_arima: "stats", auto_ets: "stats", theta: "stats",
-  lightgbm: "ml", chronos2: "ai", timesfm25: "ai", ensemble: "blend",
+  lightgbm: "ml", chronos2: "ai", timesfm25: "ai", ensemble: "blend", lightgbm_x: "ml", chronos2_x: "ai",
 };
 
 const COPY = defineCopy({
@@ -22,10 +22,11 @@ const COPY = defineCopy({
     models: {
       last_value: "Last month's price", seasonal_naive: "Same month last year", auto_arima: "ARIMA", auto_ets: "Exponential smoothing",
       theta: "Theta", lightgbm: "LightGBM", chronos2: "Chronos-2", timesfm25: "TimesFM 2.5", ensemble: "Ensemble",
+      lightgbm_x: "LightGBM + market data", chronos2_x: "Chronos-2 + market data",
     } as Record<string, string>,
     kinds: { rule: "Simple rule", stats: "Statistical", ml: "Machine learning", ai: "AI foundation model", blend: "Theta + ETS + Chronos-2" } as Record<Kind, string>,
-    makers: { chronos2: "Amazon", timesfm25: "Google" } as Record<string, string>,
-    variety: "Variety", horizon: "Forecast for",
+    makers: { chronos2: "Amazon", timesfm25: "Google", chronos2_x: "Amazon" } as Record<string, string>,
+    variety: "Variety", horizon: "Forecast for", monthsAhead: "Months ahead",
     ahead: (h: number) => h === 1 ? "Next month" : `${h} months ahead`,
     question: (variety: string, h: number) => h === 1 ? `Can we predict the ${variety} price next month?` : `Can we predict the ${variety} price ${h} months ahead?`,
     verdictValidated: (model: string) => `Yes. ${model} beats the simple rule on live prices.`,
@@ -58,10 +59,11 @@ const COPY = defineCopy({
     models: {
       last_value: "ಕಳೆದ ತಿಂಗಳ ದರ", seasonal_naive: "ಕಳೆದ ವರ್ಷದ ಅದೇ ತಿಂಗಳು", auto_arima: "ARIMA", auto_ets: "ಘಾತೀಯ ಸರಾಗೀಕರಣ (ETS)",
       theta: "Theta", lightgbm: "LightGBM", chronos2: "Chronos-2", timesfm25: "TimesFM 2.5", ensemble: "ಸಂಯೋಜಿತ ಮಾದರಿ",
+      lightgbm_x: "LightGBM + ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶ", chronos2_x: "Chronos-2 + ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶ",
     },
     kinds: { rule: "ಸರಳ ನಿಯಮ", stats: "ಸಾಂಖ್ಯಿಕ", ml: "ಯಂತ್ರ ಕಲಿಕೆ", ai: "AI ಮೂಲ ಮಾದರಿ", blend: "Theta + ETS + Chronos-2" },
-    makers: { chronos2: "Amazon", timesfm25: "Google" },
-    variety: "ತಳಿ", horizon: "ಅಂದಾಜು",
+    makers: { chronos2: "Amazon", timesfm25: "Google", chronos2_x: "Amazon" },
+    variety: "ತಳಿ", horizon: "ಅಂದಾಜು", monthsAhead: "ತಿಂಗಳ ಮುಂದೆ",
     ahead: (h: number) => h === 1 ? "ಮುಂದಿನ ತಿಂಗಳು" : `${h} ತಿಂಗಳ ಮುಂದೆ`,
     question: (variety: string, h: number) => h === 1 ? `${variety} ಮುಂದಿನ ತಿಂಗಳ ದರವನ್ನು ಊಹಿಸಬಹುದೇ?` : `${variety} ದರವನ್ನು ${h} ತಿಂಗಳ ಮುಂದೆ ಊಹಿಸಬಹುದೇ?`,
     verdictValidated: (model: string) => `ಹೌದು. ${model} ನಿಜವಾದ ದರಗಳಲ್ಲಿ ಸರಳ ನಿಯಮಕ್ಕಿಂತ ಉತ್ತಮ.`,
@@ -151,8 +153,10 @@ export function ForecastShowcase({ evaluations, track, trackModel, predictions, 
     <div className="fx-toolbar">
       <label className="fx-select"><span>{t.variety}</span>
         <select value={variety} onChange={(event) => setVariety(event.target.value)}>{varieties.map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
-      <div className="fx-segmented" role="group" aria-label={t.horizon}>
-        {horizons.map((h) => <button type="button" key={h} aria-pressed={h === horizon} onClick={() => setHorizon(h)}>{t.ahead(h)}</button>)}
+      {/* Up to three horizons get word labels; more get a "Months ahead" label and numbered buttons so six still fit a phone. */}
+      <div className={`fx-segmented${horizons.length > 3 ? " is-numeric" : ""}`} role="group" aria-label={t.horizon}>
+        {horizons.length > 3 && <span className="fx-segmented-label">{t.monthsAhead}</span>}
+        {horizons.map((h) => <button type="button" key={h} aria-pressed={h === horizon} aria-label={t.ahead(h)} onClick={() => setHorizon(h)}>{horizons.length > 3 ? h : t.ahead(h)}</button>)}
       </div>
     </div>
 

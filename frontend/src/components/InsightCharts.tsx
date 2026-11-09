@@ -216,3 +216,47 @@ export function TrackRecordChart({ periods, actual, median, lower, upper, baseli
   };
   return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
+
+/**
+ * Recent prices with the outlook as a fan: a dashed line from the last official price through each month's estimate,
+ * and the likely range opening from that last price to each month's lower–upper bounds.
+ */
+export function OutlookChart({ periods, prices, next, labels, description, height = 300 }: {
+  periods: string[]; prices: number[]; next: { label: string; point: number; lower: number; upper: number; chance?: string }[];
+  labels: { actual: string; outlook: string; range: string; month: (period: string) => string }; description: string; height?: number;
+}) {
+  const onChartReady = useResponsiveChart();
+  const phone = usePhone();
+  const { AXIS_LABEL, AXIS_LINE, BRAND, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
+  const categories = [...periods.map(labels.month), ...next.map((item) => item.label)];
+  const n = periods.length, last = prices[n - 1];
+  const gap = Array(n - 1).fill(null);
+  const option = {
+    ...base(description, INK),
+    legend: { ...base(description, INK).legend, itemStyle: { opacity: 1 }, data: [labels.actual, labels.outlook, labels.range],
+      ...(phone ? { itemGap: 10, textStyle: { color: INK[600], fontSize: 11, fontFamily: CHART_FONT } } : {}) },
+    // On phones the three legend entries take two rows, so the plot starts lower.
+    grid: { top: phone ? 56 : 36, right: phone ? 8 : 16, bottom: 4, left: 4, containLabel: true },
+    tooltip: {
+      ...TOOLTIP, trigger: "axis", axisPointer: CROSSHAIR,
+      formatter: (items: { dataIndex: number }[]) => {
+        const i = items[0]?.dataIndex ?? 0;
+        const ahead = next[i - n];
+        return ahead
+          ? tooltipHtml(ahead.label, [{ label: labels.outlook, value: inr(ahead.point) }, { label: labels.range, value: `${inr(ahead.lower)} – ${inr(ahead.upper)}` },
+            ...(ahead.chance ? [{ value: ahead.chance }] : [])])
+          : tooltipHtml(categories[i], [{ label: labels.actual, value: inr(prices[i]) }]);
+      },
+    },
+    xAxis: { type: "category", data: categories, boundaryGap: false, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, hideOverlap: true, interval: monthAxisInterval(periods) }, axisLine: AXIS_LINE },
+    yAxis: { type: "value", scale: true, splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: axisInr }, splitLine: GRID_LINE },
+    series: [
+      { name: "fan-floor", type: "line", data: [...gap, last, ...next.map((item) => item.lower)], stack: "fan", symbol: "none", lineStyle: { opacity: 0 }, silent: true, tooltip: { show: false } },
+      { name: labels.range, type: "line", data: [...gap, 0, ...next.map((item) => item.upper - item.lower)], stack: "fan", symbol: "none", smooth: 0.3, color: BRAND, lineStyle: { opacity: 0 }, areaStyle: { color: BRAND, opacity: 0.18 }, silent: true },
+      { name: labels.outlook, type: "line", data: [...gap, last, ...next.map((item) => item.point)], color: BRAND, symbol: "circle", symbolSize: 7, showSymbol: true,
+        itemStyle: { color: BRAND, borderColor: INK.surface, borderWidth: 2 }, lineStyle: { color: BRAND, width: 2, type: "dashed" } },
+      { name: labels.actual, type: "line", data: [...prices, ...next.map(() => null)], symbol: "none", smooth: 0.3, smoothMonotone: "x", color: INK[900], lineStyle: { color: INK[900], width: 2.25 } },
+    ],
+  };
+  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
+}

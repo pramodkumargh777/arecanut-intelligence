@@ -43,7 +43,7 @@ def _peer_median(panel: pd.DataFrame, series_id: str, months: int) -> pd.Series:
 
 def series_features(history: pd.Series, horizon: int, *, series_id: str = "", panel: pd.DataFrame | None = None,
                     season_length: int = 12, exogenous: list[ExogenousValue] | None = None,
-                    cutoff_for_origin=None) -> pd.DataFrame:
+                    cutoff_for_origin=None, covariates: pd.DataFrame | None = None) -> pd.DataFrame:
     """Feature rows for every origin in a contiguous positive history (index = origin period)."""
     if history.empty or (history <= 0).any() or history.isna().any():
         raise ValueError("Feature history must be non-empty, positive and without gaps.")
@@ -70,6 +70,11 @@ def series_features(history: pd.Series, horizon: int, *, series_id: str = "", pa
     if panel is not None:
         frame["peer_median_return_1"] = _peer_median(panel, series_id, 1).reindex(frame.index)
         frame["peer_median_return_3"] = _peer_median(panel, series_id, 3).reindex(frame.index)
+    if covariates is not None:
+        # Indexed by the origin month at which each value was already published (covariates.monthly_covariates), so
+        # a row only ever sees outside data available at its own origin.
+        for column in covariates.columns:
+            frame[f"exog_{column}"] = covariates[column].reindex(frame.index).to_numpy(dtype=float)
     for item in exogenous or []:
         column = f"exog_{item.name}"
         if column not in frame:

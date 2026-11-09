@@ -11,8 +11,17 @@ export type QualityInspection = QualityInput & { id: string; submitted_at: strin
 export type ForecastMetrics = { count: number; mae: number; rmse: number; smape_percent: number };
 export type ForecastPoint = { reporting_month: string; training_through: string; actual: number; last_value: number; seasonal_naive: number };
 export type Forecast = { reporting_month: string; model: string; point: number; lower: number; upper: number; nominal_coverage: number; method: string };
+/** Live 1–6 month outlook built by the API from the forecasting engine's calibration (api/src/outlook.ts). */
+export type OutlookHorizon = {
+  horizon: number; target_month: string; model: string; point: number; lower: number; upper: number; chance_higher: number;
+  band: [number, number]; tested: { coverage: number; months: number; from: string; direction_skill: number | null } | null;
+};
+export type Outlook = {
+  experiment_id: string; calibrated_at: string; level: number; last_month: string; last_price: number;
+  volatility_percent: number; horizons: OutlookHorizon[]; point_rule: string;
+};
 export type ForecastData = {
-  status: string; stale: boolean; stale_reasons: string[]; forecast: Forecast | null;
+  status: string; stale: boolean; stale_reasons: string[]; forecast: Forecast | null; outlook?: Outlook | null;
   snapshot: null | {
     id: string; state: string; variety: string; evaluated_at: string; formula_version: string; source_fingerprint: string;
     inputs: { prices: { reporting_month: string; weighted_price: number | null; fetched_at: string; refresh_run_id: string; source_url: string }[] };
