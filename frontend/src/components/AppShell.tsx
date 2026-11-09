@@ -50,6 +50,8 @@ function storedCollapsed() {
 
 /** Grower pages are arecanut-only and short, so they leave out the commodity and market-search controls. */
 const GROWER_PAGES = ["/", "/sell-or-hold"];
+/** A visitor's own saved profiles and the reviewer queue have nothing for search engines. */
+const PRIVATE_PAGES = ["/workspace", "/data-quality"];
 
 const SHELL_COPY = defineCopy({
   en: {
@@ -130,6 +132,19 @@ export function AppShell() {
   useEffect(() => {
     document.title = `${currentPage} · Areca Pulse`;
   }, [currentPage]);
+
+  // Private pages, and addresses that match no page, are kept out of search results.
+  const searchable = Boolean(currentItem) && !PRIVATE_PAGES.includes(location.pathname);
+  useEffect(() => {
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (searchable) return robots?.remove();
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.name = "robots";
+      document.head.append(robots);
+    }
+    robots.content = "noindex";
+  }, [searchable]);
 
   useEffect(() => {
     setSearch(new URLSearchParams(location.search).get("search") ?? "");
