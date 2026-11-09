@@ -9,6 +9,7 @@ import { defaultGeography } from "../services/intelligence";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { COMMON } from "../services/commonCopy";
 import { AboutData } from "../components/AboutData";
+import { ExportButton } from "../components/ExportButton";
 const domains = ["production", "weather", "trade", "policy", "news", "quality"] as const;
 type Domain = typeof domains[number];
 
@@ -108,7 +109,7 @@ export function exportModule(rows: (string | number | null)[][], name: string) {
 function EvidenceCell({ row }: { row: Evidence }) {
   const t = useCopy(COPY);
   const format = useFormat();
-  return <><a href={row.source_url} target="_blank" rel="noreferrer">{t.publisher}</a>{" · "}<a href={api.sourceCaptureUrl(row.capture_id)}>{t.archived}</a><small className="quote-fetch">{t.platformFetched(format.timestamp(row.fetched_at))}</small>{row.publication_period && <small className="quote-fetch">{t.documentPublication(row.publication_period)}</small>}</>;
+  return <><a href={row.source_url} target="_blank" rel="noreferrer">{t.publisher}</a>{" · "}<a href={api.sourceCaptureUrl(row.capture_id)}>{t.archived}</a><small className="quote-fetch evidence-fetched">{t.platformFetched(format.timestamp(row.fetched_at))}</small>{row.publication_period && <small className="quote-fetch">{t.documentPublication(row.publication_period)}</small>}</>;
 }
 type ModuleRow = Production | Trade | Weather | Bulletin;
 export function IntelligencePage() {
@@ -166,11 +167,11 @@ export function IntelligencePage() {
         <label className="filter-control"><span>{domain === "trade" ? t.partner : t.geography}</span><select value={geography} onChange={(event) => setGeography(event.target.value)}><option value="">{t.allAvailable}</option>{[...new Set([...places, ...(domain === "production" ? ["Karnataka"] : [])])].sort().map((value) => <option key={value}>{value}</option>)}</select></label>
         <button className="button-secondary" onClick={() => { setPeriod(""); setGeography(defaultGeography(domain)); }}>{c.resetFilters}</button>
       </section>}
-      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.records}</h2><p className="phone-hide">{t.displayed(filtered.length)} · {domain === "production" || domain === "trade" ? t.yearLabels : t.independent}</p></div><button className="button-secondary" disabled={!filtered.length} onClick={exportRows}>{t.exportDomain(t.tabs[domain as Domain] ?? domain)}</button></div>
+      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.records}</h2><p className="phone-hide">{t.displayed(filtered.length)} · {domain === "production" || domain === "trade" ? t.yearLabels : t.independent}</p></div><ExportButton label={t.exportDomain(t.tabs[domain as Domain] ?? domain)} disabled={!filtered.length} onClick={exportRows} /></div>
         {!filtered.length ? <EmptyState title={rows.length ? t.noMatch : t.noCaptured}>{rows.length ? t.resetHint : t.refreshHint}</EmptyState> :
-          <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recordsAria(title)}><table className={columnType === "bulletin" ? "bulletin-table" : undefined}>
+          <>{domain === "weather" && <p className="table-note phone-only" aria-hidden="true">{t.weatherCaption}</p>}<div className="table-scroll" tabIndex={0} role="region" aria-label={t.recordsAria(title)}><table className={columnType === "bulletin" ? "bulletin-table" : undefined}>
             {/* The weather caption says what the numbers are; elsewhere it would only repeat the page title, so only screen readers get it. */}
-            {domain === "weather" ? <caption>{t.weatherCaption}</caption> : <caption className="sr-only">{title}</caption>}
+            {domain === "weather" ? <caption className="weather-caption">{t.weatherCaption}</caption> : <caption className="sr-only">{title}</caption>}
             <thead><tr>{columns.map((label, index) => <th scope="col" key={label} className={index >= numericFrom ? "numeric" : undefined}>{label}</th>)}<th scope="col" className="evidence-column">{t.sourceFreshness}</th></tr></thead>
             <tbody>{filtered.map((row) => <tr key={`${row.capture_id}:${"geography" in row ? `${row.geography}:${row.period}` : "partner" in row ? `${row.partner}:${row.period}` : "date" in row ? row.date : row.release_id}`}>
               {"geography" in row ? <><td>{row.geography}</td><td>{row.period}</td><td>{row.estimate_status}</td><td className="numeric">{num(row.area_thousand_hectares)}</td><td className="numeric">{num(row.production_thousand_tonnes)}</td><td className="numeric">{num(row.yield_kg_hectare)}</td></>
@@ -178,7 +179,7 @@ export function IntelligencePage() {
                 : "date" in row ? <><td>{day(row.date)}</td><td>{row.kind === "recent_model" ? t.recent : t.forecast}</td><td className="numeric">{num(row.temperature_max_c)}</td><td className="numeric">{num(row.temperature_min_c)}</td><td className="numeric">{num(row.precipitation_mm)}</td></>
                 : <><td className="bulletin-title" lang="en">{row.title}<small className="quote-fetch">{row.source_key.startsWith("pib") ? t.pib : t.dasd} · {row.release_id}</small></td><td>{day(row.published_on)}</td></>}
               <td className="evidence-column"><EvidenceCell row={row} /></td>
-            </tr>)}</tbody></table></div>}
+            </tr>)}</tbody></table></div></>}
       </section>
       {domain === "weather" && rows.length > 0 && "grid_latitude" in rows[0] && <p className="data-disclosure">{t.grid(rows[0].grid_latitude, rows[0].grid_longitude, rows[0].elevation_m)} <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · <a href="https://open-meteo.com/en/terms" target="_blank" rel="noreferrer">{t.terms}</a>.</p>}
     </>}

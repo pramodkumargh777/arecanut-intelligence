@@ -322,10 +322,38 @@
   .snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .snapshot-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
   .snapshot-grid > :last-child:nth-child(odd) .snapshot-value { margin-top: 0; }
-  /* A panel's title and its one action (such as an export) share a row; a long title wraps beside the button. */
-  .panel-heading:has(> .button-secondary) { flex-wrap: nowrap; align-items: center; }
-  .panel-heading:has(> .button-secondary) > div { flex: 1 1 auto; min-width: 0; }
+  /* A panel's title and its one action (such as an export) share a row. The title never gets less than 10em, so a long
+     Kannada title wraps by word instead of letter; if the action cannot fit beside that, it drops to its own row. */
+  .panel-heading:has(> .button-secondary) { flex-wrap: wrap; align-items: center; }
+  .panel-heading:has(> .button-secondary) > div { flex: 1 1 10em; min-width: 0; }
+  .panel-heading:has(> .button-secondary) h2 { overflow-wrap: normal; }
   .panel-heading > .button-secondary { flex: none; min-height: 40px; height: auto; padding: 6px 12px; font-size: 13.5px; }
+  /* CSV downloads shrink to an icon and "CSV"; the full label stays for screen readers and as a tooltip. */
+  .export-label { display: none; }
+  .export-short { display: inline; }
+  .phone-only { display: block; }
+  /* Long dates and times in stat cards at body size, so a card is not three lines taller than its neighbour. */
+  .snapshot-card .snapshot-value.snapshot-date { font-size: 15px; line-height: 1.35; }
+  /* Section tabs on one row, sharing the width equally; a very narrow screen scrolls them sideways instead of wrapping. */
+  .module-navigation { flex-wrap: nowrap; width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .module-navigation::-webkit-scrollbar { display: none; }
+  .module-navigation a { flex: 1 0 auto; padding: 6px 8px; text-align: center; white-space: nowrap; text-decoration: none; }
+  /* Weather dates stay on one line; the table scrolls sideways instead. */
+  caption.weather-caption ~ tbody td:first-child { max-width: none; white-space: nowrap; }
+  /* Chart figures three to a row: five figures take two rows instead of three. */
+  .chart-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+  .chart-stats dd { font-size: 18px; }
+  /* Source tables: a row names its publisher and archived copy on one line. The fetch time is in the stat card above,
+     and the period or publication date has its own column. */
+  .evidence-column { min-width: 0; white-space: nowrap; }
+  .evidence-column .quote-fetch { display: none; }
+  /* A release title gets a readable width instead of a word per line; the table scrolls sideways for the rest. */
+  td.bulletin-title { min-width: 230px; max-width: none; }
+  /* Short summary figures under a chart: the label and its value share one line. */
+  .fact-list.compact > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .fact-list.compact dd { text-align: right; white-space: nowrap; }
+  /* The weather caption is a note above the table, so it wraps to the screen instead of running off with the table. */
+  caption.weather-caption { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .snapshot-card { padding: 12px 14px; }
   .snapshot-card .snapshot-value, .snapshot-grid-even .snapshot-value { font-size: 19px; margin-top: 6px; }
   .row-warnings { display: flex; margin-top: 4px; }

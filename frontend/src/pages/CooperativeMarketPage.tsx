@@ -20,6 +20,7 @@ import { SourceControl, SourceSlot } from "../components/SourceSlot";
 import { pageParam, readPage, readPreset, readSort, sortParams, withoutFilters, withParams } from "../services/priceFilters";
 import { defineCopy, useCopy, useFormat, useLanguage } from "../services/language";
 import { COMMON, fetchStatusText } from "../services/commonCopy";
+import { ExportButton } from "../components/ExportButton";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
 /** Rows per page in the observation table. */
@@ -72,11 +73,11 @@ const COPY = defineCopy({
     analyticsSummary: "Cooperative analytics summary", qualifying: "QUALIFYING DAILY OBSERVATIONS", qualifyingHint: (coverage: number) => `Dates meeting the ${coverage}-branch minimum`,
     periodAverage: "PERIOD AVERAGE", periodAverageHint: "Arithmetic mean of published daily medians", periodHighLow: "PERIOD HIGH / LOW", low: (value: string) => `Low: ${value}`,
     dispersion: "PRICE DISPERSION", dispersionHint: "Population standard deviation, not forecast uncertainty",
-    historyTitle: (source: string, single: boolean) => `${source} ${single ? "reported-average history" : "branch-average benchmark"}`,
+    historyTitle: (source: string, single: boolean) => `${source} ${single ? "reported-average history" : "average benchmark"}`,
     historySingleHint: "One location and exact variety. Not a benchmark or forecast.",
     historyHint: (dates: number, coverage: number) => `${dates} qualifying reporting date${dates === 1 ? "" : "s"} · At least ${coverage} branches per date · Constituent coverage varies`,
     chartLocation: "Chart location", chartSingleLabel: (source: string, branch: string, variety: string) => `${source} · ${branch} · ${variety} · Reported average`,
-    chartBenchmarkLabel: (source: string) => `${source} branch-average benchmark`, operatorAssumption: " — operator assumption",
+    chartBenchmarkLabel: (source: string) => `${source} average benchmark`, operatorAssumption: " — operator assumption",
     insufficientCoverage: "Insufficient same-date branch coverage", constituents: "Constituent branches by date",
     spreadTitle: "Cross-branch spread", spreadHint: "Highest minus lowest reported average among branches on the same date · dates with ≥2 branches",
     noSpread: "No date has two or more reporting branches", spreadName: "Branch spread", spreadDescription: (source: string) => `${source} cross-branch average spread by reporting date`,
@@ -164,11 +165,11 @@ const COPY = defineCopy({
     analyticsSummary: "ಸಹಕಾರಿ ವಿಶ್ಲೇಷಣೆಯ ಸಾರಾಂಶ", qualifying: "ಅರ್ಹ ದೈನಂದಿನ ದಾಖಲೆಗಳು", qualifyingHint: (coverage: number) => `ಕನಿಷ್ಠ ${coverage} ಶಾಖೆಗಳಿರುವ ದಿನಾಂಕಗಳು`,
     periodAverage: "ಅವಧಿಯ ಸರಾಸರಿ", periodAverageHint: "ಪ್ರಕಟಿತ ದೈನಂದಿನ ಮಧ್ಯಮಗಳ ಸರಾಸರಿ", periodHighLow: "ಅವಧಿಯ ಗರಿಷ್ಠ / ಕನಿಷ್ಠ", low: (value: string) => `ಕನಿಷ್ಠ: ${value}`,
     dispersion: "ದರದ ಏರಿಳಿತ", dispersionHint: "ಪ್ರಮಾಣಿತ ವಿಚಲನ; ಮುನ್ಸೂಚನೆಯ ಅನಿಶ್ಚಿತತೆ ಅಲ್ಲ",
-    historyTitle: (source: string, single: boolean) => `${source} ${single ? "ವರದಿಯಾದ ಸರಾಸರಿಯ ಇತಿಹಾಸ" : "ಶಾಖೆ-ಸರಾಸರಿ ಮಾನದಂಡ ದರ"}`,
+    historyTitle: (source: string, single: boolean) => `${source} ${single ? "ವರದಿಯಾದ ಸರಾಸರಿಯ ಇತಿಹಾಸ" : "ಸರಾಸರಿ ಮಾನದಂಡ ದರ"}`,
     historySingleHint: "ಒಂದು ಸ್ಥಳ ಮತ್ತು ನಿಖರ ತಳಿ. ಮಾನದಂಡ ಅಥವಾ ಮುನ್ಸೂಚನೆ ಅಲ್ಲ.",
     historyHint: (dates: number, coverage: number) => `${dates} ಅರ್ಹ ವರದಿ ದಿನಾಂಕಗಳು · ಪ್ರತಿ ದಿನಾಂಕಕ್ಕೆ ಕನಿಷ್ಠ ${coverage} ಶಾಖೆಗಳು · ಒಳಗೊಂಡ ಶಾಖೆಗಳು ಬದಲಾಗಬಹುದು`,
     chartLocation: "ಚಾರ್ಟ್ ಸ್ಥಳ", chartSingleLabel: (source: string, branch: string, variety: string) => `${source} · ${branch} · ${variety} · ವರದಿಯಾದ ಸರಾಸರಿ`,
-    chartBenchmarkLabel: (source: string) => `${source} ಶಾಖೆ-ಸರಾಸರಿ ಮಾನದಂಡ ದರ`, operatorAssumption: " — ಘಟಕ ಊಹಿಸಲಾಗಿದೆ",
+    chartBenchmarkLabel: (source: string) => `${source} ಸರಾಸರಿ ಮಾನದಂಡ ದರ`, operatorAssumption: " — ಘಟಕ ಊಹಿಸಲಾಗಿದೆ",
     insufficientCoverage: "ಒಂದೇ ದಿನಾಂಕದಲ್ಲಿ ಸಾಕಷ್ಟು ಶಾಖೆಗಳಿಲ್ಲ", constituents: "ದಿನಾಂಕವಾರು ಒಳಗೊಂಡ ಶಾಖೆಗಳು",
     spreadTitle: "ಶಾಖೆಗಳ ನಡುವಿನ ಅಂತರ", spreadHint: "ಒಂದೇ ದಿನಾಂಕದಲ್ಲಿ ಶಾಖೆಗಳ ಅತಿ ಹೆಚ್ಚು ಮತ್ತು ಅತಿ ಕಡಿಮೆ ಸರಾಸರಿಯ ವ್ಯತ್ಯಾಸ · ಕನಿಷ್ಠ 2 ಶಾಖೆಗಳಿರುವ ದಿನಾಂಕಗಳು",
     noSpread: "ಯಾವ ದಿನಾಂಕದಲ್ಲೂ ಎರಡು ಅಥವಾ ಹೆಚ್ಚು ಶಾಖೆಗಳು ವರದಿ ಮಾಡಿಲ್ಲ", spreadName: "ಶಾಖೆ ಅಂತರ", spreadDescription: (source: string) => `ವರದಿ ದಿನಾಂಕವಾರು ${source} ಶಾಖೆಗಳ ಸರಾಸರಿ ಅಂತರ`,
@@ -515,7 +516,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
       </section>}
       {from && to && from > to ? <ErrorState error={new Error(c.invalidRange)} /> : <section className="panel table-panel">
         <div className="panel-heading"><div><h2>{isCompare ? t.comparisonTitle : t.observationsTitle}</h2><p className="phone-hide">{t.matching(tableRows.length)} · {t.notModal}{data?.window && <> · {t.window(format.date(data.window.from), format.date(data.window.to))}{data.window.truncated ? t.truncated(data.window.row_limit.toLocaleString("en-IN")) : ""}</>}</p></div>
-          <button className="button-secondary" onClick={exportRows} disabled={!tableRows.length}>{c.exportMatchingCsv}</button></div>
+          <ExportButton label={c.exportMatchingCsv} disabled={!tableRows.length} onClick={exportRows} /></div>
         {!tableRows.length ? <EmptyState title={t.noMatches} /> : <QuoteTable rows={isCompare ? comparison : filtered.slice(activePage * PAGE_SIZE, (activePage + 1) * PAGE_SIZE)} sort={isCompare ? undefined : sort} onSort={isCompare ? undefined : toggleSort} />}
         {!isCompare && filtered.length > PAGE_SIZE && <div className="pagination"><span>{c.page(activePage + 1, Math.ceil(filtered.length / PAGE_SIZE))}</span><div><button className="button-secondary" disabled={!activePage} onClick={() => update({ page: pageParam(activePage - 1) })}>{c.previous}</button><button className="button-secondary" disabled={(activePage + 1) * PAGE_SIZE >= filtered.length} onClick={() => update({ page: pageParam(activePage + 1) })}>{c.next}</button></div></div>}
       </section>}

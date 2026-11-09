@@ -10,6 +10,7 @@ import { defineCopy, useCopy, useFormat } from "../services/language";
 import { COMMON } from "../services/commonCopy";
 import { MonthlyRefresh, MonthlySnapshot } from "./MonthlyTrendsPage";
 import { MonthYearPicker } from "../components/MonthYearPicker";
+import { ExportButton } from "../components/ExportButton";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
@@ -160,10 +161,10 @@ export function HistoricalAnalyticsPage() {
         {!data.flagged_months && <p>{t.noFlags}</p>}
         {data.points.filter((row) => row.review_flags.length > 0).map((row) => <article key={row.reporting_month}><h3>{format.month(row.reporting_month)} · {variety} · {number(row.weighted_price)} {row.price_unit}</h3><ul>{row.review_flags.map((flag) => <li key={flag.code}>{flagText(flag)}</li>)}</ul>{row.refresh_run_id && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</article>)}
       </div></section>
-      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.calendar}</h2><p>{t.calendarHint}</p></div><button className="button-secondary" onClick={() => download([
+      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.calendar}</h2><p>{t.calendarHint}</p></div><ExportButton label={t.exportHistory} onClick={() => download([
         ["month", "weighted_price", "price_unit", "status", "review_flags", "review_explanations", "rolling_3", "rolling_12", "yoy_percent", "volatility_percent", "source_url", "fetched_at", "refresh_run_id"],
         ...data.points.map((row) => [row.reporting_month, row.weighted_price, row.price_unit, row.status, row.review_flags.map((flag) => flag.code).join("; "), row.review_flags.map((flag) => flag.explanation).join("; "), row.rolling_3, row.rolling_12, row.yoy_percent, row.volatility_percent, row.source_url, row.fetched_at, row.refresh_run_id]),
-      ], "areca-pulse-monthly-history.csv")}>{t.exportHistory}</button></div>
+      ], "areca-pulse-monthly-history.csv")} /></div>
         <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label={t.tableAria}><table><caption>{t.tableCaption}</caption><thead><tr><th>{t.month}</th><th>{c.status}</th><th className="numeric">{t.weighted}</th><th className="numeric">{t.mean3}</th><th className="numeric">{t.mean12}</th><th className="numeric">{t.yoyPercent}</th><th className="numeric">{t.volPercent}</th><th>{t.sourceFreshness}</th></tr></thead><tbody>
           {data.points.map((row) => <tr key={row.reporting_month}><td>{format.month(row.reporting_month)}</td><td>{t.status[row.status] ?? row.status.replace(/_/g, " ")}{row.review_flags.length > 0 && <small className="quote-fetch" role="note">{t.flagged}</small>}{row.latest_attempt?.status === "failed" && <small className="quote-fetch" role="note">{t.refreshFailed(row.latest_attempt.error_message ?? "")}</small>}</td><td className="numeric">{number(row.weighted_price)}</td><td className="numeric">{number(row.rolling_3)}</td><td className="numeric">{number(row.rolling_12)}</td><td className="numeric">{number(row.yoy_percent)}</td><td className="numeric">{number(row.volatility_percent)}</td><td>{row.source_url ? <a href={row.source_url} target="_blank" rel="noreferrer">AGMARKNET CSV</a> : t.noObservation}<small className="quote-fetch">{row.fetched_at ? t.platformFetched(format.timestamp(row.fetched_at)) : t.notFetched}</small>{row.refresh_run_id && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</td></tr>)}
         </tbody></table></div>
