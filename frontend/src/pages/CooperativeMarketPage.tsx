@@ -14,6 +14,7 @@ import { capabilityStatus, DEFAULT_COMMODITY, marketFeeds, type MarketFeed } fro
 import { commodityName, useCommodity } from "../services/commodity";
 import { IntelligenceScorecard } from "../components/Scorecard";
 import { AboutData } from "../components/AboutData";
+import { usePhone } from "../components/usePhone";
 import { ImportsPanel } from "../components/ImportsPanel";
 import { SourceControl, SourceSlot } from "../components/SourceSlot";
 import { pageParam, readPage, readPreset, readSort, sortParams, withoutFilters, withParams } from "../services/priceFilters";
@@ -271,16 +272,31 @@ function QuoteTable({ rows, sort, onSort }: { rows: CooperativeQuote[]; sort?: Q
   const source = rows[0]?.source_key ?? "mamcos";
   const tss = source === "tss";
   const sourceName = source.toUpperCase();
+  // Phones show the average price beside the branch, before the dates, so the rate is visible without scrolling sideways.
+  const phone = usePhone();
+  const dateHead = <SortHeader key="date" label={c.reportingDate} column="reporting_date" sort={sort} onSort={onSort} />;
+  const varietyHead = <th key="variety" scope="col">{c.exactVariety}</th>;
+  const priceHeads = phone
+    ? [<SortHeader key="avg" label={c.average} column="average_price" sort={sort} onSort={onSort} numeric />, <SortHeader key="min" label={c.minimum} column="minimum_price" sort={sort} onSort={onSort} numeric />, <SortHeader key="max" label={c.maximum} column="maximum_price" sort={sort} onSort={onSort} numeric />]
+    : [<SortHeader key="min" label={c.minimum} column="minimum_price" sort={sort} onSort={onSort} numeric />, <SortHeader key="avg" label={c.average} column="average_price" sort={sort} onSort={onSort} numeric />, <SortHeader key="max" label={c.maximum} column="maximum_price" sort={sort} onSort={onSort} numeric />];
+  const normalHead = tss ? [<th key="normal" scope="col" className="numeric">{t.normalRate}</th>] : [];
   return <div className="table-scroll" tabIndex={0} role="region" aria-label={t.quotations}><table>
     <caption className="sr-only">{t.tableCaption(sourceName, c.inrQuintal, rows[0]?.unit_status === "assumed")}</caption>
-    <thead><tr><SortHeader label={c.branch} column="branch" sort={sort} onSort={onSort} /><SortHeader label={c.reportingDate} column="reporting_date" sort={sort} onSort={onSort} /><th scope="col">{c.exactVariety}</th>
-      <SortHeader label={c.minimum} column="minimum_price" sort={sort} onSort={onSort} numeric /><SortHeader label={c.average} column="average_price" sort={sort} onSort={onSort} numeric /><SortHeader label={c.maximum} column="maximum_price" sort={sort} onSort={onSort} numeric />
-      {tss && <th scope="col" className="numeric">{t.normalRate}</th>}<th scope="col" className="col-quality">{c.quality}</th><th scope="col" className="col-source">{t.sourceFetched}</th></tr></thead>
-    <tbody>{rows.map((row) => { const checks = quoteQuality(row, t); return <tr key={row.id}><td className="table-market">{row.branch}
+    <thead><tr><SortHeader label={c.branch} column="branch" sort={sort} onSort={onSort} />
+      {phone ? [...priceHeads, ...normalHead, dateHead, varietyHead] : [dateHead, varietyHead, ...priceHeads, ...normalHead]}
+      <th scope="col" className="col-quality">{c.quality}</th><th scope="col" className="col-source">{t.sourceFetched}</th></tr></thead>
+    <tbody>{rows.map((row) => {
+      const checks = quoteQuality(row, t);
+      const date = <td key="date">{format.date(row.reporting_date)}</td>;
+      const variety = <td key="variety" lang="en">{row.variety}</td>;
+      const min = <td key="min" className="numeric">{money(row.minimum_price, c.notReported)}</td>;
+      const avg = <td key="avg" className="numeric table-price">{money(row.average_price, c.notReported)}</td>;
+      const max = <td key="max" className="numeric">{money(row.maximum_price, c.notReported)}</td>;
+      const normal = tss ? [<td key="normal" className="numeric">{money(row.normal_price, c.notReported)}</td>] : [];
+      return <tr key={row.id}><td className="table-market">{row.branch}
       {/* Phones drop the quality column; a failed check still shows, under the branch. */}
-      {checks.some((check) => check.ok === false) && <span className="quality-chips row-warnings">{checks.filter((check) => check.ok === false).map((check) => <span key={check.label} className="status-pill tone-warn">{check.label}</span>)}</span>}</td><td>{format.date(row.reporting_date)}</td><td lang="en">{row.variety}</td>
-      <td className="numeric">{money(row.minimum_price, c.notReported)}</td><td className="numeric table-price">{money(row.average_price, c.notReported)}</td><td className="numeric">{money(row.maximum_price, c.notReported)}</td>
-      {tss && <td className="numeric">{money(row.normal_price, c.notReported)}</td>}
+      {checks.some((check) => check.ok === false) && <span className="quality-chips row-warnings">{checks.filter((check) => check.ok === false).map((check) => <span key={check.label} className="status-pill tone-warn">{check.label}</span>)}</span>}</td>
+      {phone ? [avg, min, max, ...normal, date, variety] : [date, variety, min, avg, max, ...normal]}
       <td className="col-quality"><span className="quality-chips">{checks.map((check) => <span key={check.label} className={`status-pill tone-${check.ok === null ? "neutral" : check.ok ? "good" : "warn"}`}>{check.label}</span>)}</span></td>
       <td className="col-source"><a href={row.source_url} target="_blank" rel="noreferrer">{sourceName}</a><small className="quote-fetch">{t.platformFetched(format.timestamp(row.fetched_at))}</small></td></tr>; })}</tbody>
   </table></div>;

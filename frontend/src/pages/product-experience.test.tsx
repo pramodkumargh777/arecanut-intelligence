@@ -399,6 +399,15 @@ describe("market experience", () => {
     expect(eventsBetween("2025-01-01", "2025-12-31").map((event) => event.date)).toEqual(["2025-10-15"]);
   });
 
+  it("lets Monthly trends pick a year from a dropdown instead of the browser's month input", () => {
+    const html = render(<HistoricalAnalyticsPage />, "/monthly-trends");
+    expect(html).not.toContain('type="month"');
+    const from = html.slice(html.indexOf('aria-label="From month"'));
+    expect(from).toMatch(/aria-label="From month: year"><option value="20\d\d"/);
+    expect(from).toContain('<option value="2021" selected="">2021</option>');
+    expect(from).toContain('<option value="2010">2010</option>');
+  });
+
   it("offers a menu collapse button that starts expanded", () => {
     const html = render(<AppShell />);
     expect(html).toContain('class="app-shell"');
@@ -596,7 +605,8 @@ describe("market experience", () => {
     expect(strip).toContain("1 Oct 2026");
     expect(strip).toContain("₹48,000");
     expect(strip).toContain("1 branch<");
-    expect(strip).toContain("No earlier report to compare");
+    expect(strip).toContain('title="No earlier report to show a change against">No prior report<');
+    expect(strip).toMatch(/class="glance-share"><button[^>]*aria-label="Share this summary"/);
   });
 
   it("shows one APMC Siddapur row for the chosen variety from its latest day, with a link to the other markets", () => {

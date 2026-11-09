@@ -5,6 +5,7 @@ import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { completedMonthIST } from "../../../shared/dates";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { COMMON, fetchStatusText } from "../services/commonCopy";
+import { MonthYearPicker } from "../components/MonthYearPicker";
 
 const price = (value: number | null, missing: string) => value === null ? missing : new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -108,7 +109,7 @@ export function MonthlyRefresh() {
       <details><summary>{t.refreshTitle}</summary>
         <p>{t.refreshNote}</p>
         <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); refresh.mutate(); }}>
-          <label className="filter-control"><span>{t.completedMonth}</span><input type="month" min="2010-01" value={refreshMonth} required disabled={refresh.isPending} onChange={(event) => setRefreshMonth(event.target.value)} /></label>
+          <MonthYearPicker label={t.completedMonth} min="2010-01" max={completedMonthIST()} value={refreshMonth} onChange={setRefreshMonth} />
           <label className="filter-control"><span>{t.token}</span><input type="password" autoComplete="off" required value={token} disabled={refresh.isPending} onChange={(event) => setToken(event.target.value)} /></label>
           <button className="button-secondary" disabled={refresh.isPending || !token}>{refresh.isPending ? t.fetching : t.fetch}</button>
         </form>
