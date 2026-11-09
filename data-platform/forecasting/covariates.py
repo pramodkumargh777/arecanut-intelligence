@@ -226,7 +226,9 @@ def monthly_covariates(through: str | None = None) -> pd.DataFrame:
         columns["arrivals_yoy"] = logs - logs.shift(12)
     imports = _read("imports.csv")
     if not imports.empty:
-        q = imports.set_index(pd.PeriodIndex(imports.month, freq="M")).quantity
+        # An unreleased month comes back as all-zero rows; areca imports are never truly zero in a month, so a zero
+        # total means "not published yet", not "no imports".
+        q = imports.set_index(pd.PeriodIndex(imports.month, freq="M")).quantity.where(lambda v: v > 0)
         logs = np.log1p(q)
         columns["imports_log"] = logs
         columns["imports_yoy"] = logs - logs.shift(12)

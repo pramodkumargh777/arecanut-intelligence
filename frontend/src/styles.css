@@ -1048,3 +1048,52 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   .fx-segmented.is-numeric { grid-template-columns: auto; grid-auto-columns: minmax(0, 1fr); }
   .fx-segmented.is-numeric button { min-width: 0; padding: 0; }
 }
+
+/* ---- Sell or wait: folded costs and details, and the waiting-period dot chart ---------------------------------- */
+.hold-costs { grid-column: 1 / -1; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
+.hold-costs > summary, .hold-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 14px; cursor: pointer; list-style: none; }
+.hold-costs > summary::-webkit-details-marker, .hold-fold > summary::-webkit-details-marker { display: none; }
+.hold-costs > summary::after, .hold-fold > summary::after { content: ""; flex: none; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform .15s ease; }
+.hold-costs[open] > summary::after, .hold-fold[open] > summary::after { transform: rotate(225deg) translateY(-2px); }
+.hold-costs summary > span, .hold-fold summary > span { display: grid; gap: 2px; }
+.hold-costs summary strong, .hold-fold summary strong { font-size: 15px; font-weight: 650; color: var(--ink); }
+.hold-costs summary small, .hold-fold summary small { color: var(--muted); font-size: 12.5px; }
+.hold-costs-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px 16px; padding: 0 14px 14px; }
+.hold-costs-body > .rate-caption { grid-column: 1 / -1; margin: 0; }
+.hold-fold > summary { padding: 0; }
+.hold-fold[open] > summary { margin-bottom: 12px; }
+.hold-medians { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0 0 14px; padding: 0; list-style: none; }
+.hold-medians li { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
+.hold-medians span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.hold-medians b { color: var(--ink); font-size: 18px; font-variant-numeric: tabular-nums; }
+.hold-medians small { color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+
+.hold-chart { display: grid; grid-template-columns: 46px minmax(0, 1fr); margin: 14px 0 0; }
+.hold-chart-axis { position: relative; height: 240px; }
+.hold-chart-axis span { position: absolute; right: 8px; transform: translateY(-50%); color: var(--subtle); font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hold-chart-body { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.hold-chart-grid { position: absolute; inset: 0 0 auto 0; height: 240px; pointer-events: none; }
+.hold-chart-grid i { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); }
+.hold-chart-grid i.is-zero { background: var(--line-strong); }
+.hold-chart-col { display: grid; grid-template-rows: 240px auto; min-width: 0; border-left: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); }
+.hold-chart-col:first-child { border-left: 0; }
+.hold-chart-plot { position: relative; }
+.hold-chart-need { position: absolute; left: 10%; right: 10%; height: 0; border-top: 2px solid #d99a2b; }
+.hold-chart-need-text { color: #b7791f; font-size: 12px; font-weight: 650; }
+:root[data-theme="dark"] .hold-chart-need-text { color: #f2c46d; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hold-chart-need-text { color: #f2c46d; } }
+.hold-chart-dot { position: absolute; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--surface); border: 2px solid var(--subtle); cursor: help; }
+.hold-chart-dot.is-paid { background: var(--brand-leaf); border-color: var(--brand-leaf); }
+.hold-chart-label { display: grid; justify-items: center; gap: 2px; padding: 10px 4px 0; text-align: center; }
+.hold-chart-label strong { color: var(--ink); font-size: 13.5px; font-weight: 650; }
+.hold-chart-label small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+@media (max-width: 640px) {
+  .hold-chart { grid-template-columns: 38px minmax(0, 1fr); }
+  .hold-chart-axis, .hold-chart-grid { height: 220px; }
+  .hold-chart-col { grid-template-rows: 220px auto; }
+  .hold-chart-dot { width: 12px; height: 12px; }
+  .hold-chart-need { left: 4%; right: 4%; }
+  .hold-chart-need-text { font-size: 11px; }
+  .hold-chart-label strong { font-size: 12.5px; }
+  .hold-chart-label small { font-size: 11px; }
+}
