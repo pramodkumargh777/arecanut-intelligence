@@ -16,7 +16,6 @@ import { TSS_VARIETIES } from "../../../shared/tss-varieties";
 import { AssistantPage } from "./AssistantPage";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { OverviewPage } from "./OverviewPage";
-import { MonthlyTrendsPage } from "./MonthlyTrendsPage";
 import { HistoricalAnalyticsPage } from "./HistoricalAnalyticsPage";
 import { DecisionToolsPage } from "./DecisionToolsPage";
 import { IntelligencePage } from "./IntelligencePage";
@@ -33,6 +32,8 @@ import { shareMessage } from "../services/share";
 import { marketSuggestion, matchSuggestions } from "../services/marketSuggestions";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import { ImportsPanel } from "../components/ImportsPanel";
+import { eventsBetween, MARKET_EVENTS } from "../services/market-events";
 
 const state = vi.hoisted(() => ({
   cooperative: [] as object[],
@@ -244,7 +245,7 @@ describe("market experience", () => {
     expect(text).toContain("• Branch 8: ₹48007");
     expect(text).not.toContain("Branch 9:");
     expect(text).toContain("…and 2 more");
-    expect(text).toContain("Areca Pulse: https://example.test/?v=rashi");
+    expect(text.split("\n").at(-1)).toBe("ದಿನದ ಅಡಿಕೆ ಧಾರಣೆ ನೋಡಿ: https://example.test/?v=rashi");
     expect(shareMessage({ title: "APMC", lines: [{ place: "Market One", price: "₹100", date: "2 Oct 2026" }], more: String, note: "", url: "u" })).toContain("• Market One: ₹100 (2 Oct 2026)");
   });
 
@@ -374,6 +375,30 @@ describe("market experience", () => {
     expect(phone).toMatch(/<optgroup label="Everyday varieties"><option value="rashi" selected="">Rashi<\/option><option value="chali">Chali<\/option><option value="sippe-gotu">Sippe gotu<\/option><\/optgroup>/);
   });
 
+  it("summarises yearly imports from the published total, with the change and largest sources", () => {
+    const trade = (period: string, partner: string, quantity_tonnes: number | null) => ({ period, partner, quantity_tonnes, direction: "Import", value_inr_lakh: null, source_url: "https://dasd.example/imports.pdf" });
+    state.intelligence = ready({ data: [
+      trade("2023-24", "All partners (including others)", 39443), trade("2024-25", "All partners (including others)", 42174),
+      trade("2024-25", "Bangladesh", 12155), trade("2024-25", "Indonesia", 11590), trade("2024-25", "Sri Lanka", 8354), trade("2024-25", "UAE", 390), trade("2024-25", "Bhutan", null),
+    ], attempts: [] });
+    const html = render(<ImportsPanel />);
+    expect(html).toContain("42,174");
+    expect(html).toContain("+7% on 2023-24");
+    expect(html).toContain("Bangladesh 12,155 · Indonesia 11,590 · Sri Lanka 8,354");
+    expect(html).toContain('href="https://dasd.example/imports.pdf"');
+  });
+
+  it("shows nothing about imports when no total is published", () => {
+    state.intelligence = ready({ data: [], attempts: [] });
+    expect(render(<ImportsPanel />)).toBe("");
+  });
+
+  it("keeps market events dated, sourced and in order, and picks only those inside a chart's range", () => {
+    expect(MARKET_EVENTS.every((event, index) => /^\d{4}-\d{2}-\d{2}$/.test(event.date) && event.source.url.startsWith("https://") && event.en && event.kn
+      && (index === 0 || MARKET_EVENTS[index - 1].date < event.date))).toBe(true);
+    expect(eventsBetween("2025-01-01", "2025-12-31").map((event) => event.date)).toEqual(["2025-10-15"]);
+  });
+
   it("offers a menu collapse button that starts expanded", () => {
     const html = render(<AppShell />);
     expect(html).toContain('class="app-shell"');
@@ -391,7 +416,9 @@ describe("market experience", () => {
     expect(english).not.toContain("Arecanut Intelligence");
     expect(english).toContain("Explore prices");
     expect(english).toContain("More tools");
-    expect(english).toContain('href="/data-quality"');
+    expect(english).toContain('href="/monthly-trends"');
+    // Internal pages stay reachable by address but are out of the menu, and Historical analytics is part of Monthly trends.
+    for (const hidden of ['href="/data-quality"', 'href="/workspace"', 'href="/history"']) expect(english).not.toContain(hidden);
     expect(english).toContain("<details");
     state.language = "kn";
     const kannada = render(<AppShell />);
@@ -525,7 +552,7 @@ describe("market experience", () => {
   it.each([
     ["/", () => <HomePage />], ["/sell-or-hold", () => <SellOrHoldPage />], ["/prices", () => <PricesPage />], ["/overview", () => <OverviewPage />],
     ["/analytics", () => <AnalyticsPage />], ["/compare", () => <ComparePage />], ["/prices?feed=mamcos", () => <MarketDataPage official={<p />} />],
-    ["/monthly-trends", () => <MonthlyTrendsPage />], ["/history", () => <HistoricalAnalyticsPage />], ["/decision-tools", () => <DecisionToolsPage />],
+    ["/monthly-trends", () => <HistoricalAnalyticsPage />], ["/decision-tools", () => <DecisionToolsPage />],
     ["/intelligence/production", () => <IntelligencePage />], ["/intelligence/quality", () => <QualityInspectionsPage />], ["/supply", () => <SupplyPage />],
     ["/forecasts", () => <ForecastsPage />], ["/forecasts/evaluation", () => <ForecastEvaluationPage />], ["/assistant", () => <AssistantPage />],
     ["/workspace", () => <WorkspacePage />], ["/data-quality", () => <DataQualityPage />], ["/no-such-page", () => <NotFoundPage />],

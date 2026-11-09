@@ -11,7 +11,7 @@ import brandIcon from "../assets/areca-pulse-icon.svg";
 import darkLogo from "../assets/areca-pulse-logo-dark.svg";
 import appIcon from "../assets/areca-pulse-app-icon.svg";
 import { setTheme, useTheme } from "../services/theme";
-import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, ChevronDown, ClipboardCheck, Ellipsis, FlaskConical, Gauge, History, Hourglass, House, LayoutDashboard, MapPin, Menu, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, Search, SlidersHorizontal, Sun, TableProperties, X } from "lucide-react";
+import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, ChevronDown, Ellipsis, FlaskConical, Gauge, Hourglass, House, MapPin, Menu, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, Search, SlidersHorizontal, Sun, TableProperties, X } from "lucide-react";
 
 const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
@@ -26,7 +26,6 @@ const advancedGroups = [
   { label: "Market detail", kn: "ಮಾರುಕಟ್ಟೆ ವಿವರ", items: [
     { to: "/overview", label: "Market overview", kn: "ಸಮಗ್ರ ನೋಟ", icon: Activity },
     { to: "/monthly-trends", label: "Monthly trends", kn: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", icon: CalendarRange },
-    { to: "/history", label: "Historical analytics", kn: "ಐತಿಹಾಸಿಕ ವಿಶ್ಲೇಷಣೆ", icon: History },
     { to: "/supply", label: "Supply & weather", kn: "ಉತ್ಪಾದನೆ ಮತ್ತು ಹವಾಮಾನ", icon: MapPin },
   ] },
   { label: "Forecasting", kn: "ಮುನ್ಸೂಚನೆ", items: [
@@ -34,9 +33,11 @@ const advancedGroups = [
     { to: "/forecasts/evaluation", label: "Forecast evaluation", kn: "ಅಂದಾಜಿನ ಪರಿಶೀಲನೆ", icon: Gauge },
   ] },
   { label: "Workspace", kn: "ಕಾರ್ಯಕ್ಷೇತ್ರ", items: [
-    { to: "/workspace", label: "Organization dashboard", kn: "ಸಂಸ್ಥೆಯ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", icon: LayoutDashboard },
+    // Hidden from the menu for now: no organization uses it yet. The page still works at /workspace.
+    // { to: "/workspace", label: "Organization dashboard", kn: "ಸಂಸ್ಥೆಯ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", icon: LayoutDashboard },
     { to: "/decision-tools", label: "Decision tools", kn: "ಲೆಕ್ಕಾಚಾರ ಸಾಧನಗಳು", icon: Calculator },
-    { to: "/data-quality", label: "Data quality", kn: "ದತ್ತಾಂಶ ಗುಣಮಟ್ಟ", icon: ClipboardCheck },
+    // Hidden from the menu for now: an internal review queue, not for growers. The page still works at /data-quality.
+    // { to: "/data-quality", label: "Data quality", kn: "ದತ್ತಾಂಶ ಗುಣಮಟ್ಟ", icon: ClipboardCheck },
   ] },
 ];
 const navigation: { to: string; label: string; kn: string; icon: typeof Activity; end?: boolean }[] = [...primaryNavigation, ...advancedGroups.flatMap((group) => group.items)];
@@ -50,6 +51,8 @@ function storedCollapsed() {
 
 /** Grower pages are arecanut-only and short, so they leave out the commodity and market-search controls. */
 const GROWER_PAGES = ["/", "/sell-or-hold"];
+/** A visitor's own saved profiles and the reviewer queue have nothing for search engines. */
+const PRIVATE_PAGES = ["/workspace", "/data-quality"];
 
 const SHELL_COPY = defineCopy({
   en: {
@@ -130,6 +133,19 @@ export function AppShell() {
   useEffect(() => {
     document.title = `${currentPage} · Areca Pulse`;
   }, [currentPage]);
+
+  // Private pages, and addresses that match no page, are kept out of search results.
+  const searchable = Boolean(currentItem) && !PRIVATE_PAGES.includes(location.pathname);
+  useEffect(() => {
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (searchable) return robots?.remove();
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.name = "robots";
+      document.head.append(robots);
+    }
+    robots.content = "noindex";
+  }, [searchable]);
 
   useEffect(() => {
     setSearch(new URLSearchParams(location.search).get("search") ?? "");

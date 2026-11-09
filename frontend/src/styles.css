@@ -280,6 +280,37 @@ details[open] > summary { margin-bottom: 8px; }
 .chart-meta > span:first-child { display: flex; align-items: center; gap: 7px; }
 .legend-line { width: 16px; height: 2px; background: var(--ink); }
 .price-chart { width: 100%; }
+/* Sell or wait: the one-line usual high and low season for the chosen variety. */
+.hold-season { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--brand-leaf); border-radius: var(--radius-sm);
+  background: var(--brand-tint); color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+.hold-season svg { flex: none; margin-top: 2px; color: var(--brand); }
+/* Yearly imports on Price trends: one figure, a few bars, the largest sources. */
+.page-stack-follow { margin-top: 20px; }
+.imports-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px 24px; }
+.imports-head h2 { margin: 0; font-size: var(--text-section-title); font-weight: 600; line-height: 1.4; color: var(--ink); }
+.imports-context { max-width: 520px; margin: 4px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.imports-figure { display: grid; justify-items: end; gap: 2px; text-align: right; }
+.imports-figure strong { font-size: 24px; font-weight: 650; letter-spacing: -.02em; line-height: 1.2; color: var(--ink); font-variant-numeric: tabular-nums; }
+.imports-figure small { font-size: 13px; font-weight: 500; color: var(--muted); }
+.imports-figure span { font-size: 13px; color: var(--muted); }
+.imports-figure b { font-weight: 600; color: var(--ink-2); }
+.imports-bars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; height: 132px; margin: 16px 0 12px; }
+.imports-bar { display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; gap: 6px; min-width: 0; }
+.imports-bar-plot { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; width: 100%; height: 100%; min-height: 0; }
+.imports-bar-fill { width: min(56px, 100%); border-radius: 6px 6px 2px 2px; background: var(--line-strong); }
+.imports-bar-latest .imports-bar-fill { background: var(--brand); }
+.imports-bar-value { font-size: 12px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.imports-bar-year { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.imports-top { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+.imports-top span { color: var(--muted); }
+.imports-source { margin: 6px 0 0; font-size: 12.5px; }
+.imports-source a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+/* Policy and tax events under a price chart, numbered to match the markers on it. */
+.chart-events { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+.chart-events li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: start; }
+.chart-events time { font-weight: 600; color: var(--ink); }
+.chart-events a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.chart-event-number { display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: var(--ink-2); color: var(--surface); font-size: 10.5px; font-weight: 700; }
 .chart-stats { display: flex; flex-wrap: wrap; gap: 12px 36px; margin: 0 0 14px; padding-bottom: 14px; border-bottom: 1px solid var(--surface-2); }
 .chart-stats > div { min-width: 0; }
 .chart-stats dt { font-size: 11.5px; color: var(--muted); }

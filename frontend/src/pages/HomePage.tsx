@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowRight, ArrowUp, ChevronDown, ExternalLink, Minus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AboutData } from "../components/AboutData";
 import { ShareButton } from "../components/ShareButton";
 import { useChangeFlash } from "../components/useChangeFlash";
@@ -171,6 +171,8 @@ const branchName = placeName;
 
 /** Shared links point at this site, so a friend who opens one sees the same variety's rates. */
 const shareUrl = (path: string) => `${window.location.origin}${path}`;
+/** Rashi opens by default, so its link needs no variety and stays short. */
+const varietyShareUrl = (key: string) => shareUrl(key === VARIETIES[0].key ? "/" : `/?v=${encodeURIComponent(key)}`);
 
 const signedPercent = (value: number) => `${value > 0 ? "+" : ""}${value}%`;
 
@@ -239,15 +241,32 @@ function collapsedRows(rows: CooperativeQuote[], featured: string[] = []) {
 /** Matches the `rate-row-out` animation in styles.css. */
 const COLLAPSE_MS = 150;
 
+/** A card with no entry shows its first rows only. While "closing", its extra rows fade out before they are removed. */
+type CardState = "open" | "closing";
+
+function useCardStates() {
+  const [cards, setCards] = useState<Record<string, CardState>>({});
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  useEffect(() => { const pending = timers.current; return () => pending.forEach(clearTimeout); }, []);
+  const set = (key: string, state: CardState | undefined) => setCards(({ [key]: _, ...rest }) => state ? { ...rest, [key]: state } : rest);
+  function toggle(key: string) {
+    clearTimeout(timers.current.get(key));
+    timers.current.delete(key);
+    // A card that is closing opens again rather than closing twice.
+    if (cards[key] !== "open") return set(key, "open");
+    set(key, "closing");
+    timers.current.set(key, setTimeout(() => { timers.current.delete(key); set(key, undefined); }, COLLAPSE_MS));
+  }
+  return { cards, toggle };
+}
+
 export function HomePage() {
   const { language } = useLanguage();
   const { code } = useCommodity();
   const [params, setParams] = useSearchParams();
   const copy = COPY[language];
   const today = calendarTodayIST();
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  // The card whose extra rows are fading out; they are removed once the animation ends.
-  const [collapsing, setCollapsing] = useState<string | null>(null);
+  const { cards, toggle } = useCardStates();
   // Enough reports to find each branch's previous one. Older ones are too old to show a change against anyway.
   const historyFrom = new Date(calendarDateToTime(today) - (MAX_CHANGE_GAP_DAYS + 7) * DAY_MS).toISOString().slice(0, 10);
   const variety = VARIETIES.find((item) => item.key === params.get("v")) ?? VARIETIES[0];
@@ -289,13 +308,9 @@ export function HomePage() {
   const allDates = [...SOURCES.flatMap((source) => rowsFor(source.key)), ...tumcos].map((row) => row.reporting_date).sort();
   const newest = allDates.at(-1);
   const newestAge = newest ? ageDays(newest, today) : null;
-  const moreToggle = (key: string, total: number) => total > VISIBLE_ROWS && <button type="button" className="rate-more-toggle" aria-expanded={Boolean(expanded[key])}
-    onClick={() => {
-      if (!expanded[key]) return setExpanded((current) => ({ ...current, [key]: true }));
-      setCollapsing(key);
-      setTimeout(() => { setExpanded((current) => ({ ...current, [key]: false })); setCollapsing(null); }, COLLAPSE_MS);
-    }}>
-    {expanded[key] ? copy.showFewer : copy.showAll(total)}<ChevronDown size={15} aria-hidden="true" /></button>;
+  const moreToggle = (key: string, total: number) => total > VISIBLE_ROWS && <button type="button" className="rate-more-toggle" aria-expanded={cards[key] === "open"}
+    onClick={() => toggle(key)}>
+    {cards[key] === "open" ? copy.showFewer : copy.showAll(total)}<ChevronDown size={15} aria-hidden="true" /></button>;
   // One line per cooperative from its latest report. Sources stay separate because each works out its average differently.
   const glance = publishing.flatMap((source) => {
     const { latest, rows } = orderRows(rowsFor(source.key));
@@ -307,7 +322,7 @@ export function HomePage() {
   });
   const shareLabels = { share: copy.share, opening: copy.shareOpening, shared: copy.shareDone, whatsapp: copy.shareWhatsapp };
   // Rows outside the collapsed set animate in when the card is expanded and out when it is collapsed.
-  const reveal = (key: string, row: CooperativeQuote, collapsed: CooperativeQuote[]) => collapsed.includes(row) ? undefined : collapsing === key ? "out" as const : "in" as const;
+  const reveal = (key: string, row: CooperativeQuote, collapsed: CooperativeQuote[]) => collapsed.includes(row) ? undefined : cards[key] === "closing" ? "out" as const : "in" as const;
   return <div className="page-stack home" lang={language}>
     <section className="home-hero">
       <div><h1>{copy.title}</h1><p>{copy.subtitle}</p></div>
@@ -390,7 +405,7 @@ export function HomePage() {
     <section className="home-price-section" aria-labelledby="cooperative-prices-heading">
     <div className="home-section-heading"><h2 id="cooperative-prices-heading">{copy.cooperativeTitle}</h2><p>{copy.cooperativeHint}</p></div>
     {/* Collapsed cards are stretched to one height so their footers line up; an expanded card would stretch the others too far. */}
-    <div className={`rate-grid${publishing.some((source) => expanded[source.key]) ? "" : " rate-grid-even"}`}>
+    <div className={`rate-grid${publishing.some((source) => cards[source.key]) ? "" : " rate-grid-even"}`}>
       {publishing.map((source) => {
         const published = variety.labels[source.key]!;
         const sourceQueries = requests.flatMap((request, index) => request.source === source.key ? [queries[index]] : []);
@@ -416,7 +431,7 @@ export function HomePage() {
               {breadth.flat > 0 && <span><Minus size={13} aria-hidden="true" /><b>{breadth.flat}</b> {copy.flat}</span>}
               <span className={`market-breadth-median ${breadth.median_percent > 0 ? "hold-up" : breadth.median_percent < 0 ? "hold-down" : ""}`}>{copy.typical} <b>{signedPercent(breadth.median_percent).replace("-", "−")}</b></span>
             </div>}
-            <ul className="rate-list">{(expanded[source.key] ? rows : collapsed).map((row) => <RateRow key={`${row.branch}|${varietyKey(row.variety)}`} reveal={reveal(source.key, row, collapsed)} row={row} today={today} language={language} showLabel
+            <ul className="rate-list">{(cards[source.key] ? rows : collapsed).map((row) => <RateRow key={`${row.branch}|${varietyKey(row.variety)}`} reveal={reveal(source.key, row, collapsed)} row={row} today={today} language={language} showLabel
               highest={sameDay.length > 1 && row === sameDay[0]} change={priceChange(row, history)} />)}</ul>
             {moreToggle(source.key, rows.length)}
             </>}
@@ -425,7 +440,7 @@ export function HomePage() {
             {latest && <ShareButton labels={shareLabels} ariaLabel={copy.shareAria(source.en)} title={copy.shareTitle(varietyName(variety), source.en)} message={() => shareMessage({
               title: copy.shareTitle(varietyName(variety), language === "kn" ? source.kn : source.en), date: copy.shareReport(dateText(latest, language)),
               lines: sameDay.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
-              more: copy.shareMore, note: copy.shareBasis(source.assumedUnit), url: shareUrl(`/?v=${encodeURIComponent(variety.key)}`),
+              more: copy.shareMore, note: copy.shareBasis(source.assumedUnit), url: varietyShareUrl(variety.key),
             })} />}
             <Link to={`/prices?feed=${source.key}${published.length === 1 ? `&variety=${encodeURIComponent(published[0])}` : ""}`} aria-label={copy.moreFrom(source.en)}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
         </section>;
@@ -446,7 +461,7 @@ export function HomePage() {
         <footer className="rate-card-foot">{tumcos[0] && <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("TUMCOS")} title={copy.shareTumcosTitle} message={() => shareMessage({
           title: copy.shareTumcosTitle, date: copy.shareReport(dateText(tumcos[0].reporting_date, language)),
           lines: tumcos.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
-          more: copy.shareMore, note: copy.shareTumcosNote, url: shareUrl(`/?v=${encodeURIComponent(variety.key)}`),
+          more: copy.shareMore, note: copy.shareTumcosNote, url: varietyShareUrl(variety.key),
         })} />}<Link to="/prices?feed=tumcos" aria-label={copy.moreFrom("TUMCOS")}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
       </section>}
 

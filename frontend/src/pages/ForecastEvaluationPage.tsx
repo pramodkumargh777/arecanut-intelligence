@@ -113,7 +113,9 @@ export function ForecastEvaluationPage() {
   const format = useFormat();
   const statusText = (value: string) => t.status[value] ?? label(value);
   const [status, setStatus] = useState(""), [horizon, setHorizon] = useState("1");
-  const [cursor, setCursor] = useState<number | undefined>(undefined), [history, setHistory] = useState<number[]>([]);
+  // The cursors of the pages visited so far; the last is the page shown and `undefined` is the first page.
+  const [cursors, setCursors] = useState<(number | undefined)[]>([undefined]);
+  const cursor = cursors.at(-1);
   const overview = useQuery({ queryKey: ["forecasting-overview"], queryFn: () => api.forecastingOverview() });
   const experimentId = overview.data?.experiment?.id;
   const evaluations = useQuery({
@@ -124,7 +126,7 @@ export function ForecastEvaluationPage() {
   const predictions = useQuery({ queryKey: ["forecasting-predictions", experimentId], enabled: Boolean(experimentId), queryFn: () => api.forecastingPredictions({ experiment_id: experimentId, limit: "500" }) });
   const performance = useQuery({ queryKey: ["forecasting-performance"], queryFn: () => api.forecastingPerformance() });
 
-  const resetPaging = () => { setCursor(undefined); setHistory([]); };
+  const resetPaging = () => setCursors([undefined]);
   const experiment = overview.data?.experiment, meta = experiment?.metadata;
   const pooled = (meta?.pooled ?? []).filter((row) => !horizon || row.horizon === Number(horizon)).sort((a, b) => (a.mae ?? Infinity) - (b.mae ?? Infinity));
   const shownPredictions = (predictions.data?.data ?? []).filter((row) => showsValues(row.publication));
@@ -179,8 +181,8 @@ export function ForecastEvaluationPage() {
             {evaluations.data.data.map((row) => <tr key={row.id}><td lang="en">{row.variety}</td><td>{row.horizon}</td><td lang="en">{row.model}</td><td lang="en">{row.baseline_model}</td><td>{row.n}</td><td>{num(row.mae)}</td><td>{pct(row.mae_skill_vs_baseline)}</td><td>{num(row.p_value_holm, 3)}</td><td>{pct(row.interval_coverage)} ({label(row.coverage_status)})</td><td>{statusText(row.status)}</td><td>{row.reasons.map(label).join(", ")}</td></tr>)}
           </tbody></table></div>
           <div className="pagination"><span>{t.onPage(evaluations.data.data.length)}</span><div>
-            <button type="button" className="button-secondary" disabled={!history.length} onClick={() => { const previous = [...history]; const last = previous.pop(); setHistory(previous); setCursor(last === -1 ? undefined : last); }}>{t.previous}</button>
-            <button type="button" className="button-secondary" disabled={evaluations.data.next_after == null} onClick={() => { setHistory([...history, cursor ?? -1]); setCursor(evaluations.data?.next_after ?? undefined); }}>{t.next}</button>
+            <button type="button" className="button-secondary" disabled={cursors.length < 2} onClick={() => setCursors(cursors.slice(0, -1))}>{t.previous}</button>
+            <button type="button" className="button-secondary" disabled={evaluations.data.next_after == null} onClick={() => { const next = evaluations.data?.next_after; if (next != null) setCursors([...cursors, next]); }}>{t.next}</button>
           </div></div>
         </>}
       </section>

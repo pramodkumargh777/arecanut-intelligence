@@ -1,9 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { calendarTodayIST } from "../../../shared/dates";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, QUEUE_PAGE_SIZE } from "../services/api";
-import { QueuePager } from "./QueuePager";
+import { QueuePager, useStepBackWhenEmpty } from "./QueuePager";
+import { useReviewerAccess } from "./useReviewerAccess";
 import { reviewFlags, unitPublishable, type CooperativeQuote, type CooperativeSource } from "../services/cooperative";
 import { EmptyState, ErrorState, LoadingState } from "./State";
 
@@ -109,8 +110,8 @@ function QueueRow({ row, busy, onReview }: { row: CooperativeQuote; busy: boolea
 export function CooperativeReview() {
   const t = useCopy(COPY);
   const today = calendarTodayIST();
-  const [token, setToken] = useState("");
-  const [unlocked, setUnlocked] = useState(false);
+  const access = useReviewerAccess(["cooperative-quality"]);
+  const { token, unlocked } = access;
   const [feedback, setFeedback] = useState("");
   const [queueSource, setQueueSource] = useState<CooperativeSource | "">("");
   const [tssDate, setTssDate] = useState(today);
@@ -128,10 +129,7 @@ export function CooperativeReview() {
   const client = useQueryClient();
   const [queueOffset, setQueueOffset] = useState(0);
   const queue = useQuery({ queryKey: ["cooperative-quality", token, queueSource, queueOffset], queryFn: () => api.cooperativeQuality(token, queueSource || undefined, queueOffset), enabled: unlocked });
-  const queueTotal = queue.data?.total;
-  const queueEmptyPage = Boolean(queue.data && !queue.data.data.length);
-  // Reviewing shrinks the queue; step back when the current page empties.
-  useEffect(() => { if (queueEmptyPage && queueOffset > 0 && queueTotal) setQueueOffset(Math.max(0, queueOffset - QUEUE_PAGE_SIZE)); }, [queueEmptyPage, queueOffset, queueTotal]);
+  useStepBackWhenEmpty(queue.data, queueOffset, setQueueOffset, QUEUE_PAGE_SIZE);
   async function invalidate() {
     for (const key of ["cooperative", "cooperative-quality", "cooperative-sources", "decision-prices", "aggregates"]) await client.invalidateQueries({ queryKey: [key] });
   }
@@ -159,17 +157,16 @@ export function CooperativeReview() {
   const mutations = [refresh, tssRefresh, tssBackfill, tumcos, csvImport, replay, review];
   const busy = mutations.some((m) => m.isPending);
   function lock() {
-    client.removeQueries({ queryKey: ["cooperative-quality"] });
-    setToken(""); setUnlocked(false); setFeedback(""); setAttested(false); setCsvText("");
+    access.lock(); setFeedback(""); setAttested(false); setCsvText("");
     mutations.forEach((m) => m.reset());
   }
   const submit = (action: () => void) => (event: FormEvent) => { event.preventDefault(); setFeedback(""); action(); };
   async function loadCsvFile(file: File | undefined) { if (file) setCsvText(await file.text()); }
   return <section className="panel"><div className="panel-heading"><div><h2>{t.title}</h2><p>{t.intro}</p></div></div>
     <div className="monthly-details">
-      {!unlocked ? <form className="monthly-refresh" onSubmit={(event) => { event.preventDefault(); setUnlocked(true); }}>
-        <label className="filter-control"><span>{t.token}</span><input type="password" autoComplete="off" required value={token} onChange={(event) => setToken(event.target.value)} /></label>
-        <button className="button-secondary" disabled={!token}>{t.unlock}</button>
+      {!unlocked ? <form className="monthly-refresh" onSubmit={access.unlock}>
+        <label className="filter-control"><span>{t.token}</span><input type="password" autoComplete="off" required value={access.draft} onChange={(event) => access.setDraft(event.target.value)} /></label>
+        <button className="button-secondary" disabled={!access.canUnlock}>{t.unlock}</button>
       </form> : <>
         <div className="monthly-refresh"><button className="button-secondary" disabled={busy} onClick={() => { setFeedback(""); refresh.mutate(); }}>{refresh.isPending ? t.fetchingMamcos : t.fetchMamcos}</button>
           <button className="button-secondary" disabled={busy} onClick={lock}>{t.lock}</button></div>

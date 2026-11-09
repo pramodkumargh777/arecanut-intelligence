@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { CalendarRange } from "lucide-react";
 import { useState } from "react";
 import { calendarTodayIST, formatCalendarMonth, formatPeriodKannada, MONTH_NAMES_EN, MONTH_NAMES_KN, shiftCalendarMonth } from "../../../shared/dates";
-import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS } from "../../../shared/hold-history";
+import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS, seasonalPattern } from "../../../shared/hold-history";
 import { ErrorState, LoadingState } from "../components/State";
 import { usePhone } from "../components/usePhone";
 import { api } from "../services/api";
@@ -52,6 +53,9 @@ const COPY = defineCopy({
     noData: "ಈ ತಳಿ ಮತ್ತು ತಿಂಗಳಿಗೆ ಸಾಕಷ್ಟು ದತ್ತಾಂಶ ಇಲ್ಲ.",
     loading: "ಹಿಂದಿನ ದರಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ",
     source: "ಮೂಲ: AGMARKNET ತಿಂಗಳ ವರದಿಗಳು",
+    season: (since: number, name: string, high: string, low: string, spread: number, consistent: number, years: number) =>
+      `${since}ರಿಂದ ${name} ದರ ಸಾಮಾನ್ಯವಾಗಿ ${high} ತಿಂಗಳಲ್ಲಿ ಹೆಚ್ಚು, ${low} ತಿಂಗಳಲ್ಲಿ ಕಡಿಮೆ ಇದೆ; ಸುಮಾರು ${spread}% ಅಂತರ (${years} ರಲ್ಲಿ ${consistent} ವರ್ಷ).`,
+    noSeason: (since: number, name: string) => `${since}ರಿಂದ ${name} ದರದಲ್ಲಿ ಸ್ಪಷ್ಟ ಏರಿಕೆ ಅಥವಾ ಇಳಿಕೆಯ ಕಾಲ ಕಂಡುಬಂದಿಲ್ಲ.`,
   },
   en: {
     title: "Sell now or wait?",
@@ -75,6 +79,9 @@ const COPY = defineCopy({
     noData: "Not enough data for this variety and month.",
     loading: "Loading past prices",
     source: "Source: AGMARKNET monthly reports",
+    season: (since: number, name: string, high: string, low: string, spread: number, consistent: number, years: number) =>
+      `Since ${since}, ${name} has usually been highest in ${high} and lowest in ${low}, about ${spread}% apart (${consistent} of ${years} years).`,
+    noSeason: (since: number, name: string) => `Since ${since}, ${name} has shown no clear high or low season.`,
   },
 });
 
@@ -108,7 +115,12 @@ export function SellOrHoldPage() {
   const others = usable.filter((name) => !COMMON_VARIETIES.some((item) => item.name === name))
     .sort((a, b) => (OTHER_NAMES[a]?.en ?? a).localeCompare(OTHER_NAMES[b]?.en ?? b));
   const otherName = (name: string) => OTHER_NAMES[name]?.[language] ?? name;
+  const varietyName = language === "kn" ? COMMON_VARIETIES.find((item) => item.name === variety)?.kn ?? otherName(variety) : otherName(variety);
+  // One sentence on the usual high and low months, from past years only; it does not depend on the month chosen.
+  const season = data ? seasonalPattern(data.points) : null;
   const monthNames = language === "kn" ? MONTH_NAMES_KN : MONTH_NAMES_EN;
+  // Word joiners keep a pair such as "Feb–Mar" on one line.
+  const monthPair = ([a, b]: [number, number]) => language === "kn" ? `${MONTH_NAMES_KN[a - 1]}\u2060–\u2060${MONTH_NAMES_KN[b - 1]}` : `${MONTH_NAMES_EN[a - 1].slice(0, 3)}\u2060–\u2060${MONTH_NAMES_EN[b - 1].slice(0, 3)}`;
   // Phones show the key waiting periods and fold the cost inputs and year table away; both stay one tap from view.
   const phone = usePhone();
   const horizons = phone ? HOLD_HORIZONS.filter((months) => PHONE_HORIZONS.includes(months)) : HOLD_HORIZONS;
@@ -141,6 +153,9 @@ export function SellOrHoldPage() {
     </section>
 
     {query.isLoading ? <LoadingState label={copy.loading} /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !history?.years.length ? <p className="rate-empty">{copy.noData}</p> : <>
+      {season && <p className="hold-season"><CalendarRange size={18} aria-hidden="true" /><span>{season.high && season.low
+        ? copy.season(season.first_year, varietyName, monthPair(season.high), monthPair(season.low), season.spread_percent, season.consistent_years, season.years)
+        : copy.noSeason(season.first_year, varietyName)}</span></p>}
       <section className="rate-card" aria-labelledby="hold-summary">
         <header><h2 id="hold-summary">{copy.summaryTitle(monthNames[startMonth - 1])}</h2></header>
         <p className="rate-caption phone-hide">{copy.summaryNote}</p>

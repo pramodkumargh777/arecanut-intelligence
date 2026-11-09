@@ -78,3 +78,62 @@ export function holdBreakEvenPercent(months: number, price: number, costs: HoldC
   const needed = (price * (1 + (interest / 100) * (months / 12)) + storage * months) / (1 - weightLoss / 100);
   return round1((needed / price - 1) * 100);
 }
+
+export type SeasonalPattern = {
+  first_year: number; last_year: number; years: number;
+  /** Two neighbouring calendar months (1–12) with the highest and the lowest typical price, or null when no season stands out. */
+  high: [number, number] | null; low: [number, number] | null;
+  /** How far the high months typically sat above the low months, in whole percent. */
+  spread_percent: number;
+  /** Years in which the high months really were above the low months. */
+  consistent_years: number;
+};
+
+/** A season must be at least this far apart, and hold in more than half the years, to be called usual. */
+const MIN_SEASON_SPREAD_PERCENT = 3;
+/** A year needs most of its months to give a fair yearly average to compare each month against. */
+const MIN_MONTHS_IN_YEAR = 10;
+
+/**
+ * Which two neighbouring months have usually been highest and lowest. Each month is compared with its own year's
+ * average, so a year that was dear or cheap overall does not tilt the result. One-month spikes are left out. This
+ * describes past seasons only; null when there are too few years to say anything.
+ */
+export function seasonalPattern(points: HoldPoint[]): SeasonalPattern | null {
+  const usable = points.filter((point) => point.weighted_price !== null && point.weighted_price > 0 && !isIsolatedSpike(point));
+  const byYear = new Map<number, Map<number, number>>();
+  for (const point of usable) {
+    const year = Number(point.reporting_month.slice(0, 4));
+    if (!byYear.has(year)) byYear.set(year, new Map());
+    byYear.get(year)!.set(Number(point.reporting_month.slice(5)), point.weighted_price!);
+  }
+  const years = [...byYear].filter(([, months]) => months.size >= MIN_MONTHS_IN_YEAR).sort(([a], [b]) => a - b)
+    .map(([year, months]) => {
+      const mean = [...months.values()].reduce((sum, value) => sum + value, 0) / months.size;
+      return { year, index: new Map([...months].map(([month, price]) => [month, price / mean])) };
+    });
+  if (years.length < MIN_HOLD_YEARS) return null;
+  const typical = new Map<number, number>();
+  for (let month = 1; month <= 12; month++) {
+    const values = years.flatMap((year) => year.index.has(month) ? [year.index.get(month)!] : []);
+    if (values.length >= MIN_HOLD_YEARS) typical.set(month, medianOf(values));
+  }
+  // Pairs wrap from December to January, since the crop year does not follow the calendar.
+  const pairs = Array.from({ length: 12 }, (_, i) => [i + 1, (i + 1) % 12 + 1] as [number, number])
+    .filter(([a, b]) => typical.has(a) && typical.has(b))
+    .map((pair) => ({ pair, value: (typical.get(pair[0])! + typical.get(pair[1])!) / 2 }));
+  const base = { first_year: years[0].year, last_year: years.at(-1)!.year, years: years.length };
+  if (pairs.length < 2) return null;
+  const high = pairs.reduce((best, item) => item.value > best.value ? item : best);
+  const low = pairs.reduce((best, item) => item.value < best.value ? item : best);
+  const spread = Math.round((high.value / low.value - 1) * 100);
+  const pairIndex = (index: Map<number, number>, [a, b]: [number, number]) => index.has(a) && index.has(b) ? (index.get(a)! + index.get(b)!) / 2 : null;
+  const compared = years.flatMap((year) => {
+    const h = pairIndex(year.index, high.pair), l = pairIndex(year.index, low.pair);
+    return h === null || l === null ? [] : [h > l];
+  });
+  const consistent = compared.filter(Boolean).length;
+  if (spread < MIN_SEASON_SPREAD_PERCENT || consistent * 2 <= compared.length)
+    return { ...base, high: null, low: null, spread_percent: spread, consistent_years: consistent };
+  return { ...base, years: compared.length, high: high.pair, low: low.pair, spread_percent: spread, consistent_years: consistent };
+}

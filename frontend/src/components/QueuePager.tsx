@@ -1,5 +1,13 @@
+import { useEffect } from "react";
 import { useCopy } from "../services/language";
 import { COMMON } from "../services/commonCopy";
+
+/** Reviewing shrinks a queue; this steps the offset back a page when the current page empties. */
+export function useStepBackWhenEmpty(page: { total: number; data: unknown[] } | undefined, offset: number, setOffset: (offset: number) => void, limit: number) {
+  const emptyPage = Boolean(page && !page.data.length);
+  const total = page?.total;
+  useEffect(() => { if (emptyPage && offset > 0 && total) setOffset(Math.max(0, offset - limit)); }, [emptyPage, offset, total, limit, setOffset]);
+}
 
 type QueuePagerProps = { offset: number; limit: number; total: number; busy?: boolean; label: string; onChange: (offset: number) => void };
 

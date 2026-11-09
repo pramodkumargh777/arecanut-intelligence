@@ -163,7 +163,7 @@ export function IntelligenceScorecard({ feed, variety }: { feed: MarketFeed; var
         tone={!monthlyEnabled || history.error ? "neutral" : monthly?.state === "complete" ? "good" : monthly?.state === "partial" ? "warn" : "bad"}
         detail={!monthlyEnabled ? t.noMonthly : history.error ? (history.error as Error).message
           : t.historyDetail(history.data?.observed_months ?? 0, history.data?.expected_months ?? 0, format.month("2021-01"), format.month(completed), latestMonth ? format.month(latestMonth) : null, history.data?.flagged_months ?? 0)}
-        source={t.historySource} to="/history" />
+        source={t.historySource} to="/monthly-trends" />
       <ScoreItem icon={<ShieldCheck size={16} />} label={t.validation} loading={forecastEnabled && (forecasting.isLoading || performance.isLoading)}
         value={!forecastEnabled ? t.notIntegrated : forecasting.error ? t.unavailable : forecastText.value}
         tone={!forecastEnabled || forecasting.error ? "neutral" : FORECAST_TONE[forecastStatus]}

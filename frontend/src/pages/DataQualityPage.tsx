@@ -1,9 +1,10 @@
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ClipboardCheck, KeyRound, LockKeyhole, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api, QUEUE_PAGE_SIZE } from "../services/api";
-import { QueuePager } from "../components/QueuePager";
+import { QueuePager, useStepBackWhenEmpty } from "../components/QueuePager";
+import { useReviewerAccess } from "../components/useReviewerAccess";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { CooperativeReview } from "../components/CooperativeReview";
 import { SourceStatusPanel } from "../components/SourceStatusPanel";
@@ -52,32 +53,27 @@ const COPY = defineCopy({
   },
 });
 
-function clearReviewerQueries(queryClient: QueryClient) {
-  for (const key of ["quality", "source-status", "cooperative-sources", "cooperative-quality"]) queryClient.removeQueries({ queryKey: [key] });
-}
+const REVIEWER_QUERIES = ["quality", "source-status", "cooperative-sources", "cooperative-quality"] as const;
+
+/** The result of the last review, shown until the next one starts. */
+type Feedback = { tone: "status" | "alert"; text: string } | null;
 
 export function DataQualityPage() {
   const t = useCopy(COPY);
   const format = useFormat();
-  // Held in memory only, so it is gone when you leave this page or reload it.
-  const [token, setToken] = useState("");
-  const [draftToken, setDraftToken] = useState("");
-  const [message, setMessage] = useState("");
-  const [messageError, setMessageError] = useState(false);
+  // Held in memory only, so it is gone when you leave this page or reload it. Query keys contain the token, so cached queries go too.
+  const access = useReviewerAccess(REVIEWER_QUERIES);
+  const { token } = access;
+  const [feedback, setFeedback] = useState<Feedback>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   useEffect(() => {
     // Removes a token saved by an earlier version of this page.
     try { sessionStorage.removeItem("ani-admin-token"); } catch { /* Nothing to remove when storage is blocked. */ }
-    // Query keys contain the token, so cached queries go too.
-    return () => { clearReviewerQueries(queryClient); };
-  }, [queryClient]);
+  }, []);
   const [queueOffset, setQueueOffset] = useState(0);
-  const quality = useQuery({ queryKey: ["quality", token, queueOffset], queryFn: () => api.qualityQueue(token, queueOffset), enabled: Boolean(token) });
-  const queueTotal = quality.data?.total;
-  const queueEmptyPage = Boolean(quality.data && !quality.data.data.length);
-  // Reviewing shrinks the queue; step back when the current page empties.
-  useEffect(() => { if (queueEmptyPage && queueOffset > 0 && queueTotal) setQueueOffset(Math.max(0, queueOffset - QUEUE_PAGE_SIZE)); }, [queueEmptyPage, queueOffset, queueTotal]);
+  const quality = useQuery({ queryKey: ["quality", token, queueOffset], queryFn: () => api.qualityQueue(token, queueOffset), enabled: access.unlocked });
+  useStepBackWhenEmpty(quality.data, queueOffset, setQueueOffset, QUEUE_PAGE_SIZE);
   const evidence = quality.data?.data.map((row) => <details className="review-evidence" key={row.id}>
     <summary>{t.evidence(row.market_name, format.date(row.reporting_date), row.variety_name)}</summary>
     <p>{t.evidenceLine(row.validation_status, row.original_unit, format.timestamp(row.ingested_at))}</p>
@@ -85,27 +81,19 @@ export function DataQualityPage() {
     <pre>{row.raw_payload}</pre>
   </details>);
   function saveToken(event: FormEvent) {
-    event.preventDefault();
-    const value = draftToken.trim();
-    if (!value) return;
-    setToken(value);
-    setMessage("");
-    setMessageError(false);
+    access.unlock(event);
+    setFeedback(null);
   }
   function lockReview() {
-    setToken("");
-    setDraftToken("");
-    setMessage("");
-    setMessageError(false);
-    clearReviewerQueries(queryClient);
+    access.lock();
+    setFeedback(null);
   }
   async function review(id: string, action: "approve" | "reject") {
-    setMessage("");
-    setMessageError(false);
+    setFeedback(null);
     setReviewingId(id);
     try {
       await api.review(id, token, action);
-      setMessage(action === "approve" ? t.verified : t.rejected);
+      setFeedback({ tone: "status", text: action === "approve" ? t.verified : t.rejected });
       await queryClient.invalidateQueries({ queryKey: ["quality", token] });
       await queryClient.invalidateQueries({ queryKey: ["overview"] });
       await queryClient.invalidateQueries({ queryKey: ["latest-prices"] });
@@ -115,8 +103,7 @@ export function DataQualityPage() {
       await queryClient.invalidateQueries({ queryKey: ["varieties"] });
       await queryClient.invalidateQueries({ queryKey: ["markets"] });
     } catch (error) {
-      setMessageError(true);
-      setMessage(error instanceof Error ? error.message : t.failed);
+      setFeedback({ tone: "alert", text: error instanceof Error ? error.message : t.failed });
     } finally {
       setReviewingId(null);
     }
@@ -127,10 +114,10 @@ export function DataQualityPage() {
       <CooperativeReview />
       <section className="quality-banner"><div className="quality-banner-icon"><LockKeyhole size={18} /></div><div><strong>{t.bannerTitle}</strong><p>{t.banner}</p></div></section>
       <section className="panel review-panel"><div className="panel-heading"><div><h2>{t.queue}</h2><p>{t.queueHint}</p></div>{token && <button className="button-secondary" disabled={reviewingId !== null} onClick={lockReview}>{t.lock}</button>}</div>
-        {!token ? <form className="token-form" onSubmit={saveToken}><div className="token-icon"><KeyRound size={20} /></div><div className="token-copy"><strong>{t.access}</strong><span>{t.accessHint}</span></div><input aria-label={t.tokenLabel} type="password" autoComplete="current-password" required value={draftToken} onChange={(event) => setDraftToken(event.target.value)} placeholder={t.tokenLabel} /><button className="button-primary" type="submit" disabled={!draftToken.trim()}>{t.unlock}</button></form> : quality.isLoading ? <LoadingState label={t.loading} /> : quality.error ? <><ErrorState error={quality.error} onRetry={() => void quality.refetch()} /><button className="text-button" onClick={lockReview}>{t.changeToken}</button></> : !quality.data?.data.length ? <EmptyState title={t.clear}>{t.clearHint}</EmptyState> : <div className="review-list">{quality.data.data.map((row) => <article className="review-row" key={row.id}><div className="review-details"><strong>{row.market_name}<span>{row.district}, {row.state}</span></strong><div className="review-meta"><span>{t.marketReporting(format.date(row.reporting_date))}</span><span lang="en">{row.variety_name}{row.grade ? t.grade(row.grade) : ""}</span><span>{row.source_name}</span><span>{t.record(row.source_record_id)}</span></div><p>{t.provenance(row.publication_date ? format.date(row.publication_date) : t.notSupplied, row.platform_fetched_at ? format.timestamp(row.platform_fetched_at) : t.notCaptured, format.timestamp(row.ingested_at), row.original_unit)}</p><div className="review-prices"><span>{t.min} <b>₹{row.minimum_price.toLocaleString("en-IN")}</b></span><span>{t.modal} <b>₹{row.modal_price.toLocaleString("en-IN")}</b></span><span>{t.max} <b>₹{row.maximum_price.toLocaleString("en-IN")}</b></span><small>{row.price_unit}</small></div></div><div className="review-actions" aria-busy={reviewingId === row.id}><button className="approve-button" disabled={reviewingId !== null} onClick={() => void review(row.id, "approve")}><Check size={15} /> {t.verify}</button><button className="reject-button" disabled={reviewingId !== null} onClick={() => void review(row.id, "reject")}><X size={15} /> {t.reject}</button></div></article>)}</div>}
+        {!access.unlocked ? <form className="token-form" onSubmit={saveToken}><div className="token-icon"><KeyRound size={20} /></div><div className="token-copy"><strong>{t.access}</strong><span>{t.accessHint}</span></div><input aria-label={t.tokenLabel} type="password" autoComplete="current-password" required value={access.draft} onChange={(event) => access.setDraft(event.target.value)} placeholder={t.tokenLabel} /><button className="button-primary" type="submit" disabled={!access.canUnlock}>{t.unlock}</button></form> : quality.isLoading ? <LoadingState label={t.loading} /> : quality.error ? <><ErrorState error={quality.error} onRetry={() => void quality.refetch()} /><button className="text-button" onClick={lockReview}>{t.changeToken}</button></> : !quality.data?.data.length ? <EmptyState title={t.clear}>{t.clearHint}</EmptyState> : <div className="review-list">{quality.data.data.map((row) => <article className="review-row" key={row.id}><div className="review-details"><strong>{row.market_name}<span>{row.district}, {row.state}</span></strong><div className="review-meta"><span>{t.marketReporting(format.date(row.reporting_date))}</span><span lang="en">{row.variety_name}{row.grade ? t.grade(row.grade) : ""}</span><span>{row.source_name}</span><span>{t.record(row.source_record_id)}</span></div><p>{t.provenance(row.publication_date ? format.date(row.publication_date) : t.notSupplied, row.platform_fetched_at ? format.timestamp(row.platform_fetched_at) : t.notCaptured, format.timestamp(row.ingested_at), row.original_unit)}</p><div className="review-prices"><span>{t.min} <b>₹{row.minimum_price.toLocaleString("en-IN")}</b></span><span>{t.modal} <b>₹{row.modal_price.toLocaleString("en-IN")}</b></span><span>{t.max} <b>₹{row.maximum_price.toLocaleString("en-IN")}</b></span><small>{row.price_unit}</small></div></div><div className="review-actions" aria-busy={reviewingId === row.id}><button className="approve-button" disabled={reviewingId !== null} onClick={() => void review(row.id, "approve")}><Check size={15} /> {t.verify}</button><button className="reject-button" disabled={reviewingId !== null} onClick={() => void review(row.id, "reject")}><X size={15} /> {t.reject}</button></div></article>)}</div>}
         {token && quality.data && <QueuePager offset={queueOffset} limit={QUEUE_PAGE_SIZE} total={quality.data.total} busy={quality.isFetching || reviewingId !== null} label={t.pending} onChange={setQueueOffset} />}
         {reviewingId && <div className="review-message" role="status">{t.saving}</div>}
-        {message && <div className={`review-message ${messageError ? "message-error" : ""}`} role={messageError ? "alert" : "status"}>{message}</div>}
+        {feedback && <div className={`review-message ${feedback.tone === "alert" ? "message-error" : ""}`} role={feedback.tone}>{feedback.text}</div>}
       </section>
       {token && <SourceStatusPanel token={token} />}
       {token && <CooperativeSourceStatusPanel token={token} />}

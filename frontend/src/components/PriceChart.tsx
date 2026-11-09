@@ -2,15 +2,16 @@ import ReactEChartsCore from "echarts-for-react/lib/core";
 import { useResponsiveChart } from "./useResponsiveChart";
 import * as echarts from "echarts/core";
 import { LineChart, ScatterChart } from "echarts/charts";
-import { AriaComponent, GridComponent, TooltipComponent } from "echarts/components";
+import { AriaComponent, GridComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import type { ReferencePoint } from "../types";
 import { buildChartData, connectShortGaps, missingPeriods } from "../services/chart";
 import { calendarDateToTime, DAY_MS } from "../../../shared/dates";
 import { defineCopy, formatDate, formatMonth, useCopy, useLanguage } from "../services/language";
 import { CHART_FONT, useChartPalette } from "./chartPalette";
+import { eventsBetween } from "../services/market-events";
 
-echarts.use([LineChart, ScatterChart, GridComponent, TooltipComponent, AriaComponent, CanvasRenderer]);
+echarts.use([LineChart, ScatterChart, GridComponent, TooltipComponent, AriaComponent, MarkLineComponent, CanvasRenderer]);
 
 type AveragePoint = { reporting_date: string; median_average_price: number; branch_count: number; branches?: string[] };
 const rupees = (value: number) => `₹${Math.round(value).toLocaleString("en-IN")}`;
@@ -30,6 +31,7 @@ const COPY = defineCopy({
     aria: (label: string, unit: string, coverage: string, source: boolean) => `${label} in INR per quintal${unit}. ${coverage}. The line joins reported values and no price is estimated for dates without a report. Expand View ${source ? "source" : "index"} observations for exact values and coverage.`,
     noReport: "No report on this date. No price is estimated.", isolated: "Isolated report",
     latest: "Latest", change: "Change over period", since: (date: string) => `since ${date}`, high: "High", low: "Low", average: "Average",
+    events: "What happened", eventsAria: "Policy and tax events marked on the chart", inForce: "in force", source: "source",
     caption: (markers: boolean, monthly: boolean) => `${markers ? "Each marker is a reported value; the" : "The"} line joins reported values and no price is estimated between them${monthly ? "" : ". Dates without a report may be non-trading days"}.`,
   },
   kn: {
@@ -46,12 +48,15 @@ const COPY = defineCopy({
     aria: (label: string, unit: string, coverage: string, source: boolean) => `${label}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ರೂಪಾಯಿಗಳಲ್ಲಿ${unit}. ${coverage}. ರೇಖೆಯು ವರದಿಯಾದ ದರಗಳನ್ನು ಜೋಡಿಸುತ್ತದೆ; ವರದಿ ಇಲ್ಲದ ದಿನಗಳಿಗೆ ಯಾವುದೇ ದರ ಅಂದಾಜು ಮಾಡುವುದಿಲ್ಲ. ನಿಖರ ಮೌಲ್ಯಗಳಿಗೆ ${source ? "ಮೂಲ" : "ಸೂಚ್ಯಂಕ"} ದಾಖಲೆಗಳನ್ನು ತೆರೆಯಿರಿ.`,
     noReport: "ಈ ದಿನ ವರದಿ ಇಲ್ಲ. ಯಾವುದೇ ದರ ಅಂದಾಜು ಮಾಡಿಲ್ಲ.", isolated: "ಒಂಟಿ ವರದಿ",
     latest: "ಇತ್ತೀಚಿನದು", change: "ಅವಧಿಯಲ್ಲಿ ಬದಲಾವಣೆ", since: (date: string) => `${date} ರಿಂದ`, high: "ಗರಿಷ್ಠ", low: "ಕನಿಷ್ಠ", average: "ಸರಾಸರಿ",
+    events: "ಏನು ನಡೆಯಿತು", eventsAria: "ಚಾರ್ಟ್‌ನಲ್ಲಿ ಗುರುತಿಸಿದ ನೀತಿ ಮತ್ತು ತೆರಿಗೆ ಘಟನೆಗಳು", inForce: "ಜಾರಿ", source: "ಮೂಲ",
     caption: (markers: boolean, monthly: boolean) => `${markers ? "ಪ್ರತಿ ಚುಕ್ಕೆ ಒಂದು ವರದಿಯಾದ ದರ; " : ""}ರೇಖೆಯು ವರದಿಯಾದ ದರಗಳನ್ನು ಜೋಡಿಸುತ್ತದೆ, ನಡುವೆ ಯಾವುದೇ ದರ ಅಂದಾಜು ಮಾಡುವುದಿಲ್ಲ${monthly ? "" : ". ವರದಿ ಇಲ್ಲದ ದಿನಗಳು ವಹಿವಾಟು ಇಲ್ಲದ ದಿನಗಳಾಗಿರಬಹುದು"}.`,
   },
 });
 
-export function PriceChart({ points = [], averagePoints, quotePoints, unitNote = "", calendarInterval = "daily", range, label: givenLabel, showStats = true }: {
+export function PriceChart({ points = [], averagePoints, quotePoints, unitNote = "", calendarInterval = "daily", range, label: givenLabel, showStats = true, showEvents = true }: {
   points?: ReferencePoint[]; averagePoints?: AveragePoint[]; quotePoints?: { reporting_date: string; average_price: number }[]; unitNote?: string; label?: string; calendarInterval?: "daily" | "monthly"; range?: { from: string; to: string }; showStats?: boolean;
+  /** Numbered markers for the policy and tax events inside the plotted range, with a short list under the chart. */
+  showEvents?: boolean;
 }) {
   const t = useCopy(COPY);
   const onChartReady = useResponsiveChart();
@@ -99,6 +104,25 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
     return formatDate(iso, language).replace(/ \d{4}$/, "");
   };
   const markers = ordered.length <= 60;
+  // A monthly point stands for its whole month, so an event in the last plotted month still belongs on the chart.
+  const events = showEvents && first && latest ? eventsBetween(first.reporting_date, monthly ? `${latest.reporting_date.slice(0, 7)}-31` : latest.reporting_date) : [];
+  // Events closer than a few percent of the span would print their numbers on top of each other, so the first of a close
+  // run carries every number (such as "2·3") and the rest keep only their dashed line.
+  const eventSpan = first && latest ? calendarDateToTime(latest.reporting_date) - calendarDateToTime(first.reporting_date) : 0;
+  const eventMarks: { xAxis: number; label: { show?: boolean; formatter?: string; width?: number } }[] = [];
+  let lead: { at: number; label: { formatter?: string; width?: number } } | undefined;
+  events.forEach((event, index) => {
+    const at = calendarDateToTime(event.date);
+    if (lead && at - lead.at < eventSpan * 0.06) {
+      lead.label.formatter = `${lead.label.formatter}·${index + 1}`;
+      lead.label.width = 10 + lead.label.formatter.length * 6;
+      eventMarks.push({ xAxis: at, label: { show: false } });
+      return;
+    }
+    const mark = { xAxis: at, label: { formatter: String(index + 1) } };
+    lead = { at, label: mark.label };
+    eventMarks.push(mark);
+  });
   const isolated = line.flatMap(([time, value], index) => value !== null && line[index - 1]?.[1] == null && line[index + 1]?.[1] == null ? [[time, value]] : []);
   const branchesOn = new Map((averagePoints ?? []).map((point) => [calendarDateToTime(point.reporting_date), point.branches ?? []]));
   const option = {
@@ -106,7 +130,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
     animation: false,
     aria: { enabled: true, label: { description: t.aria(label, unitNote, coverage, Boolean(quotePoints)) } },
     textStyle: { fontFamily: CHART_FONT },
-    grid: { top: 16, right: 64, bottom: 4, left: 4, containLabel: true },
+    grid: { top: events.length ? 26 : 16, right: 64, bottom: 4, left: 4, containLabel: true },
     tooltip: {
       ...TOOLTIP, trigger: "axis", axisPointer: CROSSHAIR,
       formatter: (params: { data: [number, number | null] }[]) => {
@@ -157,6 +181,12 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
       areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: BRAND_AREA[0] }, { offset: 1, color: BRAND_AREA[1] }]) },
       emphasis: { scale: false },
       endLabel: { show: true, color: BRAND, fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, distance: 6, formatter: ({ value }: { value: [number, number] }) => rupees(value[1]) },
+      ...(events.length ? { markLine: {
+        silent: true, symbol: "none", animation: false,
+        lineStyle: { color: INK[400], type: "dashed", width: 1 },
+        label: { position: "end", distance: 2, color: INK.surface, backgroundColor: INK[600], borderRadius: 9, width: 18, height: 18, lineHeight: 18, align: "center", padding: 0, fontSize: 10.5, fontWeight: 700, fontFamily: CHART_FONT },
+        data: eventMarks,
+      } } : {}),
     }, ...(isolated.length ? [{ type: "scatter", name: t.isolated, data: isolated, symbolSize: 7, itemStyle: { color: BRAND }, silent: true, tooltip: { show: false } }] : [])],
   };
   return <div className="price-chart">
@@ -168,6 +198,10 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
       <div><dt>{t.average}</dt><dd>{rupees(mean)}</dd><small>{t.reports(chart.observations)}</small></div>
     </dl>}
     <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: 300, width: "100%" }} />
+    {events.length > 0 && <ol className="chart-events" aria-label={t.eventsAria}>
+      {events.map((event, index) => <li key={event.date}><span className="chart-event-number" aria-hidden="true">{index + 1}</span>
+        <span><time dateTime={event.date}>{formatDate(event.date, language)}</time>{event.kind === "in-force" ? ` · ${t.inForce}` : ""} · {event[language]} <a href={event.source.url} target="_blank" rel="noreferrer" title={event.source.name}>{t.source}</a></span></li>)}
+    </ol>}
     <p className="price-chart-caption">{label} · {t.perQuintal}{unitNote} · {coverage}{missingNote}. {t.caption(markers, monthly)}</p>
     {table}
   </div>;
