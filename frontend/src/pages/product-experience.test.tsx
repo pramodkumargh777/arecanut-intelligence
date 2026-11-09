@@ -14,6 +14,7 @@ import { SourceSlot } from "../components/SourceSlot";
 import { VARIETIES } from "../services/varieties";
 import { ForecastShowcase } from "../components/ForecastShowcase";
 import { PriceOutlook } from "../components/PriceOutlook";
+import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
 import type { ModelEvaluation } from "../services/forecasting";
 import { TSS_VARIETIES } from "../../../shared/tss-varieties";
 import { AssistantPage } from "./AssistantPage";
@@ -695,5 +696,19 @@ describe("price outlook", () => {
     expect(html).toContain("1 of 2 months");
     expect(html).toContain("Outside range");
     expect(html).toContain("Outlook chart: 2 months");
+  });
+});
+
+describe("sell or wait chart", () => {
+  it("marks a past year as paid off only when it rose at least as much as the cost line, and skips left-out months", () => {
+    const year = (start: string, percent: number | null, excluded = false) => ({ start_month: start, start_price: 40000,
+      changes: [{ months: 3, target_month: "x", percent, excluded }] });
+    const html = renderToStaticMarkup(<HoldOutcomeChart years={[year("2021-11", 6), year("2022-11", 2.5), year("2023-11", -4), year("2024-11", 20, true)]}
+      columns={[{ months: 3, label: "3 months", needed: 2.5, covered: "paid off 2 of 3" }]} monthLabel={(m) => m}
+      neededLabel={(p) => `needs +${p}%`} paidLabel="covered costs" notPaidLabel="did not cover costs" description="chart" />);
+    expect(html.match(/hold-chart-dot is-paid/g)).toHaveLength(2);
+    expect(html.match(/hold-chart-dot/g)).toHaveLength(3);
+    expect(html).toContain("needs +2.5%");
+    expect(html).toContain("paid off 2 of 3");
   });
 });

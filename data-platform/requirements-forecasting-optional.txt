@@ -7,3 +7,5 @@
 chronos-forecasting==2.3.2
 torch==2.15.0
 transformers==5.22.1
+# Google TimesFM 2.5 (Apache-2.0), verified 2026-11-09; checkpoint revision pinned in forecasting/config.py.
+timesfm[torch]==3.0.2

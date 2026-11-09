@@ -358,18 +358,6 @@
   .snapshot-card .snapshot-value, .snapshot-grid-even .snapshot-value { font-size: 19px; margin-top: 6px; }
   .row-warnings { display: flex; margin-top: 4px; }
   /* Sell or wait: folded cost inputs and year table. */
-  .hold-costs { grid-column: 1 / -1; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
-  .hold-costs > summary, .hold-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 14px; cursor: pointer; list-style: none; }
-  .hold-costs > summary::-webkit-details-marker, .hold-fold > summary::-webkit-details-marker { display: none; }
-  .hold-costs > summary::after, .hold-fold > summary::after { content: ""; flex: none; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform .15s ease; }
-  .hold-costs[open] > summary::after, .hold-fold[open] > summary::after { transform: rotate(225deg) translateY(-2px); }
-  .hold-costs summary > span { display: grid; gap: 2px; }
-  .hold-costs summary strong { font-size: 15px; font-weight: 600; color: var(--ink); }
-  .hold-costs summary small { color: var(--muted); }
-  .hold-costs-body { display: grid; gap: 12px; padding: 0 14px 14px; }
-  .hold-fold > summary { padding: 0; min-height: 44px; }
-  .hold-fold > summary h2 { margin: 0; }
-  .hold-fold[open] > summary { margin-bottom: 10px; }
 }
 
 /* Phones: the two filter actions sit side by side as a matched pair. */

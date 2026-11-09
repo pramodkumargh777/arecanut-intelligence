@@ -4,6 +4,7 @@ import { useState } from "react";
 import { calendarTodayIST, formatCalendarMonth, formatPeriodKannada, MONTH_NAMES_EN, MONTH_NAMES_KN, shiftCalendarMonth } from "../../../shared/dates";
 import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS, seasonalPattern } from "../../../shared/hold-history";
 import { ErrorState, LoadingState } from "../components/State";
+import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
 import { usePhone } from "../components/usePhone";
 import { api } from "../services/api";
 import { defineCopy, type Language, useLanguage } from "../services/language";
@@ -27,8 +28,6 @@ const hasHistory = (coverage: { months: number; years: number }) => coverage.yea
 
 /** A starting point for the reader to change. Weight loss and storage start at zero because they differ too much to guess. */
 const DEFAULT_INTEREST_PERCENT = 10;
-/** Waiting periods shown on phones; the year table keeps them all. */
-const PHONE_HORIZONS = [1, 3, 6];
 
 const COPY = defineCopy({
   kn: {
@@ -46,6 +45,11 @@ const COPY = defineCopy({
     needed: "ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ", covered: "ಖರ್ಚು ಸರಿದೂಗಿದ ವರ್ಷಗಳು",
     ofYears: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count}`, notEnough: `${MIN_HOLD_YEARS} ವರ್ಷಗಳಿಗಿಂತ ಕಡಿಮೆ ದತ್ತಾಂಶ`,
     yearsTitle: "ವರ್ಷವಾರು ವಿವರ", start: "ಆರಂಭ ದರ", startMonth: "ಆರಂಭ",
+    chartNote: "ಪ್ರತಿ ಚುಕ್ಕೆ ಒಂದು ಹಿಂದಿನ ವರ್ಷ. ಗೆರೆ ನಿಮ್ಮ ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ; ಗೆರೆಯ ಮೇಲಿನ ಹಸಿರು ಚುಕ್ಕೆಗಳು ಕಾಯುವುದು ಲಾಭವಾದ ವರ್ಷಗಳು.",
+    paid: "ಖರ್ಚು ಸರಿದೂಗಿತು", notPaid: "ಖರ್ಚು ಸರಿದೂಗಲಿಲ್ಲ", needsLine: (p: number) => `ಬೇಕು ${p > 0 ? "+" : ""}${p}%`,
+    paidOf: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count} ವರ್ಷ ಲಾಭ`,
+    chartDescription: (month: string) => `${month} ತಿಂಗಳಿನಿಂದ 1–6 ತಿಂಗಳು ಕಾದಿದ್ದರೆ ಪ್ರತಿ ಹಿಂದಿನ ವರ್ಷದ ದರ ಬದಲಾವಣೆ, ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆಯೊಂದಿಗೆ`,
+    details: "ವಿವರಗಳು", detailsHint: "ವರ್ಷವಾರು ಪಟ್ಟಿ ಮತ್ತು ಮಧ್ಯಮ ಬದಲಾವಣೆ",
     scrollHint: "ಎಲ್ಲಾ ತಿಂಗಳ ವಿವರ ನೋಡಲು ಅಡ್ಡವಾಗಿ ಸ್ವೈಪ್ ಮಾಡಿ.",
     excluded: (months: string) => `ಬಿಟ್ಟಿರುವ ತಿಂಗಳು: ${months}. ಈ ತಿಂಗಳಲ್ಲಿ ದರ 20% ಕ್ಕಿಂತ ಹೆಚ್ಚು ಬದಲಾಗಿ ಮುಂದಿನ ತಿಂಗಳು ಮರಳಿ ಬಂದಿದೆ; ಇದು ದತ್ತಾಂಶದ ದೋಷ ಇರಬಹುದು.`,
     latestPrice: (price: string, month: string) => `ಇತ್ತೀಚಿನ ರಾಜ್ಯ ಸರಾಸರಿ: ${price}/ಕ್ವಿಂಟಾಲ್ (${month})`,
@@ -72,6 +76,11 @@ const COPY = defineCopy({
     needed: "Rise needed to cover costs", covered: "Years that covered costs",
     ofYears: (count: number, years: number) => `${count} of ${years}`, notEnough: `Under ${MIN_HOLD_YEARS} years of data`,
     yearsTitle: "Year by year", start: "Starting price", startMonth: "From",
+    chartNote: "Each dot is one past year. The line is the rise you need to cover your costs; green dots above it are the years waiting paid off.",
+    paid: "covered costs", notPaid: "did not cover costs", needsLine: (p: number) => `needs ${p > 0 ? "+" : ""}${p}%`,
+    paidOf: (count: number, years: number) => `paid off ${count} of ${years}`,
+    chartDescription: (month: string) => `Price change in each past year after waiting 1 to 6 months from ${month}, against the rise needed to cover your costs`,
+    details: "Details", detailsHint: "Year-by-year table and median changes",
     scrollHint: "Swipe sideways to see all months.",
     excluded: (months: string) => `Left out: ${months}. The price moved more than 20% that month and came straight back the next, which may be a data problem.`,
     latestPrice: (price: string, month: string) => `Latest state average: ${price}/quintal (${month})`,
@@ -123,7 +132,6 @@ export function SellOrHoldPage() {
   const monthPair = ([a, b]: [number, number]) => language === "kn" ? `${MONTH_NAMES_KN[a - 1]}\u2060–\u2060${MONTH_NAMES_KN[b - 1]}` : `${MONTH_NAMES_EN[a - 1].slice(0, 3)}\u2060–\u2060${MONTH_NAMES_EN[b - 1].slice(0, 3)}`;
   // Phones show the key waiting periods and fold the cost inputs and year table away; both stay one tap from view.
   const phone = usePhone();
-  const horizons = phone ? HOLD_HORIZONS.filter((months) => PHONE_HORIZONS.includes(months)) : HOLD_HORIZONS;
   const latestText = latest?.weighted_price ? copy.latestPrice(rupees(latest.weighted_price), monthText(latest.reporting_month, language)) : "";
   const costInputs = <>
       <label className="filter-control"><span>{copy.interest}</span><input type="number" inputMode="decimal" min={0} max={100} step="any" value={interest} onChange={(event) => setInterest(event.target.value)} /></label>
@@ -144,37 +152,31 @@ export function SellOrHoldPage() {
       <label className="filter-control"><span>{copy.month}</span><select value={startMonth} onChange={(event) => setStartMonth(Number(event.target.value))}>
         {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
       </select></label>
-      {phone ? <details className="hold-costs">
+      {/* Costs fold away on every screen; the summary line always shows the figures in use. */}
+      <details className="hold-costs">
         <summary><span><strong>{copy.costsToggle}</strong><small>{copy.costsNow(interest || "0", weightLoss || "0", storage || "0")}</small></span></summary>
         <div className="hold-costs-body">{costInputs}<p className="rate-caption">{copy.costsHint}</p></div>
-      </details> : costInputs}
+      </details>
       </div>
-      <p className="rate-caption">{phone ? latestText && `${latestText}.` : <>{hiddenCount > 0 ? `${copy.hidden(hiddenCount)} ` : ""}{copy.costsHint}{latestText ? ` ${latestText}.` : ""}</>}</p>
+      <p className="rate-caption">{phone ? latestText && `${latestText}.` : <>{hiddenCount > 0 ? `${copy.hidden(hiddenCount)} ` : ""}{latestText ? `${latestText}.` : ""}</>}</p>
     </section>
 
     {query.isLoading ? <LoadingState label={copy.loading} /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !history?.years.length ? <p className="rate-empty">{copy.noData}</p> : <>
       {season && <p className="hold-season"><CalendarRange size={18} aria-hidden="true" /><span>{season.high && season.low
         ? copy.season(season.first_year, varietyName, monthPair(season.high), monthPair(season.low), season.spread_percent, season.consistent_years, season.years)
         : copy.noSeason(season.first_year, varietyName)}</span></p>}
-      <section className="rate-card" aria-labelledby="hold-summary">
+      <section className="rate-card hold-outcomes" aria-labelledby="hold-summary">
         <header><h2 id="hold-summary">{copy.summaryTitle(monthNames[startMonth - 1])}</h2></header>
-        <p className="rate-caption phone-hide">{copy.summaryNote}</p>
-        <ul className="hold-summary">{horizons.map((months) => {
-          const summary = history.summaries.find((item) => item.months === months)!;
-          const needed = breakEven(months);
-          const values = history.years.flatMap((year) => year.changes.filter((change) => change.months === months && change.percent !== null).map((change) => change.percent!));
-          const covered = needed === null ? null : values.filter((value) => value >= needed).length;
-          return <li key={months}>
-            <h3>{copy.months(months)}</h3>
-            {summary.median_percent === null ? <p className="rate-empty">{copy.notEnough}</p> : <dl>
-              <div><dt>{copy.rose}</dt><dd><strong>{copy.ofYears(summary.rose, summary.years)}</strong></dd></div>
-              <div><dt>{copy.typical}</dt><dd className={`hold-key-value ${tone(summary.median_percent)}`}>{signed(summary.median_percent)}</dd></div>
-              <div><dt>{copy.range}</dt><dd>{signed(summary.lowest_percent)} / {signed(summary.highest_percent)}</dd></div>
-              <div><dt>{copy.needed}</dt><dd className="hold-key-value">{needed === null ? "—" : `${needed}%`}</dd></div>
-              <div><dt>{copy.covered}</dt><dd><strong>{covered === null ? "—" : copy.ofYears(covered, summary.years)}</strong></dd></div>
-            </dl>}
-          </li>;
-        })}</ul>
+        <p className="rate-caption">{copy.chartNote} {copy.summaryNote}</p>
+        <HoldOutcomeChart years={history.years} monthLabel={(month) => monthText(month, language)} description={copy.chartDescription(monthNames[startMonth - 1])}
+          neededLabel={copy.needsLine} paidLabel={copy.paid} notPaidLabel={copy.notPaid}
+          columns={HOLD_HORIZONS.map((months) => {
+            const summary = history.summaries.find((item) => item.months === months)!;
+            const needed = breakEven(months);
+            const values = history.years.flatMap((year) => year.changes.filter((change) => change.months === months && change.percent !== null && !change.excluded).map((change) => change.percent!));
+            const covered = needed === null || summary.median_percent === null ? null : copy.paidOf(values.filter((value) => value >= needed).length, values.length);
+            return { months, label: copy.months(months), needed, covered };
+          })} />
       </section>
 
       {(() => {
@@ -189,9 +191,14 @@ export function SellOrHoldPage() {
         </table></div>
         {history.excluded_months.length > 0 && <p className="rate-caption">* {copy.excluded(history.excluded_months.map((month) => monthText(month, language)).join(", "))}</p>}
         </>;
-        return phone
-          ? <details className="rate-card hold-fold"><summary><h2 id="hold-years">{copy.yearsTitle}</h2></summary>{yearsBody}</details>
-          : <section className="rate-card" aria-labelledby="hold-years"><header><h2 id="hold-years">{copy.yearsTitle}</h2></header>{yearsBody}</section>;
+        // The year table is the full record behind the chart, folded under "Details" on every screen.
+        return <details className="rate-card hold-fold"><summary><span><strong id="hold-years">{copy.details}</strong><small>{copy.detailsHint}</small></span></summary>
+          <ul className="hold-medians">{HOLD_HORIZONS.map((months) => {
+            const summary = history.summaries.find((item) => item.months === months)!;
+            return <li key={months}><span>{copy.months(months)}</span><b className={tone(summary.median_percent)}>{signed(summary.median_percent)}</b>
+              <small>{copy.typical} · {copy.rose} {copy.ofYears(summary.rose, summary.years)}</small></li>;
+          })}</ul>
+          {yearsBody}</details>;
       })()}
 
       <p className="home-note">{copy.caveat} {copy.source}.{phone && hiddenCount > 0 ? ` ${copy.hidden(hiddenCount)}` : ""}</p>

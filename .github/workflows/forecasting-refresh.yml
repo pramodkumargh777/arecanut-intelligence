@@ -1,0 +1,118 @@
+name: Forecasting refresh
+
+# Monthly re-run of the forecasting engine (data-platform/forecasting) against the live database, then publication.
+# Fully scheduled. Each run:
+# 1. exports a copy of the live D1 database, so forecasts start from exactly the prices the API stores (the API refuses
+#    a forecast whose starting price differs from its own);
+# 2. tops up the market-data covariates (arrivals, imports, rainfall) from where the committed CSVs stop; a source
+#    outage only means the committed data is used;
+# 3. runs the walk-forward test with every model (baselines, statistical, LightGBM, Chronos-2, TimesFM 2.5, the
+#    ensemble and the market-data models) and publishes it. Publication is safe by design: a model is only ever shown as
+#    better than "last month's price" if it passes the engine's significance gate, and the live outlook's ranges come
+#    from the recalibrated errors.
+# The 20th leaves time for AGMARKNET's monthly report for the previous month to be loaded by the app.
+on:
+  schedule:
+    - cron: "0 3 20 * *" # 08:30 IST on the 20th of each month
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the run to the live API (untick for a test run)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forecasting-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: ${{ vars.ANI_API_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check credentials
+        id: credentials
+        run: |
+          if [ -z "$INGESTION_TOKEN" ] || [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::INGESTION_TOKEN, CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not configured; skipping."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - uses: actions/setup-node@v4
+        if: steps.credentials.outputs.configured == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        if: steps.credentials.outputs.configured == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: data-platform/requirements-forecasting*.txt
+      - name: Install
+        if: steps.credentials.outputs.configured == 'true'
+        run: |
+          npm ci
+          # CPU-only torch first, so the GPU build (several GB) is never downloaded.
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0
+          python -m pip install -r data-platform/requirements-forecasting-optional.txt
+      - name: Cache pretrained model checkpoints
+        if: steps.credentials.outputs.configured == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          # The revisions are pinned in config.py, so the cache only changes when they do.
+          key: hf-${{ hashFiles('data-platform/forecasting/config.py') }}
+
+      - name: Export the live database
+        if: steps.credentials.outputs.configured == 'true'
+        id: export
+        run: |
+          node scripts/d1-backup.mjs --remote --skip-counts --output-dir "$RUNNER_TEMP/backup" | tee "$RUNNER_TEMP/backup.json"
+          # The script reports the dump relative to the repository; the engine runs from data-platform, so use an absolute path.
+          echo "dump=$(python -c 'import json,os,sys; print(os.path.abspath(json.load(open(sys.argv[1]))["dump"]))' "$RUNNER_TEMP/backup.json")" >> "$GITHUB_OUTPUT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Top up market-data covariates
+        if: steps.credentials.outputs.configured == 'true'
+        # A source being down or rate-limiting must not stop the forecast; the committed CSVs are used instead.
+        continue-on-error: true
+        working-directory: data-platform
+        run: python -m forecasting covariates --through "$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"
+
+      - name: Run and publish the forecasting experiment
+        if: steps.credentials.outputs.configured == 'true'
+        working-directory: data-platform
+        run: |
+          publish=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.publish }}" = "true" ]; then publish="--publish"; fi
+          python -m forecasting run --with-pretrained --with-covariates --sql-export "${{ steps.export.outputs.dump }}" $publish \
+            | tee "$RUNNER_TEMP/summary.json"
+        env:
+          ANI_API_URL: ${{ vars.ANI_API_URL }}
+          INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
+
+      - name: Keep the run's report and data
+        if: always() && steps.credentials.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecasting-refresh-${{ github.run_id }}
+          path: |
+            data-platform/forecasting/runs/
+            data-platform/forecasting/covariates/
+            ${{ runner.temp }}/summary.json
+          if-no-files-found: ignore
+          retention-days: 180
