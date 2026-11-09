@@ -444,3 +444,30 @@
 @media (min-width: 961px) {
   .page-heading p, .home-heading p, .home-hero p, .panel-heading p, .section-heading p, .methodology-note p, .quality-banner p { max-width: none; }
 }
+
+/* ---- Desktop and tablet: home page ------------------------------------------------------------------------------
+ * The same parts, packed tighter: the variety label sits beside its pills, the price board and card headers lose spare
+ * padding, and a card's basis and report date share one line. Nothing is hidden here; phones have their own rules.
+ */
+@media (min-width: 641px) {
+  .page-stack.home { gap: 12px; }
+  .home-hero { align-items: center; padding-bottom: 0; }
+  .home-hero h1 { margin-bottom: 2px; }
+  .home-variety { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; }
+
+  .glance-head { padding: 10px 20px; }
+  .glance-tile { gap: 10px; padding: 14px 20px 16px; }
+
+  .home-price-section { gap: 10px; }
+  .rate-card-head { align-items: center; padding: 11px 18px 10px; }
+  .rate-card-head > div { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0; }
+  .rate-card-head h3 { flex: 1 1 100%; }
+  .rate-card-head .rate-card-basis, .rate-card-head .rate-card-sub { margin-top: 2px; }
+  .rate-card-head .rate-card-basis + .rate-card-sub::before { content: "·"; margin: 0 8px; color: var(--subtle); }
+  .rate-row { padding-block: 10px; }
+  .rate-more-toggle { padding-block: 7px; }
+  .rate-card-foot { padding-block: 2px; }
+  .rate-card-foot a { min-height: 36px; }
+
+  .home-actions a { padding: 11px 16px; }
+}
