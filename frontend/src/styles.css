@@ -280,6 +280,10 @@ details[open] > summary { margin-bottom: 8px; }
 .chart-meta > span:first-child { display: flex; align-items: center; gap: 7px; }
 .legend-line { width: 16px; height: 2px; background: var(--ink); }
 .price-chart { width: 100%; }
+/* Sell or wait: the one-line usual high and low season for the chosen variety. */
+.hold-season { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--brand-leaf); border-radius: var(--radius-sm);
+  background: var(--brand-tint); color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+.hold-season svg { flex: none; margin-top: 2px; color: var(--brand); }
 /* Yearly imports on Price trends: one figure, a few bars, the largest sources. */
 .page-stack-follow { margin-top: 20px; }
 .imports-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px 24px; }

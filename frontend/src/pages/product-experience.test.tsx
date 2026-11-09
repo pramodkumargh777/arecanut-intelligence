@@ -16,7 +16,6 @@ import { TSS_VARIETIES } from "../../../shared/tss-varieties";
 import { AssistantPage } from "./AssistantPage";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { OverviewPage } from "./OverviewPage";
-import { MonthlyTrendsPage } from "./MonthlyTrendsPage";
 import { HistoricalAnalyticsPage } from "./HistoricalAnalyticsPage";
 import { DecisionToolsPage } from "./DecisionToolsPage";
 import { IntelligencePage } from "./IntelligencePage";
@@ -246,7 +245,7 @@ describe("market experience", () => {
     expect(text).toContain("• Branch 8: ₹48007");
     expect(text).not.toContain("Branch 9:");
     expect(text).toContain("…and 2 more");
-    expect(text).toContain("Areca Pulse: https://example.test/?v=rashi");
+    expect(text.split("\n").at(-1)).toBe("ದಿನದ ಅಡಿಕೆ ಧಾರಣೆ ನೋಡಿ: https://example.test/?v=rashi");
     expect(shareMessage({ title: "APMC", lines: [{ place: "Market One", price: "₹100", date: "2 Oct 2026" }], more: String, note: "", url: "u" })).toContain("• Market One: ₹100 (2 Oct 2026)");
   });
 
@@ -417,7 +416,9 @@ describe("market experience", () => {
     expect(english).not.toContain("Arecanut Intelligence");
     expect(english).toContain("Explore prices");
     expect(english).toContain("More tools");
-    expect(english).toContain('href="/data-quality"');
+    expect(english).toContain('href="/monthly-trends"');
+    // Internal pages stay reachable by address but are out of the menu, and Historical analytics is part of Monthly trends.
+    for (const hidden of ['href="/data-quality"', 'href="/workspace"', 'href="/history"']) expect(english).not.toContain(hidden);
     expect(english).toContain("<details");
     state.language = "kn";
     const kannada = render(<AppShell />);
@@ -551,7 +552,7 @@ describe("market experience", () => {
   it.each([
     ["/", () => <HomePage />], ["/sell-or-hold", () => <SellOrHoldPage />], ["/prices", () => <PricesPage />], ["/overview", () => <OverviewPage />],
     ["/analytics", () => <AnalyticsPage />], ["/compare", () => <ComparePage />], ["/prices?feed=mamcos", () => <MarketDataPage official={<p />} />],
-    ["/monthly-trends", () => <MonthlyTrendsPage />], ["/history", () => <HistoricalAnalyticsPage />], ["/decision-tools", () => <DecisionToolsPage />],
+    ["/monthly-trends", () => <HistoricalAnalyticsPage />], ["/decision-tools", () => <DecisionToolsPage />],
     ["/intelligence/production", () => <IntelligencePage />], ["/intelligence/quality", () => <QualityInspectionsPage />], ["/supply", () => <SupplyPage />],
     ["/forecasts", () => <ForecastsPage />], ["/forecasts/evaluation", () => <ForecastEvaluationPage />], ["/assistant", () => <AssistantPage />],
     ["/workspace", () => <WorkspacePage />], ["/data-quality", () => <DataQualityPage />], ["/no-such-page", () => <NotFoundPage />],

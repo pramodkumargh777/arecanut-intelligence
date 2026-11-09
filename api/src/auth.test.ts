@@ -36,7 +36,8 @@ describe("browser security", () => {
 
   it("sends a restrictive policy with the site", () => {
     expect(headers).toMatch(/^\/\*$/m);
-    expect(headers).toMatch(/script-src 'self';/);
+    // Only the site itself plus Cloudflare Web Analytics' beacon may run scripts.
+    expect(headers).toMatch(/script-src 'self' https:\/\/static\.cloudflareinsights\.com;/);
     expect(headers).toMatch(/frame-ancestors 'none'/);
     expect(headers).toMatch(/object-src 'none'/);
     expect(headers).toMatch(/connect-src 'self' https:\/\/ani-market-api\.arecanut\.workers\.dev/);

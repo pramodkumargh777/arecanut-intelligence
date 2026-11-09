@@ -8,6 +8,7 @@ import { useChartPalette } from "../components/chartPalette";
 import { calendarDateToTime, calendarTodayIST, completedMonthIST, DAY_MS, MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { COMMON } from "../services/commonCopy";
+import { MonthlyRefresh, MonthlySnapshot } from "./MonthlyTrendsPage";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
@@ -20,7 +21,7 @@ function download(rows: (string | number | null)[][], name: string) {
 const COPY = defineCopy({
   en: {
     months: MONTH_NAMES_EN,
-    title: "Historical analytics", intro: "Exact-variety monthly AGMARKNET reports. Calendar gaps remain missing; revisions remain traceable.",
+    title: "Monthly trends", intro: "Karnataka monthly average price for each variety (AGMARKNET). A missing month means no report, not zero.",
     fromMonth: "From month", throughMonth: "Through month", monthlyVariety: "Exact monthly variety",
     invalid: "Select completed months in ascending order, from 2010 onward.",
     coverage: "PRICE COVERAGE", coverageHint: (n: number) => `${n} report months stored; missing values are not zero`,
@@ -66,7 +67,7 @@ const COPY = defineCopy({
   },
   kn: {
     months: MONTH_NAMES_KN,
-    title: "ಐತಿಹಾಸಿಕ ವಿಶ್ಲೇಷಣೆ", intro: "ನಿಖರ ತಳಿಯ AGMARKNET ತಿಂಗಳ ವರದಿಗಳು. ಇಲ್ಲದ ತಿಂಗಳುಗಳು ಖಾಲಿಯಾಗಿಯೇ ಇರುತ್ತವೆ; ತಿದ್ದುಪಡಿಗಳನ್ನು ಪತ್ತೆಹಚ್ಚಬಹುದು.",
+    title: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", intro: "ಪ್ರತಿ ತಳಿಯ ಕರ್ನಾಟಕ ತಿಂಗಳ ಸರಾಸರಿ ದರ (AGMARKNET). ಖಾಲಿ ತಿಂಗಳು ಎಂದರೆ ವರದಿ ಇಲ್ಲ, ಸೊನ್ನೆಯಲ್ಲ.",
     fromMonth: "ಇಂದ (ತಿಂಗಳು)", throughMonth: "ವರೆಗೆ (ತಿಂಗಳು)", monthlyVariety: "ನಿಖರ ತಿಂಗಳ ತಳಿ",
     invalid: "2010 ರಿಂದ ಮುಂದಿನ, ಮುಗಿದ ತಿಂಗಳುಗಳನ್ನು ಏರಿಕೆ ಕ್ರಮದಲ್ಲಿ ಆಯ್ಕೆಮಾಡಿ.",
     coverage: "ದರದ ವ್ಯಾಪ್ತಿ", coverageHint: (n: number) => `${n} ವರದಿ ತಿಂಗಳುಗಳು ಸಂಗ್ರಹವಾಗಿವೆ; ಇಲ್ಲದ ಮೌಲ್ಯ ಸೊನ್ನೆಯಲ್ಲ`,
@@ -136,7 +137,7 @@ export function HistoricalAnalyticsPage() {
   }) ?? [];
   const flagText = (flag: { code: string; explanation: string }) => t.flags?.[flag.code] ?? flag.explanation;
   return <div className="page-stack">
-    <section className="page-heading"><div><h1>{t.title}</h1><p>{t.intro}</p></div></section>
+    <section className="page-heading"><div><h1>{t.title}</h1><p className="page-intro">{t.intro}</p></div></section>
     <section className="filter-bar">
       <label className="filter-control"><span>{t.fromMonth}</span><input type="month" min="2010-01" max={completed()} value={from} onChange={(event) => setFrom(event.target.value)} /></label>
       <label className="filter-control"><span>{t.throughMonth}</span><input type="month" min="2010-01" max={completed()} value={to} onChange={(event) => setTo(event.target.value)} /></label>
@@ -175,7 +176,9 @@ export function HistoricalAnalyticsPage() {
       </section>
       <section className="panel"><div className="panel-heading"><div><h2>{t.snapshots}</h2><p>{t.snapshotsHint(data.versions.length, changes.length)}</p></div></div><div className="monthly-details"><details><summary>{t.inspectVersions}</summary><div className="table-scroll" tabIndex={0} role="region" aria-label={t.versionsAria}><table><caption>{t.versionsCaption}</caption><thead><tr><th>{t.month}</th><th>{t.pricePresence}</th><th>{t.fetchedAt}</th><th>{t.captured}</th><th>{c.source}</th></tr></thead><tbody>{data.versions.map((row) => <tr key={`${row.reporting_month}:${row.refresh_run_id}`}><td>{format.month(row.reporting_month)}</td><td>{row.variety_present ? number(row.weighted_price) : t.absent}</td><td>{format.timestamp(row.fetched_at)}</td><td><a href={api.monthlySnapshotUrl(row.refresh_run_id)} target="_blank" rel="noreferrer">{t.archivedCsv}</a></td><td><a href={row.source_url} target="_blank" rel="noreferrer">{t.officialCsv}</a></td></tr>)}</tbody></table></div></details><p className="phone-hide">{t.methodology}</p></div></section>
     </>}
+    <MonthlySnapshot />
     <DailyAggregation />
+    <MonthlyRefresh />
   </div>;
 }
 

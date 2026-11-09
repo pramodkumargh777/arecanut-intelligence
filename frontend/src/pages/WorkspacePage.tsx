@@ -44,7 +44,7 @@ const COPY = defineCopy({
     notIntegrated: "Source not integrated for this commodity", chooseSource: "Choose one of the available sources above.",
     noMonthly: "Monthly history not integrated", noMonthlyHint: "Monthly analysis is available for arecanut only.",
     shortcuts: "Shortcuts with this profile's filters", shortcutsHint: "Source and commodity are applied; the variety filter is applied on cooperative pages.", shortcutsAria: "Profile shortcuts",
-    links: { overview: "Overview", prices: "Market prices", analytics: "Price analytics", compare: "Market comparison", history: "Historical analytics", tools: "Decision tools", evaluation: "Forecast evaluation" },
+    links: { overview: "Overview", prices: "Market prices", analytics: "Price analytics", compare: "Market comparison", history: "Monthly trends", tools: "Decision tools", evaluation: "Forecast evaluation" },
     noSections: "No sections selected", noSectionsHint: "Tick at least one section above.",
     firstVariety: "First available variety", notInData: (variety: string) => `${variety} (not in current data)`,
     latestQuotes: "Latest reported quotes", latestHint: (period: string) => `${period} · up to 10 most recent rows · INR/quintal as published`,
@@ -78,7 +78,7 @@ const COPY = defineCopy({
     notIntegrated: "ಈ ಬೆಳೆಗೆ ಮೂಲ ಸಂಪರ್ಕಿಸಿಲ್ಲ", chooseSource: "ಮೇಲಿನ ಲಭ್ಯ ಮೂಲಗಳಲ್ಲಿ ಒಂದನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
     noMonthly: "ತಿಂಗಳ ಇತಿಹಾಸ ಸಂಪರ್ಕಿಸಿಲ್ಲ", noMonthlyHint: "ತಿಂಗಳ ವಿಶ್ಲೇಷಣೆ ಅಡಿಕೆಗೆ ಮಾತ್ರ ಲಭ್ಯ.",
     shortcuts: "ಈ ಪ್ರೊಫೈಲ್‌ನ ಫಿಲ್ಟರ್ ಸಹಿತ ಕೊಂಡಿಗಳು", shortcutsHint: "ಮೂಲ ಮತ್ತು ಬೆಳೆ ಅನ್ವಯಿಸುತ್ತವೆ; ತಳಿ ಫಿಲ್ಟರ್ ಸಹಕಾರಿ ಪುಟಗಳಲ್ಲಿ ಅನ್ವಯಿಸುತ್ತದೆ.", shortcutsAria: "ಪ್ರೊಫೈಲ್ ಕೊಂಡಿಗಳು",
-    links: { overview: "ಸಮಗ್ರ ನೋಟ", prices: "ಮಾರುಕಟ್ಟೆ ದರಗಳು", analytics: "ದರ ವಿಶ್ಲೇಷಣೆ", compare: "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ", history: "ಐತಿಹಾಸಿಕ ವಿಶ್ಲೇಷಣೆ", tools: "ಲೆಕ್ಕಾಚಾರ ಸಾಧನಗಳು", evaluation: "ಮುನ್ಸೂಚನೆ ಮೌಲ್ಯಮಾಪನ" },
+    links: { overview: "ಸಮಗ್ರ ನೋಟ", prices: "ಮಾರುಕಟ್ಟೆ ದರಗಳು", analytics: "ದರ ವಿಶ್ಲೇಷಣೆ", compare: "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ", history: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", tools: "ಲೆಕ್ಕಾಚಾರ ಸಾಧನಗಳು", evaluation: "ಮುನ್ಸೂಚನೆ ಮೌಲ್ಯಮಾಪನ" },
     noSections: "ಯಾವುದೇ ವಿಭಾಗ ಆಯ್ಕೆಯಾಗಿಲ್ಲ", noSectionsHint: "ಮೇಲೆ ಕನಿಷ್ಠ ಒಂದು ವಿಭಾಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
     firstVariety: "ಮೊದಲ ಲಭ್ಯ ತಳಿ", notInData: (variety: string) => `${variety} (ಈಗಿನ ದತ್ತಾಂಶದಲ್ಲಿಲ್ಲ)`,
     latestQuotes: "ಇತ್ತೀಚಿನ ವರದಿಯಾದ ದರಗಳು", latestHint: (period: string) => `${period} · ಇತ್ತೀಚಿನ 10 ಸಾಲುಗಳವರೆಗೆ · ಪ್ರಕಟಿಸಿದಂತೆ ₹/ಕ್ವಿಂಟಾಲ್`,
@@ -172,7 +172,7 @@ function ProfileDashboard({ profile, feeds, defaultCommodity, commodityMatches, 
       {show("shortcuts") && <section className="panel workspace-panel"><div className="panel-heading"><div><h2>{t.shortcuts}</h2><p>{t.shortcutsHint}</p></div></div>
         <nav className="workspace-links" aria-label={t.shortcutsAria}>
           <Link to={`/${search}`}>{t.links.overview}</Link><Link to={`/prices${search}`}>{t.links.prices}</Link><Link to={`/analytics${search}`}>{t.links.analytics}</Link>
-          <Link to={`/compare${search}`}>{t.links.compare}</Link><Link to="/history">{t.links.history}</Link><Link to="/decision-tools">{t.links.tools}</Link><Link to="/forecasts/evaluation">{t.links.evaluation}</Link>
+          <Link to={`/compare${search}`}>{t.links.compare}</Link><Link to="/monthly-trends">{t.links.history}</Link><Link to="/decision-tools">{t.links.tools}</Link><Link to="/forecasts/evaluation">{t.links.evaluation}</Link>
         </nav></section>}
       {!profile.sections.length && <EmptyState title={t.noSections}>{t.noSectionsHint}</EmptyState>}
     </>}

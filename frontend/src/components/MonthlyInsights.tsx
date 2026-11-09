@@ -37,7 +37,7 @@ const COPY = defineCopy({
     needs13: "Needs 13 consecutive observed months", volatilityName: "12-month volatility", volatilityDescription: (variety: string) => `Rolling volatility for ${variety}`,
     distribution: "Price distribution", distributionHint: "Number of observed months in each price band, labelled by its lower edge · flagged months included",
     monthsName: "Months", distributionDescription: (variety: string) => `Distribution of monthly ${variety} prices`,
-    reviewNote: "Methodology and review flags for each month are in", historyLink: "Historical analytics", reviewRule: (rule: string) => `Review rule: ${rule}.`,
+    reviewNote: "Methodology and review flags for each month are in", historyLink: "Monthly trends", reviewRule: (rule: string) => `Review rule: ${rule}.`,
     arrivals: "Arrivals versus price",
     arrivalsMethod: "Pairs AGMARKNET arrivals with reviewer-verified AGMARKNET price observations for the same market, reporting date and exact source variety. Rows without a variety are not paired.",
     loadingPairs: "Loading arrival pairs", noPairsTitle: "No paired arrival and price records",
@@ -69,7 +69,7 @@ const COPY = defineCopy({
     needs13: "ಸತತ 13 ದಾಖಲಿತ ತಿಂಗಳು ಬೇಕು", volatilityName: "12 ತಿಂಗಳ ಏರಿಳಿತ", volatilityDescription: (variety: string) => `${variety} ಚಲಿಸುವ ಏರಿಳಿತ`,
     distribution: "ದರಗಳ ಹಂಚಿಕೆ", distributionHint: "ಪ್ರತಿ ದರ ಶ್ರೇಣಿಯಲ್ಲಿನ ದಾಖಲಿತ ತಿಂಗಳುಗಳ ಸಂಖ್ಯೆ, ಕೆಳ ಅಂಚಿನಿಂದ ಹೆಸರಿಸಲಾಗಿದೆ · ಗುರುತಿಸಿದ ತಿಂಗಳುಗಳೂ ಸೇರಿವೆ",
     monthsName: "ತಿಂಗಳುಗಳು", distributionDescription: (variety: string) => `${variety} ತಿಂಗಳ ದರಗಳ ಹಂಚಿಕೆ`,
-    reviewNote: "ಪ್ರತಿ ತಿಂಗಳ ವಿಧಾನ ಮತ್ತು ಪರಿಶೀಲನಾ ಗುರುತುಗಳು ಇಲ್ಲಿವೆ:", historyLink: "ಐತಿಹಾಸಿಕ ವಿಶ್ಲೇಷಣೆ", reviewRule: (rule: string) => `ಪರಿಶೀಲನಾ ನಿಯಮ: ${rule}.`,
+    reviewNote: "ಪ್ರತಿ ತಿಂಗಳ ವಿಧಾನ ಮತ್ತು ಪರಿಶೀಲನಾ ಗುರುತುಗಳು ಇಲ್ಲಿವೆ:", historyLink: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", reviewRule: (rule: string) => `ಪರಿಶೀಲನಾ ನಿಯಮ: ${rule}.`,
     arrivals: "ಆವಕ ಮತ್ತು ದರ",
     arrivalsMethod: "ಅದೇ ಮಾರುಕಟ್ಟೆ, ವರದಿ ದಿನಾಂಕ ಮತ್ತು ನಿಖರ ತಳಿಗೆ AGMARKNET ಆವಕವನ್ನು ಪರಿಶೀಲಿತ AGMARKNET ದರಗಳೊಂದಿಗೆ ಜೋಡಿಸಲಾಗಿದೆ. ತಳಿ ಇಲ್ಲದ ಸಾಲುಗಳನ್ನು ಜೋಡಿಸುವುದಿಲ್ಲ.",
     loadingPairs: "ಆವಕ ಜೋಡಿಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ", noPairsTitle: "ಜೋಡಿಸಿದ ಆವಕ ಮತ್ತು ದರ ದಾಖಲೆಗಳಿಲ್ಲ",
@@ -141,7 +141,7 @@ export function MonthlyInsights() {
           <div className="chart-foot">{source}</div></article>
         <ArrivalPricePanel />
       </div>
-      <p className="panel-note">{t.reviewNote} <Link to="/history">{t.historyLink}</Link>. {t.reviewRule(data.review_method)}</p>
+      <p className="panel-note">{t.reviewNote} <Link to="/monthly-trends">{t.historyLink}</Link>. {t.reviewRule(data.review_method)}</p>
     </>}
   </section>;
 }

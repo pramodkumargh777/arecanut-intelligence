@@ -83,7 +83,7 @@ const COPY = defineCopy({
     distributionTitle: "Price distribution", distributionHint: (count: number) => `${count} published branch averages in the current window · not a forecast range`,
     noAverages: "No published averages", observationsName: "Observations", distributionDescription: (source: string) => `${source} distribution of branch averages`,
     iqr: "Interquartile range", cv: "Coefficient of variation", currentWindow: "current window",
-    seasonalNote: "Seasonal and year-on-year analysis needs multi-year history: see", historyLink: "Historical analytics", seasonalBasis: "(AGMARKNET monthly series, a different price basis).",
+    seasonalNote: "Seasonal and year-on-year analysis needs multi-year history: see", historyLink: "Monthly trends", seasonalBasis: "(AGMARKNET monthly series, a different price basis).",
     searchBranch: "Search branch or variety", searchExample: "e.g. Sagara",
     sameDate: "Same reporting date", rankedNote: (compared: number, total: number) => `Ranked by average, highest first. Other reporting dates are excluded. ${compared} of ${total} branches reported on this date.`,
     rankedTitle: "Ranked branch range", rankedHint: (date: string, variety: string, assumed: boolean) => `${date} · ${variety} · Bar shows minimum–maximum, marker shows the reported average${assumed ? " · INR/quintal by operator assumption" : ""}`,
@@ -175,7 +175,7 @@ const COPY = defineCopy({
     distributionTitle: "ದರಗಳ ಹಂಚಿಕೆ", distributionHint: (count: number) => `ಈ ಅವಧಿಯಲ್ಲಿ ${count} ಪ್ರಕಟಿತ ಶಾಖೆ ಸರಾಸರಿಗಳು · ಮುನ್ಸೂಚನೆ ಶ್ರೇಣಿ ಅಲ್ಲ`,
     noAverages: "ಪ್ರಕಟಿತ ಸರಾಸರಿಗಳಿಲ್ಲ", observationsName: "ದಾಖಲೆಗಳು", distributionDescription: (source: string) => `${source} ಶಾಖೆ ಸರಾಸರಿಗಳ ಹಂಚಿಕೆ`,
     iqr: "ಮಧ್ಯದ ಅರ್ಧ ಶ್ರೇಣಿ", cv: "ಏರಿಳಿತದ ಗುಣಾಂಕ", currentWindow: "ಈಗಿನ ಅವಧಿ",
-    seasonalNote: "ಋತುಮಾನ ಮತ್ತು ವರ್ಷದಿಂದ ವರ್ಷದ ವಿಶ್ಲೇಷಣೆಗೆ ಹಲವು ವರ್ಷಗಳ ದತ್ತಾಂಶ ಬೇಕು: ನೋಡಿ", historyLink: "ಐತಿಹಾಸಿಕ ವಿಶ್ಲೇಷಣೆ", seasonalBasis: "(AGMARKNET ತಿಂಗಳ ಸರಣಿ, ಬೇರೆ ದರದ ಆಧಾರ).",
+    seasonalNote: "ಋತುಮಾನ ಮತ್ತು ವರ್ಷದಿಂದ ವರ್ಷದ ವಿಶ್ಲೇಷಣೆಗೆ ಹಲವು ವರ್ಷಗಳ ದತ್ತಾಂಶ ಬೇಕು: ನೋಡಿ", historyLink: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", seasonalBasis: "(AGMARKNET ತಿಂಗಳ ಸರಣಿ, ಬೇರೆ ದರದ ಆಧಾರ).",
     searchBranch: "ಶಾಖೆ ಅಥವಾ ತಳಿ ಹುಡುಕಿ", searchExample: "ಉದಾ. Sagara",
     sameDate: "ಅದೇ ವರದಿ ದಿನಾಂಕ", rankedNote: (compared: number, total: number) => `ಸರಾಸರಿ ದರದ ಪ್ರಕಾರ, ಹೆಚ್ಚಿನದು ಮೊದಲು. ಬೇರೆ ವರದಿ ದಿನಾಂಕಗಳನ್ನು ಬಿಡಲಾಗಿದೆ. ಈ ದಿನಾಂಕದಂದು ${total} ರಲ್ಲಿ ${compared} ಶಾಖೆಗಳು ವರದಿ ಮಾಡಿವೆ.`,
     rankedTitle: "ಶಾಖೆಗಳ ದರ ಶ್ರೇಣಿ", rankedHint: (date: string, variety: string, assumed: boolean) => `${date} · ${variety} · ಪಟ್ಟಿ ಕನಿಷ್ಠ–ಗರಿಷ್ಠ, ಚುಕ್ಕೆ ವರದಿಯಾದ ಸರಾಸರಿ${assumed ? " · ₹/ಕ್ವಿಂಟಾಲ್ ಘಟಕ ಊಹಿಸಲಾಗಿದೆ" : ""}`,
@@ -477,7 +477,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
           {!averageBins.length ? <EmptyState title={t.noAverages} /> : <LazyBarChart categories={averageBins.map((bin) => `₹${(bin.from / 1000).toFixed(1)}k`)} tooltipLabels={averageBins.map((bin) => `${rupees(bin.from)} – ${rupees(bin.to)}`)} values={averageBins.map((bin) => bin.count)} name={t.observationsName} valueFormat="count" description={t.distributionDescription(sourceName)} />}
           <dl className="fact-list compact"><div><dt>{c.median}</dt><dd>{rupees(averageDistribution.median)}</dd></div><div><dt>{t.iqr}</dt><dd>{rupees(averageDistribution.q1)} – {rupees(averageDistribution.q3)}</dd></div><div><dt>{t.cv}</dt><dd>{averageDistribution.cvPercent === null ? "—" : `${averageDistribution.cvPercent.toFixed(1)}%`}</dd></div></dl>
           <div className="chart-foot"><SourceLabel>{sourceName} · {data?.window ? `${format.date(data.window.from)} – ${format.date(data.window.to)}` : t.currentWindow}</SourceLabel></div></article>
-        <p className="panel-note chart-wide phone-hide">{t.seasonalNote} <Link to="/history">{t.historyLink}</Link> {t.seasonalBasis}</p>
+        <p className="panel-note chart-wide phone-hide">{t.seasonalNote} <Link to="/monthly-trends">{t.historyLink}</Link> {t.seasonalBasis}</p>
       </section>}
       {location.pathname === "/prices" && <section className="filter-bar">
         <label className="filter-control"><span>{c.branch}</span><select value={branch} onChange={(event) => update({ branch: event.target.value })}><option value="">{c.allBranches}</option>{(data?.branches ?? [...new Set(rows.map((row) => row.branch))].sort()).map((value) => <option key={value}>{value}</option>)}</select></label>

@@ -8,7 +8,7 @@ const DEFAULT_SITE_URL = "https://arecanut-intel.pages.dev";
 const SITEMAP_PATHS = [
   "/", "/prices", "/analytics", "/compare", "/sell-or-hold", "/assistant",
   "/intelligence/production", "/intelligence/trade", "/intelligence/weather", "/intelligence/news", "/intelligence/policy", "/intelligence/quality",
-  "/overview", "/monthly-trends", "/history", "/supply", "/forecasts", "/forecasts/evaluation", "/decision-tools",
+  "/overview", "/monthly-trends", "/supply", "/forecasts", "/forecasts/evaluation", "/decision-tools",
 ];
 
 /** Writes robots.txt and sitemap.xml, and puts the site address into index.html's link-preview tags. */
@@ -36,11 +36,26 @@ function seo(siteUrl: string): Plugin {
   };
 }
 
+/**
+ * Cloudflare Web Analytics: privacy-first page views, no cookies and no personal data. The beacon is added only when a
+ * site token is configured, so local builds and tests send nothing. _headers allows its script and its report address.
+ */
+function analytics(token: string | undefined): Plugin {
+  if (token && !/^[a-f0-9]{32}$/.test(token)) throw new Error("VITE_CF_ANALYTICS_TOKEN must be the 32-character site token from Cloudflare Web Analytics.");
+  return {
+    name: "areca-pulse-analytics",
+    apply: "build",
+    transformIndexHtml: (html) => token
+      ? html.replace("</body>", `  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "${token}"}'></script>\n  </body>`)
+      : html,
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, "../", "VITE_");
   const siteUrl = (env.VITE_SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, "");
   return {
-    plugins: [react(), seo(siteUrl)],
+    plugins: [react(), seo(siteUrl), analytics(env.VITE_CF_ANALYTICS_TOKEN || undefined)],
     envDir: "../",
   };
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { holdBreakEvenPercent, holdHistory, isIsolatedSpike, type HoldPoint } from "../../shared/hold-history";
+import { holdBreakEvenPercent, holdHistory, isIsolatedSpike, seasonalPattern, type HoldPoint } from "../../shared/hold-history";
 
 // Rashi Karnataka monthly prices as published by AGMARKNET for November and the months compared with it.
 const RASHI: Record<string, number> = {
@@ -70,5 +70,31 @@ describe("rise needed to cover the cost of waiting", () => {
     expect(holdBreakEvenPercent(3, 47000, { ...costs, weightLossPercent: 100 })).toBeNull();
     expect(holdBreakEvenPercent(3, 47000, { ...costs, annualInterestPercent: -1 })).toBeNull();
     expect(holdBreakEvenPercent(3, 47000, { ...costs, annualInterestPercent: Number.NaN })).toBeNull();
+  });
+});
+
+describe("usual high and low season", () => {
+  // Each year: flat at 100 times the year's level, with October–November 10% up and February–March 10% down.
+  const seasonal = (years: number[], shape: (month: number) => number) => years.flatMap((year, i) => Array.from({ length: 12 }, (_, m) => ({
+    reporting_month: `${year}-${String(m + 1).padStart(2, "0")}`, weighted_price: 100 * (1 + i * 0.2) * shape(m + 1),
+  }))) as HoldPoint[];
+  const shape = (month: number) => month === 10 || month === 11 ? 1.1 : month === 2 || month === 3 ? 0.9 : 1;
+
+  it("finds the high and low months whatever each year's overall level", () => {
+    expect(seasonalPattern(seasonal([2021, 2022, 2023, 2024], shape))).toMatchObject({ first_year: 2021, high: [10, 11], low: [2, 3], spread_percent: 22, consistent_years: 4, years: 4 });
+  });
+
+  it("names no season when prices stay flat through the year", () => {
+    expect(seasonalPattern(seasonal([2021, 2022, 2023], () => 1))).toMatchObject({ high: null, low: null });
+  });
+
+  it("says nothing from fewer than three full years", () => {
+    expect(seasonalPattern(seasonal([2021, 2022], shape))).toBeNull();
+  });
+
+  it("leaves out a one-month spike", () => {
+    const points = seasonal([2021, 2022, 2023], shape).map((point) => point.reporting_month === "2022-06"
+      ? { ...point, weighted_price: 500, review_flags: [{ code: "large_change_from_previous" }, { code: "large_change_to_next" }] } : point);
+    expect(seasonalPattern(points)).toMatchObject({ high: [10, 11], low: [2, 3] });
   });
 });

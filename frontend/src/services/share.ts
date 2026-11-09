@@ -4,11 +4,15 @@ export type ShareLine = { place: string; price: string; date?: string };
 /** Lines beyond this are counted, not listed, so the message stays readable in a chat. */
 export const MAX_SHARE_LINES = 8;
 
+/** Forwards mostly reach Kannada-reading growers, so the invitation is Kannada even when shared from the English site. */
+export const SHARE_INVITE = "ದಿನದ ಅಡಿಕೆ ಧಾರಣೆ ನೋಡಿ";
+
 /**
  * Plain text for a chat message: title, report date, one line per rate, the price basis and a link back.
  * WhatsApp shows `*text*` as bold, and other apps show the asterisks harmlessly.
+ * The last line invites whoever receives a forward to open today's rates, so every share can bring a grower back.
  */
-export function shareMessage({ title, date, lines, more, note, url }: { title: string; date?: string; lines: ShareLine[]; more: (count: number) => string; note: string; url: string }) {
+export function shareMessage({ title, date, lines, more, note, url, invite = SHARE_INVITE }: { title: string; date?: string; lines: ShareLine[]; more: (count: number) => string; note: string; url: string; invite?: string }) {
   const shown = lines.slice(0, MAX_SHARE_LINES);
   return [
     `*${title}*`,
@@ -18,7 +22,7 @@ export function shareMessage({ title, date, lines, more, note, url }: { title: s
     ...(lines.length > shown.length ? [more(lines.length - shown.length)] : []),
     "",
     note,
-    `Areca Pulse: ${url}`,
+    `${invite}: ${url}`,
   ].join("\n");
 }
 

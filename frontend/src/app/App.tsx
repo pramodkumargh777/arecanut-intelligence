@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { AppErrorBoundary } from "../components/AppErrorBoundary";
 import { LoadingState } from "../components/State";
@@ -13,7 +13,6 @@ const PricesPage = lazy(() => import("../pages/PricesPage").then((module) => ({ 
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage").then((module) => ({ default: module.AnalyticsPage })));
 const ComparePage = lazy(() => import("../pages/ComparePage").then((module) => ({ default: module.ComparePage })));
 const DataQualityPage = lazy(() => import("../pages/DataQualityPage").then((module) => ({ default: module.DataQualityPage })));
-const MonthlyTrendsPage = lazy(() => import("../pages/MonthlyTrendsPage").then((module) => ({ default: module.MonthlyTrendsPage })));
 const HistoricalAnalyticsPage = lazy(() => import("../pages/HistoricalAnalyticsPage").then((module) => ({ default: module.HistoricalAnalyticsPage })));
 const DecisionToolsPage = lazy(() => import("../pages/DecisionToolsPage").then((module) => ({ default: module.DecisionToolsPage })));
 const IntelligencePage = lazy(() => import("../pages/IntelligencePage").then((module) => ({ default: module.IntelligencePage })));
@@ -34,8 +33,9 @@ export function App() {
           <Route path="sell-or-hold" element={<Suspense fallback={<LoadingState />}><SellOrHoldPage /></Suspense>} />
           <Route path="overview" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<OverviewPage />} /></Suspense>} />
           <Route path="prices" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<PricesPage />} /></Suspense>} />
-          <Route path="monthly-trends" element={<Suspense fallback={<LoadingState />}><MonthlyTrendsPage /></Suspense>} />
-          <Route path="history" element={<Suspense fallback={<LoadingState />}><HistoricalAnalyticsPage /></Suspense>} />
+          <Route path="monthly-trends" element={<Suspense fallback={<LoadingState />}><HistoricalAnalyticsPage /></Suspense>} />
+          {/* Historical analytics merged into Monthly trends; old links and bookmarks still land there. */}
+          <Route path="history" element={<HistoryRedirect />} />
           <Route path="decision-tools" element={<Suspense fallback={<LoadingState />}><DecisionToolsPage /></Suspense>} />
           <Route path="intelligence" element={<Navigate to="/intelligence/production" replace />} />
           <Route path="intelligence/quality" element={<Suspense fallback={<LoadingState />}><QualityInspectionsPage /></Suspense>} />
@@ -53,4 +53,9 @@ export function App() {
       </Routes></AppErrorBoundary>
     </BrowserRouter></LanguageProvider>
   );
+}
+
+function HistoryRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: "/monthly-trends", search }} replace />;
 }

@@ -171,6 +171,8 @@ const branchName = placeName;
 
 /** Shared links point at this site, so a friend who opens one sees the same variety's rates. */
 const shareUrl = (path: string) => `${window.location.origin}${path}`;
+/** Rashi opens by default, so its link needs no variety and stays short. */
+const varietyShareUrl = (key: string) => shareUrl(key === VARIETIES[0].key ? "/" : `/?v=${encodeURIComponent(key)}`);
 
 const signedPercent = (value: number) => `${value > 0 ? "+" : ""}${value}%`;
 
@@ -438,7 +440,7 @@ export function HomePage() {
             {latest && <ShareButton labels={shareLabels} ariaLabel={copy.shareAria(source.en)} title={copy.shareTitle(varietyName(variety), source.en)} message={() => shareMessage({
               title: copy.shareTitle(varietyName(variety), language === "kn" ? source.kn : source.en), date: copy.shareReport(dateText(latest, language)),
               lines: sameDay.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
-              more: copy.shareMore, note: copy.shareBasis(source.assumedUnit), url: shareUrl(`/?v=${encodeURIComponent(variety.key)}`),
+              more: copy.shareMore, note: copy.shareBasis(source.assumedUnit), url: varietyShareUrl(variety.key),
             })} />}
             <Link to={`/prices?feed=${source.key}${published.length === 1 ? `&variety=${encodeURIComponent(published[0])}` : ""}`} aria-label={copy.moreFrom(source.en)}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
         </section>;
@@ -459,7 +461,7 @@ export function HomePage() {
         <footer className="rate-card-foot">{tumcos[0] && <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("TUMCOS")} title={copy.shareTumcosTitle} message={() => shareMessage({
           title: copy.shareTumcosTitle, date: copy.shareReport(dateText(tumcos[0].reporting_date, language)),
           lines: tumcos.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
-          more: copy.shareMore, note: copy.shareTumcosNote, url: shareUrl(`/?v=${encodeURIComponent(variety.key)}`),
+          more: copy.shareMore, note: copy.shareTumcosNote, url: varietyShareUrl(variety.key),
         })} />}<Link to="/prices?feed=tumcos" aria-label={copy.moreFrom("TUMCOS")}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
       </section>}
 
