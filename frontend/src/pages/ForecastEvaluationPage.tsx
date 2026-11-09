@@ -31,7 +31,7 @@ const COPY = defineCopy({
     execution: "FORECAST EXECUTION", lastPeriod: (period: string) => `Last market period used: ${period}. Not a market reporting date.`,
     evaluationStatus: "EVALUATION STATUS", candidates: (n: number) => `${n} candidates`,
     outcomes: "PROSPECTIVE OUTCOMES", events: (validated: number, revoked: number) => `${validated} validated · ${revoked} revoked model events`,
-    datasets: "Datasets by price basis", datasetsHint: (version: string, tests: string) => `Input data version ${version} · ${tests}`, holm: "Holm-adjusted Diebold-Mariano tests",
+    datasets: "Datasets by price basis",
     datasetsAria: "Forecasting datasets", dataset: "Dataset", priceBasis: "Price basis", frequencyUnit: "Frequency / unit", series: "Series (eligible)", observations: "Observations", statusCol: "Status",
     suppressed: (reasons: string) => `Suppressed: ${reasons}`, evaluated: "Evaluated", notEligible: "Not publication eligible",
     horizon: "Horizon (months)", all: "All", evaluationStatusFilter: "Evaluation status",
@@ -60,8 +60,9 @@ const COPY = defineCopy({
     outcomesCol: "Outcomes", baselineMae: "Baseline MAE", ratio: "MAE ratio",
     legacy: "Comparison with the existing monthly baseline", legacyHint: "Legacy holdout MAE versus engine MAE on the same holdout months (INR/quintal, horizon 1)", legacyAria: "Legacy comparison",
     legacyModel: "Legacy model", holdoutMonths: "Holdout months", legacyMae: "Legacy MAE", withheld: " (withheld)",
-    limitations: "Limitations, data availability and licences", payload: (hash: string, time: string) => `Payload SHA-256 ${hash} · received ${time}`,
-    strict: (n: number, skipped: string) => `Strict as-of evaluation: ${n} origin(s) evaluated; skipped: ${skipped}.`, none: "none", used: "used", notUsed: "not used",
+    limitations: "Limitations",
+    essentials: ["Experimental: tested on past prices only, not a promise of future accuracy.", "Forecasts are 80% ranges, not buy or sell signals.", "Each price source is evaluated on its own and never combined with another."],
+    openSource: "Built with open-source tools:",
   },
   kn: {
     status: { reference: "ಉಲ್ಲೇಖ ಮೂಲ ಅಂದಾಜು", candidate: "ಪ್ರಾಯೋಗಿಕ ಅಭ್ಯರ್ಥಿ", not_better_than_baseline: "ಮೂಲ ಅಂದಾಜಿಗಿಂತ ಉತ್ತಮವಲ್ಲ", validated: "ದೃಢೀಕರಿಸಲಾಗಿದೆ", revoked: "ಹಿಂಪಡೆಯಲಾಗಿದೆ" },
@@ -75,7 +76,7 @@ const COPY = defineCopy({
     execution: "ಮುನ್ಸೂಚನೆ ನಡೆಸಿದ ಸಮಯ", lastPeriod: (period: string) => `ಬಳಸಿದ ಕೊನೆಯ ಮಾರುಕಟ್ಟೆ ಅವಧಿ: ${period}. ಇದು ಮಾರುಕಟ್ಟೆ ವರದಿ ದಿನಾಂಕವಲ್ಲ.`,
     evaluationStatus: "ಮೌಲ್ಯಮಾಪನ ಸ್ಥಿತಿ", candidates: (n: number) => `${n} ಅಭ್ಯರ್ಥಿಗಳು`,
     outcomes: "ಮುಂದಿನ ಫಲಿತಾಂಶಗಳು", events: (validated: number, revoked: number) => `${validated} ದೃಢೀಕೃತ · ${revoked} ಹಿಂಪಡೆದ ಮಾದರಿ ಘಟನೆಗಳು`,
-    datasets: "ದರದ ಆಧಾರವಾರು ದತ್ತಾಂಶ", datasetsHint: (version: string, tests: string) => `ದತ್ತಾಂಶ ಆವೃತ್ತಿ ${version} · ${tests}`, holm: "Holm ಹೊಂದಿಸಿದ Diebold-Mariano ಪರೀಕ್ಷೆಗಳು",
+    datasets: "ದರದ ಆಧಾರವಾರು ದತ್ತಾಂಶ",
     datasetsAria: "ಮುನ್ಸೂಚನಾ ದತ್ತಾಂಶ", dataset: "ದತ್ತಾಂಶ", priceBasis: "ದರದ ಆಧಾರ", frequencyUnit: "ಆವರ್ತನ / ಘಟಕ", series: "ಸರಣಿಗಳು (ಅರ್ಹ)", observations: "ದಾಖಲೆಗಳು", statusCol: "ಸ್ಥಿತಿ",
     suppressed: (reasons: string) => `ತಡೆಹಿಡಿಯಲಾಗಿದೆ: ${reasons}`, evaluated: "ಮೌಲ್ಯಮಾಪನವಾಗಿದೆ", notEligible: "ಪ್ರಕಟಣೆಗೆ ಅರ್ಹವಲ್ಲ",
     horizon: "ಮುಂದಿನ ಅವಧಿ (ತಿಂಗಳು)", all: "ಎಲ್ಲಾ", evaluationStatusFilter: "ಮೌಲ್ಯಮಾಪನ ಸ್ಥಿತಿ",
@@ -104,8 +105,9 @@ const COPY = defineCopy({
     outcomesCol: "ಫಲಿತಾಂಶಗಳು", baselineMae: "ಮೂಲ ಅಂದಾಜಿನ MAE", ratio: "MAE ಅನುಪಾತ",
     legacy: "ಈಗಿನ ತಿಂಗಳ ಮೂಲ ಅಂದಾಜಿನೊಂದಿಗೆ ಹೋಲಿಕೆ", legacyHint: "ಅದೇ ಪರೀಕ್ಷಾ ತಿಂಗಳುಗಳಲ್ಲಿ ಹಳೆಯ MAE ಮತ್ತು ಹೊಸ ವ್ಯವಸ್ಥೆಯ MAE (₹/ಕ್ವಿಂಟಾಲ್, ಅವಧಿ 1)", legacyAria: "ಹಳೆಯ ಹೋಲಿಕೆ",
     legacyModel: "ಹಳೆಯ ಮಾದರಿ", holdoutMonths: "ಪರೀಕ್ಷಾ ತಿಂಗಳುಗಳು", legacyMae: "ಹಳೆಯ MAE", withheld: " (ತಡೆಹಿಡಿಯಲಾಗಿದೆ)",
-    limitations: "ಮಿತಿಗಳು, ದತ್ತಾಂಶ ಲಭ್ಯತೆ ಮತ್ತು ಪರವಾನಗಿಗಳು", payload: (hash: string, time: string) => `ದತ್ತಾಂಶ SHA-256 ${hash} · ಸ್ವೀಕರಿಸಿದ್ದು ${time}`,
-    strict: (n: number, skipped: string) => `ಕಟ್ಟುನಿಟ್ಟಾದ ಆಗಿನ-ದತ್ತಾಂಶ ಮೌಲ್ಯಮಾಪನ: ${n} ಆರಂಭ ಬಿಂದು(ಗಳು); ಬಿಟ್ಟವು: ${skipped}.`, none: "ಯಾವುದೂ ಇಲ್ಲ", used: "ಬಳಸಲಾಗಿದೆ", notUsed: "ಬಳಸಿಲ್ಲ",
+    limitations: "ಮಿತಿಗಳು",
+    essentials: ["ಪ್ರಾಯೋಗಿಕ: ಹಿಂದಿನ ದರಗಳ ಮೇಲೆ ಮಾತ್ರ ಪರೀಕ್ಷಿಸಲಾಗಿದೆ, ಮುಂದಿನ ನಿಖರತೆಯ ಭರವಸೆ ಅಲ್ಲ.", "ಅಂದಾಜುಗಳು 80% ಶ್ರೇಣಿಗಳು, ಖರೀದಿ ಅಥವಾ ಮಾರಾಟ ಸಲಹೆ ಅಲ್ಲ.", "ಪ್ರತಿ ದರ ಮೂಲವನ್ನು ಪ್ರತ್ಯೇಕವಾಗಿ ಪರೀಕ್ಷಿಸಲಾಗುತ್ತದೆ; ಬೇರೆ ಮೂಲದೊಂದಿಗೆ ಬೆರೆಸುವುದಿಲ್ಲ."],
+    openSource: "ಬಳಸಿದ ಮುಕ್ತ ತಂತ್ರಾಂಶ:",
   },
 });
 
@@ -148,7 +150,7 @@ export function ForecastEvaluationPage() {
         <article className="snapshot-card"><div className="card-kicker">{t.outcomes}</div><div className="snapshot-value">{overview.data?.totals.outcomes ?? 0}</div><p>{t.events(overview.data?.totals.validated_events ?? 0, overview.data?.totals.revoked_events ?? 0)}</p></article>
       </section>
 
-      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.datasets}</h2><p>{t.datasetsHint(experiment.input_data_version.slice(0, 12), meta?.multiple_testing ?? t.holm)}</p></div></div>
+      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.datasets}</h2></div></div>
         <div className="table-scroll" tabIndex={0} role="region" aria-label={t.datasetsAria}><table><thead><tr><th>{t.dataset}</th><th>{t.priceBasis}</th><th>{t.frequencyUnit}</th><th>{t.series}</th><th>{t.observations}</th><th>{t.statusCol}</th></tr></thead><tbody>
           {(meta?.datasets ?? []).map((row) => <tr key={row.key}><td>{row.key}<br /><small lang="en">{row.provenance}</small></td><td>{label(row.price_basis)}</td><td>{row.frequency} · {row.unit} ({label(row.unit_status)})</td><td>{row.series_total} ({row.series_eligible})</td><td>{num(row.observations)}</td>
             <td>{row.suppressed ? t.suppressed(row.suppression_reasons.map(label).join(", ")) : row.publication_eligible ? t.evaluated : t.notEligible}</td></tr>)}
@@ -209,12 +211,12 @@ export function ForecastEvaluationPage() {
           {meta.legacy_comparison.map((row) => <tr key={row.variety}><td lang="en">{row.variety}</td><td lang="en">{row.legacy_model}{row.legacy_publishable ? "" : t.withheld}</td><td>{row.holdout_months}</td><td>{num(row.legacy_mae)}</td>{engineModels.map((model) => <td key={model}>{num(row.engine_mae[model])}</td>)}</tr>)}
         </tbody></table></div></section>}
 
-      <section className="panel"><div className="panel-heading"><div><h2>{t.limitations}</h2><p>{t.payload(experiment.payload_sha256.slice(0, 16), format.timestamp(experiment.received_at))}</p></div></div><div className="monthly-details">
-        {/* Limitations, exogenous-data reasons and licences are written by the forecasting engine and shown as published. */}
-        <ul lang="en">{overview.data?.limitations.map((value) => <li key={value}>{value}</li>)}</ul>
-        {meta?.strict_vintage && <p>{t.strict(meta.strict_vintage.origins_evaluated, Object.entries(meta.strict_vintage.origins_skipped).map(([key, value]) => `${label(key)} ${value}`).join(", ") || t.none)}</p>}
-        {meta?.exogenous && <ul>{Object.entries(meta.exogenous).map(([key, value]) => <li key={key}>{key}: {value.usable_in_backtest ? t.used : t.notUsed} — <span lang="en">{value.reason}</span></li>)}</ul>}
-        {meta?.environment?.licences && <ul lang="en">{Object.entries(meta.environment.licences).map(([key, value]) => <li key={key}>{key}: {value}</li>)}</ul>}
+      {/* Only what a reader needs: what the numbers are, that sources stay separate, and credit for the open-source tools.
+          Test statistics, hashes and engine internals stay in the published payload, not on the page. */}
+      <section className="panel"><div className="panel-heading"><div><h2>{t.limitations}</h2></div></div><div className="monthly-details">
+        <ul>{t.essentials.map((line) => <li key={line}>{line}</li>)}</ul>
+        {meta?.environment?.licences && <p className="table-note">{t.openSource} <span lang="en">{Object.entries(meta.environment.licences)
+          .filter(([key]) => key !== "chronos-forecasting").map(([key, value]) => `${key.replace(/^amazon\//, "")} (${value.replace(/\s*\(.*\)$/, "")})`).join(" · ")}</span></p>}
       </div></section>
     </>}
   </div>;
