@@ -15,7 +15,10 @@ MONTHLY_BASIS = "MONTHLY_STATE_WEIGHTED_AVERAGE"
 PRICE_BASES = {"APMC_MODAL", "COOPERATIVE_AVERAGE", "COOPERATIVE_TENDER_AVERAGE", MONTHLY_BASIS}
 
 BASELINE_MODELS = ("last_value", "seasonal_naive")
-CANDIDATE_MODELS = ("auto_arima", "auto_ets", "theta", "lightgbm", "chronos2")
+CANDIDATE_MODELS = ("auto_arima", "auto_ets", "theta", "lightgbm", "chronos2", "timesfm25", "ensemble")
+# Members of the equal-weight ensemble, fixed before the run that first evaluated it (chosen as the three strongest
+# individual models in fx-20261104T192118Z-5839b847aa). The ensemble takes the median of their medians and bounds.
+ENSEMBLE_MEMBERS = ("theta", "auto_ets", "chronos2")
 
 MODEL_VERSIONS = {
     "last_value": "statsforecast-naive-1",
@@ -25,11 +28,16 @@ MODEL_VERSIONS = {
     "theta": "statsforecast-theta-m12-1",
     "lightgbm": "lightgbm-direct-quantile-logreturn-1",
     "chronos2": "chronos2-zero-shot-1",
+    "timesfm25": "timesfm-2.5-200m-zero-shot-1",
+    "ensemble": "median-ensemble-theta-ets-chronos2-1",
 }
 
 # Verified 2026-11-05 from PyPI metadata and the Hugging Face model card/API (license: apache-2.0).
 CHRONOS_MODEL_ID = "amazon/chronos-2"
 CHRONOS_REVISION = "29ec3766d36d6f73f0696f85560a422f50e8498c"
+# Verified 2026-11-09 from PyPI (timesfm 3.0.2, Apache-2.0) and the Hugging Face model API (license: apache-2.0).
+TIMESFM_MODEL_ID = "google/timesfm-2.5-200m-pytorch"
+TIMESFM_REVISION = "1d952420fba87f3c6dee4f240de0f1a0fbc790e3"
 LICENCES = {
     "statsforecast": "Apache-2.0",
     "statsmodels": "BSD-3-Clause",
@@ -37,6 +45,8 @@ LICENCES = {
     "scikit-learn": "BSD-3-Clause",
     "chronos-forecasting": "Apache-2.0 (package 2.3.2)",
     "amazon/chronos-2": f"Apache-2.0 (checkpoint revision {CHRONOS_REVISION})",
+    "timesfm": "Apache-2.0 (package 3.0.2)",
+    "google/timesfm-2.5": f"Apache-2.0 (checkpoint revision {TIMESFM_REVISION})",
 }
 
 

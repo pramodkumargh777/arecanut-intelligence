@@ -12,6 +12,8 @@ import { NotFoundPage } from "./NotFoundPage";
 import { LanguageContext } from "../services/language";
 import { SourceSlot } from "../components/SourceSlot";
 import { VARIETIES } from "../services/varieties";
+import { ForecastShowcase } from "../components/ForecastShowcase";
+import type { ModelEvaluation } from "../services/forecasting";
 import { TSS_VARIETIES } from "../../../shared/tss-varieties";
 import { AssistantPage } from "./AssistantPage";
 import { AnalyticsPage } from "./AnalyticsPage";
@@ -64,7 +66,8 @@ vi.mock("../services/commodity", async (importOriginal) => ({
   ...await importOriginal<typeof import("../services/commodity")>(),
   useCommodity: () => ({ code: "arecanut", commodity: FALLBACK_CATALOG.commodities[0], catalog: FALLBACK_CATALOG, unit: "INR / QUINTAL" }),
 }));
-vi.mock("../components/LazyCharts", () => ({ LazyRangeChart: ({ rows }: { rows: { label: string }[] }) => <div>Same-date chart: {rows.map((row) => row.label).join(", ")}</div> }));
+vi.mock("../components/LazyCharts", () => ({ LazyRangeChart: ({ rows }: { rows: { label: string }[] }) => <div>Same-date chart: {rows.map((row) => row.label).join(", ")}</div>,
+  LazyTrackChart: ({ periods }: { periods: string[] }) => <div>Track chart: {periods.length} months</div> }));
 
 const quote = {
   id: "official-1", market_id: "one", market_name: "Market One", district: "District",
@@ -639,5 +642,35 @@ describe("market experience", () => {
     expect(html).toContain("Show all 8 branches");
     expect(html).toContain('class="home-date-pill');
     expect(html).toContain("Latest report");
+  });
+});
+
+describe("forecast evaluation summary", () => {
+  const evaluation = (model: string, mae: number, status: ModelEvaluation["status"] = "not_better_than_baseline"): ModelEvaluation => ({
+    id: mae, series_id: "KA|Rashi", variety: "Rashi", market: "Karnataka", grade: null, horizon: 1, model, model_version: "1",
+    baseline_model: "last_value", status: model === "last_value" ? "reference" : status, reasons: [], n: 34, mae, rmse: null,
+    wape: mae / 48000, mase: null, directional_accuracy: null, interval_coverage: 0.88, interval_width: null, dm_statistic: null,
+    p_value: null, p_value_holm: null, mae_skill_vs_baseline: null, coverage_status: "consistent_with_nominal",
+  });
+  const show = (rows: ModelEvaluation[]) => render(<ForecastShowcase evaluations={rows} track={[{ series_id: "KA|Rashi", variety: "Rashi",
+    periods: ["2026-01", "2026-02"], actual: [1, 2], baseline: [1, 2], median: [1, 2], lower: [0, 1], upper: [2, 3] }]} trackModel="theta"
+    predictions={[]} performance={undefined} />);
+
+  it("says plainly when no model beats last month's price, and names no winner", () => {
+    const html = show([evaluation("last_value", 2065), evaluation("chronos2", 2106), evaluation("theta", 2223)]);
+    expect(html).toContain("Not yet better than “Last month&#x27;s price”");
+    expect(html).toContain("±₹2,065");
+    expect(html).toContain("Chronos-2");
+    expect(html).toContain("2.0% further off");
+    expect(html).not.toContain("Promising");
+    expect(html).toContain("Track chart: 2 months");
+  });
+
+  it("calls a model promising only when it passed the backtest gate", () => {
+    const html = show([evaluation("last_value", 2065), evaluation("ensemble", 1900, "candidate")]);
+    expect(html).toContain("Promising");
+    expect(html).toContain("Ensemble");
+    expect(html).toContain("Passed");
+    expect(html).not.toContain("Not yet better");
   });
 });

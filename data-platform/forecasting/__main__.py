@@ -21,7 +21,7 @@ from .config import CANDIDATE_MODELS, ExperimentConfig
 from .datasets import IncomparableDatasets, build_all, build_unified_dataset, exogenous_availability
 from .evaluate import evaluate
 from .legacy import compare_with_engine, parity_check
-from .publish import build_payload, post_payload
+from .publish import build_payload, build_track, post_payload
 from .report import render
 from .sources import connect, table_exists
 from .tracking import RUNS_DIR, RunRecorder, canonical_hash, environment, mirror_to_mlflow, new_run_id
@@ -46,6 +46,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sql-export", help="Path to a scripts/d1-backup.mjs SQL export (loaded in memory).")
     parser.add_argument("--models", default="", help=f"Comma list; default baselines + statistical + lightgbm. Extra: {','.join(CANDIDATE_MODELS)}")
     parser.add_argument("--with-chronos", action="store_true", help="Add the experimental Chronos-2 benchmark (CPU).")
+    parser.add_argument("--with-pretrained", action="store_true",
+                        help="Add Chronos-2, TimesFM 2.5 and the median ensemble of theta, auto_ets and chronos2 (CPU).")
     parser.add_argument("--last-origins", type=int, default=0, help="Evaluate only the latest N origins (smoke runs).")
     parser.add_argument("--publish", action="store_true", help="POST the experiment to ANI_API_URL with INGESTION_TOKEN.")
     parser.add_argument("--dry-run", action="store_true", help="Build the payload and report but never POST.")
@@ -65,10 +67,10 @@ def main(argv: list[str] | None = None) -> int:
 
     conn = connect(args.sqlite, args.sql_export)
     config = ExperimentConfig()
-    if args.models or args.with_chronos:
+    if args.models or args.with_chronos or args.with_pretrained:
         models = tuple(m for m in args.models.split(",") if m) or config.models
-        if args.with_chronos and "chronos2" not in models:
-            models = models + ("chronos2",)
+        extra = ("chronos2", "timesfm25", "ensemble") if args.with_pretrained else ("chronos2",) if args.with_chronos else ()
+        models = models + tuple(m for m in extra if m not in models)
         config = ExperimentConfig(models=models)
     log = (lambda _message: None) if args.quiet else (lambda message: print(message, file=sys.stderr))
 
@@ -115,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
                             datasets=datasets, evaluated=monthly, result=result, evaluation=evaluation)
     payload["experiment"].update(strict_vintage=strict_meta, pooled=evaluation["pooled"],
                                  status_counts=evaluation["status_counts"], legacy_comparison=legacy,
-                                 exogenous=exogenous)
+                                 exogenous=exogenous, track=build_track(result.rows, monthly, evaluation["pooled"]))
     recorder.json("payload.json", payload)
     backtest_meta = {"origins_evaluated": result.origins_evaluated, "horizons": list(config.horizons),
                      "model_errors": len(result.model_errors), "seconds": round(result.seconds, 1)}

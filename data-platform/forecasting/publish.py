@@ -17,7 +17,7 @@ import pandas as pd
 
 from . import ENGINE_VERSION
 from .backtest import BacktestResult
-from .config import MODEL_VERSIONS, ExperimentConfig
+from .config import BASELINE_MODELS as BASELINES, MODEL_VERSIONS, ExperimentConfig
 from .datasets import ForecastDataset
 
 
@@ -106,6 +106,27 @@ def build_payload(*, run_id: str, created_at: str, config: ExperimentConfig, con
         "evaluations": eval_rows,
         "predictions": predictions,
     }
+
+
+def build_track(rows: pd.DataFrame, evaluated: ForecastDataset, pooled: list[dict[str, Any]], horizon: int = 1) -> dict[str, Any]:
+    """One-step-ahead backtest record per series for the dashboard's track-record chart: the actual monthly price,
+    the last-value baseline and the model with the lowest pooled MAE at this horizon, with its interval. Whole rupees."""
+    ranked = sorted((r for r in pooled if r["horizon"] == horizon and r["mae"] is not None and r["model"] not in BASELINES),
+                    key=lambda r: r["mae"])
+    best = ranked[0]["model"] if ranked else "last_value"
+    scored = rows[(rows.horizon == horizon) & rows.actual.notna()]
+    series_meta = {s.series_id: s for s in evaluated.series}
+    out = []
+    for series_id, group in scored.groupby("series_id"):
+        wide = group.pivot_table(index="target", columns="model", values=["median", "lower", "upper", "actual"], aggfunc="first")
+        if ("median", best) not in wide.columns or ("median", "last_value") not in wide.columns:
+            continue
+        wide = wide.dropna(subset=[("median", best), ("median", "last_value")]).sort_index()
+        whole = lambda column: [int(round(v)) for v in wide[column].to_numpy(dtype=float)]  # noqa: E731
+        out.append({"series_id": series_id, "variety": series_meta[series_id].variety, "periods": [str(p) for p in wide.index],
+                    "actual": whole(("actual", "last_value")), "baseline": whole(("median", "last_value")),
+                    "median": whole(("median", best)), "lower": whole(("lower", best)), "upper": whole(("upper", best))})
+    return {"model": best, "horizon": horizon, "series": out}
 
 
 def _redact(text: str, token: str) -> str:

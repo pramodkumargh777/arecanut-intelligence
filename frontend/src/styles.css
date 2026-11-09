@@ -836,3 +836,140 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .month-history thead th { white-space: normal; vertical-align: bottom; line-height: 1.35; }
 .month-history thead th.numeric { max-width: 96px; }
 .month-history th, .month-history td { padding-left: 10px; padding-right: 10px; }
+
+/* ---- Forecast evaluation: reader-facing summary ------------------------------------------------------------
+ * One column rhythm: a toolbar, the verdict, then cards that share padding, heading style and column alignment. */
+.fx-showcase { --fx-pad: 20px; display: grid; gap: 16px; min-width: 0; container-type: inline-size; }
+.fx-showcase .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.fx-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.fx-select { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 0 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.fx-select:focus-within { border-color: var(--brand-leaf); }
+.fx-select span { color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.fx-select select { width: auto; min-width: 120px; height: 40px; min-height: 0; padding: 0 34px 0 0; border: 0; border-radius: 0 10px 10px 0; background-color: transparent; background-position: right 12px center; color: var(--ink); font-size: 14px; font-weight: 650; box-shadow: none; outline: none; }
+.fx-segmented { display: inline-flex; height: 42px; padding: 3px; gap: 2px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+.fx-segmented button { min-height: 0; height: 34px; padding: 0 16px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.fx-segmented button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 14%), inset 0 0 0 1px var(--line); }
+
+.fx-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 24px; align-items: center;
+  padding: 22px var(--fx-pad) 22px calc(var(--fx-pad) + 4px); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  background: linear-gradient(120deg, var(--brand-tint), var(--surface) 70%); box-shadow: var(--shadow); }
+.fx-hero::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--subtle); }
+.fx-hero.tone-good::before { background: var(--brand-leaf); }
+.fx-hero.tone-warn::before { background: #d99a2b; }
+.fx-eyebrow { margin: 0 0 6px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.fx-hero h2 { margin: 0; color: var(--ink); font-size: 22px; font-weight: 700; line-height: 1.3; letter-spacing: -.015em; }
+.fx-hero-detail { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.fx-tested { margin: 10px 0 0; color: var(--subtle); font-size: 12px; }
+.fx-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--surface) 86%, transparent); }
+.fx-stats > div { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 14px 16px; }
+.fx-stats > div + div { border-left: 1px solid var(--line); }
+.fx-stats dt { color: var(--muted); font-size: 12px; font-weight: 600; }
+.fx-stats dd { margin: 0; color: var(--ink); font-size: 24px; font-weight: 700; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.fx-stats dd.fx-stat-name { font-size: 18px; line-height: 1.35; }
+.fx-stats small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+.fx-card { min-width: 0; padding: 18px var(--fx-pad, 20px) 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+.fx-card-head { margin-bottom: 12px; }
+.fx-card-head h2 { margin: 0; color: var(--ink); font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.fx-card-head p { margin: 3px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.fx-card-head-row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; }
+.fx-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 12.5px; font-weight: 650; white-space: nowrap; }
+.fx-empty { margin: 4px 0 2px; color: var(--muted); font-size: 13.5px; }
+.fx-muted { color: var(--muted); }
+
+.fx-split { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+/* The horizon card matches the leaderboard's height, its three rows spread evenly down it. */
+.fx-horizons { display: flex; flex-direction: column; }
+.fx-horizons ul { flex: 1; align-content: space-evenly; }
+
+/* Leaderboard: one grid shared by the labels row and every model row, so columns line up exactly. */
+.fx-board-row { display: grid; grid-template-columns: 22px minmax(140px, 1.3fr) minmax(120px, 1fr) 88px 84px; align-items: center; column-gap: 14px; min-height: 48px; padding: 0 8px; border-top: 1px solid var(--line); }
+.fx-board-labels { min-height: 30px; border-top: 0; color: var(--subtle); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+.fx-board-labels + .fx-board-row { border-top: 0; }
+.fx-axis { display: flex; justify-content: space-between; }
+.fx-axis em { font-style: normal; }
+.fx-board-row.is-base { border-radius: 8px; background: color-mix(in srgb, var(--brand-tint) 70%, transparent); border-top-color: transparent; }
+.fx-board-row.is-base + .fx-board-row { border-top-color: transparent; }
+.fx-rank { color: var(--subtle); font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fx-model { display: grid; min-width: 0; }
+.fx-model strong { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-model small { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-tag { padding: 1px 7px; border-radius: 6px; background: var(--warn-bg); color: var(--warn-ink); font-size: 11px; font-style: normal; font-weight: 650; }
+.fx-bar { position: relative; height: 8px; border-radius: 999px; background: var(--surface-2); }
+.fx-bar::after { content: ""; position: absolute; top: -5px; bottom: -5px; left: 50%; width: 1px; background: var(--line-strong); }
+.fx-bar i { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+.is-better .fx-bar i { background: var(--brand-leaf); }
+.is-worse .fx-bar i { background: color-mix(in srgb, var(--bad-ink) 55%, transparent); }
+.fx-bar.is-beyond i { -webkit-mask-image: linear-gradient(to right, #000 70%, transparent); mask-image: linear-gradient(to right, #000 70%, transparent); }
+.fx-delta { color: var(--ink); font-size: 14px; font-weight: 650; }
+.is-better .fx-delta { color: var(--brand); }
+.is-base .fx-delta { color: var(--brand); font-size: 12.5px; }
+.fx-miss { color: var(--muted); font-size: 13px; }
+
+/* Horizons: label, then two bars on their own rows, each with its value in a fixed right column. */
+.fx-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.fx-key { display: inline-block; width: 14px; height: 6px; border-radius: 999px; }
+.fx-key + .fx-key, .fx-legend .fx-key-top { margin-left: 8px; }
+.fx-key-base, .fx-hbar-base { background: var(--line-strong); }
+.fx-key-top, .fx-hbar-top { background: var(--brand-leaf); }
+.fx-horizons ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.fx-horizons li { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; }
+.fx-horizons li.is-current { background: var(--surface-2); }
+.fx-h { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; }
+.fx-h strong { color: var(--ink); font-size: 13.5px; font-weight: 650; }
+.fx-h small { color: var(--muted); font-size: 12px; }
+.fx-hbar { display: grid; grid-template-columns: minmax(0, 1fr) 52px; align-items: center; column-gap: 10px; }
+.fx-hbar i { display: block; height: 7px; min-width: 4px; border-radius: 999px; }
+.fx-hbar b { color: var(--ink); font-size: 12.5px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Live scorecard: same column grid for the labels and each forecast. */
+.fx-live-row { display: grid; grid-template-columns: minmax(120px, 1fr) 110px minmax(150px, 1.2fr) minmax(120px, 1fr) minmax(140px, 1.1fr); align-items: center; column-gap: 16px; min-height: 52px; padding: 0 8px; border-top: 1px solid var(--line); }
+.fx-live-labels { min-height: 30px; border-top: 0; color: var(--subtle); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; }
+.fx-live-labels + .fx-live-row { border-top: 0; }
+.fx-live-row strong { color: var(--ink); font-size: 14.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.fx-live-month { display: grid; }
+.fx-live-month small { color: var(--muted); font-size: 12px; }
+.fx-live-row .fx-muted { font-size: 13px; }
+.fx-result { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.fx-result.is-pending { background: var(--surface-2); color: var(--muted); }
+.fx-result.is-hit { background: var(--brand-tint); color: var(--brand); }
+.fx-result.is-miss { background: var(--bad-bg); color: var(--bad-ink); }
+
+.fx-technical { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.fx-technical > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 14px var(--fx-pad, 20px); cursor: pointer; color: var(--ink); font-size: 15px; font-weight: 650; }
+.fx-technical > summary small { color: var(--muted); font-size: 12.5px; font-weight: 400; }
+.fx-technical[open] > summary { border-bottom: 1px solid var(--line); }
+.fx-technical > .page-stack { padding: 14px; }
+
+/* Sized by the content area, not the window, so the sidebar's width is accounted for. */
+@container (max-width: 1080px) { .fx-hero { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+@container (max-width: 860px) { .fx-split { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .fx-showcase { --fx-pad: 14px; gap: 12px; }
+  .fx-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .fx-select { width: 100%; }
+  .fx-select select { flex: 1; min-width: 0; }
+  .fx-segmented { height: auto; }
+  .fx-segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .fx-segmented button { padding: 0 6px; font-size: 13px; }
+  .fx-hero { padding: 16px var(--fx-pad) 16px calc(var(--fx-pad) + 4px); border-radius: 16px; }
+  .fx-hero h2 { font-size: 19px; }
+  .fx-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fx-stats > div:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+  .fx-stats dd { font-size: 20px; }
+  .fx-card { border-radius: 16px; }
+  .fx-limits { padding: 16px 14px 14px; }
+  .fx-board-row { grid-template-columns: 16px minmax(0, 1fr) auto; grid-template-rows: auto auto; row-gap: 6px; padding: 10px 6px; }
+  .fx-board-labels { display: none; }
+  .fx-board-row .fx-bar { grid-column: 2 / -1; grid-row: 2; }
+  .fx-board-row .fx-delta { grid-column: 3; grid-row: 1; }
+  .fx-board-row .fx-miss { display: none; }
+  .fx-live-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; padding: 10px 6px; }
+  .fx-live-labels { display: none; }
+  .fx-live-row > :nth-child(3) { grid-column: 1; text-align: left; }
+  .fx-live-row > :nth-child(4) { display: none; }
+  .fx-live-row > :nth-child(5) { grid-column: 2; grid-row: 2; justify-self: end; }
+}
+.fx-limits ul { display: grid; gap: 4px; margin: 0; padding-left: 18px; color: var(--ink-2, var(--ink)); font-size: 13.5px; line-height: 1.55; }
+.fx-limits .table-note { margin: 10px 0 0; }

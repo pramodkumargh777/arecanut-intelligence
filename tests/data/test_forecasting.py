@@ -22,7 +22,8 @@ from forecasting.datasets import (  # noqa: E402
 from forecasting.evaluate import evaluate  # noqa: E402
 from forecasting.features import ExogenousValue, series_features, supervised  # noqa: E402
 from forecasting.legacy import legacy_evaluate  # noqa: E402
-from forecasting.publish import PublicationRefused, build_payload  # noqa: E402
+from forecasting.models import median_ensemble, run_models  # noqa: E402
+from forecasting.publish import PublicationRefused, build_payload, build_track  # noqa: E402
 
 
 def monthly(values, start="2019-01", series_id="KA|Synthetic") -> SeriesData:
@@ -220,6 +221,33 @@ class LegacyParityTests(unittest.TestCase):
             self.assertIsNone(result["forecast"])
         with self.assertRaises(ValueError):
             legacy_evaluate(months[:20], values[:20])
+
+
+class EnsembleAndTrackTests(unittest.TestCase):
+    def test_ensemble_is_the_median_of_its_members(self):
+        frame = lambda m, lo, hi: pd.DataFrame([{"series_id": "S", "horizon": 1, "median": m, "lower": lo, "upper": hi}])  # noqa: E731
+        combined = median_ensemble({"theta": frame(100, 90, 110), "auto_ets": frame(104, 95, 120), "chronos2": frame(130, 80, 140)})
+        row = combined.iloc[0]
+        self.assertEqual((row["median"], row["lower"], row["upper"]), (104, 90, 120))
+
+    def test_ensemble_is_an_error_when_a_member_is_missing(self):
+        view = {"KA|Synthetic": monthly(seasonal_series(48)).values}
+        results, errors = run_models(view, ExperimentConfig(), (1,), ("theta", "auto_ets", "ensemble"))
+        self.assertNotIn("ensemble", results)
+        self.assertIn("chronos2", errors["ensemble"])
+
+    def test_track_uses_the_strongest_pooled_challenger_and_only_scored_months(self):
+        rows = pd.DataFrame([
+            {"series_id": "KA|Rashi", "model": model, "origin": "2026-0" + str(m - 1), "target": "2026-0" + str(m), "horizon": 1,
+             "median": med, "lower": med - 10, "upper": med + 10, "actual": actual}
+            for m, actual in ((2, 100.0), (3, None)) for model, med in (("last_value", 95.0), ("theta", 99.0), ("lightgbm", 90.0))])
+        ds = dataset([monthly(seasonal_series(48), series_id="KA|Rashi")])
+        pooled = [{"horizon": 1, "model": "last_value", "mae": 5.0}, {"horizon": 1, "model": "theta", "mae": 1.0},
+                  {"horizon": 1, "model": "lightgbm", "mae": 10.0}]
+        track = build_track(rows, ds, pooled)
+        self.assertEqual(track["model"], "theta")
+        series = track["series"][0]
+        self.assertEqual((series["periods"], series["actual"], series["median"], series["baseline"]), (["2026-02"], [100], [99], [95]))
 
 
 if __name__ == "__main__":

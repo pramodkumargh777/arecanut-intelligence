@@ -24,7 +24,7 @@ from .config import LICENCES
 
 RUNS_DIR = Path(__file__).resolve().parent / "runs"
 TRACKED_PACKAGES = ("pandas", "numpy", "scipy", "statsforecast", "statsmodels", "lightgbm", "scikit-learn",
-                    "chronos-forecasting", "torch", "transformers", "mlflow")
+                    "chronos-forecasting", "timesfm", "torch", "transformers", "mlflow")
 
 
 def canonical_hash(value: Any) -> str:

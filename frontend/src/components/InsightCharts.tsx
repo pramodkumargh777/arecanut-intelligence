@@ -170,3 +170,49 @@ export function RankedRangeChart({ rows, centralLabel, description }: { rows: Ra
   };
   return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: Math.max(200, rows.length * 46 + 72), width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
+
+/**
+ * Backtest track record: the actual price, a model's one-step forecast and its 80% band (a shaded area, not whiskers,
+ * since every month has one), with the last-value baseline as a faint dotted reference.
+ */
+export function TrackRecordChart({ periods, actual, median, lower, upper, baseline, labels, description, height = 320 }: {
+  periods: string[]; actual: number[]; median: number[]; lower: number[]; upper: number[]; baseline: number[];
+  labels: { actual: string; forecast: string; band: string; baseline: string; month: (period: string) => string };
+  description: string; height?: number;
+}) {
+  const onChartReady = useResponsiveChart();
+  const phone = usePhone();
+  const { AXIS_LABEL, AXIS_LINE, BRAND, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
+  const categories = periods.map(labels.month);
+  const option = {
+    ...base(description, INK),
+    legend: { ...base(description, INK).legend, itemStyle: { opacity: 1 }, data: [labels.actual, labels.forecast, labels.band, labels.baseline],
+      ...(phone ? { itemGap: 10, textStyle: { color: INK[600], fontSize: 11, fontFamily: CHART_FONT } } : {}) },
+    grid: { top: phone ? 52 : 36, right: phone ? 8 : 16, bottom: 4, left: 4, containLabel: true },
+    tooltip: {
+      ...TOOLTIP, trigger: "axis", axisPointer: CROSSHAIR,
+      formatter: (items: { dataIndex: number }[]) => {
+        const i = items[0]?.dataIndex ?? 0;
+        const miss = median[i] - actual[i];
+        return tooltipHtml(categories[i], [
+          { label: labels.actual, value: inr(actual[i]) },
+          { label: labels.forecast, value: `${inr(median[i])} (${miss >= 0 ? "+" : "−"}${inr(Math.abs(miss)).slice(1)})` },
+          { label: labels.band, value: `${inr(lower[i])} – ${inr(upper[i])}` },
+          { label: labels.baseline, value: inr(baseline[i]) },
+        ]);
+      },
+    },
+    xAxis: { type: "category", data: categories, boundaryGap: false, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, hideOverlap: true, interval: monthAxisInterval(periods) }, axisLine: AXIS_LINE },
+    yAxis: { type: "value", scale: true, splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: axisInr }, splitLine: GRID_LINE },
+    series: [
+      { name: "band-floor", type: "line", data: lower, stack: "band", symbol: "none", lineStyle: { opacity: 0 }, silent: true, tooltip: { show: false } },
+      { name: labels.band, type: "line", data: upper.map((value, i) => value - lower[i]), stack: "band", symbol: "none", color: BRAND,
+        lineStyle: { opacity: 0 }, areaStyle: { color: BRAND, opacity: 0.14 }, silent: true },
+      { name: labels.baseline, type: "line", data: baseline, symbol: "none", color: INK[400], lineStyle: { color: INK[400], width: 1, type: "dotted" } },
+      { name: labels.forecast, type: "line", data: median, symbol: "none", smooth: 0.3, smoothMonotone: "x", color: BRAND, lineStyle: { color: BRAND, width: 2, type: "dashed" } },
+      { name: labels.actual, type: "line", data: actual, symbol: "circle", symbolSize: 5, showSymbol: periods.length <= 40, smooth: 0.3, smoothMonotone: "x",
+        color: INK[900], itemStyle: { color: INK[900], borderColor: INK.surface, borderWidth: 1 }, lineStyle: { color: INK[900], width: 2 } },
+    ],
+  };
+  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
+}
