@@ -9,7 +9,7 @@ import type { ReferencePoint } from "../types";
 import { buildChartData, connectShortGaps, missingPeriods } from "../services/chart";
 import { calendarDateToTime, DAY_MS } from "../../../shared/dates";
 import { defineCopy, formatDate, formatMonth, useCopy, useLanguage } from "../services/language";
-import { CHART_FONT, useChartPalette } from "./chartPalette";
+import { CHART_FONT, chartMotion, useChartPalette } from "./chartPalette";
 import { eventsBetween } from "../services/market-events";
 
 echarts.use([LineChart, ScatterChart, GridComponent, TooltipComponent, AriaComponent, MarkLineComponent, CanvasRenderer]);
@@ -132,7 +132,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
   const branchesOn = new Map((averagePoints ?? []).map((point) => [calendarDateToTime(point.reporting_date), point.branches ?? []]));
   const option = {
     useUTC: true,
-    animation: false,
+    ...chartMotion(),
     aria: { enabled: true, label: { description: t.aria(label, unitNote, coverage, Boolean(quotePoints)) } },
     textStyle: { fontFamily: CHART_FONT },
     grid: { top: events.length ? 26 : 16, right: phone ? 12 : 64, bottom: 4, left: 4, containLabel: true },

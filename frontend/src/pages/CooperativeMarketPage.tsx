@@ -463,7 +463,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
         <section>
           <article className="panel table-panel"><div className="panel-heading"><div><h2>{t.coverageTitle}</h2><p>{t.coverageHint(latestBranches.length, c.branches(data?.branches.length ?? 0), data?.variety ?? "", data?.latest_reporting_date ? format.date(data.latest_reporting_date) : t.theLatestDate)}</p></div></div>
             <div className="coverage-meter" role="img" aria-label={t.coverageAria(latestBranches.length, data?.branches.length ?? 0)}><span style={{ width: `${data?.branches.length ? latestBranches.length / data.branches.length * 100 : 0}%` }} /></div>
-            <div className="table-scroll" tabIndex={0} role="region" aria-label={t.coverageTitle}><table><caption className="sr-only">{t.coverageCaption(data?.variety ?? "")}</caption>
+            <div className="table-scroll" tabIndex={0} role="region" aria-label={t.coverageTitle}><table className="coverage-table"><caption className="sr-only">{t.coverageCaption(data?.variety ?? "")}</caption>
               <thead><tr><th scope="col">{c.branch}</th><th scope="col">{t.latestReportingDate}</th><th scope="col" className="numeric">{c.reportedAverage}</th><th scope="col">{c.status}</th></tr></thead>
               <tbody>{(data?.latest_by_branch ?? []).map((row) => {
                 const lag = data?.latest_reporting_date ? Math.round((Date.parse(data.latest_reporting_date) - Date.parse(row.reporting_date)) / 86_400_000) : null;

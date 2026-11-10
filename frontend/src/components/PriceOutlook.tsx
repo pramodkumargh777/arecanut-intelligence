@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import type { Forecast, ForecastData, Outlook, OutlookHorizon } from "../services/modules";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { LazyOutlookChart } from "./LazyCharts";
+import { RollingText } from "./RollingNumber";
 
 /**
  * The reader-facing outlook for one variety: the likely range and most likely price for each of the next six months,
@@ -137,8 +138,9 @@ export function PriceOutlook({ variety, outlook, forecast, evaluation, prices, h
     <section className="fx-hero po-hero tone-neutral">
       <div className="fx-hero-text">
         <p className="fx-eyebrow"><span className="po-badge">{t.experimental}</span>{t.eyebrow(variety, month(next.target_month))}</p>
-        <h2>{t.headline(rupees(next.lower), rupees(next.upper))}</h2>
-        <p className="fx-hero-detail"><strong>{t.mostLikely(rupees(next.point))}</strong>{" "}
+        {/* The figures roll when the variety changes, so it is plain that the answer moved with the choice. */}
+        <h2><RollingText text={t.headline(rupees(next.lower), rupees(next.upper))} /></h2>
+        <p className="fx-hero-detail"><strong><RollingText text={t.mostLikely(rupees(next.point))} /></strong>{" "}
           {Math.abs(change) < 0.0005 ? t.flat(month(last.reporting_month)) : t.vsLast(month(last.reporting_month), `${change > 0 ? "+" : "−"}${Math.abs(change * 100).toFixed(1)}%`)}
           {next.chance_higher != null && <> {t.chance(month(last.reporting_month), pct(next.chance_higher))}</>}
           {next.model === "last_value" && <> {t.whyFlat}</>}</p>

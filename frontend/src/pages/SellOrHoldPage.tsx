@@ -43,12 +43,14 @@ const COPY = defineCopy({
     summaryNote: "ಕರ್ನಾಟಕದ ತಿಂಗಳ ಸರಾಸರಿ ದರ (AGMARKNET). ನಿಮ್ಮ ಶಾಖೆಯ ದರ ಬೇರೆ ಇರಬಹುದು.",
     wait: "ಕಾದ ಅವಧಿ", months: (n: number) => `${n} ತಿಂಗಳು`, rose: "ದರ ಏರಿದ ವರ್ಷಗಳು", typical: "ಮಧ್ಯಮ ಬದಲಾವಣೆ", range: "ಕನಿಷ್ಠ / ಗರಿಷ್ಠ",
     needed: "ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ", covered: "ಖರ್ಚು ಸರಿದೂಗಿದ ವರ್ಷಗಳು",
-    ofYears: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count}`, notEnough: `${MIN_HOLD_YEARS} ವರ್ಷಗಳಿಗಿಂತ ಕಡಿಮೆ ದತ್ತಾಂಶ`,
+    ofYears: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count}`, roseIn: (count: number, years: number) => `${years} ವರ್ಷಗಳಲ್ಲಿ ${count} ಬಾರಿ ಏರಿಕೆ`,
+    mediansTitle: "ಕಾದ ಅವಧಿಯ ಪ್ರಕಾರ ಮಧ್ಯಮ ಬದಲಾವಣೆ", notEnough: `${MIN_HOLD_YEARS} ವರ್ಷಗಳಿಗಿಂತ ಕಡಿಮೆ ದತ್ತಾಂಶ`,
     yearsTitle: "ವರ್ಷವಾರು ವಿವರ", start: "ಆರಂಭ ದರ", startMonth: "ಆರಂಭ",
     chartNote: "ಪ್ರತಿ ಚುಕ್ಕೆ ಒಂದು ಹಿಂದಿನ ವರ್ಷ. ಗೆರೆ ನಿಮ್ಮ ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ; ಗೆರೆಯ ಮೇಲಿನ ಹಸಿರು ಚುಕ್ಕೆಗಳು ಕಾಯುವುದು ಲಾಭವಾದ ವರ್ಷಗಳು.",
     paid: "ಖರ್ಚು ಸರಿದೂಗಿತು", notPaid: "ಖರ್ಚು ಸರಿದೂಗಲಿಲ್ಲ", needsLine: (p: number) => `ಬೇಕು ${p > 0 ? "+" : ""}${p}%`,
     paidOf: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count} ವರ್ಷ ಲಾಭ`,
     chartDescription: (month: string) => `${month} ತಿಂಗಳಿನಿಂದ 1–6 ತಿಂಗಳು ಕಾದಿದ್ದರೆ ಪ್ರತಿ ಹಿಂದಿನ ವರ್ಷದ ದರ ಬದಲಾವಣೆ, ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆಯೊಂದಿಗೆ`,
+    legendPaid: "ಖರ್ಚು ಸರಿದೂಗಿದ ವರ್ಷ", legendNotPaid: "ಸರಿದೂಗದ ವರ್ಷ", legendNeeded: "ನಿಮ್ಮ ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ", legendZone: "ಕಾಯುವುದು ಲಾಭವಾಗುವ ವಲಯ",
     details: "ವಿವರಗಳು", detailsHint: "ವರ್ಷವಾರು ಪಟ್ಟಿ ಮತ್ತು ಮಧ್ಯಮ ಬದಲಾವಣೆ",
     scrollHint: "ಎಲ್ಲಾ ತಿಂಗಳ ವಿವರ ನೋಡಲು ಅಡ್ಡವಾಗಿ ಸ್ವೈಪ್ ಮಾಡಿ.",
     excluded: (months: string) => `ಬಿಟ್ಟಿರುವ ತಿಂಗಳು: ${months}. ಈ ತಿಂಗಳಲ್ಲಿ ದರ 20% ಕ್ಕಿಂತ ಹೆಚ್ಚು ಬದಲಾಗಿ ಮುಂದಿನ ತಿಂಗಳು ಮರಳಿ ಬಂದಿದೆ; ಇದು ದತ್ತಾಂಶದ ದೋಷ ಇರಬಹುದು.`,
@@ -74,12 +76,14 @@ const COPY = defineCopy({
     summaryNote: "Karnataka monthly average price (AGMARKNET). Your branch's rate can differ.",
     wait: "Waited", months: (n: number) => `${n} month${n === 1 ? "" : "s"}`, rose: "Years the price rose", typical: "Median change", range: "Lowest / highest",
     needed: "Rise needed to cover costs", covered: "Years that covered costs",
-    ofYears: (count: number, years: number) => `${count} of ${years}`, notEnough: `Under ${MIN_HOLD_YEARS} years of data`,
+    ofYears: (count: number, years: number) => `${count} of ${years}`, roseIn: (count: number, years: number) => `Rose in ${count} of ${years} years`,
+    mediansTitle: "Median change by waiting period", notEnough: `Under ${MIN_HOLD_YEARS} years of data`,
     yearsTitle: "Year by year", start: "Starting price", startMonth: "From",
     chartNote: "Each dot is one past year. The line is the rise you need to cover your costs; green dots above it are the years waiting paid off.",
     paid: "covered costs", notPaid: "did not cover costs", needsLine: (p: number) => `needs ${p > 0 ? "+" : ""}${p}%`,
     paidOf: (count: number, years: number) => `paid off ${count} of ${years}`,
     chartDescription: (month: string) => `Price change in each past year after waiting 1 to 6 months from ${month}, against the rise needed to cover your costs`,
+    legendPaid: "Year waiting paid off", legendNotPaid: "Year it did not", legendNeeded: "Rise needed to cover your costs", legendZone: "Where waiting pays off",
     details: "Details", detailsHint: "Year-by-year table and median changes",
     scrollHint: "Swipe sideways to see all months.",
     excluded: (months: string) => `Left out: ${months}. The price moved more than 20% that month and came straight back the next, which may be a data problem.`,
@@ -170,6 +174,7 @@ export function SellOrHoldPage() {
         <p className="rate-caption">{copy.chartNote} {copy.summaryNote}</p>
         <HoldOutcomeChart years={history.years} monthLabel={(month) => monthText(month, language)} description={copy.chartDescription(monthNames[startMonth - 1])}
           neededLabel={copy.needsLine} paidLabel={copy.paid} notPaidLabel={copy.notPaid}
+          legend={{ paid: copy.legendPaid, notPaid: copy.legendNotPaid, needed: copy.legendNeeded, zone: copy.legendZone }}
           columns={HOLD_HORIZONS.map((months) => {
             const summary = history.summaries.find((item) => item.months === months)!;
             const needed = breakEven(months);
@@ -182,7 +187,7 @@ export function SellOrHoldPage() {
       {(() => {
         const yearsBody = <>
         <p id="hold-years-scroll-hint" className="table-scroll-hint">{copy.scrollHint}</p>
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="hold-years" aria-describedby="hold-years-scroll-hint"><table>
+        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="hold-years" aria-describedby="hold-years-scroll-hint"><table className="hold-years-table">
           <thead><tr><th scope="col">{copy.startMonth}</th><th scope="col" className="numeric">{copy.start}</th>{HOLD_HORIZONS.map((months) => <th scope="col" className="numeric" key={months}>{copy.months(months)}</th>)}</tr></thead>
           <tbody>{history.years.map((year) => <tr key={year.start_month}>
             <td>{monthText(year.start_month, language)}</td><td className="numeric">{rupees(year.start_price)}</td>
@@ -193,10 +198,13 @@ export function SellOrHoldPage() {
         </>;
         // The year table is the full record behind the chart, folded under "Details" on every screen.
         return <details className="rate-card hold-fold"><summary><span><strong id="hold-years">{copy.details}</strong><small>{copy.detailsHint}</small></span></summary>
+          {/* "Median change" is said once above the cards rather than inside each, so a card is the period and its
+              median on one line with the count of rising years under it. */}
+          <p className="hold-medians-title">{copy.mediansTitle}</p>
           <ul className="hold-medians">{HOLD_HORIZONS.map((months) => {
             const summary = history.summaries.find((item) => item.months === months)!;
             return <li key={months}><span>{copy.months(months)}</span><b className={tone(summary.median_percent)}>{signed(summary.median_percent)}</b>
-              <small>{copy.typical} · {copy.rose} {copy.ofYears(summary.rose, summary.years)}</small></li>;
+              <small>{copy.roseIn(summary.rose, summary.years)}</small></li>;
           })}</ul>
           {yearsBody}</details>;
       })()}

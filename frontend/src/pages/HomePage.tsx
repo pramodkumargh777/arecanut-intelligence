@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowRight, ArrowUp, ChevronDown, ExternalLink, Minus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AboutData } from "../components/AboutData";
 import { ShareButton } from "../components/ShareButton";
 import { useChangeFlash } from "../components/useChangeFlash";
@@ -19,6 +19,7 @@ import { VARIETIES, VARIETY_GROUPS } from "../services/varieties";
 import chaliImage from "../assets/varieties/chali.webp";
 import rashiImage from "../assets/varieties/rashi.webp";
 import sippeGotuImage from "../assets/varieties/sippe-gotu.webp";
+import { RollingNumber } from "../components/RollingNumber";
 
 /** The three varieties most growers sell are picture cards; every other variety is in the "More varieties" list. */
 const HOME_VARIETIES = VARIETIES.filter((item) => item.everyday);
@@ -234,7 +235,7 @@ function RateRow({ row, today, language, highest, showLabel, change, reveal, sou
         {showLabel && <span className="rate-label" lang={label ? language : "en"}>{label ?? row.variety}</span>}</span>
     </div>
     <div className="rate-price">
-      <strong>{rupees(row.average_price)}</strong>
+      <strong><RollingNumber text={rupees(row.average_price)} /></strong>
       <span className="rate-sub"><ChangeLine change={change} today={today} language={language} /><span className="rate-range">{rupees(row.minimum_price)} – {rupees(row.maximum_price)}</span></span>
       {priceKey && <span className="rate-key">{priceKey}</span>}
     </div>
@@ -277,6 +278,26 @@ function useCardStates() {
   return { cards, toggle };
 }
 
+const SEEN_REPORT_KEY = "ani-latest-report-seen";
+
+/**
+ * The "latest report" pill. When a newer report has arrived since this device last showed one, its dot pulses once to
+ * say so; the first visit has nothing to compare and does not pulse. The date seen is kept only on this device, and a
+ * browser that blocks storage simply never pulses.
+ */
+function ReportDatePill({ newest, old, children }: { newest: string; old: boolean; children: ReactNode }) {
+  const [fresh, setFresh] = useState(false);
+  useEffect(() => {
+    try {
+      const seen = window.localStorage.getItem(SEEN_REPORT_KEY);
+      if (seen && newest > seen) setFresh(true);
+      if (!seen || newest > seen) window.localStorage.setItem(SEEN_REPORT_KEY, newest);
+    } catch { /* storage blocked: no pulse */ }
+  }, [newest]);
+  return <p className={`home-date-pill${old ? " home-date-pill-old" : ""}${fresh ? " is-fresh" : ""}`}>
+    <span className="home-date-dot" aria-hidden="true" />{children}</p>;
+}
+
 export function HomePage() {
   const { language } = useLanguage();
   const { code } = useCommodity();
@@ -287,6 +308,18 @@ export function HomePage() {
   // Enough reports to find each branch's previous one. Older ones are too old to show a change against anyway.
   const historyFrom = new Date(calendarDateToTime(today) - (MAX_CHANGE_GAP_DAYS + 7) * DAY_MS).toISOString().slice(0, 10);
   const variety = VARIETIES.find((item) => item.key === params.get("v")) ?? VARIETIES[0];
+  // Switching variety dips the price board and cards and fades them back (0.18s), so the swap reads as a change rather
+  // than a snap. Web Animations, so nothing remounts and the prices still glide from old to new; skipped on first load
+  // and for readers who ask for reduced motion.
+  const swapped = useRef<string | null>(null);
+  useEffect(() => {
+    if (swapped.current === null) { swapped.current = variety.key; return; }
+    if (swapped.current === variety.key) return;
+    swapped.current = variety.key;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    document.querySelectorAll<HTMLElement>(".home .glance, .home .home-price-section").forEach((element) =>
+      element.animate?.([{ opacity: 0.35 }, { opacity: 1 }], { duration: 180, easing: "ease-out" }));
+  }, [variety.key]);
   const requests = SOURCES.flatMap((source) => (variety.labels[source.key] ?? []).map((label) => ({ source: source.key, label })));
   // TUMCOS never states a variety, so its single rate is shown only beside the common dried grades.
   const showTumcos = Boolean(variety.tumcos);
@@ -343,8 +376,8 @@ export function HomePage() {
   return <div className="page-stack home" lang={language}>
     <section className="home-hero">
       <div><h1>{copy.title}</h1><p>{copy.subtitle}</p></div>
-      {newest && <p className={`home-date-pill${newestAge !== null && newestAge > 2 ? " home-date-pill-old" : ""}`}>
-        <span className="home-date-dot" aria-hidden="true" /><span>{copy.latestPill}: <strong>{dateText(newest, language)}</strong> · {ageText(newestAge ?? 0, language)}</span></p>}
+      {newest && <ReportDatePill newest={newest} old={newestAge !== null && newestAge > 2}>
+        <span>{copy.latestPill}: <strong>{dateText(newest, language)}</strong> · {ageText(newestAge ?? 0, language)}</span></ReportDatePill>}
     </section>
 
     <div className="home-variety">
@@ -405,8 +438,8 @@ export function HomePage() {
             <span className={`glance-date${age > 2 ? " glance-date-old" : ""}`}>{dateText(latest, language)} · {ageText(age, language)}</span>
           </div>
           <p className="glance-range">
-            <span>{rupees(low)}</span>
-            {low !== high && <><span className="glance-dash" aria-hidden="true">–</span><span className="sr-only"> {copy.to} </span><span>{rupees(high)}</span></>}
+            <span><RollingNumber text={rupees(low)} /></span>
+            {low !== high && <><span className="glance-dash" aria-hidden="true">–</span><span className="sr-only"> {copy.to} </span><span><RollingNumber text={rupees(high)} /></span></>}
             <small>{copy.perQuintal}</small>
           </p>
           {/* Phones: unit and branch count on one quiet line under the range, so neither wraps alone. */}
@@ -501,7 +534,7 @@ export function HomePage() {
       {official.isPending ? <SkeletonRows label={copy.loading} rows={1} /> : official.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void official.refetch()} /> : !apmcRow ? <p className="rate-empty">{copy.officialEmpty}</p> :
         <><ul className="rate-list">{[apmcRow].map((row) => <li className="rate-row" key={row.id}>
           <div className="rate-place"><strong>{row.market_name}</strong><span className="rate-meta"><span>{row.district} · {dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span><span className="rate-label" lang="en">{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""}<span className="rate-label-source"> · {row.source_name}</span></span></span></div>
-          <div className="rate-price"><strong>{rupees(row.modal_price)}</strong></div>
+          <div className="rate-price"><strong><RollingNumber text={rupees(row.modal_price)} /></strong></div>
         </li>)}</ul>
         <Link className="rate-more-toggle" to="/prices?feed=official">{copy.officialOthers}<ArrowRight size={15} aria-hidden="true" /></Link></>}
       <footer className="rate-card-foot">{apmcRow ? <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("APMC")} title={copy.shareOfficialTitle} message={() => shareMessage({

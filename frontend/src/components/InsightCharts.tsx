@@ -5,7 +5,7 @@ import * as echarts from "echarts/core";
 import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-import { CHART_FONT, monthAxisInterval, SERIES_COLORS, useChartPalette } from "./chartPalette";
+import { CHART_FONT, chartMotion, monthAxisInterval, SERIES_COLORS, useChartPalette } from "./chartPalette";
 import { defineCopy, useCopy } from "../services/language";
 
 const CHART = defineCopy({
@@ -19,7 +19,7 @@ export { SERIES_COLORS };
 const inr = (value: number | null | undefined, missing = CHART.en.notReported) => value == null || !Number.isFinite(value) ? missing : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const axisInr = (value: number) => `₹${Math.round(value).toLocaleString("en-IN")}`;
 const base = (description: string, INK: ReturnType<typeof useChartPalette>["INK"]) => ({
-  animation: false, useUTC: true, aria: { enabled: true, label: { description } }, textStyle: { fontFamily: CHART_FONT, color: INK[900] },
+  ...chartMotion(), useUTC: true, aria: { enabled: true, label: { description } }, textStyle: { fontFamily: CHART_FONT, color: INK[900] },
   legend: { top: 0, left: 0, itemWidth: 22, itemHeight: 8, itemGap: 16, itemStyle: { opacity: 0 }, textStyle: { color: INK[600], fontSize: 12, fontFamily: CHART_FONT } },
 });
 

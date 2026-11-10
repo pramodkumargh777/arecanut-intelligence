@@ -15,6 +15,7 @@ import { VARIETIES } from "../services/varieties";
 import { ForecastShowcase } from "../components/ForecastShowcase";
 import { PriceOutlook } from "../components/PriceOutlook";
 import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
+import { RollingNumber } from "../components/RollingNumber";
 import type { ModelEvaluation } from "../services/forecasting";
 import { TSS_VARIETIES } from "../../../shared/tss-varieties";
 import { AssistantPage } from "./AssistantPage";
@@ -648,6 +649,22 @@ describe("market experience", () => {
   });
 });
 
+/** The text a screen reader would read: aria-hidden subtrees (such as rolling digits) removed, tags stripped. */
+function spoken(html: string): string {
+  let out = "", hiddenDepth = 0;
+  for (const token of html.match(/<[^>]+>|[^<]+/g) ?? []) {
+    if (token.startsWith("</")) { if (hiddenDepth) hiddenDepth--; continue; }
+    if (token.startsWith("<")) {
+      const selfClosing = token.endsWith("/>");
+      if (hiddenDepth) { if (!selfClosing) hiddenDepth++; continue; }
+      if (token.includes('aria-hidden="true"') && !selfClosing) hiddenDepth = 1;
+      continue;
+    }
+    if (!hiddenDepth) out += token;
+  }
+  return out.replace(/&#x27;/g, "'").replace(/&amp;/g, "&");
+}
+
 describe("forecast evaluation summary", () => {
   const evaluation = (model: string, mae: number, status: ModelEvaluation["status"] = "not_better_than_baseline"): ModelEvaluation => ({
     id: mae, series_id: "KA|Rashi", variety: "Rashi", market: "Karnataka", grade: null, horizon: 1, model, model_version: "1",
@@ -691,8 +708,8 @@ describe("price outlook", () => {
     const html = render(<PriceOutlook variety="Rashi" historyCount={70} evaluation={evaluation} outlook={null}
       forecast={{ reporting_month: "2026-11", model: "last_value", point: 47175, lower: 43048, upper: 51301, nominal_coverage: 0.8, method: "" }}
       prices={[{ reporting_month: "2026-09", weighted_price: 47805 }, { reporting_month: "2026-10", weighted_price: 47175 }]} />);
-    expect(html).toContain("Likely between ₹43,048 and ₹51,301");
-    expect(html).toContain("Most likely around ₹47,175 per quintal.");
+    expect(spoken(html)).toContain("Likely between ₹43,048 and ₹51,301");
+    expect(spoken(html)).toContain("Most likely around ₹47,175 per quintal.");
     expect(html).toContain("1 of 2 months");
     expect(html).toContain("Outside range");
     expect(html).toContain("Outlook chart: 2 months");
@@ -705,10 +722,23 @@ describe("sell or wait chart", () => {
       changes: [{ months: 3, target_month: "x", percent, excluded }] });
     const html = renderToStaticMarkup(<HoldOutcomeChart years={[year("2021-11", 6), year("2022-11", 2.5), year("2023-11", -4), year("2024-11", 20, true)]}
       columns={[{ months: 3, label: "3 months", needed: 2.5, covered: "paid off 2 of 3" }]} monthLabel={(m) => m}
-      neededLabel={(p) => `needs +${p}%`} paidLabel="covered costs" notPaidLabel="did not cover costs" description="chart" />);
+      neededLabel={(p) => `needs +${p}%`} paidLabel="covered costs" notPaidLabel="did not cover costs" description="chart"
+      legend={{ paid: "paid", notPaid: "not", needed: "needed", zone: "zone" }} />);
     expect(html.match(/hold-chart-dot is-paid/g)).toHaveLength(2);
     expect(html.match(/hold-chart-dot/g)).toHaveLength(3);
-    expect(html).toContain("needs +2.5%");
-    expect(html).toContain("paid off 2 of 3");
+    expect(spoken(html)).toContain("needs +2.5%");
+    expect(spoken(html)).toContain("paid off 2 of 3");
+  });
+});
+
+describe("rolling price", () => {
+  it("gives screen readers the exact price and keeps the moving digits hidden from them", () => {
+    const html = renderToStaticMarkup(<RollingNumber text="₹46,789" />);
+    expect(html).toContain('<span class="sr-only">₹46,789</span>');
+    expect(html).toContain('class="roll-face" aria-hidden="true"');
+    expect(html.match(/class="roll-digit"/g)).toHaveLength(5);
+    // The resting state is the final digit, so the price is right even if the roll animation never runs.
+    expect(html).toContain("translateY(-90%)"); // the 9 in 46,789
+    expect(html).toContain("translateY(-40%)"); // the 4
   });
 });
