@@ -43,7 +43,8 @@ const COPY = defineCopy({
     summaryNote: "ಕರ್ನಾಟಕದ ತಿಂಗಳ ಸರಾಸರಿ ದರ (AGMARKNET). ನಿಮ್ಮ ಶಾಖೆಯ ದರ ಬೇರೆ ಇರಬಹುದು.",
     wait: "ಕಾದ ಅವಧಿ", months: (n: number) => `${n} ತಿಂಗಳು`, rose: "ದರ ಏರಿದ ವರ್ಷಗಳು", typical: "ಮಧ್ಯಮ ಬದಲಾವಣೆ", range: "ಕನಿಷ್ಠ / ಗರಿಷ್ಠ",
     needed: "ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ", covered: "ಖರ್ಚು ಸರಿದೂಗಿದ ವರ್ಷಗಳು",
-    ofYears: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count}`, notEnough: `${MIN_HOLD_YEARS} ವರ್ಷಗಳಿಗಿಂತ ಕಡಿಮೆ ದತ್ತಾಂಶ`,
+    ofYears: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count}`, roseIn: (count: number, years: number) => `${years} ವರ್ಷಗಳಲ್ಲಿ ${count} ಬಾರಿ ಏರಿಕೆ`,
+    mediansTitle: "ಕಾದ ಅವಧಿಯ ಪ್ರಕಾರ ಮಧ್ಯಮ ಬದಲಾವಣೆ", notEnough: `${MIN_HOLD_YEARS} ವರ್ಷಗಳಿಗಿಂತ ಕಡಿಮೆ ದತ್ತಾಂಶ`,
     yearsTitle: "ವರ್ಷವಾರು ವಿವರ", start: "ಆರಂಭ ದರ", startMonth: "ಆರಂಭ",
     chartNote: "ಪ್ರತಿ ಚುಕ್ಕೆ ಒಂದು ಹಿಂದಿನ ವರ್ಷ. ಗೆರೆ ನಿಮ್ಮ ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ; ಗೆರೆಯ ಮೇಲಿನ ಹಸಿರು ಚುಕ್ಕೆಗಳು ಕಾಯುವುದು ಲಾಭವಾದ ವರ್ಷಗಳು.",
     paid: "ಖರ್ಚು ಸರಿದೂಗಿತು", notPaid: "ಖರ್ಚು ಸರಿದೂಗಲಿಲ್ಲ", needsLine: (p: number) => `ಬೇಕು ${p > 0 ? "+" : ""}${p}%`,
@@ -75,7 +76,8 @@ const COPY = defineCopy({
     summaryNote: "Karnataka monthly average price (AGMARKNET). Your branch's rate can differ.",
     wait: "Waited", months: (n: number) => `${n} month${n === 1 ? "" : "s"}`, rose: "Years the price rose", typical: "Median change", range: "Lowest / highest",
     needed: "Rise needed to cover costs", covered: "Years that covered costs",
-    ofYears: (count: number, years: number) => `${count} of ${years}`, notEnough: `Under ${MIN_HOLD_YEARS} years of data`,
+    ofYears: (count: number, years: number) => `${count} of ${years}`, roseIn: (count: number, years: number) => `Rose in ${count} of ${years} years`,
+    mediansTitle: "Median change by waiting period", notEnough: `Under ${MIN_HOLD_YEARS} years of data`,
     yearsTitle: "Year by year", start: "Starting price", startMonth: "From",
     chartNote: "Each dot is one past year. The line is the rise you need to cover your costs; green dots above it are the years waiting paid off.",
     paid: "covered costs", notPaid: "did not cover costs", needsLine: (p: number) => `needs ${p > 0 ? "+" : ""}${p}%`,
@@ -196,10 +198,13 @@ export function SellOrHoldPage() {
         </>;
         // The year table is the full record behind the chart, folded under "Details" on every screen.
         return <details className="rate-card hold-fold"><summary><span><strong id="hold-years">{copy.details}</strong><small>{copy.detailsHint}</small></span></summary>
+          {/* "Median change" is said once above the cards rather than inside each, so a card is the period and its
+              median on one line with the count of rising years under it. */}
+          <p className="hold-medians-title">{copy.mediansTitle}</p>
           <ul className="hold-medians">{HOLD_HORIZONS.map((months) => {
             const summary = history.summaries.find((item) => item.months === months)!;
             return <li key={months}><span>{copy.months(months)}</span><b className={tone(summary.median_percent)}>{signed(summary.median_percent)}</b>
-              <small>{copy.typical} · {copy.rose} {copy.ofYears(summary.rose, summary.years)}</small></li>;
+              <small>{copy.roseIn(summary.rose, summary.years)}</small></li>;
           })}</ul>
           {yearsBody}</details>;
       })()}

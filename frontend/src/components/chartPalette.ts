@@ -89,3 +89,16 @@ export function monthAxisInterval(categories: string[]): "auto" | ((index: numbe
   const keep = categories.length > 54 ? /^Jan/ : /^(Jan|Jul)/;
   return (_index, label) => keep.test(label);
 }
+
+/**
+ * Chart motion: lines draw in left to right and bars grow once, in 0.6s, on first view; later updates (a new variety
+ * or range) settle in 0.3s. Readers who ask their device to reduce motion get static charts. Tooltips and hover
+ * never animate.
+ */
+export function chartMotion() {
+  const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  return reduced ? { animation: false } : {
+    animation: true, animationDuration: 600, animationEasing: "cubicOut" as const,
+    animationDurationUpdate: 300, animationEasingUpdate: "cubicOut" as const, animationThreshold: 4000,
+  };
+}

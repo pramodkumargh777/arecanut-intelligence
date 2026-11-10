@@ -3,6 +3,7 @@ import type { ForecastingPerformance, ModelEvaluation, StoredPrediction, TrackSe
 import { showsValues } from "../services/forecasting";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { LazyTrackChart } from "./LazyCharts";
+import { useSlidingPill } from "./useSlidingPill";
 
 /**
  * The reader-facing half of the forecast evaluation page: one verdict per variety and horizon, a leaderboard against
@@ -109,6 +110,7 @@ export function ForecastShowcase({ evaluations, track, trackModel, predictions, 
   const [chosen, setVariety] = useState("Rashi");
   const variety = varieties.includes(chosen) ? chosen : varieties[0] ?? "";
   const [horizon, setHorizon] = useState(1);
+  const pill = useSlidingPill<HTMLDivElement>(horizon);
   const rows = evaluations.filter((row) => row.variety === variety && row.horizon === horizon);
   const baseline = rows.find((row) => row.model === rows[0]?.baseline_model);
   const challengers = rows.filter((row) => !BASELINES.has(row.model) && row.mae != null).sort((a, b) => a.mae! - b.mae!);
@@ -154,7 +156,7 @@ export function ForecastShowcase({ evaluations, track, trackModel, predictions, 
       <label className="fx-select"><span>{t.variety}</span>
         <select value={variety} onChange={(event) => setVariety(event.target.value)}>{varieties.map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
       {/* Up to three horizons get word labels; more get a "Months ahead" label and numbered buttons so six still fit a phone. */}
-      <div className={`fx-segmented${horizons.length > 3 ? " is-numeric" : ""}`} role="group" aria-label={t.horizon}>
+      <div ref={pill} className={`fx-segmented${horizons.length > 3 ? " is-numeric" : ""}`} role="group" aria-label={t.horizon}>
         {horizons.length > 3 && <span className="fx-segmented-label">{t.monthsAhead}</span>}
         {horizons.map((h) => <button type="button" key={h} aria-pressed={h === horizon} aria-label={t.ahead(h)} onClick={() => setHorizon(h)}>{horizons.length > 3 ? h : t.ahead(h)}</button>)}
       </div>

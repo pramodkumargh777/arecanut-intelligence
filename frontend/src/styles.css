@@ -793,10 +793,16 @@ a.rate-more-toggle { text-decoration: none; }
 .skeleton-row:nth-of-type(2) .skeleton-lines > :last-child { width: 55%; }
 .skeleton-row:nth-of-type(3) .skeleton-lines > :first-child { width: 50%; }
 .about-data[open] > .about-data-body { animation: fade-in .15s ease-out; }
+/* Folded sections open and close smoothly where the browser supports animating <details>; elsewhere the content
+   fades in. Reduced motion turns both off (the global rule removes transitions; the block below removes the fade). */
+.hold-costs[open] > .hold-costs-body, .hold-fold[open] > summary ~ *, .fx-technical[open] > summary ~ *, .phone-fold[open] > summary ~ * { animation: fade-in .2s ease-out; }
 @supports selector(::details-content) {
-  .about-data { interpolate-size: allow-keywords; }
+  .about-data, .hold-costs, .hold-fold, .fx-technical, .phone-fold { interpolate-size: allow-keywords; }
   .about-data::details-content { block-size: 0; overflow: hidden; transition: block-size .15s ease, content-visibility .15s allow-discrete; }
   .about-data[open]::details-content { block-size: auto; }
+  .hold-costs::details-content, .hold-fold::details-content, .fx-technical::details-content, .phone-fold::details-content {
+    block-size: 0; overflow: hidden; transition: block-size .28s cubic-bezier(.2, .8, .2, 1), content-visibility .28s allow-discrete; }
+  .hold-costs[open]::details-content, .hold-fold[open]::details-content, .fx-technical[open]::details-content, .phone-fold[open]::details-content { block-size: auto; }
 }
 @keyframes rate-updated { from { background-color: var(--brand-tint); } to { background-color: transparent; } }
 @keyframes rate-reveal { from { max-height: 0; opacity: 0; } to { max-height: 240px; opacity: 1; } }
@@ -804,7 +810,8 @@ a.rate-more-toggle { text-decoration: none; }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes pop-in { from { transform: scale(.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .rate-row-updated, .rate-row-in, .rate-row-out, .skeleton-bar, .rate-share-done svg, .mobile-scrim, .about-data[open] > .about-data-body, .market-suggestions { animation: none !important; }
+  .rate-row-updated, .rate-row-in, .rate-row-out, .skeleton-bar, .rate-share-done svg, .mobile-scrim, .about-data[open] > .about-data-body, .market-suggestions,
+  .hold-costs[open] > .hold-costs-body, .hold-fold[open] > summary ~ *, .fx-technical[open] > summary ~ *, .phone-fold[open] > summary ~ * { animation: none !important; }
   /* Without the fade, the changed row is still marked, just without movement. */
   .rate-row-updated { background-color: var(--brand-tint); }
   .rate-row-out { opacity: 0; }
@@ -1064,11 +1071,21 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .hold-costs-body > .rate-caption { grid-column: 1 / -1; margin: 0; }
 .hold-fold > summary { padding: 0; }
 .hold-fold[open] > summary { margin-bottom: 12px; }
-.hold-medians { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0 0 14px; padding: 0; list-style: none; }
-.hold-medians li { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
-.hold-medians span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
-.hold-medians b { color: var(--ink); font-size: 18px; font-variant-numeric: tabular-nums; }
-.hold-medians small { color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+.rate-card.hold-fold .hold-medians-title { margin: 0 0 8px; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.rate-card.hold-fold .hold-medians { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; }
+/* Period and median share the top line; the count of rising years sits under it on one line. */
+.hold-medians li { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 8px; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
+.hold-medians span { color: var(--muted); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.hold-medians b { color: var(--ink); font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hold-medians small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+/* On a phone five cards would wrap 2-2-1; a tight list keeps each period, its count and its median on one line. */
+@media (max-width: 640px) {
+  .rate-card.hold-fold .hold-medians { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
+  .hold-medians li { grid-template-columns: 1fr auto auto; align-items: baseline; gap: 10px; padding: 8px 12px; border: 0; border-radius: 0; background: none; }
+  .hold-medians li + li { border-top: 1px solid var(--line); }
+  .hold-medians small { grid-column: 2; grid-row: 1; white-space: nowrap; }
+  .hold-medians b { grid-column: 3; grid-row: 1; min-width: 4.2em; text-align: right; font-size: 15px; }
+}
 
 .hold-chart { display: grid; grid-template-columns: 46px minmax(0, 1fr); margin: 14px 0 0; }
 .hold-chart-axis { position: relative; height: 240px; }
@@ -1089,6 +1106,17 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .hold-chart-label { display: grid; justify-items: center; gap: 2px; padding: 10px 4px 0; text-align: center; }
 .hold-chart-label strong { color: var(--ink); font-size: 13.5px; font-weight: 650; }
 .hold-chart-label small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+/* With room to spare, the period heads the column and its two figures share one line beneath it, so the labels stop
+   stacking into a tall three-line block. Decided by the column's own width (a sidebar or Kannada changes what fits), so
+   narrow columns keep the stack. */
+.hold-chart-col { container-type: inline-size; }
+@container (min-width: 200px) {
+  .hold-chart-label { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 3px 0; padding-top: 12px; }
+  .hold-chart-label strong { flex-basis: 100%; }
+  .hold-chart-label small { white-space: nowrap; }
+  .hold-chart-need-text { white-space: nowrap; }
+  .hold-chart-need-text + small::before { content: "·"; margin: 0 7px; color: var(--subtle); }
+}
 @media (max-width: 640px) {
   .hold-chart { grid-template-columns: 38px minmax(0, 1fr); }
   .hold-chart-axis, .hold-chart-grid { height: 220px; }
@@ -1146,3 +1174,34 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   .hold-costs summary > span, .hold-fold summary > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
   .hold-costs > summary, .hold-fold > summary { min-height: 44px; }
 }
+
+/* Odometer prices: each digit is a 0–9 strip in a one-character window that slides to its value once. */
+.roll { display: inline-block; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.roll-face { display: inline-flex; align-items: flex-end; user-select: none; -webkit-user-select: none; }
+.roll-digit { display: inline-block; height: 1.15em; overflow: hidden; line-height: 1.15em; }
+/* Resting state is the final digit (set inline). On first appearance the strip rolls up from 0 while fading in; a
+   later change of value glides by transition. */
+.roll-strip { display: flex; flex-direction: column; transition: transform .55s cubic-bezier(.2, .75, .25, 1); animation: roll-in .55s cubic-bezier(.2, .75, .25, 1) backwards; }
+@keyframes roll-in { from { transform: translateY(0); opacity: 0; } 45% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .roll-strip { animation: none; } }
+.roll-strip > span { display: block; height: 1.15em; line-height: 1.15em; text-align: center; }
+.roll-char { display: inline-block; line-height: 1.15em; }
+
+/* Sliding switch highlight: one pill behind the buttons glides to the pressed one (components/useSlidingPill.ts). */
+.has-pill { position: relative; isolation: isolate; }
+.has-pill::after { content: ""; position: absolute; z-index: -1; left: 0; top: var(--pill-y); width: var(--pill-w); height: var(--pill-h);
+  transform: translateX(var(--pill-x)); transition: transform .26s cubic-bezier(.2, .8, .2, 1), width .26s cubic-bezier(.2, .8, .2, 1); pointer-events: none; }
+.has-pill > button { position: relative; transition: color .2s ease; }
+.language-toggle.has-pill::after { border-radius: 5px; background: var(--brand); }
+.language-toggle.has-pill > button[aria-pressed="true"] { background: transparent; }
+.fx-segmented.has-pill::after { border-radius: 8px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 14%), inset 0 0 0 1px var(--line); }
+.fx-segmented.has-pill > button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+
+/* New report since the last visit: the date dot pulses once (a ring that grows and fades), then rests. */
+.home-date-pill.is-fresh .home-date-dot { animation: report-pulse 1.6s ease-out 1 .4s; }
+@keyframes report-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-leaf) 70%, transparent); transform: scale(1); }
+  35% { transform: scale(1.35); }
+  100% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--brand-leaf) 0%, transparent); transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .home-date-pill.is-fresh .home-date-dot { animation: none; } }

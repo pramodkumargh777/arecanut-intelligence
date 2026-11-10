@@ -1,3 +1,4 @@
+import { RollingText } from "./RollingNumber";
 import type { HoldYear } from "../../../shared/hold-history";
 
 /**
@@ -58,8 +59,9 @@ export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, paid
           </div>
           {/* The requirement is printed under the column, not on the line, so it never sits under a year's dot. */}
           <div className="hold-chart-label"><strong>{column.label}</strong>
-            {column.needed !== null && <span className="hold-chart-need-text">{neededLabel(column.needed)}</span>}
-            {column.covered && <small>{column.covered}</small>}</div>
+            {/* These follow the reader's costs, so they roll when the costs are changed. */}
+            {column.needed !== null && <span className="hold-chart-need-text"><RollingText text={neededLabel(column.needed)} /></span>}
+            {column.covered && <small><RollingText text={column.covered} /></small>}</div>
         </div>;
       })}
     </div>

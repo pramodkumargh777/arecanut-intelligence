@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { formatDate, formatMonth, formatTimestamp, type Language } from "./formatting";
+import { useSlidingPill } from "../components/useSlidingPill";
 
 export { formatDate, formatMonth, formatTimestamp };
 
@@ -33,7 +34,8 @@ export const useLanguage = () => useContext(LanguageContext);
 
 export function LanguageToggle() {
   const { language, setLanguage } = useLanguage();
-  return <div className="language-toggle" role="group" aria-label="Language / ಭಾಷೆ">
+  const pill = useSlidingPill<HTMLDivElement>(language);
+  return <div ref={pill} className="language-toggle" role="group" aria-label="Language / ಭಾಷೆ">
     <button type="button" lang="kn" aria-pressed={language === "kn"} onClick={() => setLanguage("kn")}>ಕನ್ನಡ</button>
     <button type="button" lang="en" aria-pressed={language === "en"} onClick={() => setLanguage("en")}>English</button>
   </div>;
