@@ -342,7 +342,9 @@ details[open] > summary { margin-bottom: 8px; }
 .panel-bottom-link { border-top: 1px solid var(--surface-2); padding-top: 12px; justify-content: space-between; }
 
 /* Tables */
-.table-scroll { overflow-x: auto; max-width: 100%; scrollbar-color: var(--line-strong) transparent; scrollbar-width: thin; }
+/* position: relative keeps screen-reader-only text inside scrolled rows contained by (and clipped to) the scroller;
+   otherwise its offscreen position below the visible rows stretches the page with empty space. */
+.table-scroll { position: relative; overflow-x: auto; max-width: 100%; scrollbar-color: var(--line-strong) transparent; scrollbar-width: thin; }
 .table-scroll:focus-visible { outline-offset: -2px; }
 .table-tall { max-height: 560px; overflow-y: auto; border-bottom: 1px solid var(--surface-2); }
 table { border-collapse: separate; border-spacing: 0; width: 100%; white-space: nowrap; text-align: left; font-size: 13px; font-variant-numeric: tabular-nums; }
@@ -1096,4 +1098,51 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   .hold-chart-need-text { font-size: 11px; }
   .hold-chart-label strong { font-size: 12.5px; }
   .hold-chart-label small { font-size: 11px; }
+}
+
+/* Fixed, proportionate columns on wider screens, so spare width is shared evenly instead of opening one wide gap. */
+@media (min-width: 641px) {
+  .coverage-table { table-layout: fixed; }
+  .coverage-table th:nth-child(1) { width: 30%; }
+  .coverage-table th:nth-child(2) { width: 24%; }
+  .coverage-table th:nth-child(3) { width: 20%; }
+  .coverage-table th:nth-child(4), .coverage-table td:nth-child(4) { width: 26%; padding-left: 28px; }
+  .hold-years-table { table-layout: fixed; }
+  .hold-years-table th:nth-child(1) { width: 15%; }
+  .hold-years-table th:nth-child(2) { width: 15%; }
+  .hold-years-table th:nth-child(n + 3) { width: 14%; }
+}
+
+/* Sell-or-wait chart: legend, paid-off zone, typical marker, hover labels. */
+.hold-chart { row-gap: 6px; }
+.hold-chart-legend { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 8px; color: var(--muted); font-size: 12.5px; }
+.hold-chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.hold-chart-legend i { display: inline-block; flex: none; }
+.hold-key-paid { width: 11px; height: 11px; border-radius: 50%; background: var(--brand-leaf); }
+.hold-key-not { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--subtle); box-sizing: border-box; }
+.hold-key-need { width: 18px; height: 0; border-top: 2px solid #d99a2b; }
+.hold-key-zone { width: 16px; height: 11px; border-radius: 3px; background: color-mix(in srgb, var(--brand-leaf) 22%, transparent); }
+.hold-chart-col { transition: background-color .15s ease; border-radius: 10px; }
+.hold-chart-col:hover { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
+.hold-chart-zone { position: absolute; top: 0; left: 6%; right: 6%; pointer-events: none;
+  background: linear-gradient(to top, color-mix(in srgb, var(--brand-leaf) 11%, transparent), transparent 85%); }
+.hold-chart-need { z-index: 1; left: 6%; right: 6%; border-top-width: 2px; border-radius: 2px; }
+.hold-chart-dot { z-index: 2; transition: transform .12s ease, box-shadow .12s ease; outline: none; }
+.hold-chart-dot.is-paid { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-leaf) 25%, transparent); }
+.hold-chart-dot:hover, .hold-chart-dot:focus-visible { z-index: 3; transform: translate(-50%, -50%) scale(1.35); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 18%, transparent); }
+.hold-chart-dot::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%) scale(.74); transform-origin: bottom center;
+  padding: 6px 10px; border-radius: 8px; background: var(--ink); color: var(--surface); font-size: 12px; font-weight: 600; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .12s ease; box-shadow: 0 6px 18px rgb(0 0 0 / 25%); }
+.hold-chart-dot.tip-left::after { left: auto; right: -6px; transform: scale(.74); transform-origin: bottom right; }
+.hold-chart-dot:hover::after, .hold-chart-dot:focus-visible::after { opacity: 1; }
+.hold-chart-label small { font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .hold-chart-legend { gap: 4px 12px; font-size: 11.5px; }
+  .hold-chart-zone, .hold-chart-need { left: 3%; right: 3%; }
+  .hold-chart-dot::after { font-size: 11px; white-space: normal; width: 150px; }
+}
+/* Desktop: a fold's title and its short note share one line; phones keep them stacked. */
+@media (min-width: 641px) {
+  .hold-costs summary > span, .hold-fold summary > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+  .hold-costs > summary, .hold-fold > summary { min-height: 44px; }
 }

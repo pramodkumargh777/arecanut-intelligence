@@ -705,7 +705,8 @@ describe("sell or wait chart", () => {
       changes: [{ months: 3, target_month: "x", percent, excluded }] });
     const html = renderToStaticMarkup(<HoldOutcomeChart years={[year("2021-11", 6), year("2022-11", 2.5), year("2023-11", -4), year("2024-11", 20, true)]}
       columns={[{ months: 3, label: "3 months", needed: 2.5, covered: "paid off 2 of 3" }]} monthLabel={(m) => m}
-      neededLabel={(p) => `needs +${p}%`} paidLabel="covered costs" notPaidLabel="did not cover costs" description="chart" />);
+      neededLabel={(p) => `needs +${p}%`} paidLabel="covered costs" notPaidLabel="did not cover costs" description="chart"
+      legend={{ paid: "paid", notPaid: "not", needed: "needed", zone: "zone" }} />);
     expect(html.match(/hold-chart-dot is-paid/g)).toHaveLength(2);
     expect(html.match(/hold-chart-dot/g)).toHaveLength(3);
     expect(html).toContain("needs +2.5%");

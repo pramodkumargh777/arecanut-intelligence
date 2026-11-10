@@ -22,9 +22,10 @@ function scale(values: number[]) {
   return { min, max, ticks, at: (value: number) => `${((max - value) / (max - min)) * 100}%` };
 }
 
-export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, paidLabel, notPaidLabel, description }: {
+export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, paidLabel, notPaidLabel, description, legend }: {
   years: HoldYear[]; columns: HoldColumn[]; monthLabel: (month: string) => string;
   neededLabel: (percent: number) => string; paidLabel: string; notPaidLabel: string; description: string;
+  legend: { paid: string; notPaid: string; needed: string; zone: string };
 }) {
   const points = columns.map((column) => years.flatMap((year) => year.changes
     .filter((change) => change.months === column.months && change.percent !== null && !change.excluded)
@@ -32,6 +33,10 @@ export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, paid
   const { ticks, at } = scale([...points.flat().map((point) => point.percent), ...columns.flatMap((column) => column.needed === null ? [] : [column.needed])]);
   const signed = (value: number) => `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value)}%`;
   return <figure className="hold-chart" aria-label={description}>
+    <figcaption className="hold-chart-legend">
+      <span><i className="hold-key-paid" />{legend.paid}</span><span><i className="hold-key-not" />{legend.notPaid}</span>
+      <span><i className="hold-key-need" />{legend.needed}</span><span><i className="hold-key-zone" />{legend.zone}</span>
+    </figcaption>
     <div className="hold-chart-axis" aria-hidden="true">{ticks.map((tick) => <span key={tick} style={{ top: at(tick) }}>{signed(tick)}</span>)}</div>
     <div className="hold-chart-body">
       <div className="hold-chart-grid" aria-hidden="true">{ticks.map((tick) => <i key={tick} className={tick === 0 ? "is-zero" : undefined} style={{ top: at(tick) }} />)}</div>
@@ -40,12 +45,15 @@ export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, paid
         const sorted = [...points[c]].sort((a, b) => a.percent - b.percent);
         return <div className="hold-chart-col" key={column.months}>
           <div className="hold-chart-plot">
+            {/* Everything above the cost line is the zone where waiting paid off. */}
+            {column.needed !== null && <span className="hold-chart-zone" style={{ height: at(column.needed) }} />}
             {column.needed !== null && <span className="hold-chart-need" style={{ top: at(column.needed) }} />}
             {sorted.map((point, i) => {
               const paid = column.needed !== null && point.percent >= column.needed;
               const left = sorted.length > 1 ? 22 + (56 * i) / (sorted.length - 1) : 50;
-              return <span key={point.from} className={`hold-chart-dot${paid ? " is-paid" : ""}`} style={{ top: at(point.percent), left: `${left}%` }}
-                title={`${monthLabel(point.from)} → ${monthLabel(point.to)}: ${signed(point.percent)} · ${paid ? paidLabel : notPaidLabel}`} />;
+              const tip = `${monthLabel(point.from)} → ${monthLabel(point.to)} · ${signed(point.percent)} · ${paid ? paidLabel : notPaidLabel}`;
+              return <span key={point.from} tabIndex={0} className={`hold-chart-dot${paid ? " is-paid" : ""}${left > 60 ? " tip-left" : ""}`}
+                style={{ top: at(point.percent), left: `${left}%` }} aria-label={tip} data-tip={tip} />;
             })}
           </div>
           {/* The requirement is printed under the column, not on the line, so it never sits under a year's dot. */}

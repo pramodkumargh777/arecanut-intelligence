@@ -49,6 +49,7 @@ const COPY = defineCopy({
     paid: "ಖರ್ಚು ಸರಿದೂಗಿತು", notPaid: "ಖರ್ಚು ಸರಿದೂಗಲಿಲ್ಲ", needsLine: (p: number) => `ಬೇಕು ${p > 0 ? "+" : ""}${p}%`,
     paidOf: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count} ವರ್ಷ ಲಾಭ`,
     chartDescription: (month: string) => `${month} ತಿಂಗಳಿನಿಂದ 1–6 ತಿಂಗಳು ಕಾದಿದ್ದರೆ ಪ್ರತಿ ಹಿಂದಿನ ವರ್ಷದ ದರ ಬದಲಾವಣೆ, ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆಯೊಂದಿಗೆ`,
+    legendPaid: "ಖರ್ಚು ಸರಿದೂಗಿದ ವರ್ಷ", legendNotPaid: "ಸರಿದೂಗದ ವರ್ಷ", legendNeeded: "ನಿಮ್ಮ ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ", legendZone: "ಕಾಯುವುದು ಲಾಭವಾಗುವ ವಲಯ",
     details: "ವಿವರಗಳು", detailsHint: "ವರ್ಷವಾರು ಪಟ್ಟಿ ಮತ್ತು ಮಧ್ಯಮ ಬದಲಾವಣೆ",
     scrollHint: "ಎಲ್ಲಾ ತಿಂಗಳ ವಿವರ ನೋಡಲು ಅಡ್ಡವಾಗಿ ಸ್ವೈಪ್ ಮಾಡಿ.",
     excluded: (months: string) => `ಬಿಟ್ಟಿರುವ ತಿಂಗಳು: ${months}. ಈ ತಿಂಗಳಲ್ಲಿ ದರ 20% ಕ್ಕಿಂತ ಹೆಚ್ಚು ಬದಲಾಗಿ ಮುಂದಿನ ತಿಂಗಳು ಮರಳಿ ಬಂದಿದೆ; ಇದು ದತ್ತಾಂಶದ ದೋಷ ಇರಬಹುದು.`,
@@ -80,6 +81,7 @@ const COPY = defineCopy({
     paid: "covered costs", notPaid: "did not cover costs", needsLine: (p: number) => `needs ${p > 0 ? "+" : ""}${p}%`,
     paidOf: (count: number, years: number) => `paid off ${count} of ${years}`,
     chartDescription: (month: string) => `Price change in each past year after waiting 1 to 6 months from ${month}, against the rise needed to cover your costs`,
+    legendPaid: "Year waiting paid off", legendNotPaid: "Year it did not", legendNeeded: "Rise needed to cover your costs", legendZone: "Where waiting pays off",
     details: "Details", detailsHint: "Year-by-year table and median changes",
     scrollHint: "Swipe sideways to see all months.",
     excluded: (months: string) => `Left out: ${months}. The price moved more than 20% that month and came straight back the next, which may be a data problem.`,
@@ -170,6 +172,7 @@ export function SellOrHoldPage() {
         <p className="rate-caption">{copy.chartNote} {copy.summaryNote}</p>
         <HoldOutcomeChart years={history.years} monthLabel={(month) => monthText(month, language)} description={copy.chartDescription(monthNames[startMonth - 1])}
           neededLabel={copy.needsLine} paidLabel={copy.paid} notPaidLabel={copy.notPaid}
+          legend={{ paid: copy.legendPaid, notPaid: copy.legendNotPaid, needed: copy.legendNeeded, zone: copy.legendZone }}
           columns={HOLD_HORIZONS.map((months) => {
             const summary = history.summaries.find((item) => item.months === months)!;
             const needed = breakEven(months);
@@ -182,7 +185,7 @@ export function SellOrHoldPage() {
       {(() => {
         const yearsBody = <>
         <p id="hold-years-scroll-hint" className="table-scroll-hint">{copy.scrollHint}</p>
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="hold-years" aria-describedby="hold-years-scroll-hint"><table>
+        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="hold-years" aria-describedby="hold-years-scroll-hint"><table className="hold-years-table">
           <thead><tr><th scope="col">{copy.startMonth}</th><th scope="col" className="numeric">{copy.start}</th>{HOLD_HORIZONS.map((months) => <th scope="col" className="numeric" key={months}>{copy.months(months)}</th>)}</tr></thead>
           <tbody>{history.years.map((year) => <tr key={year.start_month}>
             <td>{monthText(year.start_month, language)}</td><td className="numeric">{rupees(year.start_price)}</td>
