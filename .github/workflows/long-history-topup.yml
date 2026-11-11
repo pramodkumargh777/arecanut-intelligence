@@ -1,0 +1,102 @@
+name: Long history top-up
+
+# Keeps the 2014+ monthly series (APMC median, tables monthly_apmc_prices / monthly_apmc_series) current. Pages use it
+# only while it is as recent as the monthly report, so without this a new report would send them back to 2021+ history.
+# Fully scheduled. Each run, on days 3-10 of the month (the source holds the previous month in full by day 3; later days
+# retry a failed fetch):
+# 1. fetches the previous month's AGMARKNET daily prices into data-platform/forecasting/daily_archive/ (months already
+#    stored are skipped, so after a successful run the remaining days do nothing);
+# 2. only when a month was added: exports the live monthly report (for the tracking comparison), rebuilds the monthly
+#    series, replaces both D1 tables (about 5,000 rows written) and commits the new archive files to the repository.
+# A failed load is not committed, so the next day's run fetches and loads again.
+on:
+  schedule:
+    - cron: "30 2 3-10 * *" # 08:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: long-history-topup
+  cancel-in-progress: false
+
+jobs:
+  topup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check credentials
+        id: credentials
+        run: |
+          if [ -z "$DATA_GOV_IN_API_KEY" ] || [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::DATA_GOV_IN_API_KEY, CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not configured; skipping."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - uses: actions/setup-python@v5
+        if: steps.credentials.outputs.configured == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: data-platform/requirements-forecasting.txt
+      - name: Install
+        if: steps.credentials.outputs.configured == 'true'
+        run: python -m pip install -r data-platform/requirements-forecasting.txt
+
+      - name: Fetch the previous month's daily prices
+        if: steps.credentials.outputs.configured == 'true'
+        id: fetch
+        working-directory: data-platform
+        run: |
+          through="$(TZ=Asia/Kolkata date -d "$(TZ=Asia/Kolkata date +%Y-%m-01) -1 month" +%Y-%m)"
+          # One request at a time: data.gov.in answers HTTP 429 when fetched faster.
+          python -m forecasting daily-archive --from 2014-01 --through "$through" --workers 1 | tee "$RUNNER_TEMP/archive.json"
+          python -c 'import json,sys; failed=json.load(open(sys.argv[1]))["months_failed"]; sys.exit(f"months not fetched: {failed}" if failed else 0)' "$RUNNER_TEMP/archive.json"
+          if [ -n "$(git status --porcelain -- forecasting/daily_archive)" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+        env:
+          DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
+          AGMARKNET_HISTORY_RESOURCE_ID: ${{ vars.AGMARKNET_HISTORY_RESOURCE_ID }}
+          AGMARKNET_API_BASE_URL: ${{ vars.AGMARKNET_API_BASE_URL }}
+          AGMARKNET_PRICE_UNIT: ${{ vars.AGMARKNET_PRICE_UNIT }}
+
+      - uses: actions/setup-node@v4
+        if: steps.fetch.outputs.changed == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Export the live database
+        if: steps.fetch.outputs.changed == 'true'
+        id: export
+        run: |
+          npm ci
+          node scripts/d1-backup.mjs --remote --skip-counts --output-dir "$RUNNER_TEMP/backup" | tee "$RUNNER_TEMP/backup.json"
+          echo "dump=$(python -c 'import json,os,sys; print(os.path.abspath(json.load(open(sys.argv[1]))["dump"]))' "$RUNNER_TEMP/backup.json")" >> "$GITHUB_OUTPUT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Rebuild the monthly series and load it into D1
+        if: steps.fetch.outputs.changed == 'true'
+        run: |
+          (cd data-platform && python -m forecasting daily-monthly-sql --sql-export "${{ steps.export.outputs.dump }}" --out "$RUNNER_TEMP/apmc_monthly.sql")
+          npx wrangler d1 execute ani-market-data --remote --config api/wrangler.toml --file "$RUNNER_TEMP/apmc_monthly.sql"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Commit the new archive months
+        if: steps.fetch.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data-platform/forecasting/daily_archive
+          git commit -m "data: top up AGMARKNET daily archive through $(python -c 'import json; print(max(json.load(open("data-platform/forecasting/daily_archive/manifest.json"))["months"]))')"
+          git push
