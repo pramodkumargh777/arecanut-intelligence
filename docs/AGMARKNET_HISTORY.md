@@ -148,6 +148,11 @@ fetches only the months that failed.
 - Only the monthly results go to D1 (about 2,500 rows, tables `monthly_apmc_prices` and `monthly_apmc_series`, migration
   0022). `python -m forecasting daily-monthly-sql --sql-export <backup.sql> --out apmc.sql` writes a file that replaces
   both tables (complete months only), then `wrangler d1 execute ani-market-data --remote --file apmc.sql` loads it.
+- **Monthly top-up** (`.github/workflows/long-history-topup.yml`): on days 3–10 of each month it fetches the previous
+  month, and only when a month was added rebuilds the series, replaces both D1 tables and commits the new archive files.
+  Pages use the long series only while it is as recent as the monthly report, so if the top-up fails they fall back to
+  the report (2021+) rather than show stale prices. Needs the `DATA_GOV_IN_API_KEY`, `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID` secrets, and permission for Actions to push to the default branch.
 
 ### Where the long series is used
 
