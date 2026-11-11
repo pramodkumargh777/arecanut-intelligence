@@ -57,7 +57,7 @@ jobs:
           ANI_API_URL: ${{ vars.ANI_API_URL }}
       - name: Archive source pages and reports for replay
         if: always() && steps.credentials.outputs.configured == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: agmarknet-daily-${{ github.run_id }}
           path: ${{ runner.temp }}/agmarknet-report
