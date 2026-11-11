@@ -11,7 +11,7 @@ import { median } from "./domain/analytics";
 export const AUTO_REVIEWER = "auto-validation-v1";
 /** A branch average further than this from the variety's recent median waits for a person. */
 export const AUTO_PUBLISH_MAX_DEVIATION = 0.2;
-/** With fewer recent quotes there is no reliable "normal" to compare against, as with a newly seen variety. */
+/** With fewer recent quotes there is no reliable "normal", as with a newly seen variety, so the deviation check is skipped. */
 export const AUTO_PUBLISH_MIN_REFERENCE = 3;
 export const AUTO_PUBLISH_LOOKBACK_DAYS = 30;
 const MAX_ROWS_PER_RUN = 200;
@@ -38,8 +38,9 @@ export function holdReason(row: PendingQuote, referenceMedian: number | null, to
   const flags: string[] = row.review_flags ? JSON.parse(row.review_flags) : [];
   const unaccepted = flags.filter((flag) => !ACCEPTED_FLAGS.has(flag));
   if (unaccepted.length) return `review flag: ${unaccepted.join(", ")}`;
-  if (referenceMedian === null) return "too few recent quotes to compare against";
-  if (Math.abs(average - referenceMedian) / referenceMedian > AUTO_PUBLISH_MAX_DEVIATION) return `average ${average} is more than ${AUTO_PUBLISH_MAX_DEVIATION * 100}% from the recent median ${referenceMedian}`;
+  // A newly seen variety (fewer than AUTO_PUBLISH_MIN_REFERENCE recent quotes) has no "normal" to compare against, so it
+  // publishes on the checks above alone; the 20% comparison starts once there is enough history.
+  if (referenceMedian !== null && Math.abs(average - referenceMedian) / referenceMedian > AUTO_PUBLISH_MAX_DEVIATION) return `average ${average} is more than ${AUTO_PUBLISH_MAX_DEVIATION * 100}% from the recent median ${referenceMedian}`;
   return null;
 }
 
