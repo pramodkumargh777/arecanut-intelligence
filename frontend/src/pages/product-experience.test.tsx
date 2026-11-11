@@ -547,6 +547,9 @@ describe("market experience", () => {
     for (const variety of VARIETIES) for (const label of variety.labels.tss ?? []) expect(captured.has(label), label).toBe(true);
     expect(VARIETIES.find((item) => item.key === "new-rashi")?.labels.tss).toEqual(["NEW RASHI"]);
     expect(VARIETIES.filter((item) => item.labels.tss?.includes("FRESH RED ARECANUT")).map((item) => item.key)).toEqual(["fresh-red"]);
+    // Every fresh lot is its own variety in the fresh group, so no fresh price is ever read as a dried grade's.
+    const fresh = ["FRESH RED ARECANUT", "FRESH GREEN ARECANUT", "GREEN RAW ARECA", "FRESH SIPPE ARECA", "FRESH KOLE RAW"];
+    expect(VARIETIES.filter((item) => item.group === "fresh").map((item) => item.labels.tss)).toEqual(fresh.map((label) => [label]));
   });
 
   it("shows only the cooperatives that publish a variety and names the others in one line", () => {

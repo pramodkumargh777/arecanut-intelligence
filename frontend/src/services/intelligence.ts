@@ -13,7 +13,14 @@ export type MonthlyHistory = {
   flagged_months: number; review_method: string; anomaly_threshold_percent: number;
   seasonal: { month: number; index: number | null; complete_years: number }[]; seasonal_years: string[];
   versions: { reporting_month: string; weighted_price: number | null; fetched_at: string; source_url: string; refresh_run_id: string; variety_present: number }[];
+  /** MONTHLY_STATE_WEIGHTED_AVERAGE (the monthly report) or MONTHLY_APMC_MODAL_MEDIAN (from daily APMC prices). */
+  basis?: string; long_history_varieties?: string[];
+  long_history?: { first_month: string; last_month: string; compared_months: number; median_abs_gap_pct: number | null; same_direction_pct: number | null; imported_at: string };
 };
+export const LONG_BASIS = "MONTHLY_APMC_MODAL_MEDIAN";
+export const isLongBasis = (history?: Pick<MonthlyHistory, "basis"> | null) => history?.basis === LONG_BASIS;
+/** The first month the long series is asked for. */
+export const LONG_HISTORY_FROM = "2014-01";
 export type MonthlyEvidence = {
   reporting_month: string; state: string; variety: string; source_url: string; fetched_at: string;
   source_publication_timestamp: null; source_value: string; raw_imported_value: string; source_unit: string;

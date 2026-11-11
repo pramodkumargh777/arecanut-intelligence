@@ -131,8 +131,8 @@ export function CategoryBarChart({ categories, values, name, color: givenColor, 
 export type RangeRow = { label: string; detail?: string; minimum: number | null; central: number; maximum: number | null };
 
 /** Round axis bounds, so the range axis labels regular prices instead of the raw edges of the data. */
-function niceBounds(lowest: number, highest: number) {
-  const rough = Math.max(1, highest - lowest) / 5;
+function niceBounds(lowest: number, highest: number, ticks = 5) {
+  const rough = Math.max(1, highest - lowest) / ticks;
   const magnitude = 10 ** Math.floor(Math.log10(rough));
   const step = [1, 2, 2.5, 5, 10].map((factor) => factor * magnitude).find((candidate) => candidate >= rough) ?? rough;
   return { min: Math.max(0, Math.floor(lowest / step) * step), max: Math.ceil(highest / step) * step, interval: step };
@@ -145,12 +145,17 @@ export function RankedRangeChart({ rows, centralLabel, description }: { rows: Ra
   const { AXIS_LABEL, AXIS_LINE, BRAND, GRID_LINE, INK, TOOLTIP, tooltipHtml, shade } = useChartPalette();
   const labels = rows.map((row) => row.label);
   const hasRange = rows.map((row) => row.minimum !== null && row.maximum !== null && row.maximum >= row.minimum);
-  const lowest = Math.min(...rows.flatMap((row) => [row.minimum ?? row.central, row.central]));
-  const highest = Math.max(...rows.flatMap((row) => [row.maximum ?? row.central, row.central]));
+  const phone = usePhone();
+  const low = Math.min(...rows.flatMap((row) => [row.minimum ?? row.central, row.central]));
+  const high = Math.max(...rows.flatMap((row) => [row.maximum ?? row.central, row.central]));
+  // The scale spans at least 10% of the price, centred on the data, so a ₹80 spread at ₹4,000 is drawn as the small
+  // spread it is (not stretched across the chart) and no marker or label sits on the chart's edge.
+  const pad = Math.max(0, high * 0.1 - (high - low)) / 2;
+  const lowest = Math.max(0, low - pad), highest = high + pad;
   const option = {
     ...base(description, INK),
     legend: { ...base(description, INK).legend, icon: "roundRect", itemWidth: 14, itemHeight: 6, itemStyle: { opacity: 1 }, data: [t.range, centralLabel] },
-    grid: { top: 36, right: 24, bottom: 4, left: 4, containLabel: true },
+    grid: { top: phone ? 30 : 36, right: phone ? 14 : 24, bottom: 4, left: 4, containLabel: true },
     tooltip: {
       ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: shade } },
       formatter: (items: { dataIndex: number }[]) => {
@@ -158,17 +163,21 @@ export function RankedRangeChart({ rows, centralLabel, description }: { rows: Ra
         return row ? tooltipHtml(row.label, [{ label: t.minimum, value: inr(row.minimum, t.notReported) }, { label: centralLabel, value: inr(row.central, t.notReported) }, { label: t.maximum, value: inr(row.maximum, t.notReported) }], row.detail) : "";
       },
     },
-    yAxis: { type: "category", data: labels, inverse: true, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, color: INK[700], interval: 0, width: 120, overflow: "truncate" }, axisLine: AXIS_LINE },
-    xAxis: { type: "value", ...niceBounds(lowest, highest), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: axisInr }, splitLine: GRID_LINE },
+    yAxis: { type: "category", data: labels, inverse: true, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, color: INK[700], interval: 0, width: phone ? 96 : 120, overflow: "truncate" }, axisLine: AXIS_LINE },
+    // A phone has room for about three prices across; any label that would still touch its neighbour is dropped.
+    xAxis: { type: "value", ...niceBounds(lowest, highest, phone ? 3 : 5), axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { ...AXIS_LABEL, formatter: axisInr, hideOverlap: true, ...(phone ? { fontSize: 11 } : {}) }, splitLine: GRID_LINE },
     series: [
       { name: "range-base", type: "bar", stack: "range", silent: true, itemStyle: { color: "transparent" }, data: rows.map((row, index) => hasRange[index] ? row.minimum : null), tooltip: { show: false } },
       { name: t.range, type: "bar", stack: "range", barMaxWidth: 10, color: INK[200], itemStyle: { color: INK[200], borderRadius: 3 },
         data: rows.map((row, index) => hasRange[index] ? row.maximum! - row.minimum! : null) },
       { name: centralLabel, type: "scatter", symbol: "circle", symbolSize: 10, color: BRAND, itemStyle: { color: BRAND, borderColor: INK.surface, borderWidth: 2 }, data: rows.map((row) => row.central), z: 3,
-        label: { show: rows.length <= 16, position: "top", distance: 4, color: INK[900], fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, formatter: ({ value }: { value: number }) => inr(value) } },
+        label: { show: rows.length <= 16, position: "top", distance: 4, color: INK[900], fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT,
+          // A backing in the card colour keeps a grid line from running through the price.
+          backgroundColor: INK.surface, padding: [1, 3], borderRadius: 3, formatter: ({ value }: { value: number }) => inr(value) } },
     ],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: Math.max(200, rows.length * 46 + 72), width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: Math.max(rows.length > 2 ? 200 : 150, rows.length * 46 + 72), width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
 
 /**

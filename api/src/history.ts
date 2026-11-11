@@ -108,21 +108,78 @@ export function aggregateDaily(rows: DailyQuote[], from: string, to: string, int
   }));
 }
 
+export const REPORT_BASIS = "MONTHLY_STATE_WEIGHTED_AVERAGE";
+export const LONG_BASIS = "MONTHLY_APMC_MODAL_MEDIAN";
+const LONG_SOURCE_URL = "https://api.data.gov.in/resource/35985678-0d79-46b4-9ed6-6f13308a1d24";
+type LongSeries = { tracking: Set<string>; coverage: Map<string, { variety: string; months: number; years: number }>; meta: Map<string, LongMeta> };
+type LongMeta = { variety_name: string; first_month: string; last_month: string; compared_months: number; median_abs_gap_pct: number | null;
+  same_direction_pct: number | null; move_correlation: number | null; data_version: string; imported_at: string };
+
+/** Months and calendar years with a report price, per variety, so a page can leave out varieties with too little history. */
+async function reportCoverage(db: D1Database, state: string) {
+  const rows = await db.prepare(`SELECT variety_name, COUNT(DISTINCT CASE WHEN weighted_price IS NOT NULL THEN reporting_month END) AS months,
+    COUNT(DISTINCT CASE WHEN weighted_price IS NOT NULL THEN substr(reporting_month, 1, 4) END) AS years
+    FROM monthly_variety_prices WHERE state=? GROUP BY variety_name ORDER BY variety_name`).bind(state).all<{ variety_name: string; months: number; years: number }>();
+  return rows.results.map(({ variety_name, months, years }) => ({ variety: variety_name, months, years }));
+}
+
+/** Varieties whose long series passed the tracking rule and is as recent as their report. Null when the table is missing or empty (migration not applied). */
+async function longSeries(db: D1Database, state: string): Promise<LongSeries | null> {
+  try {
+    const rows = await db.prepare(`SELECT s.*, (SELECT COUNT(DISTINCT substr(p.reporting_month,1,4)) FROM monthly_apmc_prices p
+      WHERE p.state=s.state AND p.variety_name=s.variety_name) AS years, s.months FROM monthly_apmc_series s WHERE s.state=? AND s.tracks_reports=1
+      -- A series behind the report (not topped up since a newer report arrived) is not used, so pages never go stale.
+      AND s.last_month >= COALESCE((SELECT MAX(r.reporting_month) FROM monthly_variety_prices r WHERE r.state=s.state AND r.variety_name=s.variety_name), '')`)
+      .bind(state).all<LongMeta & { months: number; years: number }>();
+    if (!rows.results.length) return null;
+    return { tracking: new Set(rows.results.map((row) => row.variety_name)),
+      coverage: new Map(rows.results.map((row) => [row.variety_name, { variety: row.variety_name, months: row.months, years: row.years }])),
+      meta: new Map(rows.results.map((row) => [row.variety_name, row])) };
+  } catch {
+    return null;
+  }
+}
+
+async function longHistory(db: D1Database, state: string, variety: string, from: string, to: string, long: LongSeries) {
+  const meta = long.meta.get(variety)!;
+  const rows = await db.prepare(`SELECT reporting_month, modal_median, markets, imported_at, data_version FROM monthly_apmc_prices
+    WHERE state=? AND variety_name=? AND reporting_month BETWEEN ? AND ? ORDER BY reporting_month`)
+    .bind(state, variety, previousMonth(new Date(`${from}-01T00:00:00Z`), 12), shiftCalendarMonth(to, 1))
+    .all<{ reporting_month: string; modal_median: number; markets: number; imported_at: string; data_version: string }>();
+  const prices: Price[] = rows.results.map((row) => ({ reporting_month: row.reporting_month, weighted_price: row.modal_median,
+    fetched_at: row.imported_at, source_url: LONG_SOURCE_URL, refresh_run_id: `apmc-median:${row.data_version}`, price_unit: "INR/quintal" }));
+  const present = rows.results.map((row) => row.reporting_month).filter((month) => month >= from && month <= to);
+  const reports = await reportCoverage(db, state);
+  const coverage = [...reports.filter((row) => !long.coverage.has(row.variety)), ...long.coverage.values()].sort((a, b) => a.variety.localeCompare(b.variety));
+  return { ...monthlyAnalytics(from, to, prices, present, []), variety, state, from, to, varieties: coverage.map((row) => row.variety),
+    variety_coverage: coverage, versions: [], basis: LONG_BASIS, long_history_varieties: [...long.tracking],
+    long_history: { first_month: meta.first_month, last_month: meta.last_month, compared_months: meta.compared_months,
+      median_abs_gap_pct: meta.median_abs_gap_pct, same_direction_pct: meta.same_direction_pct, imported_at: meta.imported_at },
+    methodology: "Monthly value: each Karnataka APMC's mean daily modal price for the month (AGMARKNET daily, data.gov.in), then the median across at least 2 markets; months below that are left missing. A different measure from the arrival-weighted monthly report; used only for varieties whose series follows the report closely where both exist (2021 onward: typical gap within 3%, moves in the same direction at least 75% of months). Rolling means, YoY, volatility and seasonality are computed as for the monthly report. Descriptive only, not a forecast.",
+  };
+}
+
 export const historyRoutes = new Hono<Env>();
 historyRoutes.get("/history/monthly", async (c) => {
   const input = z.object({ from: z.string().refine(validMonth), to: z.string().refine(validMonth), variety: z.string().trim().min(1).max(160) })
     .safeParse({ from: c.req.query("from") ?? "2021-01", to: c.req.query("to") ?? previousMonth(new Date()), variety: c.req.query("variety") ?? "Rashi" });
   if (!input.success || input.data.from > input.data.to || input.data.to > previousMonth(new Date())
     || monthRange(input.data.from, input.data.to).length > 240) return c.json({ error: "Select an exact variety and up to 240 completed months in ascending order." }, 400);
-  const { from, to, variety } = input.data, state = c.env.REFERENCE_STATE ?? "Karnataka";
+  const { to, variety } = input.data, state = c.env.REFERENCE_STATE ?? "Karnataka";
+  let { from } = input.data;
+  // ?basis=long asks for the 2014+ series built from daily APMC prices, used only for varieties that track the report.
+  const long = c.req.query("basis") === "long" ? await longSeries(c.env.DB, state) : null;
+  if (long?.tracking.has(variety)) return c.json(await longHistory(c.env.DB, state, variety, input.data.from, to, long));
+  // Asked for the longest history but this variety stays on the report: start where the report starts.
+  if (c.req.query("basis") === "long") {
+    const first = await c.env.DB.prepare("SELECT MIN(reporting_month) AS month FROM monthly_variety_prices WHERE state=?").bind(state).first<{ month: string | null }>();
+    if (first?.month && first.month > from && first.month <= to) from = first.month;
+  }
   const prices = await c.env.DB.prepare("SELECT * FROM monthly_variety_prices WHERE state=? AND variety_name=? AND reporting_month BETWEEN ? AND ? ORDER BY reporting_month")
     .bind(state, variety, previousMonth(new Date(`${from}-01T00:00:00Z`), 12), shiftCalendarMonth(to, 1)).all<Price>();
   const reports = await c.env.DB.prepare("SELECT DISTINCT reporting_month FROM monthly_variety_prices WHERE state=? AND reporting_month BETWEEN ? AND ?")
     .bind(state, from, to).all<{ reporting_month: string }>();
-  // Months and calendar years with a price, per variety, so a page can leave out varieties with too little history.
-  const varieties = await c.env.DB.prepare(`SELECT variety_name, COUNT(DISTINCT CASE WHEN weighted_price IS NOT NULL THEN reporting_month END) AS months,
-    COUNT(DISTINCT CASE WHEN weighted_price IS NOT NULL THEN substr(reporting_month, 1, 4) END) AS years
-    FROM monthly_variety_prices WHERE state=? GROUP BY variety_name ORDER BY variety_name`).bind(state).all<{ variety_name: string; months: number; years: number }>();
+  const varieties = await reportCoverage(c.env.DB, state);
   const runs = await c.env.DB.prepare("SELECT reporting_month,status,error_message,started_at FROM monthly_refresh_runs WHERE state=? AND reporting_month BETWEEN ? AND ? ORDER BY started_at DESC")
     .bind(state, from, to).all<Run>();
   const versions = await c.env.DB.prepare(`SELECT r.reporting_month,v.weighted_price,r.source_url,
@@ -134,8 +191,9 @@ historyRoutes.get("/history/monthly", async (c) => {
   ORDER BY r.reporting_month,r.finished_at,r.rowid`)
   .bind(variety, state, from, to).all();
   return c.json({ ...monthlyAnalytics(from, to, prices.results, reports.results.map((row) => row.reporting_month), runs.results),
-    variety, state, from, to, varieties: varieties.results.map((row) => row.variety_name),
-    variety_coverage: varieties.results.map(({ variety_name, months, years }) => ({ variety: variety_name, months, years })), versions: versions.results,
+    variety, state, from, to, varieties: varieties.map((row) => row.variety),
+    variety_coverage: varieties.map((row) => long?.coverage.get(row.variety) ?? row), versions: versions.results,
+    basis: REPORT_BASIS, long_history_varieties: long ? [...long.tracking] : [],
     methodology: "Rolling means require every calendar month in the window; rolling statistics and YoY use up to 12 stored months before the selected range as lookback. Volatility: sample standard deviation of 12 consecutive monthly log returns, annualized by sqrt(12). Seasonality: monthly price / full-year mean × 100, averaged across at least 3 complete years within the selected range. Descriptive only, not a forecast. Missing months and varieties are not filled. Monthly state-level arrival-weighted modal prices are not daily quotes.",
   });
 

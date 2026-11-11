@@ -6,6 +6,8 @@ Commands
   parity     Check the Python port of monthly-baselines-v1 against stored forecast snapshots.
   publish    POST a stored run's payload.json (`--run-id`) to the API.
   covariates Download arrivals, imports and rainfall through `--through YYYY-MM` into forecasting/covariates/.
+  daily-monthly-sql  Write SQL that loads the archive's monthly series into D1 (`--out FILE`, `--sql-export` for the reports).
+  daily-archive  Fetch AGMARKNET daily APMC prices from 2014 into forecasting/daily_archive/ (`--from`, `--through`).
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from itertools import combinations
+from pathlib import Path
 
 from .backtest import walk_forward
 from .config import CANDIDATE_MODELS, ExperimentConfig
@@ -43,8 +46,10 @@ def _unified_note(datasets) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m forecasting", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["datasets", "run", "parity", "publish", "covariates"])
+    parser.add_argument("command", choices=["datasets", "run", "parity", "publish", "covariates", "daily-archive", "daily-monthly-sql"])
+    parser.add_argument("--from", dest="from_month", help="First month (YYYY-MM) for the daily-archive command (default 2014-01).")
     parser.add_argument("--through", help="Last month (YYYY-MM) for the covariates command.")
+    parser.add_argument("--workers", type=int, default=4, help="Dates fetched at once by the daily-archive command (default 4).")
     parser.add_argument("--sqlite", help="Path to a D1 SQLite file (default: discover local Miniflare D1).")
     parser.add_argument("--sql-export", help="Path to a scripts/d1-backup.mjs SQL export (loaded in memory).")
     parser.add_argument("--models", default="", help=f"Comma list; default baselines + statistical + lightgbm. Extra: {','.join(CANDIDATE_MODELS)}")
@@ -53,10 +58,13 @@ def main(argv: list[str] | None = None) -> int:
                         help="Add lightgbm_x and chronos2_x, fed with arrivals, imports, rainfall and policy events from forecasting/covariates/.")
     parser.add_argument("--with-pretrained", action="store_true",
                         help="Add Chronos-2, TimesFM 2.5 and the median ensemble of theta, auto_ets and chronos2 (CPU).")
+    parser.add_argument("--monthly-source", choices=["reports", "daily"], default="reports",
+                        help="Monthly series to evaluate: AGMARKNET monthly reports (D1) or the 2014+ daily archive.")
     parser.add_argument("--last-origins", type=int, default=0, help="Evaluate only the latest N origins (smoke runs).")
     parser.add_argument("--publish", action="store_true", help="POST the experiment to ANI_API_URL with INGESTION_TOKEN.")
     parser.add_argument("--dry-run", action="store_true", help="Build the payload and report but never POST.")
     parser.add_argument("--run-id", help="Run identifier for the publish command.")
+    parser.add_argument("--out", help="Output file for the daily-monthly-sql command.")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(argv)
 
@@ -65,6 +73,34 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("covariates needs --through YYYY-MM")
         from .covariates import fetch_all
         print(json.dumps({"files": fetch_all(args.through, log=lambda m: print(m, file=sys.stderr))}, indent=2))
+        return 0
+
+    if args.command == "daily-archive":
+        from .daily_archive import START, fetch_archive
+        for value in (args.from_month, args.through):
+            if value and not re.fullmatch(r"\d{4}-\d{2}", value):
+                parser.error("daily-archive months are YYYY-MM")
+        print(json.dumps(fetch_archive(args.from_month or START, args.through, workers=args.workers, log=lambda m: print(m, file=sys.stderr)), indent=2))
+        return 0
+
+    if args.command == "daily-monthly-sql":
+        if not args.out:
+            parser.error("daily-monthly-sql needs --out FILE")
+        import pandas as pd
+        from .daily_archive import load_archive, load_manifest
+        from .daily_monthly import d1_sql, monthly_from_daily
+        from .datasets import build_monthly_from_daily
+        state = "Karnataka"
+        reports = pd.read_sql_query("SELECT variety_name AS variety, reporting_month, weighted_price AS value FROM monthly_variety_prices "
+                                    "WHERE state=? AND weighted_price>0", connect(args.sqlite, args.sql_export), params=(state,))
+        reports["month"] = pd.PeriodIndex(reports.reporting_month, freq="M")
+        through = max(m for m, entry in load_manifest()["months"].items()
+                      if entry["last_date"] == (pd.Period(m, freq="M").end_time.date().isoformat()))
+        imported_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        sql = d1_sql(monthly_from_daily(load_archive()), reports[["variety", "month", "value"]], through=through,
+                     imported_at=imported_at, data_version=build_monthly_from_daily().data_version[:16], state=state)
+        Path(args.out).write_text(sql, encoding="utf-8")
+        print(json.dumps({"out": args.out, "through": through, "statements": sql.count("\n")}))
         return 0
 
     if args.command == "publish":
@@ -107,7 +143,10 @@ def main(argv: list[str] | None = None) -> int:
     run_id = new_run_id(config_hash)
     recorder = RunRecorder(run_id)
     env = environment()
-    monthly = datasets["monthly_reference"]
+    if args.monthly_source == "daily":
+        from .datasets import build_monthly_from_daily
+        datasets["monthly_from_daily"] = build_monthly_from_daily(config)
+    monthly = datasets["monthly_from_daily" if args.monthly_source == "daily" else "monthly_reference"]
     recorder.json("config.json", config.to_dict() | {"config_hash": config_hash})
     recorder.json("environment.json", env)
     recorder.json("datasets.json", {k: d.summary() for k, d in datasets.items()})
