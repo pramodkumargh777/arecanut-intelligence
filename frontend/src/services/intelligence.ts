@@ -21,6 +21,8 @@ export const LONG_BASIS = "MONTHLY_APMC_MODAL_MEDIAN";
 export const isLongBasis = (history?: Pick<MonthlyHistory, "basis"> | null) => history?.basis === LONG_BASIS;
 /** The first month the long series is asked for. */
 export const LONG_HISTORY_FROM = "2014-01";
+/** The first month of the AGMARKNET monthly report series. */
+export const MONTHLY_REPORT_FROM = "2021-01";
 export type MonthlyEvidence = {
   reporting_month: string; state: string; variety: string; source_url: string; fetched_at: string;
   source_publication_timestamp: null; source_value: string; raw_imported_value: string; source_unit: string;

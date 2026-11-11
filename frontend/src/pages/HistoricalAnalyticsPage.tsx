@@ -1,7 +1,7 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../services/api";
-import { isLongBasis, LONG_HISTORY_FROM } from "../services/intelligence";
+import { isLongBasis, LONG_HISTORY_FROM, MONTHLY_REPORT_FROM } from "../services/intelligence";
 import { toCsv } from "../services/csv";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { LazyBarChart } from "../components/LazyCharts";
@@ -139,12 +139,19 @@ export function HistoricalAnalyticsPage() {
   const t = useCopy(COPY);
   const c = useCopy(COMMON);
   const format = useFormat();
-  const [from, setFrom] = useState("2021-01"), [to, setTo] = useState(completed), [variety, setVariety] = useState("Rashi");
+  const [from, setFrom] = useState(MONTHLY_REPORT_FROM), [to, setTo] = useState(completed), [variety, setVariety] = useState("Rashi");
   const [series, setSeries] = useState<"report" | "long">("report");
-  const valid = from >= "2010-01" && from <= to && to <= completed();
+  const valid = from >= LONG_HISTORY_FROM && from <= to && to <= completed();
   const query = useQuery({ queryKey: ["history", from, to, variety, series], queryFn: () => api.monthlyHistory(from, to, variety, series === "long" ? "long" : undefined), enabled: valid, refetchInterval: 60_000 });
   const data = query.data;
   const long = isLongBasis(data);
+  // The pickers start where the series on screen starts, so a range cannot be half empty. A variety that stays on the
+  // monthly report starts in 2021 even when the long history is asked for.
+  const earliest = series === "long" && (long || !data) ? LONG_HISTORY_FROM : MONTHLY_REPORT_FROM;
+  useEffect(() => {
+    if (from < earliest) setFrom(earliest);
+    if (to < earliest) setTo(earliest);
+  }, [earliest, from, to]);
   const choose = (value: "report" | "long") => {
     setSeries(value);
     if (value === "long" && from > LONG_HISTORY_FROM) setFrom(LONG_HISTORY_FROM);
@@ -158,8 +165,8 @@ export function HistoricalAnalyticsPage() {
   return <div className="page-stack">
     <section className="page-heading"><div><h1>{t.title}</h1><p className="page-intro">{t.intro}</p></div></section>
     <section className="filter-bar">
-      <MonthYearPicker label={t.fromMonth} min="2010-01" max={completed()} value={from} onChange={setFrom} />
-      <MonthYearPicker label={t.throughMonth} min="2010-01" max={completed()} value={to} onChange={setTo} />
+      <MonthYearPicker label={t.fromMonth} min={earliest} max={completed()} value={from} onChange={setFrom} />
+      <MonthYearPicker label={t.throughMonth} min={earliest} max={completed()} value={to} onChange={setTo} />
       <label className="filter-control"><span>{t.monthlyVariety}</span><select value={variety} onChange={(event) => setVariety(event.target.value)}>{[...new Set([variety, ...(data?.varieties ?? [])])].map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
       <label className="filter-control"><span>{t.series}</span><select value={series} onChange={(event) => choose(event.target.value as "report" | "long")}>
         <option value="report">{t.seriesReport}</option><option value="long">{t.seriesLong}</option></select></label>
