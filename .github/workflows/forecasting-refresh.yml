@@ -107,7 +107,7 @@ jobs:
 
       - name: Keep the run's report and data
         if: always() && steps.credentials.outputs.configured == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: forecasting-refresh-${{ github.run_id }}
           path: |
