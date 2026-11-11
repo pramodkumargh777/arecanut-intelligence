@@ -42,7 +42,6 @@ describe("which quotations wait for a person", () => {
     ["a future date", { reporting_date: "2026-11-07" }, 46000, "future"],
     ["an unconfirmed unit", { price_unit: "unconfirmed" }, 46000, "unit"],
     ["an unknown review flag", { review_flags: JSON.stringify(["multiple_source_records_same_date"]) }, 46000, "multiple_source_records_same_date"],
-    ["no recent quotes to compare with", {}, null, "too few"],
     ["a jump of more than 20%", {}, 38000, "more than 20%"],
     ["a drop of more than 20%", {}, 58000, "more than 20%"],
   ])("holds %s", (_name, change, reference, expected) => {
@@ -84,16 +83,26 @@ describe("auto-publishing", () => {
     expect(db.sqlite.prepare("SELECT COUNT(*) AS n FROM cooperative_reviews WHERE quote_id='second'").get()).toEqual({ n: 0 });
   });
 
-  it("holds a variety seen too rarely to judge, and starts publishing once there is enough to compare", async () => {
-    quote({ id: "a", variety: "HASA" });
-    expect((await autoPublishPending(db as never, "mamcos", NOW)).held[0].reason).toContain("too few");
-    quote({ id: "b", variety: "HASA", branch: "KOPPA" });
-    quote({ id: "c", variety: "HASA", branch: "SORABA" });
-    expect((await autoPublishPending(db as never, "mamcos", NOW)).published).toBe(3);
+  it("publishes a newly seen variety on the other checks, and compares once there is enough history", async () => {
+    expect(holdReason({ id: "x", commodity: "arecanut", branch: "SAGARA", reporting_date: "2026-11-05", variety: "HASA", minimum_price: 1800,
+      maximum_price: 2600, average_price: 2222, price_unit: "INR/quintal", unit_status: "source_confirmed", validation_message: null, review_flags: null }, null, TODAY)).toBeNull();
+    quote({ id: "a", variety: "HASA", average: 2222 });
+    expect(await autoPublishPending(db as never, "mamcos", NOW)).toEqual({ published: 1, held: [] });
+    expect(statusOf("a")).toBe("verified");
+    quote({ id: "bad-range", variety: "NEW GRADE", message: "Reported prices do not satisfy minimum <= average <= maximum." });
+    expect((await autoPublishPending(db as never, "mamcos", NOW)).held).toEqual([{ id: "bad-range", reason: "failed source validation" }]);
+    quote({ id: "b", variety: "HASA", branch: "KOPPA", average: 2300 });
+    quote({ id: "c", variety: "HASA", branch: "SORABA", average: 2250 });
+    quote({ id: "spike", variety: "HASA", branch: "SHIVAMOGGA", average: 9000 });
+    const later = await autoPublishPending(db as never, "mamcos", NOW);
+    expect(later.published).toBe(2);
+    expect(later.held).toEqual(expect.arrayContaining([{ id: "spike", reason: expect.stringContaining("more than 20%") }]));
   });
 
   it("compares within one variety and source, and touches no other source", async () => {
     history();
+    history("mamcos", "CHALI");
+    // Held against CHALI's own median (46000); other varieties' prices are never used for the comparison.
     quote({ id: "chali", variety: "CHALI", average: 20000 });
     quote({ id: "tss-row", source: "tss", branch: "Sirsi", variety: "RASHI", unitStatus: "assumed" });
     const result = await autoPublishPending(db as never, "mamcos", NOW);
