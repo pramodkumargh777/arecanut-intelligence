@@ -1,0 +1,2542 @@
+{
+  "months": {
+    "2014-01": {
+      "first_date": "2014-01-01",
+      "last_date": "2014-01-31",
+      "fetched_at": "2026-11-11T03:27:47Z",
+      "source_rows": 1126,
+      "kept": 1126,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-01-02",
+        "2014-01-15"
+      ],
+      "renamed_markets": 1116
+    },
+    "2014-02": {
+      "first_date": "2014-02-01",
+      "last_date": "2014-02-28",
+      "fetched_at": "2026-11-11T03:28:05Z",
+      "source_rows": 1005,
+      "kept": 1005,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1004
+    },
+    "2014-03": {
+      "first_date": "2014-03-01",
+      "last_date": "2014-03-31",
+      "fetched_at": "2026-11-11T03:28:14Z",
+      "source_rows": 1063,
+      "kept": 1063,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1060
+    },
+    "2014-04": {
+      "first_date": "2014-04-01",
+      "last_date": "2014-04-30",
+      "fetched_at": "2026-11-11T04:36:51Z",
+      "source_rows": 997,
+      "kept": 997,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-04-14",
+        "2014-04-18"
+      ],
+      "renamed_markets": 995
+    },
+    "2014-05": {
+      "first_date": "2014-05-01",
+      "last_date": "2014-05-31",
+      "fetched_at": "2026-11-11T04:37:05Z",
+      "source_rows": 1141,
+      "kept": 1141,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-05-02"
+      ],
+      "renamed_markets": 1134
+    },
+    "2014-06": {
+      "first_date": "2014-06-01",
+      "last_date": "2014-06-30",
+      "fetched_at": "2026-11-11T04:37:24Z",
+      "source_rows": 995,
+      "kept": 995,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 994
+    },
+    "2014-07": {
+      "first_date": "2014-07-01",
+      "last_date": "2014-07-31",
+      "fetched_at": "2026-11-11T06:45:46Z",
+      "source_rows": 1088,
+      "kept": 1088,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-07-29"
+      ],
+      "renamed_markets": 1085
+    },
+    "2014-08": {
+      "first_date": "2014-08-01",
+      "last_date": "2014-08-31",
+      "fetched_at": "2026-11-11T03:32:34Z",
+      "source_rows": 771,
+      "kept": 771,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-08-15",
+        "2014-08-23",
+        "2014-08-29"
+      ],
+      "renamed_markets": 770
+    },
+    "2014-09": {
+      "first_date": "2014-09-01",
+      "last_date": "2014-09-30",
+      "fetched_at": "2026-11-11T03:32:45Z",
+      "source_rows": 678,
+      "kept": 678,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-09-24"
+      ],
+      "renamed_markets": 675
+    },
+    "2014-10": {
+      "first_date": "2014-10-01",
+      "last_date": "2014-10-31",
+      "fetched_at": "2026-11-11T03:32:56Z",
+      "source_rows": 131,
+      "kept": 131,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-10-01",
+        "2014-10-02",
+        "2014-10-03",
+        "2014-10-04",
+        "2014-10-05",
+        "2014-10-06",
+        "2014-10-22"
+      ],
+      "renamed_markets": 131
+    },
+    "2014-11": {
+      "first_date": "2014-11-01",
+      "last_date": "2014-11-30",
+      "fetched_at": "2026-11-11T04:39:01Z",
+      "source_rows": 43,
+      "kept": 43,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-11-01",
+        "2014-11-02",
+        "2014-11-04",
+        "2014-11-06",
+        "2014-11-08",
+        "2014-11-09",
+        "2014-11-16",
+        "2014-11-23",
+        "2014-11-27",
+        "2014-11-30"
+      ],
+      "renamed_markets": 38
+    },
+    "2014-12": {
+      "first_date": "2014-12-01",
+      "last_date": "2014-12-31",
+      "fetched_at": "2026-11-11T03:34:49Z",
+      "source_rows": 213,
+      "kept": 213,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2014-12-25"
+      ],
+      "renamed_markets": 213
+    },
+    "2015-01": {
+      "first_date": "2015-01-01",
+      "last_date": "2015-01-31",
+      "fetched_at": "2026-11-11T04:41:02Z",
+      "source_rows": 1173,
+      "kept": 1173,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1168
+    },
+    "2015-02": {
+      "first_date": "2015-02-01",
+      "last_date": "2015-02-28",
+      "fetched_at": "2026-11-11T04:41:22Z",
+      "source_rows": 1078,
+      "kept": 1078,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2015-02-01"
+      ],
+      "renamed_markets": 1071
+    },
+    "2015-03": {
+      "first_date": "2015-03-01",
+      "last_date": "2015-03-31",
+      "fetched_at": "2026-11-11T03:36:47Z",
+      "source_rows": 1050,
+      "kept": 1050,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2015-03-21",
+        "2015-03-29"
+      ],
+      "renamed_markets": 1047
+    },
+    "2015-04": {
+      "first_date": "2015-04-01",
+      "last_date": "2015-04-30",
+      "fetched_at": "2026-11-11T04:41:42Z",
+      "source_rows": 891,
+      "kept": 891,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2015-04-02",
+        "2015-04-03"
+      ],
+      "renamed_markets": 888
+    },
+    "2015-05": {
+      "first_date": "2015-05-01",
+      "last_date": "2015-05-31",
+      "fetched_at": "2026-11-11T04:42:01Z",
+      "source_rows": 1041,
+      "kept": 1041,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2015-05-01",
+        "2015-05-02",
+        "2015-05-03"
+      ],
+      "renamed_markets": 1037
+    },
+    "2015-06": {
+      "first_date": "2015-06-01",
+      "last_date": "2015-06-30",
+      "fetched_at": "2026-11-11T03:38:52Z",
+      "source_rows": 1092,
+      "kept": 1092,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1089
+    },
+    "2015-07": {
+      "first_date": "2015-07-01",
+      "last_date": "2015-07-31",
+      "fetched_at": "2026-11-11T04:42:23Z",
+      "source_rows": 1011,
+      "kept": 1011,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2015-07-11",
+        "2015-07-18"
+      ],
+      "renamed_markets": 1008
+    },
+    "2015-08": {
+      "first_date": "2015-08-01",
+      "last_date": "2015-08-31",
+      "fetched_at": "2026-11-11T03:40:40Z",
+      "source_rows": 956,
+      "kept": 956,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2015-08-15"
+      ],
+      "renamed_markets": 954
+    },
+    "2015-09": {
+      "first_date": "2015-09-01",
+      "last_date": "2015-09-30",
+      "fetched_at": "2026-11-11T03:40:59Z",
+      "source_rows": 988,
+      "kept": 988,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 982
+    },
+    "2015-10": {
+      "first_date": "2015-10-01",
+      "last_date": "2015-10-31",
+      "fetched_at": "2026-11-11T04:42:42Z",
+      "source_rows": 946,
+      "kept": 946,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2015-10-24"
+      ],
+      "renamed_markets": 937
+    },
+    "2015-11": {
+      "first_date": "2015-11-01",
+      "last_date": "2015-11-30",
+      "fetched_at": "2026-11-11T04:43:01Z",
+      "source_rows": 994,
+      "kept": 994,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 984
+    },
+    "2015-12": {
+      "first_date": "2015-12-01",
+      "last_date": "2015-12-31",
+      "fetched_at": "2026-11-11T03:43:02Z",
+      "source_rows": 1177,
+      "kept": 1177,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1166
+    },
+    "2016-01": {
+      "first_date": "2016-01-01",
+      "last_date": "2016-01-31",
+      "fetched_at": "2026-11-11T06:46:13Z",
+      "source_rows": 807,
+      "kept": 807,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2016-01-15",
+        "2016-01-26",
+        "2016-01-27",
+        "2016-01-28",
+        "2016-01-29"
+      ],
+      "renamed_markets": 801
+    },
+    "2016-02": {
+      "first_date": "2016-02-01",
+      "last_date": "2016-02-29",
+      "fetched_at": "2026-11-11T03:44:52Z",
+      "source_rows": 775,
+      "kept": 775,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2016-02-02"
+      ],
+      "renamed_markets": 767
+    },
+    "2016-03": {
+      "first_date": "2016-03-01",
+      "last_date": "2016-03-31",
+      "fetched_at": "2026-11-11T04:44:40Z",
+      "source_rows": 1013,
+      "kept": 1013,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2016-03-25"
+      ],
+      "renamed_markets": 1002
+    },
+    "2016-04": {
+      "first_date": "2016-04-01",
+      "last_date": "2016-04-30",
+      "fetched_at": "2026-11-11T04:46:10Z",
+      "source_rows": 968,
+      "kept": 968,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2016-04-03",
+        "2016-04-08"
+      ],
+      "renamed_markets": 965
+    },
+    "2016-05": {
+      "first_date": "2016-05-01",
+      "last_date": "2016-05-31",
+      "fetched_at": "2026-11-11T03:47:01Z",
+      "source_rows": 1145,
+      "kept": 1145,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2016-05-01"
+      ],
+      "renamed_markets": 1139
+    },
+    "2016-06": {
+      "first_date": "2016-06-01",
+      "last_date": "2016-06-30",
+      "fetched_at": "2026-11-11T04:46:30Z",
+      "source_rows": 1178,
+      "kept": 1178,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1175
+    },
+    "2016-07": {
+      "first_date": "2016-07-01",
+      "last_date": "2016-07-31",
+      "fetched_at": "2026-11-11T04:46:49Z",
+      "source_rows": 1070,
+      "kept": 1070,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1069
+    },
+    "2016-08": {
+      "first_date": "2016-08-01",
+      "last_date": "2016-08-31",
+      "fetched_at": "2026-11-11T03:49:10Z",
+      "source_rows": 1112,
+      "kept": 1112,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1107
+    },
+    "2016-09": {
+      "first_date": "2016-09-01",
+      "last_date": "2016-09-30",
+      "fetched_at": "2026-11-11T04:47:09Z",
+      "source_rows": 1004,
+      "kept": 1004,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2016-09-30"
+      ],
+      "renamed_markets": 1002
+    },
+    "2016-10": {
+      "first_date": "2016-10-01",
+      "last_date": "2016-10-31",
+      "fetched_at": "2026-11-11T03:50:59Z",
+      "source_rows": 955,
+      "kept": 955,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2016-10-30",
+        "2016-10-31"
+      ],
+      "renamed_markets": 952
+    },
+    "2016-11": {
+      "first_date": "2016-11-01",
+      "last_date": "2016-11-30",
+      "fetched_at": "2026-11-11T03:51:11Z",
+      "source_rows": 916,
+      "kept": 916,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2016-11-13",
+        "2016-11-17"
+      ],
+      "renamed_markets": 910
+    },
+    "2016-12": {
+      "first_date": "2016-12-01",
+      "last_date": "2016-12-31",
+      "fetched_at": "2026-11-11T04:47:28Z",
+      "source_rows": 1174,
+      "kept": 1174,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1164
+    },
+    "2017-01": {
+      "first_date": "2017-01-01",
+      "last_date": "2017-01-31",
+      "fetched_at": "2026-11-11T03:53:07Z",
+      "source_rows": 1069,
+      "kept": 1069,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2017-01-14",
+        "2017-01-22"
+      ],
+      "renamed_markets": 1061
+    },
+    "2017-02": {
+      "first_date": "2017-02-01",
+      "last_date": "2017-02-28",
+      "fetched_at": "2026-11-11T04:47:49Z",
+      "source_rows": 1067,
+      "kept": 1067,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2017-02-19",
+        "2017-02-26"
+      ],
+      "renamed_markets": 1059
+    },
+    "2017-03": {
+      "first_date": "2017-03-01",
+      "last_date": "2017-03-31",
+      "fetched_at": "2026-11-11T04:48:08Z",
+      "source_rows": 1264,
+      "kept": 1264,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1254
+    },
+    "2017-04": {
+      "first_date": "2017-04-01",
+      "last_date": "2017-04-30",
+      "fetched_at": "2026-11-11T03:54:38Z",
+      "source_rows": 1067,
+      "kept": 1067,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2017-04-09"
+      ],
+      "renamed_markets": 1061
+    },
+    "2017-05": {
+      "first_date": "2017-05-01",
+      "last_date": "2017-05-31",
+      "fetched_at": "2026-11-11T04:48:28Z",
+      "source_rows": 1188,
+      "kept": 1188,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1186
+    },
+    "2017-06": {
+      "first_date": "2017-06-01",
+      "last_date": "2017-06-30",
+      "fetched_at": "2026-11-11T04:48:47Z",
+      "source_rows": 1088,
+      "kept": 1088,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1084
+    },
+    "2017-07": {
+      "first_date": "2017-07-01",
+      "last_date": "2017-07-31",
+      "fetched_at": "2026-11-11T03:56:44Z",
+      "source_rows": 980,
+      "kept": 980,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2017-07-02"
+      ],
+      "renamed_markets": 977
+    },
+    "2017-08": {
+      "first_date": "2017-08-01",
+      "last_date": "2017-08-31",
+      "fetched_at": "2026-11-11T04:49:04Z",
+      "source_rows": 1075,
+      "kept": 1075,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2017-08-25"
+      ],
+      "renamed_markets": 1065
+    },
+    "2017-09": {
+      "first_date": "2017-09-01",
+      "last_date": "2017-09-30",
+      "fetched_at": "2026-11-11T03:58:40Z",
+      "source_rows": 1010,
+      "kept": 1010,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1004
+    },
+    "2017-10": {
+      "first_date": "2017-10-01",
+      "last_date": "2017-10-31",
+      "fetched_at": "2026-11-11T03:58:51Z",
+      "source_rows": 966,
+      "kept": 966,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2017-10-01",
+        "2017-10-14",
+        "2017-10-18"
+      ],
+      "renamed_markets": 963
+    },
+    "2017-11": {
+      "first_date": "2017-11-01",
+      "last_date": "2017-11-30",
+      "fetched_at": "2026-11-11T04:49:26Z",
+      "source_rows": 1125,
+      "kept": 1125,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1119
+    },
+    "2017-12": {
+      "first_date": "2017-12-01",
+      "last_date": "2017-12-31",
+      "fetched_at": "2026-11-11T04:00:41Z",
+      "source_rows": 1120,
+      "kept": 1120,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1118
+    },
+    "2018-01": {
+      "first_date": "2018-01-01",
+      "last_date": "2018-01-31",
+      "fetched_at": "2026-11-11T04:00:53Z",
+      "source_rows": 1184,
+      "kept": 1184,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2018-01-26"
+      ],
+      "renamed_markets": 1178
+    },
+    "2018-02": {
+      "first_date": "2018-02-01",
+      "last_date": "2018-02-28",
+      "fetched_at": "2026-11-11T06:46:41Z",
+      "source_rows": 1114,
+      "kept": 1114,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1109
+    },
+    "2018-03": {
+      "first_date": "2018-03-01",
+      "last_date": "2018-03-31",
+      "fetched_at": "2026-11-11T04:02:41Z",
+      "source_rows": 1145,
+      "kept": 1145,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1142
+    },
+    "2018-04": {
+      "first_date": "2018-04-01",
+      "last_date": "2018-04-30",
+      "fetched_at": "2026-11-11T04:50:59Z",
+      "source_rows": 841,
+      "kept": 841,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2018-04-01",
+        "2018-04-18",
+        "2018-04-22"
+      ],
+      "renamed_markets": 841
+    },
+    "2018-05": {
+      "first_date": "2018-05-01",
+      "last_date": "2018-05-31",
+      "fetched_at": "2026-11-11T04:51:18Z",
+      "source_rows": 1237,
+      "kept": 1237,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1234
+    },
+    "2018-06": {
+      "first_date": "2018-06-01",
+      "last_date": "2018-06-30",
+      "fetched_at": "2026-11-11T04:04:16Z",
+      "source_rows": 1284,
+      "kept": 1284,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1276
+    },
+    "2018-07": {
+      "first_date": "2018-07-01",
+      "last_date": "2018-07-31",
+      "fetched_at": "2026-11-11T04:51:38Z",
+      "source_rows": 1199,
+      "kept": 1199,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1193
+    },
+    "2018-08": {
+      "first_date": "2018-08-01",
+      "last_date": "2018-08-31",
+      "fetched_at": "2026-11-11T06:47:05Z",
+      "source_rows": 1126,
+      "kept": 1126,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2018-08-15"
+      ],
+      "renamed_markets": 1126
+    },
+    "2018-09": {
+      "first_date": "2018-09-01",
+      "last_date": "2018-09-30",
+      "fetched_at": "2026-11-11T04:06:18Z",
+      "source_rows": 1080,
+      "kept": 1079,
+      "needs_review": 0,
+      "rejected": 1,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 2
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 1078
+    },
+    "2018-10": {
+      "first_date": "2018-10-01",
+      "last_date": "2018-10-31",
+      "fetched_at": "2026-11-11T04:53:16Z",
+      "source_rows": 1130,
+      "kept": 1130,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1127
+    },
+    "2018-11": {
+      "first_date": "2018-11-01",
+      "last_date": "2018-11-30",
+      "fetched_at": "2026-11-11T04:53:35Z",
+      "source_rows": 1011,
+      "kept": 1011,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1008
+    },
+    "2018-12": {
+      "first_date": "2018-12-01",
+      "last_date": "2018-12-31",
+      "fetched_at": "2026-11-11T04:53:54Z",
+      "source_rows": 1260,
+      "kept": 1260,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1260
+    },
+    "2019-01": {
+      "first_date": "2019-01-01",
+      "last_date": "2019-01-31",
+      "fetched_at": "2026-11-11T06:47:35Z",
+      "source_rows": 1261,
+      "kept": 1261,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2019-01-26"
+      ],
+      "renamed_markets": 1255
+    },
+    "2019-02": {
+      "first_date": "2019-02-01",
+      "last_date": "2019-02-28",
+      "fetched_at": "2026-11-11T04:09:47Z",
+      "source_rows": 1235,
+      "kept": 1235,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1231
+    },
+    "2019-03": {
+      "first_date": "2019-03-01",
+      "last_date": "2019-03-31",
+      "fetched_at": "2026-11-11T04:55:32Z",
+      "source_rows": 1191,
+      "kept": 1191,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2019-03-04"
+      ],
+      "renamed_markets": 1188
+    },
+    "2019-04": {
+      "first_date": "2019-04-01",
+      "last_date": "2019-04-30",
+      "fetched_at": "2026-11-11T04:55:50Z",
+      "source_rows": 1021,
+      "kept": 1021,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2019-04-14",
+        "2019-04-19"
+      ],
+      "renamed_markets": 1017
+    },
+    "2019-05": {
+      "first_date": "2019-05-01",
+      "last_date": "2019-05-31",
+      "fetched_at": "2026-11-11T04:11:47Z",
+      "source_rows": 1279,
+      "kept": 1279,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1275
+    },
+    "2019-06": {
+      "first_date": "2019-06-01",
+      "last_date": "2019-06-30",
+      "fetched_at": "2026-11-11T04:56:11Z",
+      "source_rows": 913,
+      "kept": 913,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2019-06-30"
+      ],
+      "renamed_markets": 910
+    },
+    "2019-07": {
+      "first_date": "2019-07-01",
+      "last_date": "2019-07-31",
+      "fetched_at": "2026-11-11T06:48:01Z",
+      "source_rows": 728,
+      "kept": 728,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2019-07-07",
+        "2019-07-14"
+      ],
+      "renamed_markets": 727
+    },
+    "2019-08": {
+      "first_date": "2019-08-01",
+      "last_date": "2019-08-31",
+      "fetched_at": "2026-11-11T04:13:49Z",
+      "source_rows": 1072,
+      "kept": 1072,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1071
+    },
+    "2019-09": {
+      "first_date": "2019-09-01",
+      "last_date": "2019-09-30",
+      "fetched_at": "2026-11-11T04:57:45Z",
+      "source_rows": 1036,
+      "kept": 1036,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1033
+    },
+    "2019-10": {
+      "first_date": "2019-10-01",
+      "last_date": "2019-10-31",
+      "fetched_at": "2026-11-11T04:58:04Z",
+      "source_rows": 1056,
+      "kept": 1056,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2019-10-06",
+        "2019-10-27"
+      ],
+      "renamed_markets": 1052
+    },
+    "2019-11": {
+      "first_date": "2019-11-01",
+      "last_date": "2019-11-30",
+      "fetched_at": "2026-11-11T04:15:50Z",
+      "source_rows": 1198,
+      "kept": 1198,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1194
+    },
+    "2019-12": {
+      "first_date": "2019-12-01",
+      "last_date": "2019-12-31",
+      "fetched_at": "2026-11-11T06:48:30Z",
+      "source_rows": 1280,
+      "kept": 1280,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1275
+    },
+    "2020-01": {
+      "first_date": "2020-01-01",
+      "last_date": "2020-01-31",
+      "fetched_at": "2026-11-11T04:17:26Z",
+      "source_rows": 1276,
+      "kept": 1276,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-01-15"
+      ],
+      "renamed_markets": 1269
+    },
+    "2020-02": {
+      "first_date": "2020-02-01",
+      "last_date": "2020-02-29",
+      "fetched_at": "2026-11-11T04:17:53Z",
+      "source_rows": 1124,
+      "kept": 1124,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1121
+    },
+    "2020-03": {
+      "first_date": "2020-03-01",
+      "last_date": "2020-03-31",
+      "fetched_at": "2026-11-11T04:59:41Z",
+      "source_rows": 960,
+      "kept": 960,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-03-25",
+        "2020-03-27",
+        "2020-03-28",
+        "2020-03-29"
+      ],
+      "renamed_markets": 955
+    },
+    "2020-04": {
+      "first_date": "2020-04-01",
+      "last_date": "2020-04-30",
+      "fetched_at": "2026-11-11T04:19:42Z",
+      "source_rows": 288,
+      "kept": 288,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-04-05",
+        "2020-04-06",
+        "2020-04-07",
+        "2020-04-08",
+        "2020-04-09",
+        "2020-04-12",
+        "2020-04-14",
+        "2020-04-19"
+      ],
+      "renamed_markets": 288
+    },
+    "2020-05": {
+      "first_date": "2020-05-01",
+      "last_date": "2020-05-31",
+      "fetched_at": "2026-11-11T04:19:53Z",
+      "source_rows": 965,
+      "kept": 965,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-05-10",
+        "2020-05-24",
+        "2020-05-31"
+      ],
+      "renamed_markets": 964
+    },
+    "2020-06": {
+      "first_date": "2020-06-01",
+      "last_date": "2020-06-30",
+      "fetched_at": "2026-11-11T04:59:59Z",
+      "source_rows": 1240,
+      "kept": 1240,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1237
+    },
+    "2020-07": {
+      "first_date": "2020-07-01",
+      "last_date": "2020-07-31",
+      "fetched_at": "2026-11-11T04:21:41Z",
+      "source_rows": 816,
+      "kept": 816,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-07-05",
+        "2020-07-12",
+        "2020-07-19",
+        "2020-07-25",
+        "2020-07-26"
+      ],
+      "renamed_markets": 815
+    },
+    "2020-08": {
+      "first_date": "2020-08-01",
+      "last_date": "2020-08-31",
+      "fetched_at": "2026-11-11T04:22:00Z",
+      "source_rows": 860,
+      "kept": 860,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-08-02",
+        "2020-08-15",
+        "2020-08-22",
+        "2020-08-23",
+        "2020-08-30"
+      ],
+      "renamed_markets": 858
+    },
+    "2020-09": {
+      "first_date": "2020-09-01",
+      "last_date": "2020-09-30",
+      "fetched_at": "2026-11-11T05:00:18Z",
+      "source_rows": 970,
+      "kept": 970,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-09-12"
+      ],
+      "renamed_markets": 968
+    },
+    "2020-10": {
+      "first_date": "2020-10-01",
+      "last_date": "2020-10-31",
+      "fetched_at": "2026-11-11T05:00:37Z",
+      "source_rows": 870,
+      "kept": 870,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-10-02",
+        "2020-10-25",
+        "2020-10-31"
+      ],
+      "renamed_markets": 864
+    },
+    "2020-11": {
+      "first_date": "2020-11-01",
+      "last_date": "2020-11-30",
+      "fetched_at": "2026-11-11T04:24:01Z",
+      "source_rows": 897,
+      "kept": 897,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-11-01",
+        "2020-11-14",
+        "2020-11-15"
+      ],
+      "renamed_markets": 892
+    },
+    "2020-12": {
+      "first_date": "2020-12-01",
+      "last_date": "2020-12-31",
+      "fetched_at": "2026-11-11T06:49:00Z",
+      "source_rows": 922,
+      "kept": 922,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2020-12-25"
+      ],
+      "renamed_markets": 920
+    },
+    "2021-01": {
+      "first_date": "2021-01-01",
+      "last_date": "2021-01-31",
+      "fetched_at": "2026-11-11T04:25:52Z",
+      "source_rows": 960,
+      "kept": 960,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-01-14"
+      ],
+      "renamed_markets": 954
+    },
+    "2021-02": {
+      "first_date": "2021-02-01",
+      "last_date": "2021-02-28",
+      "fetched_at": "2026-11-11T04:26:04Z",
+      "source_rows": 1017,
+      "kept": 1017,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1008
+    },
+    "2021-03": {
+      "first_date": "2021-03-01",
+      "last_date": "2021-03-31",
+      "fetched_at": "2026-11-11T05:02:11Z",
+      "source_rows": 1007,
+      "kept": 1007,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-03-28"
+      ],
+      "renamed_markets": 1004
+    },
+    "2021-04": {
+      "first_date": "2021-04-01",
+      "last_date": "2021-04-30",
+      "fetched_at": "2026-11-11T05:02:28Z",
+      "source_rows": 760,
+      "kept": 760,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-04-13",
+        "2021-04-24",
+        "2021-04-25"
+      ],
+      "renamed_markets": 759
+    },
+    "2021-05": {
+      "first_date": "2021-05-01",
+      "last_date": "2021-05-31",
+      "fetched_at": "2026-11-11T04:28:06Z",
+      "source_rows": 278,
+      "kept": 278,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-05-01",
+        "2021-05-02",
+        "2021-05-09",
+        "2021-05-14",
+        "2021-05-16",
+        "2021-05-22",
+        "2021-05-23",
+        "2021-05-30"
+      ],
+      "renamed_markets": 277
+    },
+    "2021-06": {
+      "first_date": "2021-06-01",
+      "last_date": "2021-06-30",
+      "fetched_at": "2026-11-11T06:49:27Z",
+      "source_rows": 643,
+      "kept": 643,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-06-06",
+        "2021-06-13",
+        "2021-06-20",
+        "2021-06-27"
+      ],
+      "renamed_markets": 641
+    },
+    "2021-07": {
+      "first_date": "2021-07-01",
+      "last_date": "2021-07-31",
+      "fetched_at": "2026-11-11T05:04:29Z",
+      "source_rows": 885,
+      "kept": 885,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-07-04"
+      ],
+      "renamed_markets": 882
+    },
+    "2021-08": {
+      "first_date": "2021-08-01",
+      "last_date": "2021-08-31",
+      "fetched_at": "2026-11-11T04:30:11Z",
+      "source_rows": 822,
+      "kept": 822,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-08-15"
+      ],
+      "renamed_markets": 818
+    },
+    "2021-09": {
+      "first_date": "2021-09-01",
+      "last_date": "2021-09-30",
+      "fetched_at": "2026-11-11T05:04:44Z",
+      "source_rows": 935,
+      "kept": 935,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-09-10"
+      ],
+      "renamed_markets": 925
+    },
+    "2021-10": {
+      "first_date": "2021-10-01",
+      "last_date": "2021-10-31",
+      "fetched_at": "2026-11-11T04:31:36Z",
+      "source_rows": 753,
+      "kept": 753,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-10-03"
+      ],
+      "renamed_markets": 745
+    },
+    "2021-11": {
+      "first_date": "2021-11-01",
+      "last_date": "2021-11-30",
+      "fetched_at": "2026-11-11T05:05:01Z",
+      "source_rows": 764,
+      "kept": 764,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2021-11-05"
+      ],
+      "renamed_markets": 755
+    },
+    "2021-12": {
+      "first_date": "2021-12-01",
+      "last_date": "2021-12-31",
+      "fetched_at": "2026-11-11T06:50:54Z",
+      "source_rows": 1025,
+      "kept": 1025,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1016
+    },
+    "2022-01": {
+      "first_date": "2022-01-01",
+      "last_date": "2022-01-31",
+      "fetched_at": "2026-11-11T04:33:43Z",
+      "source_rows": 942,
+      "kept": 942,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2022-01-09",
+        "2022-01-16",
+        "2022-01-23",
+        "2022-01-26"
+      ],
+      "renamed_markets": 937
+    },
+    "2022-02": {
+      "first_date": "2022-02-01",
+      "last_date": "2022-02-28",
+      "fetched_at": "2026-11-11T05:06:38Z",
+      "source_rows": 923,
+      "kept": 923,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 919
+    },
+    "2022-03": {
+      "first_date": "2022-03-01",
+      "last_date": "2022-03-31",
+      "fetched_at": "2026-11-11T05:06:54Z",
+      "source_rows": 977,
+      "kept": 977,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 974
+    },
+    "2022-04": {
+      "first_date": "2022-04-01",
+      "last_date": "2022-04-30",
+      "fetched_at": "2026-11-11T06:51:20Z",
+      "source_rows": 846,
+      "kept": 846,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2022-04-02",
+        "2022-04-03"
+      ],
+      "renamed_markets": 846
+    },
+    "2022-05": {
+      "first_date": "2022-05-01",
+      "last_date": "2022-05-31",
+      "fetched_at": "2026-11-11T05:08:35Z",
+      "source_rows": 934,
+      "kept": 934,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2022-05-01"
+      ],
+      "renamed_markets": 927
+    },
+    "2022-06": {
+      "first_date": "2022-06-01",
+      "last_date": "2022-06-30",
+      "fetched_at": "2026-11-11T05:09:00Z",
+      "source_rows": 917,
+      "kept": 917,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 916
+    },
+    "2022-07": {
+      "first_date": "2022-07-01",
+      "last_date": "2022-07-31",
+      "fetched_at": "2026-11-11T05:09:19Z",
+      "source_rows": 830,
+      "kept": 830,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2022-07-10"
+      ],
+      "renamed_markets": 829
+    },
+    "2022-08": {
+      "first_date": "2022-08-01",
+      "last_date": "2022-08-31",
+      "fetched_at": "2026-11-11T06:51:45Z",
+      "source_rows": 785,
+      "kept": 785,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2022-08-31"
+      ],
+      "renamed_markets": 779
+    },
+    "2022-09": {
+      "first_date": "2022-09-01",
+      "last_date": "2022-09-30",
+      "fetched_at": "2026-11-11T05:10:55Z",
+      "source_rows": 795,
+      "kept": 795,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2022-09-25"
+      ],
+      "renamed_markets": 793
+    },
+    "2022-10": {
+      "first_date": "2022-10-01",
+      "last_date": "2022-10-31",
+      "fetched_at": "2026-11-11T05:11:14Z",
+      "source_rows": 761,
+      "kept": 761,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 758
+    },
+    "2022-11": {
+      "first_date": "2022-11-01",
+      "last_date": "2022-11-30",
+      "fetched_at": "2026-11-11T05:11:33Z",
+      "source_rows": 833,
+      "kept": 833,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2022-11-13"
+      ],
+      "renamed_markets": 833
+    },
+    "2022-12": {
+      "first_date": "2022-12-01",
+      "last_date": "2022-12-31",
+      "fetched_at": "2026-11-11T05:11:52Z",
+      "source_rows": 989,
+      "kept": 989,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 986
+    },
+    "2023-01": {
+      "first_date": "2023-01-01",
+      "last_date": "2023-01-31",
+      "fetched_at": "2026-11-11T06:52:09Z",
+      "source_rows": 1007,
+      "kept": 1007,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-01-15",
+        "2023-01-26"
+      ],
+      "renamed_markets": 1003
+    },
+    "2023-02": {
+      "first_date": "2023-02-01",
+      "last_date": "2023-02-28",
+      "fetched_at": "2026-11-11T05:13:28Z",
+      "source_rows": 885,
+      "kept": 885,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-02-18"
+      ],
+      "renamed_markets": 883
+    },
+    "2023-03": {
+      "first_date": "2023-03-01",
+      "last_date": "2023-03-31",
+      "fetched_at": "2026-11-11T05:14:50Z",
+      "source_rows": 951,
+      "kept": 951,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-03-22"
+      ],
+      "renamed_markets": 951
+    },
+    "2023-04": {
+      "first_date": "2023-04-01",
+      "last_date": "2023-04-30",
+      "fetched_at": "2026-11-11T05:16:36Z",
+      "source_rows": 666,
+      "kept": 666,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-04-02"
+      ],
+      "renamed_markets": 665
+    },
+    "2023-05": {
+      "first_date": "2023-05-01",
+      "last_date": "2023-05-31",
+      "fetched_at": "2026-11-11T05:16:57Z",
+      "source_rows": 935,
+      "kept": 935,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-05-10",
+        "2023-05-28"
+      ],
+      "renamed_markets": 933
+    },
+    "2023-06": {
+      "first_date": "2023-06-01",
+      "last_date": "2023-06-30",
+      "fetched_at": "2026-11-11T05:17:16Z",
+      "source_rows": 1004,
+      "kept": 1004,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 998
+    },
+    "2023-07": {
+      "first_date": "2023-07-01",
+      "last_date": "2023-07-31",
+      "fetched_at": "2026-11-11T05:17:35Z",
+      "source_rows": 951,
+      "kept": 951,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 949
+    },
+    "2023-08": {
+      "first_date": "2023-08-01",
+      "last_date": "2023-08-31",
+      "fetched_at": "2026-11-11T05:17:55Z",
+      "source_rows": 805,
+      "kept": 805,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-08-15"
+      ],
+      "renamed_markets": 804
+    },
+    "2023-09": {
+      "first_date": "2023-09-01",
+      "last_date": "2023-09-30",
+      "fetched_at": "2026-11-11T05:18:15Z",
+      "source_rows": 698,
+      "kept": 698,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-09-17"
+      ],
+      "renamed_markets": 695
+    },
+    "2023-10": {
+      "first_date": "2023-10-01",
+      "last_date": "2023-10-31",
+      "fetched_at": "2026-11-11T05:18:33Z",
+      "source_rows": 808,
+      "kept": 808,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-10-01",
+        "2023-10-22",
+        "2023-10-23"
+      ],
+      "renamed_markets": 802
+    },
+    "2023-11": {
+      "first_date": "2023-11-01",
+      "last_date": "2023-11-30",
+      "fetched_at": "2026-11-11T05:18:59Z",
+      "source_rows": 700,
+      "kept": 700,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-11-05",
+        "2023-11-12",
+        "2023-11-14",
+        "2023-11-26"
+      ],
+      "renamed_markets": 696
+    },
+    "2023-12": {
+      "first_date": "2023-12-01",
+      "last_date": "2023-12-31",
+      "fetched_at": "2026-11-11T05:19:18Z",
+      "source_rows": 898,
+      "kept": 898,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2023-12-17"
+      ],
+      "renamed_markets": 896
+    },
+    "2024-01": {
+      "first_date": "2024-01-01",
+      "last_date": "2024-01-31",
+      "fetched_at": "2026-11-11T05:19:38Z",
+      "source_rows": 811,
+      "kept": 811,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2024-01-21",
+        "2024-01-28"
+      ],
+      "renamed_markets": 809
+    },
+    "2024-02": {
+      "first_date": "2024-02-01",
+      "last_date": "2024-02-29",
+      "fetched_at": "2026-11-11T05:19:57Z",
+      "source_rows": 1001,
+      "kept": 1001,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1000
+    },
+    "2024-03": {
+      "first_date": "2024-03-01",
+      "last_date": "2024-03-31",
+      "fetched_at": "2026-11-11T05:20:17Z",
+      "source_rows": 860,
+      "kept": 860,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2024-03-08"
+      ],
+      "renamed_markets": 859
+    },
+    "2024-04": {
+      "first_date": "2024-04-01",
+      "last_date": "2024-04-30",
+      "fetched_at": "2026-11-11T05:20:39Z",
+      "source_rows": 652,
+      "kept": 652,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2024-04-09",
+        "2024-04-10",
+        "2024-04-11",
+        "2024-04-14",
+        "2024-04-21"
+      ],
+      "renamed_markets": 652
+    },
+    "2024-05": {
+      "first_date": "2024-05-01",
+      "last_date": "2024-05-31",
+      "fetched_at": "2026-11-11T05:20:56Z",
+      "source_rows": 911,
+      "kept": 911,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 911
+    },
+    "2024-06": {
+      "first_date": "2024-06-01",
+      "last_date": "2024-06-30",
+      "fetched_at": "2026-11-11T05:21:21Z",
+      "source_rows": 843,
+      "kept": 843,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2024-06-02",
+        "2024-06-16",
+        "2024-06-17"
+      ],
+      "renamed_markets": 841
+    },
+    "2024-07": {
+      "first_date": "2024-07-01",
+      "last_date": "2024-07-31",
+      "fetched_at": "2026-11-11T05:21:54Z",
+      "source_rows": 1002,
+      "kept": 1002,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1000
+    },
+    "2024-08": {
+      "first_date": "2024-08-01",
+      "last_date": "2024-08-31",
+      "fetched_at": "2026-11-11T05:22:13Z",
+      "source_rows": 938,
+      "kept": 938,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2024-08-11",
+        "2024-08-18"
+      ],
+      "renamed_markets": 936
+    },
+    "2024-09": {
+      "first_date": "2024-09-01",
+      "last_date": "2024-09-30",
+      "fetched_at": "2026-11-11T06:52:34Z",
+      "source_rows": 867,
+      "kept": 867,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2024-09-07",
+        "2024-09-15",
+        "2024-09-29"
+      ],
+      "renamed_markets": 865
+    },
+    "2024-10": {
+      "first_date": "2024-10-01",
+      "last_date": "2024-10-31",
+      "fetched_at": "2026-11-11T06:52:58Z",
+      "source_rows": 872,
+      "kept": 870,
+      "needs_review": 0,
+      "rejected": 2,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 2
+      },
+      "dates_with_no_records": [
+        "2024-10-06",
+        "2024-10-12",
+        "2024-10-27"
+      ],
+      "renamed_markets": 869
+    },
+    "2024-11": {
+      "first_date": "2024-11-01",
+      "last_date": "2024-11-30",
+      "fetched_at": "2026-11-11T05:24:08Z",
+      "source_rows": 686,
+      "kept": 686,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2024-11-01",
+        "2024-11-02",
+        "2024-11-03",
+        "2024-11-22",
+        "2024-11-23",
+        "2024-11-24"
+      ],
+      "renamed_markets": 682
+    },
+    "2024-12": {
+      "first_date": "2024-12-01",
+      "last_date": "2024-12-31",
+      "fetched_at": "2026-11-11T05:24:24Z",
+      "source_rows": 932,
+      "kept": 932,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2024-12-01",
+        "2024-12-08",
+        "2024-12-15"
+      ],
+      "renamed_markets": 928
+    },
+    "2025-01": {
+      "first_date": "2025-01-01",
+      "last_date": "2025-01-31",
+      "fetched_at": "2026-11-11T06:53:24Z",
+      "source_rows": 1090,
+      "kept": 1090,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2025-01-26"
+      ],
+      "renamed_markets": 1088
+    },
+    "2025-02": {
+      "first_date": "2025-02-01",
+      "last_date": "2025-02-28",
+      "fetched_at": "2026-11-11T05:26:04Z",
+      "source_rows": 960,
+      "kept": 960,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2025-02-23"
+      ],
+      "renamed_markets": 958
+    },
+    "2025-03": {
+      "first_date": "2025-03-01",
+      "last_date": "2025-03-31",
+      "fetched_at": "2026-11-11T05:26:24Z",
+      "source_rows": 481,
+      "kept": 467,
+      "needs_review": 0,
+      "rejected": 14,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 28
+      },
+      "dates_with_no_records": [
+        "2025-03-05",
+        "2025-03-06",
+        "2025-03-07",
+        "2025-03-08"
+      ],
+      "renamed_markets": 466
+    },
+    "2025-04": {
+      "first_date": "2025-04-01",
+      "last_date": "2025-04-30",
+      "fetched_at": "2026-11-11T06:53:49Z",
+      "source_rows": 620,
+      "kept": 618,
+      "needs_review": 0,
+      "rejected": 2,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 4
+      },
+      "dates_with_no_records": [
+        "2025-04-01",
+        "2025-04-30"
+      ],
+      "renamed_markets": 618
+    },
+    "2025-05": {
+      "first_date": "2025-05-01",
+      "last_date": "2025-05-31",
+      "fetched_at": "2026-11-11T06:54:14Z",
+      "source_rows": 838,
+      "kept": 835,
+      "needs_review": 0,
+      "rejected": 3,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 6
+      },
+      "dates_with_no_records": [
+        "2025-05-01",
+        "2025-05-11"
+      ],
+      "renamed_markets": 835
+    },
+    "2025-06": {
+      "first_date": "2025-06-01",
+      "last_date": "2025-06-30",
+      "fetched_at": "2026-11-11T05:28:19Z",
+      "source_rows": 812,
+      "kept": 804,
+      "needs_review": 0,
+      "rejected": 8,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 16
+      },
+      "dates_with_no_records": [
+        "2025-06-08"
+      ],
+      "renamed_markets": 804
+    },
+    "2025-07": {
+      "first_date": "2025-07-01",
+      "last_date": "2025-07-31",
+      "fetched_at": "2026-11-11T05:28:40Z",
+      "source_rows": 859,
+      "kept": 853,
+      "needs_review": 0,
+      "rejected": 6,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 12
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 853
+    },
+    "2025-08": {
+      "first_date": "2025-08-01",
+      "last_date": "2025-08-31",
+      "fetched_at": "2026-11-11T05:29:01Z",
+      "source_rows": 579,
+      "kept": 576,
+      "needs_review": 0,
+      "rejected": 3,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 2,
+        "conflicting_duplicate": 2
+      },
+      "dates_with_no_records": [
+        "2025-08-10",
+        "2025-08-17",
+        "2025-08-24",
+        "2025-08-27",
+        "2025-08-31"
+      ],
+      "renamed_markets": 576
+    },
+    "2025-09": {
+      "first_date": "2025-09-01",
+      "last_date": "2025-09-30",
+      "fetched_at": "2026-11-11T05:29:23Z",
+      "source_rows": 807,
+      "kept": 802,
+      "needs_review": 0,
+      "rejected": 5,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 10
+      },
+      "dates_with_no_records": [
+        "2025-09-07",
+        "2025-09-21",
+        "2025-09-28"
+      ],
+      "renamed_markets": 802
+    },
+    "2025-10": {
+      "first_date": "2025-10-01",
+      "last_date": "2025-10-31",
+      "fetched_at": "2026-11-11T05:29:40Z",
+      "source_rows": 580,
+      "kept": 579,
+      "needs_review": 1,
+      "rejected": 1,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "non_positive_price": 1
+      },
+      "dates_with_no_records": [
+        "2025-10-01",
+        "2025-10-05",
+        "2025-10-12",
+        "2025-10-19",
+        "2025-10-20",
+        "2025-10-22"
+      ],
+      "renamed_markets": 579
+    },
+    "2025-11": {
+      "first_date": "2025-11-01",
+      "last_date": "2025-11-30",
+      "fetched_at": "2026-11-11T05:30:00Z",
+      "source_rows": 843,
+      "kept": 774,
+      "needs_review": 1,
+      "rejected": 0,
+      "duplicates": 69,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [
+        "2025-11-02",
+        "2025-11-08",
+        "2025-11-09",
+        "2025-11-16",
+        "2025-11-23",
+        "2025-11-30"
+      ],
+      "renamed_markets": 750
+    },
+    "2025-12": {
+      "first_date": "2025-12-01",
+      "last_date": "2025-12-31",
+      "fetched_at": "2026-11-11T05:30:19Z",
+      "source_rows": 703,
+      "kept": 699,
+      "needs_review": 0,
+      "rejected": 4,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 4
+      },
+      "dates_with_no_records": [
+        "2025-12-07",
+        "2025-12-14",
+        "2025-12-21"
+      ],
+      "renamed_markets": 550
+    },
+    "2026-01": {
+      "first_date": "2026-01-01",
+      "last_date": "2026-01-31",
+      "fetched_at": "2026-11-11T06:54:39Z",
+      "source_rows": 818,
+      "kept": 814,
+      "needs_review": 1,
+      "rejected": 4,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 4
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 654
+    },
+    "2026-02": {
+      "first_date": "2026-02-01",
+      "last_date": "2026-02-28",
+      "fetched_at": "2026-11-11T06:55:05Z",
+      "source_rows": 1147,
+      "kept": 1137,
+      "needs_review": 0,
+      "rejected": 10,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 10
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 928
+    },
+    "2026-03": {
+      "first_date": "2026-03-01",
+      "last_date": "2026-03-31",
+      "fetched_at": "2026-11-11T05:32:15Z",
+      "source_rows": 1160,
+      "kept": 1152,
+      "needs_review": 3,
+      "rejected": 8,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 8
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 933
+    },
+    "2026-04": {
+      "first_date": "2026-04-01",
+      "last_date": "2026-04-30",
+      "fetched_at": "2026-11-11T05:32:33Z",
+      "source_rows": 2451,
+      "kept": 1343,
+      "needs_review": 3,
+      "rejected": 4,
+      "duplicates": 1104,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 4
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 1169
+    },
+    "2026-05": {
+      "first_date": "2026-05-01",
+      "last_date": "2026-05-31",
+      "fetched_at": "2026-11-11T06:55:26Z",
+      "source_rows": 2550,
+      "kept": 1478,
+      "needs_review": 15,
+      "rejected": 0,
+      "duplicates": 1072,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 1139
+    },
+    "2026-06": {
+      "first_date": "2026-06-01",
+      "last_date": "2026-06-30",
+      "fetched_at": "2026-11-11T05:34:09Z",
+      "source_rows": 1490,
+      "kept": 1405,
+      "needs_review": 1,
+      "rejected": 18,
+      "duplicates": 67,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 18
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 67
+    },
+    "2026-07": {
+      "first_date": "2026-07-01",
+      "last_date": "2026-07-31",
+      "fetched_at": "2026-11-11T05:34:26Z",
+      "source_rows": 1543,
+      "kept": 1512,
+      "needs_review": 5,
+      "rejected": 16,
+      "duplicates": 15,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 16
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 15
+    },
+    "2026-08": {
+      "first_date": "2026-08-01",
+      "last_date": "2026-08-31",
+      "fetched_at": "2026-11-11T06:55:54Z",
+      "source_rows": 1276,
+      "kept": 1272,
+      "needs_review": 2,
+      "rejected": 4,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 4
+      },
+      "dates_with_no_records": [
+        "2026-08-23"
+      ],
+      "renamed_markets": 0
+    },
+    "2026-09": {
+      "first_date": "2026-09-01",
+      "last_date": "2026-09-30",
+      "fetched_at": "2026-11-11T06:56:22Z",
+      "source_rows": 1524,
+      "kept": 1522,
+      "needs_review": 3,
+      "rejected": 2,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 2
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 0
+    },
+    "2026-10": {
+      "first_date": "2026-10-01",
+      "last_date": "2026-10-31",
+      "fetched_at": "2026-11-11T05:36:21Z",
+      "source_rows": 1547,
+      "kept": 1543,
+      "needs_review": 0,
+      "rejected": 4,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {
+        "conflicting_duplicate": 4
+      },
+      "dates_with_no_records": [],
+      "renamed_markets": 0
+    },
+    "2026-11": {
+      "first_date": "2026-11-01",
+      "last_date": "2026-11-09",
+      "fetched_at": "2026-11-11T05:36:40Z",
+      "source_rows": 370,
+      "kept": 370,
+      "needs_review": 0,
+      "rejected": 0,
+      "duplicates": 0,
+      "out_of_scope": 0,
+      "rejection_reasons": {},
+      "dates_with_no_records": [],
+      "renamed_markets": 0
+    }
+  },
+  "source": "data.gov.in resource 35985678-0d79-46b4-9ed6-6f13308a1d24 (AGMARKNET variety-wise daily prices)",
+  "state": "Karnataka",
+  "commodity": "Arecanut(Betelnut/Supari)",
+  "unit": "INR/quintal"
+}

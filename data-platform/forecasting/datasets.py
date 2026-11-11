@@ -202,6 +202,35 @@ def build_monthly_reference(conn: sqlite3.Connection, config: ExperimentConfig |
     return dataset
 
 
+def build_monthly_from_daily(config: ExperimentConfig | None = None) -> ForecastDataset:
+    """Monthly series from the 2014+ daily archive files (``daily_monthly.py`` rule). Not stored in D1, no vintages."""
+    from .daily_archive import load_archive, load_manifest
+    from .daily_monthly import BASIS, MIN_MARKETS, monthly_from_daily
+
+    config = config or ExperimentConfig()
+    monthly = monthly_from_daily(load_archive())
+    series: list[SeriesData] = []
+    for variety, frame in monthly.groupby("variety", sort=True):
+        raw = pd.Series(frame.value.to_numpy(dtype=float), index=pd.PeriodIndex(frame.month, freq="M"))
+        kept, dropped, missing = _trailing_contiguous_months(raw)
+        series.append(SeriesData(series_id=f"KA|{variety}", market="Karnataka", variety=str(variety), grade=None,
+                                 values=kept, dropped_observations=dropped, missing_periods=missing))
+    empty = pd.DataFrame({"series_id": pd.Series(dtype=str), "period": pd.PeriodIndex([], freq="M"),
+                          "value": pd.Series(dtype=float), "fetched_at": pd.to_datetime(pd.Series([], dtype=str), utc=True)})
+    dataset = ForecastDataset(
+        key="monthly_from_daily", price_basis=BASIS, frequency="monthly", unit="INR/quintal",
+        unit_status="derived_report", provenance="database",
+        source_description=f"Median across Karnataka APMCs of each market's mean daily modal price (AGMARKNET daily, "
+                           f"from 2014; at least {MIN_MARKETS} markets a month)",
+        series=series, vintages=MonthlyVintages(empty),
+    )
+    months = load_manifest()["months"]
+    dataset.notes.append(f"Built from {len(months)} archived months of daily APMC prices; not the arrival-weighted monthly report.")
+    _apply_rule(dataset, config)
+    dataset.data_version = data_version(dataset.price_basis, dataset.unit, dataset.series)
+    return dataset
+
+
 def build_daily_agmarknet(conn: sqlite3.Connection, config: ExperimentConfig | None = None) -> ForecastDataset:
     config = config or ExperimentConfig()
     frame = pd.DataFrame()

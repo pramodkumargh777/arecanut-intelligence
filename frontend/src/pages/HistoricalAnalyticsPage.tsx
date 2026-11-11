@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../services/api";
+import { isLongBasis, LONG_HISTORY_FROM } from "../services/intelligence";
 import { toCsv } from "../services/csv";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { LazyBarChart } from "../components/LazyCharts";
@@ -25,8 +26,12 @@ const COPY = defineCopy({
     months: MONTH_NAMES_EN,
     title: "Monthly trends", intro: "Karnataka monthly average price for each variety (AGMARKNET). A missing month means no report, not zero.",
     fromMonth: "From month", throughMonth: "Through month", monthlyVariety: "Exact monthly variety",
+    series: "Price series", seriesReport: "Monthly report (from 2021)", seriesLong: "Long history from daily prices (from 2014)",
+    longNote: (gap: string, same: string, months: number) => `Median of Karnataka APMCs' daily modal prices (AGMARKNET daily, data.gov.in), at least 2 markets a month. Not the arrival-weighted monthly report: over ${months} months where both exist, it was typically ${gap}% away and moved the same way in ${same}% of months.`,
+    longUnavailable: "This variety stays on the monthly report: its daily-price series does not follow the report closely enough to stand in for it.",
+    observedTitleLong: (variety: string) => `${variety} · Monthly APMC median prices`, longSource: "AGMARKNET daily",
     invalid: "Select completed months in ascending order, from 2010 onward.",
-    coverage: "PRICE COVERAGE", coverageHint: (n: number) => `${n} report months stored; missing values are not zero`,
+    coverage: "PRICE COVERAGE", coverageHint: (n: number) => `${n} report months stored; missing values are not zero`, coverageHintLong: (n: number) => `${n} months with at least 2 markets reporting; missing values are not zero`,
     latestMonth: "LATEST OBSERVED MONTH", none: "None", latestHint: (fetched: string) => `Platform fetched: ${fetched}. Reporting month is a calendar period, not a timestamp.`,
     yoy: "LATEST YEAR-ON-YEAR", yoyHint: "Exact month vs same month last year; never nearest available",
     volatility: "TRAILING VOLATILITY", volatilityHint: "Annualized sample volatility of 12 consecutive monthly log returns",
@@ -72,8 +77,12 @@ const COPY = defineCopy({
     months: MONTH_NAMES_KN,
     title: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", intro: "ಪ್ರತಿ ತಳಿಯ ಕರ್ನಾಟಕ ತಿಂಗಳ ಸರಾಸರಿ ದರ (AGMARKNET). ಖಾಲಿ ತಿಂಗಳು ಎಂದರೆ ವರದಿ ಇಲ್ಲ, ಸೊನ್ನೆಯಲ್ಲ.",
     fromMonth: "ಇಂದ (ತಿಂಗಳು)", throughMonth: "ವರೆಗೆ (ತಿಂಗಳು)", monthlyVariety: "ನಿಖರ ತಿಂಗಳ ತಳಿ",
+    series: "ದರದ ಸರಣಿ", seriesReport: "ತಿಂಗಳ ವರದಿ (2021ರಿಂದ)", seriesLong: "ದೈನಂದಿನ ದರಗಳಿಂದ ದೀರ್ಘ ಇತಿಹಾಸ (2014ರಿಂದ)",
+    longNote: (gap: string, same: string, months: number) => `ಕರ್ನಾಟಕದ ಎಪಿಎಂಸಿಗಳ ದೈನಂದಿನ ಮಾದರಿ ದರದ ಮಧ್ಯಮ ಮೌಲ್ಯ (AGMARKNET ದೈನಂದಿನ, data.gov.in), ತಿಂಗಳಿಗೆ ಕನಿಷ್ಠ 2 ಮಾರುಕಟ್ಟೆಗಳು. ಇದು ಆವಕ ಆಧಾರಿತ ತಿಂಗಳ ವರದಿ ಅಲ್ಲ: ಎರಡೂ ಇರುವ ${months} ತಿಂಗಳಲ್ಲಿ ಸಾಮಾನ್ಯವಾಗಿ ${gap}% ಅಂತರ ಇತ್ತು, ${same}% ತಿಂಗಳಲ್ಲಿ ಒಂದೇ ದಿಕ್ಕಿನಲ್ಲಿ ಚಲಿಸಿತು.`,
+    longUnavailable: "ಈ ತಳಿ ತಿಂಗಳ ವರದಿಯಲ್ಲೇ ಉಳಿಯುತ್ತದೆ: ಇದರ ದೈನಂದಿನ ದರ ಸರಣಿ ವರದಿಗೆ ಸಾಕಷ್ಟು ಹತ್ತಿರವಿಲ್ಲ.",
+    observedTitleLong: (variety: string) => `${variety} · ತಿಂಗಳ ಎಪಿಎಂಸಿ ಮಧ್ಯಮ ದರಗಳು`, longSource: "AGMARKNET ದೈನಂದಿನ",
     invalid: "2010 ರಿಂದ ಮುಂದಿನ, ಮುಗಿದ ತಿಂಗಳುಗಳನ್ನು ಏರಿಕೆ ಕ್ರಮದಲ್ಲಿ ಆಯ್ಕೆಮಾಡಿ.",
-    coverage: "ದರದ ವ್ಯಾಪ್ತಿ", coverageHint: (n: number) => `${n} ವರದಿ ತಿಂಗಳುಗಳು ಸಂಗ್ರಹವಾಗಿವೆ; ಇಲ್ಲದ ಮೌಲ್ಯ ಸೊನ್ನೆಯಲ್ಲ`,
+    coverage: "ದರದ ವ್ಯಾಪ್ತಿ", coverageHint: (n: number) => `${n} ವರದಿ ತಿಂಗಳುಗಳು ಸಂಗ್ರಹವಾಗಿವೆ; ಇಲ್ಲದ ಮೌಲ್ಯ ಸೊನ್ನೆಯಲ್ಲ`, coverageHintLong: (n: number) => `ಕನಿಷ್ಠ 2 ಮಾರುಕಟ್ಟೆಗಳು ವರದಿ ಮಾಡಿದ ${n} ತಿಂಗಳುಗಳು; ಇಲ್ಲದ ಮೌಲ್ಯ ಸೊನ್ನೆಯಲ್ಲ`,
     latestMonth: "ಇತ್ತೀಚಿನ ದಾಖಲಿತ ತಿಂಗಳು", none: "ಯಾವುದೂ ಇಲ್ಲ", latestHint: (fetched: string) => `ತಂದ ಸಮಯ: ${fetched}. ವರದಿ ತಿಂಗಳು ಒಂದು ಕ್ಯಾಲೆಂಡರ್ ಅವಧಿ, ಸಮಯವಲ್ಲ.`,
     yoy: "ಇತ್ತೀಚಿನ ವರ್ಷದಿಂದ ವರ್ಷದ ಬದಲಾವಣೆ", yoyHint: "ಅದೇ ತಿಂಗಳನ್ನು ಕಳೆದ ವರ್ಷದ ಅದೇ ತಿಂಗಳಿಗೆ ಹೋಲಿಸಲಾಗಿದೆ; ಹತ್ತಿರದ ತಿಂಗಳನ್ನು ಎಂದೂ ಬಳಸುವುದಿಲ್ಲ",
     volatility: "ಇತ್ತೀಚಿನ ಏರಿಳಿತ", volatilityHint: "ಸತತ 12 ತಿಂಗಳ ದರ ಬದಲಾವಣೆಗಳ ವಾರ್ಷಿಕ ಏರಿಳಿತ",
@@ -131,9 +140,15 @@ export function HistoricalAnalyticsPage() {
   const c = useCopy(COMMON);
   const format = useFormat();
   const [from, setFrom] = useState("2021-01"), [to, setTo] = useState(completed), [variety, setVariety] = useState("Rashi");
+  const [series, setSeries] = useState<"report" | "long">("report");
   const valid = from >= "2010-01" && from <= to && to <= completed();
-  const query = useQuery({ queryKey: ["history", from, to, variety], queryFn: () => api.monthlyHistory(from, to, variety), enabled: valid, refetchInterval: 60_000 });
+  const query = useQuery({ queryKey: ["history", from, to, variety, series], queryFn: () => api.monthlyHistory(from, to, variety, series === "long" ? "long" : undefined), enabled: valid, refetchInterval: 60_000 });
   const data = query.data;
+  const long = isLongBasis(data);
+  const choose = (value: "report" | "long") => {
+    setSeries(value);
+    if (value === "long" && from > LONG_HISTORY_FROM) setFrom(LONG_HISTORY_FROM);
+  };
   const latest = data?.points.filter((point) => point.weighted_price !== null).at(-1);
   const changes = data?.versions.filter((row, index, versions) => {
     const prior = versions.slice(0, index).filter((value) => value.reporting_month === row.reporting_month).at(-1);
@@ -146,32 +161,36 @@ export function HistoricalAnalyticsPage() {
       <MonthYearPicker label={t.fromMonth} min="2010-01" max={completed()} value={from} onChange={setFrom} />
       <MonthYearPicker label={t.throughMonth} min="2010-01" max={completed()} value={to} onChange={setTo} />
       <label className="filter-control"><span>{t.monthlyVariety}</span><select value={variety} onChange={(event) => setVariety(event.target.value)}>{[...new Set([variety, ...(data?.varieties ?? [])])].map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
+      <label className="filter-control"><span>{t.series}</span><select value={series} onChange={(event) => choose(event.target.value as "report" | "long")}>
+        <option value="report">{t.seriesReport}</option><option value="long">{t.seriesLong}</option></select></label>
     </section>
     {!valid ? <ErrorState error={new Error(t.invalid)} /> : query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
       <section className="snapshot-grid">
-        <article className="snapshot-card"><div className="card-kicker">{t.coverage}</div><div className="snapshot-value">{data.observed_months} / {data.expected_months}</div><p>{t.coverageHint(data.reporting_months)}</p></article>
+        <article className="snapshot-card"><div className="card-kicker">{t.coverage}</div><div className="snapshot-value">{data.observed_months} / {data.expected_months}</div><p>{(long ? t.coverageHintLong : t.coverageHint)(data.reporting_months)}</p></article>
         <article className="snapshot-card"><div className="card-kicker">{t.latestMonth}</div><div className="snapshot-value">{latest ? format.month(latest.reporting_month) : t.none}</div><p>{t.latestHint(latest?.fetched_at ? format.timestamp(latest.fetched_at) : c.never)}</p></article>
         <article className="snapshot-card"><div className="card-kicker">{t.yoy}</div><div className="snapshot-value">{number(latest?.yoy_percent ?? null)}{latest?.yoy_percent != null ? "%" : ""}</div><p>{t.yoyHint}</p></article>
         <article className="snapshot-card"><div className="card-kicker">{t.volatility}</div><div className="snapshot-value">{number(latest?.volatility_percent ?? null)}{latest?.volatility_percent != null ? "%" : ""}</div><p>{t.volatilityHint}</p></article>
       </section>
-      <section className="panel"><div className="panel-heading"><div><h2>{t.observedTitle(variety)}</h2><p>{t.observedHint(data.state)}</p></div></div>
+      <section className="panel"><div className="panel-heading"><div><h2>{long ? t.observedTitleLong(variety) : t.observedTitle(variety)}</h2><p>{t.observedHint(data.state)}</p>
+        {long && data.long_history && <p>{t.longNote(String(data.long_history.median_abs_gap_pct ?? "—"), String(data.long_history.same_direction_pct ?? "—"), data.long_history.compared_months)}</p>}
+        {series === "long" && !long && <p>{t.longUnavailable}</p>}</div></div>
         {!data.observed_months ? <EmptyState title={t.noObserved}>{t.noObservedHint}</EmptyState>
           : <Suspense fallback={<LoadingState />}><PriceChart label={t.chartLabel(variety)} quotePoints={data.points.flatMap((row) => row.weighted_price === null ? [] : [{ reporting_date: `${row.reporting_month}-01`, average_price: row.weighted_price }])} calendarInterval="monthly" range={{ from: `${from}-01`, to: `${to}-01` }} /></Suspense>}
       </section>
       <section className="panel"><div className="panel-heading"><div><h2>{t.anomaly}</h2><p>{t.anomalyHint(data.flagged_months, data.anomaly_threshold_percent, data.review_method)}</p></div></div><div className="monthly-details">
         <p className="phone-hide">{t.flagsNote}</p>
         {!data.flagged_months && <p>{t.noFlags}</p>}
-        {data.points.filter((row) => row.review_flags.length > 0).map((row) => <article key={row.reporting_month}><h3>{format.month(row.reporting_month)} · {variety} · {number(row.weighted_price)} {row.price_unit}</h3><ul>{row.review_flags.map((flag) => <li key={flag.code}>{flagText(flag)}</li>)}</ul>{row.refresh_run_id && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</article>)}
+        {data.points.filter((row) => row.review_flags.length > 0).map((row) => <article key={row.reporting_month}><h3>{format.month(row.reporting_month)} · {variety} · {number(row.weighted_price)} {row.price_unit}</h3><ul>{row.review_flags.map((flag) => <li key={flag.code}>{flagText(flag)}</li>)}</ul>{row.refresh_run_id && !long && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</article>)}
       </div></section>
       <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.calendar}</h2><p>{t.calendarHint}</p></div><ExportButton label={t.exportHistory} onClick={() => download([
         ["month", "weighted_price", "price_unit", "status", "review_flags", "review_explanations", "rolling_3", "rolling_12", "yoy_percent", "volatility_percent", "source_url", "fetched_at", "refresh_run_id"],
         ...data.points.map((row) => [row.reporting_month, row.weighted_price, row.price_unit, row.status, row.review_flags.map((flag) => flag.code).join("; "), row.review_flags.map((flag) => flag.explanation).join("; "), row.rolling_3, row.rolling_12, row.yoy_percent, row.volatility_percent, row.source_url, row.fetched_at, row.refresh_run_id]),
       ], "areca-pulse-monthly-history.csv")} /></div>
         <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label={t.tableAria}><table className="month-history"><caption>{t.tableCaption}</caption><thead><tr><th>{t.month}</th><th>{c.status}</th><th className="numeric">{t.weighted}</th><th className="numeric">{t.mean3}</th><th className="numeric">{t.mean12}</th><th className="numeric">{t.yoyPercent}</th><th className="numeric">{t.volPercent}</th><th>{t.sourceFreshness}</th></tr></thead><tbody>
-          {data.points.map((row) => <tr key={row.reporting_month}><td>{format.month(row.reporting_month)}</td><td>{t.status[row.status] ?? row.status.replace(/_/g, " ")}{row.review_flags.length > 0 && <span className="status-flag" role="note" title={t.flagged}>{t.flaggedShort}<span className="sr-only"> — {t.flagged}</span></span>}{row.latest_attempt?.status === "failed" && <small className="quote-fetch" role="note">{t.refreshFailed(row.latest_attempt.error_message ?? "")}</small>}</td><td className="numeric">{number(row.weighted_price)}</td><td className="numeric">{number(row.rolling_3)}</td><td className="numeric">{number(row.rolling_12)}</td><td className="numeric">{number(row.yoy_percent)}</td><td className="numeric">{number(row.volatility_percent)}</td><td className="month-source">{row.source_url ? <a href={row.source_url} target="_blank" rel="noreferrer">AGMARKNET CSV</a> : t.noObservation}
+          {data.points.map((row) => <tr key={row.reporting_month}><td>{format.month(row.reporting_month)}</td><td>{t.status[row.status] ?? row.status.replace(/_/g, " ")}{row.review_flags.length > 0 && <span className="status-flag" role="note" title={t.flagged}>{t.flaggedShort}<span className="sr-only"> — {t.flagged}</span></span>}{row.latest_attempt?.status === "failed" && <small className="quote-fetch" role="note">{t.refreshFailed(row.latest_attempt.error_message ?? "")}</small>}</td><td className="numeric">{number(row.weighted_price)}</td><td className="numeric">{number(row.rolling_3)}</td><td className="numeric">{number(row.rolling_12)}</td><td className="numeric">{number(row.yoy_percent)}</td><td className="numeric">{number(row.volatility_percent)}</td><td className="month-source">{row.source_url ? <a href={row.source_url} target="_blank" rel="noreferrer">{long ? t.longSource : "AGMARKNET CSV"}</a> : t.noObservation}
             {/* The fetch day shows in the row; the exact time is in its tooltip and in the evidence below. */}
             <small title={row.fetched_at ? t.platformFetched(format.timestamp(row.fetched_at)) : undefined}>{row.fetched_at ? t.fetchedOn(format.date(calendarTodayIST(new Date(row.fetched_at)))) : t.notFetched}</small>
-            {row.refresh_run_id && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</td></tr>)}
+            {row.refresh_run_id && !long && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</td></tr>)}
         </tbody></table></div>
       </section>
       <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.seasonal}</h2><p>{t.seasonalHint(data.seasonal_years.length, data.seasonal_years.join(", ") || t.none)}</p></div></div>
@@ -181,7 +200,7 @@ export function HistoricalAnalyticsPage() {
         <div className="table-scroll" tabIndex={0} role="region" aria-label={t.seasonalAria}><table><caption>{t.seasonalCaption}</caption><thead><tr><th>{t.calendarMonth}</th><th className="numeric">{t.index}</th><th className="numeric">{t.completeYears}</th></tr></thead><tbody>{data.seasonal.map((row) => <tr key={row.month}><td>{t.months[row.month - 1]}</td><td className="numeric">{number(row.index)}</td><td className="numeric">{row.complete_years}</td></tr>)}</tbody></table></div>
         </details>
       </section>
-      <section className="panel"><div className="panel-heading"><div><h2>{t.snapshots}</h2><p>{t.snapshotsHint(data.versions.length, changes.length)}</p></div></div><div className="monthly-details"><details><summary>{t.inspectVersions}</summary><div className="table-scroll" tabIndex={0} role="region" aria-label={t.versionsAria}><table><caption>{t.versionsCaption}</caption><thead><tr><th>{t.month}</th><th>{t.pricePresence}</th><th>{t.fetchedAt}</th><th>{t.captured}</th><th>{c.source}</th></tr></thead><tbody>{data.versions.map((row) => <tr key={`${row.reporting_month}:${row.refresh_run_id}`}><td>{format.month(row.reporting_month)}</td><td>{row.variety_present ? number(row.weighted_price) : t.absent}</td><td>{format.timestamp(row.fetched_at)}</td><td><a href={api.monthlySnapshotUrl(row.refresh_run_id)} target="_blank" rel="noreferrer">{t.archivedCsv}</a></td><td><a href={row.source_url} target="_blank" rel="noreferrer">{t.officialCsv}</a></td></tr>)}</tbody></table></div></details><p className="phone-hide">{t.methodology}</p></div></section>
+      {!long && <section className="panel"><div className="panel-heading"><div><h2>{t.snapshots}</h2><p>{t.snapshotsHint(data.versions.length, changes.length)}</p></div></div><div className="monthly-details"><details><summary>{t.inspectVersions}</summary><div className="table-scroll" tabIndex={0} role="region" aria-label={t.versionsAria}><table><caption>{t.versionsCaption}</caption><thead><tr><th>{t.month}</th><th>{t.pricePresence}</th><th>{t.fetchedAt}</th><th>{t.captured}</th><th>{c.source}</th></tr></thead><tbody>{data.versions.map((row) => <tr key={`${row.reporting_month}:${row.refresh_run_id}`}><td>{format.month(row.reporting_month)}</td><td>{row.variety_present ? number(row.weighted_price) : t.absent}</td><td>{format.timestamp(row.fetched_at)}</td><td><a href={api.monthlySnapshotUrl(row.refresh_run_id)} target="_blank" rel="noreferrer">{t.archivedCsv}</a></td><td><a href={row.source_url} target="_blank" rel="noreferrer">{t.officialCsv}</a></td></tr>)}</tbody></table></div></details><p className="phone-hide">{t.methodology}</p></div></section>}
     </>}
     <MonthlySnapshot />
     <DailyAggregation />

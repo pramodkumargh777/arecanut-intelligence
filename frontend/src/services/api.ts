@@ -78,7 +78,8 @@ export const api = {
   forecastingPredictions: (params: Record<string, string | undefined>) => request<Page<StoredPrediction>>(`/forecasting/predictions${queryString(params)}`),
   forecastingPerformance: () => request<ForecastingPerformance>("/forecasting/performance"),
   evaluateForecast: (variety: string, token: string) => request<ForecastData>("/admin/forecasts/evaluate", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ variety }) }),
-  monthlyHistory: (from: string, to: string, variety: string) => request<MonthlyHistory>(`/history/monthly${queryString({ from, to, variety })}`),
+  /** `basis: "long"` asks for the 2014+ series from daily APMC prices where it tracks the report; see `isLongBasis`. */
+  monthlyHistory: (from: string, to: string, variety: string, basis?: "long") => request<MonthlyHistory>(`/history/monthly${queryString({ from, to, variety, basis })}`),
   monthlySnapshotUrl: (id: string) => `${API_BASE_URL}/history/monthly/snapshots/${encodeURIComponent(id)}`,
   monthlyEvidence: (id: string, variety: string) => request<MonthlyEvidence>(`/history/monthly/snapshots/${encodeURIComponent(id)}/evidence${queryString({ variety })}`),
   aggregates: (params: Record<string, string>) => request<Aggregates>(`/history/aggregates${queryString(params)}`),

@@ -24,7 +24,8 @@ describe("TSS reported averages with explicit unit assumption", () => {
     expect(parsed.quotes).toHaveLength(1);
   });
   it("captures every listed arecanut grade under its exact TSS label", async () => {
-    const labels = ["NEW RASHI", "K.G.", "B.G.", "11-CHALI", "LA B GOT", "FRESH RED ARECANUT"];
+    const labels = ["NEW RASHI", "K.G.", "B.G.", "11-CHALI", "LA B GOT", "SANNA RASHI", "SIPPE GOTU", "SIPPE CHALI", "FRESH RED ARECANUT",
+      "FRESH GREEN ARECANUT", "FRESH SIPPE ARECA", "FRESH KOLE RAW", "GREEN RAW ARECA"];
     const parsed = await parse(report(labels.map((iname, index) => ({ ...row, itemcode: index + 10, iname, iname_en: iname }))));
     expect(parsed.quotes.map((quote) => quote.variety)).toEqual(labels);
     expect(parsed.excluded_count).toBe(0);

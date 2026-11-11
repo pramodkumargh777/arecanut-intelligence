@@ -123,3 +123,49 @@ observation counts, coverage and recent runs.
   with no rows are listed in each run's `dates_with_no_records`; nothing is interpolated.
 - The unit is the same operator-confirmed `Rs./Quintal` as the daily connector, not a publisher declaration.
 - The reference index still groups by exact variety, not grade (see the daily connector's limitations).
+
+## 2014 onward for forecasting: kept as files, not in D1
+
+The scheduled backfill above stops at 2021, because storing every daily row in D1 costs about 17 rows written per
+record (2014–2020 would take about seven weeks of the free write budget). Forecasting and Sell or wait only need one
+value per variety and month, so the longer history takes a cheaper route:
+
+```sh
+cd data-platform
+python -m forecasting daily-archive --from 2014-01 --workers 1   # resumable; months already stored are skipped
+```
+
+data.gov.in answers HTTP 429 when fetched too fast; with `--workers 1` a full run from 2014 completes, and a re-run
+fetches only the months that failed.
+
+- Same source, checks and market-name mapping as the history connector (`fetch_history_day`, `prepare_history`); each
+  date is checked against the source's total and a month with any failed date is not written.
+- Output: `data-platform/forecasting/daily_archive/YYYY-MM.csv.gz` (about 10 KB a month) and `manifest.json` with each
+  month's source row count, rejections by reason, flagged rows and fetch time. Nothing is interpolated.
+- `forecasting/daily_monthly.py` turns the files into one monthly value per variety: each market's average modal price
+  for the month, then the median across markets, with at least two markets (otherwise the month stays missing). This
+  is basis `MONTHLY_APMC_MODAL_MEDIAN`, never mixed with the AGMARKNET monthly report's arrival-weighted average.
+- Only the monthly results go to D1 (about 2,500 rows, tables `monthly_apmc_prices` and `monthly_apmc_series`, migration
+  0022). `python -m forecasting daily-monthly-sql --sql-export <backup.sql> --out apmc.sql` writes a file that replaces
+  both tables (complete months only), then `wrangler d1 execute ani-market-data --remote --file apmc.sql` loads it.
+
+### Where the long series is used
+
+The series is a different measure from the monthly report, so it stands in for the report only for varieties that
+follow it closely where both exist (2021 onward). The rule, in `daily_monthly.py`: at least 24 compared months, a
+median level gap within 3%, month-to-month moves in the same direction at least 75% of the time and a move correlation
+of at least 0.3. On the November 2026 data that admits Rashi, Chali, Bilegotu, Gorabalu, Kempugotu, Tattibettee and
+Ripe; Bette, Cqca, Saraku, EDI and the rest stay on the report. The thresholds were set after seeing the comparison,
+so they are a judgement, recorded here rather than presented as a test.
+
+`GET /history/monthly?basis=long` returns the long series for those varieties (basis `MONTHLY_APMC_MODAL_MEDIAN`) and
+the report otherwise, starting where the report starts. It is used by:
+
+- **Sell or wait**: hold outcomes and the season sentence from 2014, labelled as the APMC median.
+- **Price trends → Multi-year monthly analysis**: statistics, YoY, volatility and the seasonal index from 2014 (the
+  by-year chart shows the latest six years).
+- **Monthly trends**: a "Price series" selector; the report stays the default and keeps its snapshots and evidence.
+
+Not used for forecasting: the walk-forward evaluation on 2015–2026 (109 origins, 11 varieties, run
+`fx-20261111T070122Z-bd53304d56`) found no model that beat the last-value baseline after Holm adjustment, the same
+result as on the report. Not used for the monthly report page or the decision calculator, which quote the report.

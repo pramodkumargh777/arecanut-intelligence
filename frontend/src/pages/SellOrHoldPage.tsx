@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from "../components/State";
 import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
 import { usePhone } from "../components/usePhone";
 import { api } from "../services/api";
+import { isLongBasis, LONG_HISTORY_FROM } from "../services/intelligence";
 import { defineCopy, type Language, useLanguage } from "../services/language";
 
 /** Common trade names first. Everything else the source reports follows, under its own name. */
@@ -59,6 +60,10 @@ const COPY = defineCopy({
     noData: "ಈ ತಳಿ ಮತ್ತು ತಿಂಗಳಿಗೆ ಸಾಕಷ್ಟು ದತ್ತಾಂಶ ಇಲ್ಲ.",
     loading: "ಹಿಂದಿನ ದರಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ",
     source: "ಮೂಲ: AGMARKNET ತಿಂಗಳ ವರದಿಗಳು",
+    summaryNoteLong: (since: number) => `${since}ರಿಂದ, ಕರ್ನಾಟಕದ ಎಪಿಎಂಸಿಗಳ ದೈನಂದಿನ ಮಾದರಿ ದರದ ಮಧ್ಯಮ ಮೌಲ್ಯ (AGMARKNET ದೈನಂದಿನ). ಈ ತಳಿಗೆ ಇದು ತಿಂಗಳ ವರದಿಗೆ ಹತ್ತಿರವಾಗಿದೆ, ಆದರೆ ಅದೇ ಅಳತೆ ಅಲ್ಲ. ನಿಮ್ಮ ಶಾಖೆಯ ದರ ಬೇರೆ ಇರಬಹುದು.`,
+    latestPriceLong: (price: string, month: string) => `ಇತ್ತೀಚಿನ ಎಪಿಎಂಸಿ ಮಧ್ಯಮ ದರ: ${price}/ಕ್ವಿಂಟಾಲ್ (${month})`,
+    caveatLong: (years: number) => `${years} ವರ್ಷಗಳ ದತ್ತಾಂಶ ಇದೆ. ಹಿಂದೆ ಆದದ್ದು ಈ ವರ್ಷವೂ ಆಗುತ್ತದೆ ಎಂದು ಹೇಳಲಾಗದು. ಮಾರಾಟದ ನಿರ್ಧಾರ ನಿಮ್ಮದು.`,
+    sourceLong: "ಮೂಲ: AGMARKNET ದೈನಂದಿನ ಎಪಿಎಂಸಿ ದರಗಳು (data.gov.in)",
     season: (since: number, name: string, high: string, low: string, spread: number, consistent: number, years: number) =>
       `${since}ರಿಂದ ${name} ದರ ಸಾಮಾನ್ಯವಾಗಿ ${high} ತಿಂಗಳಲ್ಲಿ ಹೆಚ್ಚು, ${low} ತಿಂಗಳಲ್ಲಿ ಕಡಿಮೆ ಇದೆ; ಸುಮಾರು ${spread}% ಅಂತರ (${years} ರಲ್ಲಿ ${consistent} ವರ್ಷ).`,
     noSeason: (since: number, name: string) => `${since}ರಿಂದ ${name} ದರದಲ್ಲಿ ಸ್ಪಷ್ಟ ಏರಿಕೆ ಅಥವಾ ಇಳಿಕೆಯ ಕಾಲ ಕಂಡುಬಂದಿಲ್ಲ.`,
@@ -92,6 +97,10 @@ const COPY = defineCopy({
     noData: "Not enough data for this variety and month.",
     loading: "Loading past prices",
     source: "Source: AGMARKNET monthly reports",
+    summaryNoteLong: (since: number) => `Since ${since}: the median of Karnataka APMCs' daily modal prices (AGMARKNET daily). For this variety it follows the monthly report closely, but it is not the same measure. Your branch's rate can differ.`,
+    latestPriceLong: (price: string, month: string) => `Latest APMC median: ${price}/quintal (${month})`,
+    caveatLong: (years: number) => `This is ${years} years of data. What happened before may not happen this year. The decision to sell is yours.`,
+    sourceLong: "Source: AGMARKNET daily APMC prices (data.gov.in)",
     season: (since: number, name: string, high: string, low: string, spread: number, consistent: number, years: number) =>
       `Since ${since}, ${name} has usually been highest in ${high} and lowest in ${low}, about ${spread}% apart (${consistent} of ${years} years).`,
     noSeason: (since: number, name: string) => `Since ${since}, ${name} has shown no clear high or low season.`,
@@ -113,8 +122,10 @@ export function SellOrHoldPage() {
   const [interest, setInterest] = useState(String(DEFAULT_INTEREST_PERCENT));
   const [weightLoss, setWeightLoss] = useState("0");
   const [storage, setStorage] = useState("0");
-  const query = useQuery({ queryKey: ["sell-or-hold", variety, lastCompleted], queryFn: () => api.monthlyHistory("2021-01", lastCompleted, variety) });
+  // The longest history for each variety: from 2014 where the daily-price series tracks the report, else the report.
+  const query = useQuery({ queryKey: ["sell-or-hold", variety, lastCompleted, "long"], queryFn: () => api.monthlyHistory(LONG_HISTORY_FROM, lastCompleted, variety, "long") });
   const data = query.data;
+  const long = isLongBasis(data);
   const history = data ? holdHistory(data.points, startMonth) : null;
   const observed = (data?.points ?? []).filter((point) => point.weighted_price !== null);
   const latest = observed.at(-1);
@@ -136,7 +147,8 @@ export function SellOrHoldPage() {
   const monthPair = ([a, b]: [number, number]) => language === "kn" ? `${MONTH_NAMES_KN[a - 1]}\u2060–\u2060${MONTH_NAMES_KN[b - 1]}` : `${MONTH_NAMES_EN[a - 1].slice(0, 3)}\u2060–\u2060${MONTH_NAMES_EN[b - 1].slice(0, 3)}`;
   // Phones show the key waiting periods and fold the cost inputs and year table away; both stay one tap from view.
   const phone = usePhone();
-  const latestText = latest?.weighted_price ? copy.latestPrice(rupees(latest.weighted_price), monthText(latest.reporting_month, language)) : "";
+  const latestText = latest?.weighted_price ? (long ? copy.latestPriceLong : copy.latestPrice)(rupees(latest.weighted_price), monthText(latest.reporting_month, language)) : "";
+  const since = Number((observed[0]?.reporting_month ?? data?.from ?? "2021").slice(0, 4));
   const costInputs = <>
       <label className="filter-control"><span>{copy.interest}</span><input type="number" inputMode="decimal" min={0} max={100} step="any" value={interest} onChange={(event) => setInterest(event.target.value)} /></label>
       <label className="filter-control"><span>{copy.weightLoss}</span><input type="number" inputMode="decimal" min={0} max={99} step="any" value={weightLoss} onChange={(event) => setWeightLoss(event.target.value)} /></label>
@@ -171,7 +183,7 @@ export function SellOrHoldPage() {
         : copy.noSeason(season.first_year, varietyName)}</span></p>}
       <section className="rate-card hold-outcomes" aria-labelledby="hold-summary">
         <header><h2 id="hold-summary">{copy.summaryTitle(monthNames[startMonth - 1])}</h2></header>
-        <p className="rate-caption">{copy.chartNote} {copy.summaryNote}</p>
+        <p className="rate-caption">{copy.chartNote} {long ? copy.summaryNoteLong(since) : copy.summaryNote}</p>
         <HoldOutcomeChart years={history.years} monthLabel={(month) => monthText(month, language)} description={copy.chartDescription(monthNames[startMonth - 1])}
           neededLabel={copy.needsLine} paidLabel={copy.paid} notPaidLabel={copy.notPaid}
           legend={{ paid: copy.legendPaid, notPaid: copy.legendNotPaid, needed: copy.legendNeeded, zone: copy.legendZone }}
@@ -209,7 +221,7 @@ export function SellOrHoldPage() {
           {yearsBody}</details>;
       })()}
 
-      <p className="home-note">{copy.caveat} {copy.source}.{phone && hiddenCount > 0 ? ` ${copy.hidden(hiddenCount)}` : ""}</p>
+      <p className="home-note">{long ? copy.caveatLong(Number(lastCompleted.slice(0, 4)) - since + 1) : copy.caveat} {long ? copy.sourceLong : copy.source}.{phone && hiddenCount > 0 ? ` ${copy.hidden(hiddenCount)}` : ""}</p>
     </>}
   </div>;
 }

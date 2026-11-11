@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
+import { isLongBasis, LONG_HISTORY_FROM } from "../services/intelligence";
 import { describe, histogram, yearMonthMatrix } from "../services/insights";
 import { completedMonthIST, MONTH_NAMES_KN } from "../../../shared/dates";
 import { defineCopy, useCopy, useFormat } from "../services/language";
@@ -13,18 +14,21 @@ import { useChartPalette } from "./chartPalette";
 import { useTheme } from "../services/theme";
 
 const money = (value: number | null) => value == null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
-const HISTORY_FROM = "2021-01";
+
+const YEAR_LINES = 6;
 
 const COPY = defineCopy({
   en: {
     months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
     loading: "Loading monthly history",
     source: (variety: string, from: string, to: string, fetched: string | null) => `AGMARKNET monthly · Karnataka arrival-weighted average · ${variety} · ${from} – ${to}${fetched ? ` · fetched ${fetched}` : ""}`,
+    sourceLong: (variety: string, from: string, to: string) => `AGMARKNET daily · median of Karnataka APMC modal prices · ${variety} · ${from} – ${to} · follows the monthly report closely for this variety, but is not the same measure`,
     title: "Multi-year monthly analysis",
-    hint: (observed: number, expected: number, flagged: number) => `${observed} of ${expected} months observed · ${flagged} months carry review flags and remain visible · Price basis: arrival-weighted state average, not a modal-price index`,
+    hint: (observed: number, expected: number, flagged: number, long: boolean) => `${observed} of ${expected} months observed · ${flagged} months carry review flags and remain visible · Price basis: ${long ? "median of APMC daily modal prices (from 2014), not the arrival-weighted monthly report" : "arrival-weighted state average, not a modal-price index"}`,
     variety: "Monthly variety", noMonths: "No observed months for this variety", notInterpolated: "Missing months are not interpolated.",
     summary: "Monthly distribution summary", observed: "Observed months", iqr: "Interquartile range", range: "Range", cv: "Coefficient of variation",
     byYear: "Seasonal price trend by year", byYearHint: "Each line is one calendar year, darkest for the most recent · gaps mark months without an observed value",
+    latestYears: (n: number) => ` · latest ${n} years shown; the seasonal index uses every year`,
     byYearDarkHint: "Each line is one calendar year, brightest for the most recent · gaps mark months without an observed value",
     byYearDescription: (variety: string) => `Monthly ${variety} prices overlaid by calendar year`,
     seasonal: "Seasonal index", seasonalHint: "Month average relative to its year's mean (100 = annual mean) · complete years only", needsYears: "Needs ≥3 complete years",
@@ -52,11 +56,13 @@ const COPY = defineCopy({
     months: MONTH_NAMES_KN,
     loading: "ತಿಂಗಳ ಇತಿಹಾಸ ತರಲಾಗುತ್ತಿದೆ",
     source: (variety: string, from: string, to: string, fetched: string | null) => `AGMARKNET ತಿಂಗಳ ವರದಿ · ಕರ್ನಾಟಕ ಆವಕ ಆಧಾರಿತ ಸರಾಸರಿ · ${variety} · ${from} – ${to}${fetched ? ` · ತಂದದ್ದು ${fetched}` : ""}`,
+    sourceLong: (variety: string, from: string, to: string) => `AGMARKNET ದೈನಂದಿನ · ಕರ್ನಾಟಕ ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳ ಮಧ್ಯಮ ಮೌಲ್ಯ · ${variety} · ${from} – ${to} · ಈ ತಳಿಗೆ ತಿಂಗಳ ವರದಿಗೆ ಹತ್ತಿರ, ಆದರೆ ಅದೇ ಅಳತೆ ಅಲ್ಲ`,
     title: "ಹಲವು ವರ್ಷಗಳ ತಿಂಗಳ ವಿಶ್ಲೇಷಣೆ",
-    hint: (observed: number, expected: number, flagged: number) => `${expected} ರಲ್ಲಿ ${observed} ತಿಂಗಳ ದಾಖಲೆ ಇದೆ · ${flagged} ತಿಂಗಳುಗಳಿಗೆ ಪರಿಶೀಲನಾ ಗುರುತು ಇದ್ದು ಕಾಣಿಸುತ್ತವೆ · ದರದ ಆಧಾರ: ಆವಕ ಆಧಾರಿತ ರಾಜ್ಯ ಸರಾಸರಿ, ಮಾದರಿ ದರದ ಸೂಚ್ಯಂಕವಲ್ಲ`,
+    hint: (observed: number, expected: number, flagged: number, long: boolean) => `${expected} ರಲ್ಲಿ ${observed} ತಿಂಗಳ ದಾಖಲೆ ಇದೆ · ${flagged} ತಿಂಗಳುಗಳಿಗೆ ಪರಿಶೀಲನಾ ಗುರುತು ಇದ್ದು ಕಾಣಿಸುತ್ತವೆ · ದರದ ಆಧಾರ: ${long ? "ಎಪಿಎಂಸಿ ದೈನಂದಿನ ಮಾದರಿ ದರಗಳ ಮಧ್ಯಮ ಮೌಲ್ಯ (2014ರಿಂದ), ಆವಕ ಆಧಾರಿತ ತಿಂಗಳ ವರದಿ ಅಲ್ಲ" : "ಆವಕ ಆಧಾರಿತ ರಾಜ್ಯ ಸರಾಸರಿ, ಮಾದರಿ ದರದ ಸೂಚ್ಯಂಕವಲ್ಲ"}`,
     variety: "ತಿಂಗಳ ತಳಿ", noMonths: "ಈ ತಳಿಗೆ ದಾಖಲಿತ ತಿಂಗಳುಗಳಿಲ್ಲ", notInterpolated: "ಇಲ್ಲದ ತಿಂಗಳುಗಳನ್ನು ತುಂಬುವುದಿಲ್ಲ.",
     summary: "ತಿಂಗಳ ದರಗಳ ಹಂಚಿಕೆಯ ಸಾರಾಂಶ", observed: "ದಾಖಲಿತ ತಿಂಗಳುಗಳು", iqr: "ಮಧ್ಯದ ಅರ್ಧ ಶ್ರೇಣಿ", range: "ಶ್ರೇಣಿ", cv: "ಏರಿಳಿತದ ಗುಣಾಂಕ",
     byYear: "ವರ್ಷವಾರು ಋತುಮಾನ ದರ ಪ್ರವೃತ್ತಿ", byYearHint: "ಪ್ರತಿ ರೇಖೆ ಒಂದು ವರ್ಷ, ಇತ್ತೀಚಿನದು ಗಾಢ · ಖಾಲಿ ಜಾಗ = ದಾಖಲೆ ಇಲ್ಲದ ತಿಂಗಳು",
+    latestYears: (n: number) => ` · ಇತ್ತೀಚಿನ ${n} ವರ್ಷಗಳು ಮಾತ್ರ; ಋತುಮಾನ ಸೂಚ್ಯಂಕಕ್ಕೆ ಎಲ್ಲ ವರ್ಷಗಳು`,
     byYearDarkHint: "ಪ್ರತಿ ರೇಖೆ ಒಂದು ವರ್ಷ, ಇತ್ತೀಚಿನದು ಹೆಚ್ಚು ಪ್ರಕಾಶಮಾನ · ಖಾಲಿ ಜಾಗ = ದಾಖಲೆ ಇಲ್ಲದ ತಿಂಗಳು",
     byYearDescription: (variety: string) => `ವರ್ಷವಾರು ಜೋಡಿಸಿದ ${variety} ತಿಂಗಳ ದರಗಳು`,
     seasonal: "ಋತುಮಾನ ಸೂಚ್ಯಂಕ", seasonalHint: "ತಿಂಗಳ ಸರಾಸರಿ ಅದರ ವರ್ಷದ ಸರಾಸರಿಗೆ ಹೋಲಿಸಿ (100 = ವಾರ್ಷಿಕ ಸರಾಸರಿ) · ಪೂರ್ಣ ವರ್ಷಗಳು ಮಾತ್ರ", needsYears: "ಕನಿಷ್ಠ 3 ಪೂರ್ಣ ವರ್ಷ ಬೇಕು",
@@ -94,12 +100,15 @@ export function MonthlyInsights() {
   const format = useFormat();
   const to = completedMonthIST();
   const [variety, setVariety] = useState("Rashi");
-  const history = useQuery({ queryKey: ["history", HISTORY_FROM, to, variety], queryFn: () => api.monthlyHistory(HISTORY_FROM, to, variety) });
+  // The longest history for each variety: from 2014 where the daily-price series tracks the report, else the report.
+  const history = useQuery({ queryKey: ["history", LONG_HISTORY_FROM, to, variety, "long"], queryFn: () => api.monthlyHistory(LONG_HISTORY_FROM, to, variety, "long") });
   if (history.isLoading) return <LoadingState label={t.loading} />;
   if (history.error) return <ErrorState error={history.error} onRetry={() => void history.refetch()} />;
   const data = history.data!;
   const observed = data.points.filter((point) => point.weighted_price !== null);
-  const years = yearMonthMatrix(data.points);
+  // More than a few year lines turn the chart into noise, so it shows the latest ones.
+  const allYears = yearMonthMatrix(data.points);
+  const years = allYears.slice(-YEAR_LINES);
   const yoy = data.points.filter((point) => point.yoy_percent !== null);
   const vol = data.points.filter((point) => point.volatility_percent !== null);
   const yearColors = orderedRamp(years.length);
@@ -107,11 +116,12 @@ export function MonthlyInsights() {
   const bins = histogram(observed.map((point) => point.weighted_price!), 8);
   const seasonalReady = data.seasonal.some((month) => month.index !== null);
   const latestFetch = observed.at(-1)?.fetched_at ?? null;
-  const source = <SourceLabel>{t.source(variety, format.month(data.from), format.month(data.to), latestFetch ? format.timestamp(latestFetch) : null)}</SourceLabel>;
+  const source = <SourceLabel>{isLongBasis(data) ? t.sourceLong(variety, format.month(observed[0]?.reporting_month ?? data.from), format.month(data.to))
+    : t.source(variety, format.month(data.from), format.month(data.to), latestFetch ? format.timestamp(latestFetch) : null)}</SourceLabel>;
 
   return <section className="page-stack" aria-label={t.title}>
     <div className="section-heading">
-      <div><h2>{t.title}</h2><p>{t.hint(data.observed_months, data.expected_months, data.flagged_months)}</p></div>
+      <div><h2>{t.title}</h2><p>{t.hint(data.observed_months, data.expected_months, data.flagged_months, isLongBasis(data))}</p></div>
       <label className="filter-control"><span>{t.variety}</span><select value={variety} onChange={(event) => setVariety(event.target.value)}>{data.varieties.map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
     </div>
     {!observed.length ? <EmptyState title={t.noMonths}>{t.notInterpolated}</EmptyState> : <>
@@ -123,7 +133,7 @@ export function MonthlyInsights() {
         <div role="listitem"><span>{t.cv}</span><strong>{stats.cvPercent === null ? "—" : `${stats.cvPercent.toFixed(1)}%`}</strong></div>
       </div>
       <div className="chart-grid">
-        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.byYear}</h2><p>{dark ? t.byYearDarkHint : t.byYearHint}</p></div></div>
+        <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.byYear}</h2><p>{dark ? t.byYearDarkHint : t.byYearHint}{allYears.length > years.length ? t.latestYears(years.length) : ""}</p></div></div>
           <LazyLineChart categories={t.months} series={years.map((year, index) => ({ name: `${year.year} (${year.observed}/12)`, values: year.values, color: yearColors[index], width: index === years.length - 1 ? 2.25 : 1.25 }))} description={t.byYearDescription(variety)} />
           <div className="chart-foot">{source}</div></article>
         <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.seasonal}</h2><p>{t.seasonalHint}</p></div>{!seasonalReady && <StatusBadge tone="warn">{t.needsYears}</StatusBadge>}</div>

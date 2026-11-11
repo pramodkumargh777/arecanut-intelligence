@@ -17,6 +17,9 @@ export type GrowerVariety = {
   note?: { en: string; kn: string };
 };
 
+const FRESH_NOTE = { en: "Fresh, undried nuts. Priced per quintal of fresh weight, so far below dried grades such as Rashi.",
+  kn: "ಒಣಗಿಸದ ಹಸಿ ಅಡಿಕೆ. ಹಸಿ ತೂಕದ ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ದರ, ಆದ್ದರಿಂದ ರಾಶಿಯಂತಹ ಒಣ ಅಡಿಕೆಗಿಂತ ತುಂಬಾ ಕಡಿಮೆ." };
+
 export const VARIETIES: GrowerVariety[] = [
   // Everyday
   { key: "rashi", en: "Rashi", kn: "ರಾಶಿ", group: "rashi", everyday: true, tumcos: true, labels: { mamcos: ["RASHI EDI"], tss: ["RASHI"] } },
@@ -49,10 +52,12 @@ export const VARIETIES: GrowerVariety[] = [
   { key: "muri", en: "Muri", kn: "ಮುರಿ", group: "other", labels: { tss: ["MURI"] } },
   { key: "kole", en: "Kole", kn: "ಕೊಳೆ", group: "other", labels: { tss: ["KOLE"] } },
   { key: "churu", en: "Churu", kn: "ಚೂರು", group: "other", labels: { tss: ["CHURU"] } },
-  // Fresh, undried nut
-  { key: "fresh-red", en: "Fresh red arecanut", kn: "ಹಸಿ ಕೆಂಪು ಅಡಿಕೆ", group: "fresh", labels: { tss: ["FRESH RED ARECANUT"] },
-    note: { en: "Fresh, undried nuts. Priced per quintal of fresh weight, so far below dried grades such as Rashi.",
-      kn: "ಒಣಗಿಸದ ಹಸಿ ಅಡಿಕೆ. ಹಸಿ ತೂಕದ ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ದರ, ಆದ್ದರಿಂದ ರಾಶಿಯಂತಹ ಒಣ ಅಡಿಕೆಗಿಂತ ತುಂಬಾ ಕಡಿಮೆ." } },
+  // Fresh, undried nut. Each is its own TSS lot, never merged with another fresh grade or a dried one.
+  { key: "fresh-red", en: "Fresh red arecanut", kn: "ಹಸಿ ಕೆಂಪು ಅಡಿಕೆ", group: "fresh", labels: { tss: ["FRESH RED ARECANUT"] }, note: FRESH_NOTE },
+  { key: "fresh-green", en: "Fresh green arecanut", kn: "ಹಸಿ ಹಸಿರು ಅಡಿಕೆ", group: "fresh", labels: { tss: ["FRESH GREEN ARECANUT"] }, note: FRESH_NOTE },
+  { key: "green-raw", en: "Green raw areca", kn: "ಹಸಿರು ಕಚ್ಚಾ ಅಡಿಕೆ", group: "fresh", labels: { tss: ["GREEN RAW ARECA"] }, note: FRESH_NOTE },
+  { key: "fresh-sippe", en: "Fresh sippe areca", kn: "ಹಸಿ ಸಿಪ್ಪೆ ಅಡಿಕೆ", group: "fresh", labels: { tss: ["FRESH SIPPE ARECA"] }, note: FRESH_NOTE },
+  { key: "fresh-kole", en: "Fresh kole", kn: "ಹಸಿ ಕೊಳೆ ಅಡಿಕೆ", group: "fresh", labels: { tss: ["FRESH KOLE RAW"] }, note: FRESH_NOTE },
 ];
 
 export const VARIETY_GROUPS: { key: VarietyGroup; en: string; kn: string }[] = [

@@ -344,3 +344,64 @@ class CovariateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MonthlyFromDailyTests(unittest.TestCase):
+    """The daily-based monthly series: market averages first, then their median; thin months stay missing."""
+
+    def rows(self, items):
+        from forecasting.daily_archive import COLUMNS
+        frame = pd.DataFrame([dict(zip(COLUMNS, item)) for item in items])
+        frame["reporting_date"] = pd.to_datetime(frame.reporting_date)
+        return frame
+
+    def test_market_averages_then_median_and_flagged_rows_left_out(self):
+        from forecasting.daily_monthly import monthly_from_daily
+        frame = self.rows([
+            # Market A reports three times; it still counts once, at its average (100).
+            ("2015-03-02", "D", "A", "Rashi", "FAQ", 90, 100, 110, "validated"),
+            ("2015-03-03", "D", "A", "Rashi", "FAQ", 80, 90, 120, "validated"),
+            ("2015-03-04", "D", "A", "Rashi", "FAQ", 100, 110, 120, "validated"),
+            ("2015-03-02", "D", "B", "Rashi", "FAQ", 190, 200, 210, "validated"),
+            ("2015-03-02", "D", "C", "Rashi", "FAQ", 290, 300, 310, "validated"),
+            # A flagged row never counts.
+            ("2015-03-05", "D", "C", "Rashi", "FAQ", 1, 9000, 9999, "needs_review"),
+        ])
+        result = monthly_from_daily(frame)
+        self.assertEqual(result.value.tolist(), [200])
+        self.assertEqual(result.markets.tolist(), [3])
+        self.assertEqual(result.market_days.tolist(), [5])
+
+    def test_month_with_one_market_is_left_missing(self):
+        from forecasting.daily_monthly import monthly_from_daily
+        frame = self.rows([("2015-04-02", "D", "A", "Chali", "FAQ", 90, 100, 110, "validated")])
+        self.assertTrue(monthly_from_daily(frame).empty)
+
+    def test_tracking_reports_level_gap_and_move_agreement(self):
+        from forecasting.daily_monthly import tracking
+        months = pd.period_range("2021-01", periods=12, freq="M")
+        report = pd.DataFrame({"variety": "Rashi", "month": months, "value": np.linspace(100, 210, 12)})
+        daily = report.assign(value=report.value * 1.05)
+        row = tracking(daily, report).iloc[0]
+        self.assertEqual(row.months, 12)
+        self.assertAlmostEqual(row.median_gap_pct, 5.0)
+        self.assertEqual(row.same_direction_pct, 100)
+
+    def test_d1_sql_marks_only_tracking_varieties_and_drops_incomplete_months(self):
+        import sqlite3
+        from pathlib import Path
+        from forecasting.daily_monthly import d1_sql
+        months = pd.period_range("2021-01", periods=30, freq="M")
+        wave = 100 + 10 * np.sin(np.arange(30))
+        report = pd.concat([pd.DataFrame({"variety": v, "month": months, "value": wave}) for v in ("Rashi", "Bette")])
+        close = pd.DataFrame({"variety": "Rashi", "month": months, "value": wave * 1.01, "markets": 4, "market_days": 40})
+        loose = pd.DataFrame({"variety": "Bette", "month": months, "value": wave[::-1], "markets": 2, "market_days": 9})
+        later = pd.DataFrame({"variety": ["Rashi"], "month": [pd.Period("2023-07", freq="M")], "value": [1.0], "markets": [3], "market_days": [3]})
+        sql = d1_sql(pd.concat([close, loose, later]), report, through="2023-06", imported_at="2026-11-11T00:00:00Z", data_version="v")
+        db = sqlite3.connect(":memory:")
+        db.executescript(Path("api/migrations/0022_monthly_apmc_median.sql").read_text() + sql)
+        self.assertEqual(db.execute("SELECT variety_name, tracks_reports FROM monthly_apmc_series ORDER BY 1").fetchall(), [("Bette", 0), ("Rashi", 1)])
+        self.assertEqual(db.execute("SELECT MAX(reporting_month) FROM monthly_apmc_prices").fetchone()[0], "2023-06")
+        # Loading twice replaces rather than duplicates.
+        db.executescript(sql)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM monthly_apmc_prices").fetchone()[0], 60)
