@@ -18,7 +18,7 @@ import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
 import { RollingNumber } from "../components/RollingNumber";
 import type { ModelEvaluation } from "../services/forecasting";
 import { TSS_VARIETIES } from "../../../shared/tss-varieties";
-import { Answer, AssistantPage, followUps, PriceDates } from "./AssistantPage";
+import { Answer, AssistantPage, followUps, PriceDates, rateLabel } from "./AssistantPage";
 import type { AssistantAnswer } from "../services/assistant";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { OverviewPage } from "./OverviewPage";
@@ -144,7 +144,7 @@ describe("market experience", () => {
   it.each(["production", "trade", "weather", "policy", "news"])("keeps operational controls off the %s customer page", (domain) => {
     state.intelligence = ready({ data: [], attempts: [{ id: "attempt", source_key: "test-source", status: "failed", started_at: "2026-10-01T10:00:00Z", error_message: "capture failed" }] });
     const html = render(<Routes><Route path="/intelligence/:domain" element={<IntelligencePage />} /></Routes>, `/intelligence/${domain}`);
-    expect(html).toContain("LATEST PLATFORM FETCH");
+    expect(html).toContain('<span class="label-full">LATEST PLATFORM FETCH</span><span class="label-short" aria-hidden="true">LATEST FETCH</span>');
     expect(html).toContain("No source records are available yet");
     expect(html).not.toContain("Recent capture attempts");
     expect(html).not.toContain("npm run refresh:intelligence");
@@ -747,6 +747,21 @@ describe("sell or wait chart", () => {
     expect(spoken(html)).toContain("needs +2.5%");
     expect(spoken(html)).toContain("paid off 2 of 3");
   });
+
+  it("gives phones short labels while screen readers keep the full wording", () => {
+    const year = (start: string, percent: number) => ({ start_month: start, start_price: 40000, changes: [{ months: 1, target_month: "x", percent, excluded: false }] });
+    const html = renderToStaticMarkup(<HoldOutcomeChart years={[year("2021-11", 6), year("2022-11", -1)]}
+      columns={[{ months: 1, label: "1 month", shortLabel: "1 mo", needed: 0.8, covered: "paid off 1 of 2", coveredShort: "1/2" }]} monthLabel={(m) => m}
+      neededLabel={(p) => `needs +${p}%`} neededShort={(p) => `+${p}%`} paidLabel="covered costs" notPaidLabel="did not cover costs" description="chart"
+      legend={{ paid: "Year waiting paid off", notPaid: "Year it did not", needed: "Rise needed to cover your costs", zone: "Where waiting pays off" }}
+      legendShort={{ paid: "Paid off", notPaid: "Did not", needed: "Cost line" }} />);
+    for (const short of ["1 mo", "Paid off", "Cost line"]) expect(html).toContain(`<span class="label-short" aria-hidden="true">${short}</span>`);
+    // Legend (3), month, required rise and years paid off: every phone label has a hidden-from-readers short copy.
+    expect(html.match(/class="label-short" aria-hidden="true"/g)).toHaveLength(6);
+    expect(html).toContain('class="hold-key-zone-item"');
+    for (const full of ["1 month", "needs +0.8%", "paid off 1 of 2", "Rise needed to cover your costs"]) expect(spoken(html)).toContain(full);
+    expect(spoken(html)).not.toContain("Cost line");
+  });
 });
 
 describe("rolling price", () => {
@@ -841,9 +856,8 @@ describe("assistant conversation", () => {
     expect(html).toContain("ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?");
     expect(html).toContain("ಬೋರ್ಡೋ ದ್ರಾವಣ ತಯಾರಿಕೆ ಹೇಗೆ?");
     expect(html).not.toContain("What is the latest Rashi price?");
-    // The top bar and sidebar carry the logo; the page title does not repeat it.
-    expect(html).not.toContain("assistant-brand-mark");
-    expect(html).toContain('<div class="assistant-brand"><h1>');
+    // The assistant has its own mark beside the title, distinct from the site logo in the top bar.
+    expect(html).toMatch(/<img src="[^"]*ask-areca-pulse[^"]*\.png" alt="" width="52" height="52" class="assistant-brand-mark"/);
   });
 
   it("puts the answer first, with linked citations, a rate card and its source", () => {
@@ -855,7 +869,7 @@ describe("assistant conversation", () => {
     expect(html).toContain("<li>TSS 11 Nov 2026 <small>1 day old</small></li>");
     // Sources start folded; the citation link unfolds them.
     expect(html).toMatch(/<details class="chat-sources-box"><summary><span>Sources · 1<\/span>/);
-    expect(html).toMatch(/<img class="chat-avatar"/);
+    expect(html).toMatch(/<img class="chat-avatar" src="[^"]*ask-areca-pulse/);
     // Document passages are cited as sources, never shown as figures.
     expect(html).not.toContain("garbled passage text");
   });
@@ -895,5 +909,16 @@ describe("price dates in an answer", () => {
 
   it("shows any other shape of text as it is", () => {
     expect(render(<PriceDates text="No dates" />)).toContain("<span>No dates</span>");
+  });
+});
+
+describe("rate tile labels", () => {
+  it("keeps the place and variety in the title and moves the source and kind of price below", () => {
+    expect(rateLabel("AGMARKNET Yellapur APMC – Chali latest modal price", "AGMARKNET daily", "en")).toEqual({ title: "Yellapur APMC · Chali", measure: "latest modal" });
+    expect(rateLabel("Sirsi APMC (Uttara Kannada) – Chali modal price", "AGMARKNET daily", "en")).toEqual({ title: "Sirsi APMC · Chali", measure: "modal" });
+    expect(rateLabel("TSS Sirsi – RASHI branch average", "TSS", "en")).toEqual({ title: "Sirsi · RASHI", measure: "branch average" });
+    expect(rateLabel("MAMCOS median of branch averages – RASHI EDI", "MAMCOS", "en")).toEqual({ title: "Median of branch averages · RASHI EDI", measure: null });
+    expect(rateLabel("Karnataka monthly arrival-weighted modal price – Rashi", "AGMARKNET monthly", "kn")).toEqual({ title: "Karnataka monthly · Rashi", measure: "ಆವಕ ಆಧಾರಿತ ಮೋಡಲ್ ದರ" });
+    expect(rateLabel("Reference index – Rashi", "Areca Pulse reference index", "en")).toEqual({ title: "Reference index · Rashi", measure: null });
   });
 });

@@ -28,7 +28,7 @@ const COPY = defineCopy({
     } as Record<string, string>,
     staleWeather: "Weather capture is more than 24 hours old. A forecast at capture is not necessarily a current forecast.",
     selected: "SELECTED RECORDS", captures: (n: number) => `${n} current source captures; older captures retained`,
-    latestFetch: "LATEST PLATFORM FETCH", notPeriod: "Not the reporting period or source publication time",
+    latestFetch: "LATEST PLATFORM FETCH", latestFetchShort: "LATEST FETCH", notPeriod: "Not the reporting period or source publication time",
     sourceCoverage: "SOURCE COVERAGE", sirsi: "Sirsi", indiaWide: "India-wide", india: "India",
     coverageHint: {
       weather: "Open-Meteo gridded model; recent and future model days", trade: "Annual imports; one annual export aggregate",
@@ -67,7 +67,7 @@ const COPY = defineCopy({
     },
     staleWeather: "ಹವಾಮಾನ ಸಂಗ್ರಹ 24 ಗಂಟೆಗಿಂತ ಹಳೆಯದು. ಸಂಗ್ರಹದ ಸಮಯದ ಮುನ್ಸೂಚನೆ ಈಗಿನ ಮುನ್ಸೂಚನೆಯಾಗಿರಬೇಕಿಲ್ಲ.",
     selected: "ಆಯ್ದ ದಾಖಲೆಗಳು", captures: (n: number) => `${n} ಈಗಿನ ಮೂಲ ಸಂಗ್ರಹಗಳು; ಹಳೆಯವುಗಳನ್ನೂ ಉಳಿಸಲಾಗಿದೆ`,
-    latestFetch: "ಕೊನೆಯ ಬಾರಿ ತಂದ ಸಮಯ", notPeriod: "ಇದು ವರದಿ ಅವಧಿ ಅಥವಾ ಮೂಲದ ಪ್ರಕಟಣೆ ಸಮಯವಲ್ಲ",
+    latestFetch: "ಕೊನೆಯ ಬಾರಿ ತಂದ ಸಮಯ", latestFetchShort: "ಕೊನೆಯ ಬಾರಿ ತಂದ ಸಮಯ", notPeriod: "ಇದು ವರದಿ ಅವಧಿ ಅಥವಾ ಮೂಲದ ಪ್ರಕಟಣೆ ಸಮಯವಲ್ಲ",
     sourceCoverage: "ಮೂಲದ ವ್ಯಾಪ್ತಿ", sirsi: "ಶಿರಸಿ", indiaWide: "ಭಾರತದಾದ್ಯಂತ", india: "ಭಾರತ",
     coverageHint: {
       weather: "Open-Meteo ಗ್ರಿಡ್ ಮಾದರಿ; ಇತ್ತೀಚಿನ ಮತ್ತು ಮುಂದಿನ ದಿನಗಳು", trade: "ವಾರ್ಷಿಕ ಆಮದು; ಒಂದು ವಾರ್ಷಿಕ ರಫ್ತು ಒಟ್ಟು",
@@ -159,7 +159,7 @@ export function IntelligencePage() {
       {staleWeather && <div role="alert" className="data-disclosure">{t.staleWeather}</div>}
       <section className="snapshot-grid snapshot-grid-even">
         <article className="snapshot-card"><div className="card-kicker">{t.selected}</div><div className="snapshot-value">{filtered.length}</div><p>{t.captures(new Set(filtered.map((row) => row.capture_id)).size)}</p></article>
-        <article className="snapshot-card"><div className="card-kicker">{t.latestFetch}</div><div className="snapshot-value snapshot-date">{latest ? format.timestamp(latest) : c.never}</div><p>{t.notPeriod}</p></article>
+        <article className="snapshot-card"><div className="card-kicker"><span className="label-full">{t.latestFetch}</span><span className="label-short" aria-hidden="true">{t.latestFetchShort}</span></div><div className="snapshot-value snapshot-date">{latest ? format.timestamp(latest) : c.never}</div><p>{t.notPeriod}</p></article>
         <article className="snapshot-card"><div className="card-kicker">{t.sourceCoverage}</div><div className="snapshot-value">{domain === "weather" ? t.sirsi : domain === "production" ? geography || t.indiaWide : t.india}</div><p>{t.coverageHint[coverageKey]}</p></article>
       </section>
       {(periods.length > 0 || places.length > 0) && <section className="filter-bar">

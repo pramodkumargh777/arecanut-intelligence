@@ -1256,15 +1256,21 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 /* Assistant (/assistant): a conversation. The question on the right, the answer as a card with its rates, sources and
    actions; how the answer was made is folded away. The composer stays at the bottom of the screen. */
 .assistant-page { display: grid; gap: 18px; max-width: 860px; width: 100%; margin: 0 auto; }
-.assistant-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.assistant-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .assistant-head h1 { margin: 0 0 6px; font-size: var(--text-page-title); font-weight: 650; letter-spacing: -.02em; color: var(--ink); }
 .assistant-head p { margin: 0; max-width: 620px; font-size: 14px; line-height: 1.55; color: var(--muted); }
 .assistant-new { display: inline-flex; align-items: center; gap: 6px; flex: none; }
 .assistant-thread { display: grid; gap: 22px; min-height: 120px; }
-.assistant-brand { min-width: 0; }
-.assistant-brand h1 { margin-bottom: 4px; }
+/* Mark and title share a row, centred on each other; the description runs underneath from the same left edge as
+   the mark and the sections below, so everything on the page starts on one line. */
+.assistant-brand { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; row-gap: 8px; min-width: 0; }
+.assistant-brand > div { display: contents; }
+.assistant-brand-mark { grid-column: 1; grid-row: 1; flex: none; width: 52px; height: 52px; filter: drop-shadow(0 8px 14px rgb(6 39 30 / 35%)); }
+.assistant-brand h1 { grid-column: 2; grid-row: 1; margin: 0; }
+.assistant-brand p { grid-column: 1 / -1; grid-row: 2; }
 /* New conversation: a quiet text button, so it does not compete with the title. */
-.assistant-new { min-height: 36px; padding: 0 12px; border-color: var(--line); color: var(--muted); font-size: 13px; }
+/* Centred on the 52px mark-and-title row. */
+.assistant-new { margin-top: 8px; min-height: 36px; padding: 0 12px; border-color: var(--line); color: var(--muted); font-size: 13px; }
 @media (hover: hover) { .assistant-new:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); } }
 .assistant-topics { display: grid; gap: 12px; }
 .assistant-topics > h2 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); }
@@ -1276,10 +1282,12 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .assistant-topic li + li { border-top: 1px solid var(--line); }
 .assistant-topic button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 8px 2px; border: 0; background: none;
   color: var(--ink-2); font: inherit; font-size: 14px; line-height: 1.4; text-align: left; cursor: pointer; transition: color .12s ease; }
-.assistant-topic button svg { flex: none; color: var(--subtle); transition: transform .15s ease, color .12s ease; }
+.assistant-topic-q-icon { display: none; }
+.assistant-topic-q { flex: 1; min-width: 0; }
+.assistant-topic button > svg { flex: none; color: var(--subtle); transition: transform .15s ease, color .12s ease; }
 @media (hover: hover) {
   .assistant-topic button:hover { color: var(--brand); }
-  .assistant-topic button:hover svg { color: var(--brand); transform: translate(2px, -2px); }
+  .assistant-topic button:hover > svg { color: var(--brand); transform: translate(2px, -2px); }
 }
 .assistant-topic button:active { color: var(--brand); }
 .chat-follow-ups button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface);
@@ -1302,10 +1310,12 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 650; line-height: 1; text-decoration: none !important; vertical-align: 2px; }
 a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 .chat-cite-static { flex: none; }
-.chat-dates { display: grid; gap: 6px; margin: 0; padding: 10px 14px; border-left: 3px solid var(--brand-leaf); border-radius: 0 10px 10px 0; background: var(--brand-tint); color: var(--ink-2); font-size: 13px; }
+.chat-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; padding: 8px 12px; border-left: 3px solid var(--brand-leaf);
+  border-radius: 0 10px 10px 0; background: var(--brand-tint); color: var(--ink-2); font-size: 13px; }
 .chat-dates-label { font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); }
-.chat-dates ul { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
-.chat-dates li { line-height: 1.5; font-variant-numeric: tabular-nums; }
+.chat-dates ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+/* Each feed's date is a small tag; rounded corners rather than a pill, so a tag that wraps on a narrow phone still fits. */
+.chat-dates li { padding: 3px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); line-height: 1.45; font-variant-numeric: tabular-nums; }
 .chat-dates li small { margin-left: 4px; font-size: 12px; color: var(--muted); }
 :lang(kn) .chat-dates-label { letter-spacing: 0; text-transform: none; }
 .chat-missing { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.6; color: var(--muted); }
@@ -1313,9 +1323,9 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 .chat-block h3 { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); }
 .chat-rates { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
 .chat-rates li { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); min-width: 0; }
-.chat-rate-label { font-size: 13px; line-height: 1.4; color: var(--ink-2); overflow-wrap: anywhere; }
+.chat-rate-label { font-size: 13.5px; font-weight: 600; line-height: 1.35; color: var(--ink); overflow-wrap: anywhere; }
 .chat-rates strong { font-size: 22px; font-weight: 700; letter-spacing: -.01em; color: var(--brand); font-variant-numeric: tabular-nums; }
-.chat-rate-meta { font-size: 12px; color: var(--muted); }
+.chat-rate-meta { font-size: 12px; line-height: 1.45; color: var(--muted); }
 .chat-figures { display: grid; gap: 8px; margin: 0; }
 .chat-figures div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .chat-figures div:last-child { border-bottom: 0; }
@@ -1404,18 +1414,25 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 /* Phones: less on screen at once, nothing under 12.5px, rows that swipe instead of piling up, thumb-sized targets. */
 @media (max-width: 640px) {
   .assistant-page { gap: 14px; }
-  .assistant-head { align-items: center; gap: 10px; }
+  .assistant-head { align-items: flex-start; gap: 10px; }
   /* The top bar already shows the logo, and the card's side says who is speaking; the avatar row would repeat both. */
   .chat-answer-head { display: none; }
+  .assistant-brand { column-gap: 11px; row-gap: 6px; }
+  .assistant-brand-mark { width: 42px; height: 42px; }
   .assistant-head p { font-size: 13.5px; }
   .assistant-page.has-turns .assistant-head p { display: none; }
-  .assistant-new { width: 40px; min-width: 40px; min-height: 40px; padding: 0; justify-content: center; border-radius: 12px; }
+  .assistant-new { width: 40px; min-width: 40px; min-height: 40px; margin-top: 1px; padding: 0; justify-content: center; border-radius: 12px; }
   .assistant-new-label { display: none; }
   .assistant-topics > h2, .chat-block h3, .chat-follow-ups > span, .chat-how-body h4 { font-size: 12.5px; }
-  .assistant-topic-grid { grid-template-columns: 1fr; gap: 10px; }
-  .assistant-topic { padding: 12px 14px 4px; }
-  .assistant-topic li:nth-child(n + 3) { display: none; }
-  .assistant-topic button { font-size: 15px; }
+  /* One compact card: a question per topic, each with its topic's icon, instead of three headed cards. */
+  .assistant-topics { gap: 8px; }
+  .assistant-topic-grid { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+  .assistant-topic { padding: 0 12px; border: 0; border-radius: 0; background: none; box-shadow: none; gap: 0; }
+  .assistant-topic + .assistant-topic { border-top: 1px solid var(--line); }
+  .assistant-topic h3 { display: none; }
+  .assistant-topic li:nth-child(n + 2) { display: none; }
+  .assistant-topic button { gap: 12px; min-height: 52px; font-size: 15px; }
+  .assistant-topic-q-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 9px; background: var(--brand-tint); color: var(--brand); }
   .chat-turn { gap: 10px; }
   .chat-user { max-width: 86%; font-size: 15px; }
   .chat-answer { gap: 12px; padding: 14px; border-radius: 4px 16px 16px 16px; }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { RollingText } from "./RollingNumber";
 import type { HoldYear } from "../../../shared/hold-history";
 
@@ -7,7 +8,7 @@ import type { HoldYear } from "../../../shared/hold-history";
  * Built from HTML rather than a scaled image so the labels stay readable on a phone.
  */
 
-export type HoldColumn = { months: number; label: string; needed: number | null; covered: string | null };
+export type HoldColumn = { months: number; label: string; needed: number | null; covered: string | null; shortLabel?: string; coveredShort?: string | null };
 
 const STEPS = [1, 2, 2.5, 5, 10, 20, 25, 50];
 
@@ -23,11 +24,15 @@ function scale(values: number[]) {
   return { min, max, ticks, at: (value: number) => `${((max - value) / (max - min)) * 100}%` };
 }
 
-export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, paidLabel, notPaidLabel, description, legend }: {
+export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, neededShort, paidLabel, notPaidLabel, description, legend, legendShort }: {
   years: HoldYear[]; columns: HoldColumn[]; monthLabel: (month: string) => string;
   neededLabel: (percent: number) => string; paidLabel: string; notPaidLabel: string; description: string;
   legend: { paid: string; notPaid: string; needed: string; zone: string };
+  /** Phone wording (see .label-short in responsive.css); screen readers always get the full wording. */
+  neededShort?: (percent: number) => string; legendShort?: { paid: string; notPaid: string; needed: string };
 }) {
+  const dual = (full: ReactNode, short: ReactNode | undefined) => short === undefined ? full
+    : <><span className="label-full">{full}</span><span className="label-short" aria-hidden="true">{short}</span></>;
   const points = columns.map((column) => years.flatMap((year) => year.changes
     .filter((change) => change.months === column.months && change.percent !== null && !change.excluded)
     .map((change) => ({ from: year.start_month, to: change.target_month, percent: change.percent! }))));
@@ -35,8 +40,8 @@ export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, paid
   const signed = (value: number) => `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value)}%`;
   return <figure className="hold-chart" aria-label={description}>
     <figcaption className="hold-chart-legend">
-      <span><i className="hold-key-paid" />{legend.paid}</span><span><i className="hold-key-not" />{legend.notPaid}</span>
-      <span><i className="hold-key-need" />{legend.needed}</span><span><i className="hold-key-zone" />{legend.zone}</span>
+      <span><i className="hold-key-paid" />{dual(legend.paid, legendShort?.paid)}</span><span><i className="hold-key-not" />{dual(legend.notPaid, legendShort?.notPaid)}</span>
+      <span><i className="hold-key-need" />{dual(legend.needed, legendShort?.needed)}</span><span className="hold-key-zone-item"><i className="hold-key-zone" />{legend.zone}</span>
     </figcaption>
     <div className="hold-chart-axis" aria-hidden="true">{ticks.map((tick) => <span key={tick} style={{ top: at(tick) }}>{signed(tick)}</span>)}</div>
     <div className="hold-chart-body">
@@ -58,10 +63,11 @@ export function HoldOutcomeChart({ years, columns, monthLabel, neededLabel, paid
             })}
           </div>
           {/* The requirement is printed under the column, not on the line, so it never sits under a year's dot. */}
-          <div className="hold-chart-label"><strong>{column.label}</strong>
+          <div className="hold-chart-label"><strong>{dual(column.label, column.shortLabel)}</strong>
             {/* These follow the reader's costs, so they roll when the costs are changed. */}
-            {column.needed !== null && <span className="hold-chart-need-text"><RollingText text={neededLabel(column.needed)} /></span>}
-            {column.covered && <small><RollingText text={column.covered} /></small>}</div>
+            {column.needed !== null && <span className="hold-chart-need-text">{dual(<RollingText text={neededLabel(column.needed)} />,
+              neededShort ? <RollingText text={neededShort(column.needed)} /> : undefined)}</span>}
+            {column.covered && <small>{dual(<RollingText text={column.covered} />, column.coveredShort ? <RollingText text={column.coveredShort} /> : undefined)}</small>}</div>
         </div>;
       })}
     </div>
