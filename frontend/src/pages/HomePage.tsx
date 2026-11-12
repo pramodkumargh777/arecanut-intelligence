@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AboutData } from "../components/AboutData";
 import { ShareButton } from "../components/ShareButton";
 import { useChangeFlash } from "../components/useChangeFlash";
-import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { varietyPath } from "../services/seo-pages";
 import { calendarDateToTime, calendarTodayIST, DAY_MS, formatCalendarDate, formatPeriodKannada } from "../../../shared/dates";
 import { DEFAULT_COMMODITY } from "../../../shared/commodities";
 import { marketBreadth, MAX_CHANGE_GAP_DAYS, priceChange, varietyKey, type PriceChange } from "../../../shared/price-change";
@@ -307,7 +308,10 @@ export function HomePage() {
   const { cards, toggle } = useCardStates();
   // Enough reports to find each branch's previous one. Older ones are too old to show a change against anyway.
   const historyFrom = new Date(calendarDateToTime(today) - (MAX_CHANGE_GAP_DAYS + 7) * DAY_MS).toISOString().slice(0, 10);
-  const variety = VARIETIES.find((item) => item.key === params.get("v")) ?? VARIETIES[0];
+  // A variety page (/variety/rashi) names the variety in its address; the home page keeps it in ?v=.
+  const { key: pageVariety } = useParams();
+  const navigate = useNavigate();
+  const variety = VARIETIES.find((item) => item.key === (pageVariety ?? params.get("v"))) ?? VARIETIES[0];
   // Switching variety dips the price board and cards and fades them back (0.18s), so the swap reads as a change rather
   // than a snap. Web Animations, so nothing remounts and the prices still glide from old to new; skipped on first load
   // and for readers who ask for reduced motion.
@@ -353,7 +357,10 @@ export function HomePage() {
   const tumcosHistory = tumcosQuery?.data?.data ?? [];
   const publishing = SOURCES.filter((source) => variety.labels[source.key]?.length);
   const notPublishing = SOURCES.filter((source) => !variety.labels[source.key]?.length);
-  const choose = (key: string) => { const next = new URLSearchParams(params); next.set("v", key); setParams(next, { replace: true }); };
+  const choose = (key: string) => {
+    if (pageVariety) return navigate(varietyPath(key), { replace: true });
+    const next = new URLSearchParams(params); next.set("v", key); setParams(next, { replace: true });
+  };
   const varietyName = (item: typeof variety) => language === "kn" ? item.kn : item.en;
   const allDates = [...SOURCES.flatMap((source) => rowsFor(source.key)), ...tumcos].map((row) => row.reporting_date).sort();
   const newest = allDates.at(-1);

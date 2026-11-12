@@ -1,0 +1,46 @@
+name: Refresh rate pages
+
+# The variety pages (/variety/rashi and the rest) carry the latest published rates as plain text in their HTML, so a
+# search engine can read them without running scripts. That text is written when the site is built, so the site is
+# rebuilt and uploaded after each scheduled collection (09:00 and 20:00 IST, see api/wrangler.toml). Only the frontend
+# is rebuilt, from main; the API is not deployed here. A failed run leaves the previous pages in place, and the live
+# screen always loads current rates itself.
+on:
+  schedule:
+    - cron: "50 3 * * *"  # 09:20 IST, after the 09:00 collection
+    - cron: "50 14 * * *" # 20:20 IST, after the 20:00 collection
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-rate-pages
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    if: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME != '' && vars.VITE_API_BASE_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm --workspace frontend run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
+          VITE_CF_ANALYTICS_TOKEN: ${{ vars.VITE_CF_ANALYTICS_TOKEN }}
+      - name: Check the rates were written
+        run: test -f frontend/dist/variety/rashi.html || { echo "No variety pages were built; keeping the pages already live."; exit 1; }
+      - run: npx wrangler pages deploy frontend/dist --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}

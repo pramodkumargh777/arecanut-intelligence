@@ -365,6 +365,14 @@ describe("market experience", () => {
     expect(html).toContain(encodeURIComponent("Page: /"));
   });
 
+  it("gives the contact email in every page's footer, for reports and in the contact block", () => {
+    const html = render(<AppShell />);
+    expect(html).toContain(`href="mailto:contact@adikenaadi.com?subject=${encodeURIComponent("Wrong price or missing market")}&amp;body=`);
+    expect(html).toContain('href="mailto:contact@adikenaadi.com"');
+    expect(html).toContain(">contact@adikenaadi.com</span>");
+    expect(html).toContain("All rights reserved.");
+  });
+
   it("offers Rashi, Chali and Sippe gotu as picture pills and every other variety under More varieties", () => {
     const html = render(<HomePage />);
     const cards = html.slice(html.indexOf('class="variety-cards"'));

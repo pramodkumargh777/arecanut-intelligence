@@ -137,7 +137,9 @@
   .footer-report { grid-template-columns: auto minmax(0, 1fr); gap: 14px; padding: 18px; }
   .footer-report-badge { width: 40px; height: 40px; }
   .footer-report-text h2 { font-size: 15.5px; }
-  .footer-whatsapp { grid-column: 1 / -1; justify-content: center; }
+  .footer-report-actions { grid-column: 1 / -1; }
+  .footer-report-actions > a { flex: 1 1 0; justify-content: center; }
+  .footer-contact a { min-height: 36px; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 26px 20px; padding: 28px 0 24px; }
   .footer-column:last-child { grid-column: 1 / -1; }
   .footer-sources { grid-template-columns: 1fr 1fr; gap: 12px 20px !important; }
@@ -262,7 +264,7 @@
   .rate-caption, .review-details > strong, .token-copy strong, .rate-share, td, .home table { font-size: 13.5px; }
 
   /* Body text and names. */
-  .chart-empty strong, .empty-state strong, .footer-column a, .footer-sources li, .footer-tagline, .footer-whatsapp strong,
+  .chart-empty strong, .empty-state strong, .footer-column a, .footer-sources li, .footer-tagline, .footer-whatsapp strong, .footer-email strong, .footer-contact a,
   .home .filter-control span, .home-actions span, .home-heading .home-latest, .home-heading p, .home-hero p, .home-note, .home-section-heading p,
   .market-suggestion-name, .page-heading p, .sidebar-caption p, .hold-summary dl > div, .glance-head h2, .pulse-empty strong, .rate-place strong { font-size: 15px; }
 

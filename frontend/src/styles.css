@@ -178,6 +178,21 @@ small { font-size: 11px; color: var(--muted); }
 .footer-whatsapp:active { transform: scale(.98); }
 .footer-whatsapp:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .footer-whatsapp strong { font-size: 14px; font-weight: 650; white-space: nowrap; }
+.footer-report-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+/* The quiet partner to the WhatsApp button: same size, outlined, so one action leads. */
+.footer-email { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px 0 16px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface); color: var(--ink) !important; text-decoration: none !important; transition: border-color .15s ease, color .15s ease, transform .1s ease; }
+.footer-email:hover { border-color: var(--brand); color: var(--brand) !important; }
+.footer-email:active { transform: scale(.98); }
+.footer-email:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.footer-email strong { font-size: 14px; font-weight: 650; white-space: nowrap; }
+/* Contact lines under the brand, in the manner of a company footer: icon, then the address itself. */
+.footer-contact { display: grid; gap: 8px; margin: 18px 0 0; font-style: normal; }
+.footer-contact a { display: inline-flex; align-items: center; gap: 9px; width: fit-content; font-size: 13.5px; color: var(--ink-2); text-decoration: none !important; transition: color .12s ease; }
+.footer-contact a:hover { color: var(--brand); }
+.footer-contact svg { flex: none; color: var(--subtle); transition: color .12s ease; }
+.footer-contact a:hover svg { color: var(--brand); }
+.footer-bottom-meta { display: inline-flex; flex-wrap: wrap; gap: 8px; }
 .footer-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 32px; padding: 36px 0 30px; border-bottom: 1px solid var(--line); }
 .footer-logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none !important; }
 .footer-logo-mark { display: block; width: 44px; height: 34px; }
