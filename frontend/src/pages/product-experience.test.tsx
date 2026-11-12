@@ -122,6 +122,10 @@ describe("market experience", () => {
     expect(initial("light", true)).toBe("light");
     expect(initial("dark", false)).toBe("dark");
     expect(initial("invalid", true)).toBe("dark");
+    // The same early script marks that scripts run, which hides the plain copy written for search engines.
+    const marked = { documentElement: { dataset: {} as Record<string, string> } };
+    runInNewContext(script, { document: marked, localStorage: { getItem: () => null }, window: { matchMedia: () => ({ matches: false }) }, console });
+    expect(marked.documentElement.dataset.js).toBe("on");
   });
 
   it("keeps chart series readable in both themes and escapes tooltip content", () => {
