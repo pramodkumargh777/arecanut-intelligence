@@ -17,27 +17,39 @@ const SITEMAP_PATHS = [...SEO_PAGES, ...MARKET_PAGES].map((page) => page.path);
 
 const escapeHtml = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/** Styles for the HTML a page carries before its scripts run (shown for a moment on a slow phone, read by crawlers). */
+// html[data-js] is set by public/theme-init.js before the body is read, so readers with scripts never see this copy.
+const STATIC_STYLE = `<style>html[data-js] .static-page{display:none}.static-page{max-width:760px;margin:0 auto;padding:24px 16px;line-height:1.6}.static-page table{width:100%;border-collapse:collapse;margin:12px 0 20px}`
+  + `.static-page th,.static-page td{text-align:left;padding:8px 6px;border-bottom:1px solid rgba(128,128,128,.3);font-size:14px}`
+  + `.static-page nav ul{display:flex;flex-wrap:wrap;gap:4px 16px;margin:24px 0 0;padding:0;list-style:none;font-size:14px}</style>`;
+
 /**
- * index.html rewritten for one page: its own title, description, canonical address and link-preview text, plus a
- * no-script block with the page's heading and links to every other page. Crawlers and chat previews that do not run
- * scripts otherwise see the same empty page at every address.
+ * index.html rewritten for one page: its own title, description, canonical address and link-preview text, and real
+ * content inside the app's root: the page's heading and text (or the rates written for it), then links to every other
+ * public page. Crawlers and checkers that do not run scripts read this; the app replaces it when it starts. The
+ * markers let the built home page be rewritten for each other page.
  */
 function pageHtml(html: string, siteUrl: string, page: SeoPage, linked: SeoPage[] = [], content = "") {
   const url = `${siteUrl}${page.path}`;
-  const description = `${page.kn.description} ${page.en.description}`;
-  const links = [...SEO_PAGES, ...linked].map((other) => `<li><a href="${other.path}">${escapeHtml(other.label.kn)} · ${escapeHtml(other.label.en)}</a></li>`).join("");
-  const fallback = `<noscript><main><h1>${escapeHtml(page.label.kn)} · ${escapeHtml(page.label.en)}</h1><p lang="kn">${escapeHtml(page.kn.description)}</p><p lang="en">${escapeHtml(page.en.description)}</p><nav><ul>${links}</ul></nav></main></noscript>`;
-  const meta = (pattern: RegExp, content: string) => { html = html.replace(pattern, (_match, start: string, end: string) => `${start}${escapeHtml(content)}${end}`); };
+  // One language per meta description keeps it near the 160 characters a results page shows; the title carries both.
+  const description = page.kn.description;
+  const links = [...SEO_PAGES, ...linked].filter((other) => other.path !== page.path)
+    .map((other) => `<li><a href="${other.path}">${escapeHtml(other.label.kn)} · ${escapeHtml(other.label.en)}</a></li>`).join("");
+  const nav = `<nav aria-label="ಪುಟಗಳು · Pages"><ul>${links}</ul></nav>`;
+  const body = content
+    ? content.replace(/<\/main>\s*$/, `${nav}</main>`)
+    : `<main class="static-page"><h1>${escapeHtml(page.label.kn)} · ${escapeHtml(page.label.en)}</h1><p lang="kn">${escapeHtml(page.kn.description)}</p><p lang="en">${escapeHtml(page.en.description)}</p>${nav}</main>`;
+  const meta = (pattern: RegExp, value: string) => { html = html.replace(pattern, (_match, start: string, end: string) => `${start}${escapeHtml(value)}${end}`); };
   html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(page.kn.title)}</title>`);
   meta(/(<meta name="description" content=")[^"]*(")/, description);
   meta(/(<meta property="og:title" content=")[^"]*(")/, page.kn.title);
-  meta(/(<meta property="og:description" content=")[^"]*(")/, description);
+  meta(/(<meta property="og:description" content=")[^"]*(")/, `${page.kn.description} ${page.en.description}`);
   meta(/(<meta property="og:url" content=")[^"]*(")/, url);
   meta(/(<link rel="canonical" href=")[^"]*(")/, url);
-  // Also matches a block already written, so the built home page can be rewritten for each other page.
-  html = html.replace(/<!--seo-fallback-->|<noscript><main>[\s\S]*?<\/main><\/noscript>/, fallback);
-  // Text placed inside the app's root is what a crawler reads before scripts run; the app replaces it when it starts.
-  return content ? html.replace('<div id="root"></div>', `<div id="root">${content}</div>`) : html;
+  // The old no-script copy is no longer used: the same content now sits in the root, where every reader finds it.
+  html = html.replace(/<!--seo-fallback-->|<noscript><main>[\s\S]*?<\/main><\/noscript>/, "");
+  const block = `<div id="root"><!--static-->${STATIC_STYLE}${body}<!--/static--></div>`;
+  return html.replace(/<div id="root">(?:<!--static-->[\s\S]*?<!--\/static-->)?<\/div>/, () => block);
 }
 
 type Rate = { source: "mamcos" | "tss"; branch: string; reporting_date: string; minimum_price: number | null; maximum_price: number | null; average_price: number | null };
@@ -69,9 +81,8 @@ const SOURCE_NAMES = { mamcos: "ಮ್ಯಾಮ್ಕೋಸ್ · MAMCOS", tss: 
 const rupees = (value: number | null) => value === null ? "" : `₹${value.toLocaleString("en-IN")}`;
 const day = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
-/** A variety's latest rates as plain HTML: the same branches, dates and prices the rates screen shows once it loads. */
-function ratesHtml(variety: GrowerVariety, rows: Rate[]) {
-  const name = varietyNames(variety);
+/** A table of rates: cooperative, branch, date, average and range, as the rates screen shows them once it loads. */
+function rateTable(rows: Rate[]) {
   const body = rows.map((row) => {
     const place = PLACE_NAMES_KN[row.branch.toUpperCase()];
     // MAMCOS prints its branches in capitals; a reader searches for "Shivamogga".
@@ -79,11 +90,27 @@ function ratesHtml(variety: GrowerVariety, rows: Rate[]) {
     const range = row.minimum_price !== null && row.maximum_price !== null ? `${rupees(row.minimum_price)} – ${rupees(row.maximum_price)}` : "";
     return `<tr><td>${SOURCE_NAMES[row.source]}</td><td>${escapeHtml(place ? `${place} · ${branch}` : branch)}</td><td><time datetime="${row.reporting_date}">${day(row.reporting_date)}</time></td><td>${rupees(row.average_price)}</td><td>${range}</td></tr>`;
   }).join("");
-  return `<main class="static-rates"><style>.static-rates{max-width:760px;margin:0 auto;padding:24px 16px}.static-rates table{width:100%;border-collapse:collapse;margin:16px 0}.static-rates th,.static-rates td{text-align:left;padding:8px 6px;border-bottom:1px solid rgba(128,128,128,.3);font-size:14px}</style>`
-    + `<h1>${escapeHtml(name.kn)} ಧಾರಣೆ · ${escapeHtml(name.en)} price</h1>`
+  return `<table><thead><tr><th>ಸಂಘ · Cooperative</th><th>ಶಾಖೆ · Branch</th><th>ದಿನಾಂಕ · Date</th><th>ಸರಾಸರಿ · Average</th><th>ಕನಿಷ್ಠ – ಗರಿಷ್ಠ · Range</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+/** A variety's latest rates as plain HTML: the same branches, dates and prices the rates screen shows once it loads. */
+function ratesHtml(variety: GrowerVariety, rows: Rate[]) {
+  const name = varietyNames(variety);
+  return `<main class="static-page"><h1>${escapeHtml(name.kn)} ಧಾರಣೆ · ${escapeHtml(name.en)} price</h1>`
     + `<p>ಇತ್ತೀಚಿನ ವರದಿಯಾದ ದರಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ರೂಪಾಯಿಗಳಲ್ಲಿ. Latest reported rates, in rupees per quintal.</p>`
-    + `<table><thead><tr><th>ಸಂಘ · Cooperative</th><th>ಶಾಖೆ · Branch</th><th>ದಿನಾಂಕ · Date</th><th>ಸರಾಸರಿ · Average</th><th>ಕನಿಷ್ಠ – ಗರಿಷ್ಠ · Range</th></tr></thead><tbody>${body}</tbody></table>`
+    + rateTable(rows)
     + `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ. Rates as each cooperative publishes them.</p></main>`;
+}
+
+/** The home page: its heading and text, then the latest rates of the everyday varieties, each under its own heading. */
+function homeHtml(page: SeoPage, rates: Map<string, Rate[]>) {
+  const sections = VARIETIES.filter((variety) => variety.everyday && rates.has(variety.key)).map((variety) => {
+    const name = varietyNames(variety);
+    return `<h2><a href="${varietySeo(variety).path}">${escapeHtml(name.kn)} · ${escapeHtml(name.en)}</a></h2>${rateTable(rates.get(variety.key)!)}`;
+  }).join("");
+  return `<main class="static-page"><h1>${escapeHtml(page.label.kn)} · ${escapeHtml(page.label.en)}</h1>`
+    + `<p lang="kn">${escapeHtml(page.kn.description)}</p><p lang="en">${escapeHtml(page.en.description)}</p>${sections}`
+    + (sections ? `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. Rates as each cooperative publishes them, per quintal.</p>` : "") + `</main>`;
 }
 
 type PlaceRate = { source: string; name: string; date: string; price: number | null; minimum: number | null; maximum: number | null };
@@ -125,7 +152,7 @@ async function placeRates(apiUrl: string, place: MarketPlace) {
 /** A town's rates as plain HTML, the same rows the town page shows once it loads. */
 function placeHtml(place: MarketPlace, rows: PlaceRate[]) {
   const body = rows.map((row) => `<tr><td>${escapeHtml(row.source)}</td><td>${escapeHtml(row.name)}</td><td><time datetime="${row.date}">${day(row.date)}</time></td><td>${rupees(row.price)}</td><td>${row.minimum !== null && row.maximum !== null ? `${rupees(row.minimum)} – ${rupees(row.maximum)}` : ""}</td></tr>`).join("");
-  return `<main class="static-rates"><style>.static-rates{max-width:760px;margin:0 auto;padding:24px 16px}.static-rates table{width:100%;border-collapse:collapse;margin:16px 0}.static-rates th,.static-rates td{text-align:left;padding:8px 6px;border-bottom:1px solid rgba(128,128,128,.3);font-size:14px}</style>`
+  return `<main class="static-page">`
     + `<h1>${escapeHtml(place.kn)} ಅಡಿಕೆ ಧಾರಣೆ · ${escapeHtml(place.en)} arecanut rates</h1>`
     + `<p>${escapeHtml(place.district.kn)} ಜಿಲ್ಲೆ · ${escapeHtml(place.district.en)} district. ಇತ್ತೀಚಿನ ವರದಿಯಾದ ದರಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. Latest reported rates, per quintal.</p>`
     + `<table><thead><tr><th>ಮೂಲ · Source</th><th>ತಳಿ · Variety</th><th>ದಿನಾಂಕ · Date</th><th>ದರ · Rate</th><th>ಕನಿಷ್ಠ – ಗರಿಷ್ಠ · Range</th></tr></thead><tbody>${body}</tbody></table>`
@@ -173,7 +200,7 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
         mkdirSync(dirname(file), { recursive: true });
         writeFileSync(file, pageHtml(home, siteUrl, page, [...varietyPages, ...MARKET_PAGES], content));
       };
-      for (const page of SEO_PAGES) write(page);
+      for (const page of SEO_PAGES) write(page, page.path === "/" ? homeHtml(page, rates) : "");
       write(MARKETS_SEO);
       for (const [index, place] of MARKET_PLACES.entries()) {
         let content = "";
