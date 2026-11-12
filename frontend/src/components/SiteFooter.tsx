@@ -17,6 +17,8 @@ const COPY = defineCopy({
     emailAria: `Report a wrong price or missing market by email to ${CONTACT.email}`,
     emailSubject: "Wrong price or missing market",
     contact: "Contact", emailLabel: "Email", whatsappLabel: "WhatsApp",
+    follow: "Follow Areca Pulse", onInstagram: (handle: string) => `Areca Pulse on Instagram, @${handle} (opens Instagram)`, onX: (handle: string) => `Areca Pulse on X, @${handle} (opens X)`,
+    onYouTube: (handle: string) => `Areca Pulse on YouTube, @${handle} (opens YouTube)`,
     rights: "All rights reserved.",
     tagline: "Know the market. See the opportunity.",
     made: "Daily arecanut rates for growers in Karnataka, in Kannada and English.",
@@ -37,6 +39,8 @@ const COPY = defineCopy({
     emailAria: `ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆಯನ್ನು ${CONTACT.email} ಗೆ ಇಮೇಲ್ ಮೂಲಕ ತಿಳಿಸಿ`,
     emailSubject: "ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆ",
     contact: "ಸಂಪರ್ಕ", emailLabel: "ಇಮೇಲ್", whatsappLabel: "ವಾಟ್ಸಾಪ್",
+    follow: "ಅಡಿಕೆ ನಾಡಿಯನ್ನು ಅನುಸರಿಸಿ", onInstagram: (handle: string) => `ಇನ್‌ಸ್ಟಾಗ್ರಾಮ್‌ನಲ್ಲಿ ಅಡಿಕೆ ನಾಡಿ, @${handle} (ಇನ್‌ಸ್ಟಾಗ್ರಾಮ್ ತೆರೆಯುತ್ತದೆ)`, onX: (handle: string) => `X ನಲ್ಲಿ ಅಡಿಕೆ ನಾಡಿ, @${handle} (X ತೆರೆಯುತ್ತದೆ)`,
+    onYouTube: (handle: string) => `ಯೂಟ್ಯೂಬ್‌ನಲ್ಲಿ ಅಡಿಕೆ ನಾಡಿ, @${handle} (ಯೂಟ್ಯೂಬ್ ತೆರೆಯುತ್ತದೆ)`,
     rights: "ಎಲ್ಲ ಹಕ್ಕುಗಳನ್ನು ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ.",
     tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.",
     made: "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಬೆಳೆಗಾರರಿಗೆ ದಿನದ ಧಾರಣೆ, ಕನ್ನಡ ಮತ್ತು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ.",
@@ -52,6 +56,24 @@ const COPY = defineCopy({
 const RATE_LINKS = ["/", "/prices", "/analytics", "/compare"];
 const TOOL_LINKS = ["/sell-or-hold", "/assistant", "/intelligence"];
 const SOURCES = ["MAMCOS", "TSS", "TUMCOS", "AGMARKNET"];
+
+/** Instagram and X marks, drawn inline like the WhatsApp one so they take the link's colour and need no extra request. */
+function InstagramIcon({ size = 18 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+    <rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+  </svg>;
+}
+function XIcon({ size = 16 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>;
+}
+
+function YouTubeIcon({ size = 18 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+    <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z" />
+  </svg>;
+}
 
 /** The WhatsApp mark, drawn inline so it takes the button's colour and needs no extra request. */
 function WhatsAppIcon({ size = 18 }: { size?: number }) {
@@ -96,6 +118,14 @@ export function SiteFooter() {
             <a href={`https://wa.me/${CONTACT.whatsapp}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={16} />
               <span className="sr-only">{copy.whatsappLabel}: </span><span translate="no" lang="en">{CONTACT.whatsappDisplay}</span></a>
           </address>
+          <ul className="footer-social" aria-label={copy.follow}>
+            <li><a href={CONTACT.social.instagram.url} target="_blank" rel="noopener noreferrer" aria-label={copy.onInstagram(CONTACT.social.instagram.handle)}
+              title={`@${CONTACT.social.instagram.handle}`}><InstagramIcon /></a></li>
+            <li><a href={CONTACT.social.x.url} target="_blank" rel="noopener noreferrer" aria-label={copy.onX(CONTACT.social.x.handle)}
+              title={`@${CONTACT.social.x.handle}`}><XIcon /></a></li>
+            <li><a href={CONTACT.social.youtube.url} target="_blank" rel="noopener noreferrer" aria-label={copy.onYouTube(CONTACT.social.youtube.handle)}
+              title={`@${CONTACT.social.youtube.handle}`}><YouTubeIcon /></a></li>
+          </ul>
         </div>
         <nav className="footer-column" aria-labelledby="footer-rates"><h2 id="footer-rates">{copy.rates}</h2>
           <ul>{RATE_LINKS.map((to) => <li key={to}><Link to={to}>{copy.links[to]}</Link></li>)}</ul></nav>

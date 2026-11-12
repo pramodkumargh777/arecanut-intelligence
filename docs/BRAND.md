@@ -93,6 +93,9 @@ storage keys would reset every reader's saved language.
 
 - Site: **https://adikenaadi.com** (the build default in `frontend/vite.config.ts`; `VITE_SITE_URL` overrides it).
 - Public email: **contact@adikenaadi.com**. Grower reports also go to WhatsApp **+91 86608 62841**.
+- Social: Instagram **@adike_naadi** (https://www.instagram.com/adike_naadi/), X **@adikenaadi** (https://x.com/adikenaadi),
+  YouTube **@adikenaadi** (https://www.youtube.com/@adikenaadi).
+  Defined in `CONTACT.social` (`brand.tsx`), shown as icons in the footer, and listed as `sameAs` in `index.html`.
 - Both are defined once in `CONTACT` (`frontend/src/services/brand.tsx`) and shown in every page's footer: as an
   "Email us" button next to "Chat on WhatsApp" in the report panel (the page address is filled into the message), and as
   contact lines under the brand. The email is repeated in `index.html`'s structured data and in the generated

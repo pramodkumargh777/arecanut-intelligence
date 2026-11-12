@@ -940,3 +940,25 @@ describe("pages search engines may index", () => {
     for (const path of ["/workspace", "/data-quality", "/market/atlantis", "/variety/not-a-variety", "/nothing-here"]) expect(searchablePath(path), path).toBe(false);
   });
 });
+
+describe("search result descriptions", () => {
+  it("keeps every page's description short enough for a results page (Kannada glyphs are wide)", async () => {
+    const { SEO_PAGES, MARKETS_SEO, marketSeo, varietySeo } = await import("../services/seo-pages");
+    const pages = [...SEO_PAGES, MARKETS_SEO, ...MARKET_PLACES.map(marketSeo), ...VARIETIES.map(varietySeo)];
+    const tooLong = pages.filter((page) => page.kn.description.length > 130).map((page) => `${page.path} (${page.kn.description.length})`);
+    expect(tooLong).toEqual([]);
+  });
+});
+
+describe("social links", () => {
+  it("links the official Instagram and X accounts from every page's footer, opening safely in a new tab", () => {
+    const html = render(<AppShell />);
+    expect(html).toContain('<a href="https://www.instagram.com/adike_naadi/" target="_blank" rel="noopener noreferrer" aria-label="Areca Pulse on Instagram, @adike_naadi (opens Instagram)"');
+    expect(html).toContain('<a href="https://x.com/adikenaadi" target="_blank" rel="noopener noreferrer" aria-label="Areca Pulse on X, @adikenaadi (opens X)"');
+    expect(html).toContain('<a href="https://www.youtube.com/@adikenaadi" target="_blank" rel="noopener noreferrer" aria-label="Areca Pulse on YouTube, @adikenaadi (opens YouTube)"');
+  });
+
+  it("names the same accounts in the structured data search engines read", () => {
+    expect(readFileSync("frontend/index.html", "utf8")).toContain('"sameAs": ["https://www.instagram.com/adike_naadi/", "https://x.com/adikenaadi", "https://www.youtube.com/@adikenaadi"]');
+  });
+});

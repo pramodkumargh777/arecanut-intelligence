@@ -140,6 +140,7 @@
   .footer-report-actions { grid-column: 1 / -1; }
   .footer-report-actions > a { flex: 1 1 0; justify-content: center; }
   .footer-contact a { min-height: 36px; }
+  .footer-social a { width: 40px; height: 40px; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 26px 20px; padding: 28px 0 24px; }
   .footer-column:last-child { grid-column: 1 / -1; }
   .footer-sources { grid-template-columns: 1fr 1fr; gap: 12px 20px !important; }

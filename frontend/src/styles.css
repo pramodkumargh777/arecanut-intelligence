@@ -194,6 +194,13 @@ small { font-size: 11px; color: var(--muted); }
 .footer-contact a { display: inline-flex; align-items: center; gap: 9px; width: fit-content; font-size: 13.5px; color: var(--ink-2); text-decoration: none !important; transition: color .12s ease; }
 .footer-contact a:hover { color: var(--brand); }
 .footer-contact svg { flex: none; color: var(--subtle); transition: color .12s ease; }
+/* Social links: a row of small square icon buttons under the contact lines, in the manner of a company footer. */
+.footer-social { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.footer-social a { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted);
+  text-decoration: none !important; transition: color .12s ease, border-color .12s ease, background-color .12s ease; }
+.footer-social a:active { color: var(--brand); border-color: var(--brand); }
+@media (hover: hover) { .footer-social a:hover { color: var(--brand); border-color: var(--brand); background: var(--brand-tint); } }
+.footer-social a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .footer-contact a:hover svg { color: var(--brand); }
 .footer-bottom-meta { display: inline-flex; flex-wrap: wrap; gap: 8px; }
 .footer-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 32px; padding: 36px 0 30px; border-bottom: 1px solid var(--line); }

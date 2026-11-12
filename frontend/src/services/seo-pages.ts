@@ -17,7 +17,7 @@ export const SEO_PAGES: SeoPage[] = [
     path: "/", label: { kn: "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ", en: "Arecanut price today" },
     kn: {
       title: "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ · Arecanut price today | ಅಡಿಕೆ ನಾಡಿ",
-      description: "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ಮ್ಯಾಮ್ಕೋಸ್ ಶಿವಮೊಗ್ಗ, ಸಾಗರ, ತೀರ್ಥಹಳ್ಳಿ ಮತ್ತು ಟಿಎಸ್‌ಎಸ್ ಶಿರಸಿ, ಸಿದ್ದಾಪುರ, ಯಲ್ಲಾಪುರ ದರಗಳು ಹಾಗೂ ಎಪಿಎಂಸಿ ಬೆಲೆ. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ಮತ್ತು ಇತರ ತಳಿಗಳು, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.",
+      description: "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ಶಿವಮೊಗ್ಗ, ಶಿರಸಿ ಸೇರಿ ಮ್ಯಾಮ್ಕೋಸ್, ಟಿಎಸ್‌ಎಸ್ ಮತ್ತು ಎಪಿಎಂಸಿ ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ದರ ದಿನಾಂಕದೊಂದಿಗೆ.",
     },
     en: {
       title: "Arecanut price today: MAMCOS, TSS and APMC rates | Areca Pulse",
@@ -28,7 +28,7 @@ export const SEO_PAGES: SeoPage[] = [
     path: "/prices", label: { kn: "ಅಡಿಕೆ ಮಾರುಕಟ್ಟೆ ದರಗಳು", en: "Arecanut market rates" },
     kn: {
       title: "ಅಡಿಕೆ ಮಾರುಕಟ್ಟೆ ದರಗಳು · Arecanut market rates | ಅಡಿಕೆ ನಾಡಿ",
-      description: "ಮಾರುಕಟ್ಟೆ ಮತ್ತು ತಳಿವಾರು ಅಡಿಕೆ ದರಗಳು: ಮ್ಯಾಮ್ಕೋಸ್, ಟಿಎಸ್‌ಎಸ್, ಟಮ್ಕೋಸ್ ಮತ್ತು ಎಪಿಎಂಸಿ (AGMARKNET) ದರಗಳನ್ನು ಹುಡುಕಿ, ಕನಿಷ್ಠ, ಗರಿಷ್ಠ ಮತ್ತು ಸರಾಸರಿ ಬೆಲೆಯೊಂದಿಗೆ.",
+      description: "ಮ್ಯಾಮ್ಕೋಸ್, ಟಿಎಸ್‌ಎಸ್, ಟಮ್ಕೋಸ್ ಮತ್ತು ಎಪಿಎಂಸಿ ಅಡಿಕೆ ದರಗಳನ್ನು ಮಾರುಕಟ್ಟೆ, ತಳಿವಾರು ಹುಡುಕಿ: ಕನಿಷ್ಠ, ಗರಿಷ್ಠ, ಸರಾಸರಿ ಬೆಲೆ.",
     },
     en: {
       title: "Arecanut market rates by market and variety | Areca Pulse",
@@ -157,6 +157,9 @@ export const SEO_PAGES: SeoPage[] = [
 export const varietyPath = (key: string) => `/variety/${key}`;
 export const varietyFromPath = (path: string) => path.startsWith("/variety/") ? VARIETIES.find((variety) => varietyPath(variety.key) === path) : undefined;
 
+/** The main branch of each cooperative, for descriptions that must stay short enough for a results page. */
+const SOURCE_MAIN_BRANCH = { mamcos: "ಮ್ಯಾಮ್ಕೋಸ್ ಶಿವಮೊಗ್ಗ", tss: "ಟಿಎಸ್‌ಎಸ್ ಶಿರಸಿ" };
+
 const SOURCE_PLACES = {
   mamcos: { kn: "ಮ್ಯಾಮ್ಕೋಸ್ (ಶಿವಮೊಗ್ಗ, ಸಾಗರ, ತೀರ್ಥಹಳ್ಳಿ)", en: "MAMCOS (Shivamogga, Sagara, Thirthahalli)" },
   tss: { kn: "ಟಿಎಸ್‌ಎಸ್ (ಶಿರಸಿ, ಸಿದ್ದಾಪುರ, ಯಲ್ಲಾಪುರ)", en: "TSS (Sirsi, Siddapur, Yellapur)" },
@@ -174,7 +177,7 @@ export function varietySeo(variety: GrowerVariety): SeoPage {
   const where = (language: "kn" | "en") => sources.map((source) => SOURCE_PLACES[source][language]).join(language === "kn" ? " ಮತ್ತು " : " and ");
   return {
     path: varietyPath(variety.key), label: { kn: `${name.kn} ಧಾರಣೆ`, en: `${name.en} price` },
-    kn: { title: `${name.kn} ಧಾರಣೆ ಇಂದು · ${name.en} price today | ಅಡಿಕೆ ನಾಡಿ`, description: `${name.kn} ಇತ್ತೀಚಿನ ಧಾರಣೆ: ${where("kn")} ದರಗಳು ಶಾಖೆವಾರು, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.` },
+    kn: { title: `${name.kn} ಧಾರಣೆ ಇಂದು · ${name.en} price today | ಅಡಿಕೆ ನಾಡಿ`, description: `${name.kn} ಇತ್ತೀಚಿನ ಧಾರಣೆ: ${sources.map((source) => SOURCE_MAIN_BRANCH[source]).join(", ")} ಸೇರಿ ಶಾಖೆವಾರು ದರಗಳು, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.` },
     en: { title: `${name.en} price today: ${sources.map((source) => source.toUpperCase()).join(" and ")} rates | Areca Pulse`, description: `Latest ${name.en} rates per quintal at ${where("en")}, by branch, each with its date and source.` },
   };
 }
@@ -182,7 +185,7 @@ export function varietySeo(variety: GrowerVariety): SeoPage {
 /** The list of towns, linked from the footer and navigation; each town page links back to it. */
 export const MARKETS_SEO: SeoPage = {
   path: MARKETS_PATH, label: { kn: "ಊರಿನ ಅಡಿಕೆ ಧಾರಣೆ", en: "Arecanut rates by town" },
-  kn: { title: "ಊರಿನ ಅಡಿಕೆ ಧಾರಣೆ · Arecanut rates by town | ಅಡಿಕೆ ನಾಡಿ", description: "ಶಿವಮೊಗ್ಗ, ಶಿರಸಿ, ಸಾಗರ, ತೀರ್ಥಹಳ್ಳಿ, ಚನ್ನಗಿರಿ, ಪುತ್ತೂರು ಮತ್ತು ಇತರ ಊರುಗಳ ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ಸಹಕಾರಿ ಸಂಘ ಮತ್ತು ಎಪಿಎಂಸಿ ದರಗಳು, ದಿನಾಂಕದೊಂದಿಗೆ." },
+  kn: { title: "ಊರಿನ ಅಡಿಕೆ ಧಾರಣೆ · Arecanut rates by town | ಅಡಿಕೆ ನಾಡಿ", description: "ಶಿವಮೊಗ್ಗ, ಶಿರಸಿ, ಸಾಗರ, ಪುತ್ತೂರು ಮತ್ತು ಇತರ ಊರುಗಳ ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ಸಹಕಾರಿ ಸಂಘ ಮತ್ತು ಎಪಿಎಂಸಿ ದರಗಳು, ದಿನಾಂಕದೊಂದಿಗೆ." },
   en: { title: "Arecanut rates by town: Shivamogga, Sirsi, Puttur and more | Areca Pulse", description: "Today's arecanut (adike) rates town by town: Shivamogga, Sirsi, Sagara, Thirthahalli, Channagiri, Puttur and more. Cooperative and APMC rates, each with its date." },
 };
 
@@ -197,7 +200,8 @@ export function marketSeo(place: MarketPlace): SeoPage {
   return {
     path: marketPath(place.slug), label: { kn: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ`, en: `${place.en} arecanut rate` },
     kn: { title: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ ಇಂದು · ${place.en} adike rate today | ಅಡಿಕೆ ನಾಡಿ`,
-      description: `${place.kn} (${place.district.kn}) ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ${join("kn")} ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ಮತ್ತು ಇತರ ತಳಿಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.` },
+      // Under about 130 Kannada characters, so a results page shows it whole; the district is on the page itself.
+      description: `${place.kn} ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ${join("kn")} ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ಮತ್ತು ಇತರ ತಳಿಗಳು, ದಿನಾಂಕದೊಂದಿಗೆ.` },
     en: { title: `${place.en} arecanut price today: ${join("en")} rates | Areca Pulse`,
       description: `Latest arecanut (adike) rates in ${place.en}, ${place.district.en}: ${join("en")}. Rashi, Chali, Bette and more, per quintal, each with its date and source.` },
   };
