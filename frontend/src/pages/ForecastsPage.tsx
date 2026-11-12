@@ -4,7 +4,8 @@ import { api } from "../services/api";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { exportModule } from "./IntelligencePage";
 import { shiftCalendarMonth } from "../../../shared/dates";
-import { defineCopy, useCopy, useFormat } from "../services/language";
+import { defineCopy, useCopy, useFormat, useLanguage } from "../services/language";
+import { agmarknetVarietyName } from "../services/agmarknetVarieties";
 import { LazyBarChart, LazyLineChart } from "../components/LazyCharts";
 import { SourceLabel, StatusBadge } from "../components/Scorecard";
 import { useChartPalette } from "../components/chartPalette";
@@ -150,6 +151,7 @@ const COPY = defineCopy({
 
 export function ForecastsPage() {
   const t = useCopy(COPY);
+  const { language } = useLanguage();
   const format = useFormat();
   const month = (value: string) => format.month(value);
   const number = (value: number | null | undefined) => value == null ? t.unavailable : value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
@@ -164,7 +166,7 @@ export function ForecastsPage() {
   const label = evaluation ? t.labels?.[evaluation.selected_model] ?? evaluation.label : undefined;
   return <div className="page-stack">
     <section className="page-heading"><div><h1>{t.title}</h1><p>{t.intro}</p></div></section>
-    <div className="fx-toolbar"><label className="fx-select"><span>{t.variety}</span><select value={variety} disabled={evaluate.isPending} onChange={(event) => { setVariety(event.target.value); evaluate.reset(); }}><option>Rashi</option>{prices.data?.data.filter((row) => row.variety_name !== "Rashi").map((row) => <option key={row.variety_name} lang="en">{row.variety_name}</option>)}</select></label></div>
+    <div className="fx-toolbar"><label className="fx-select"><span>{t.variety}</span><select value={variety} disabled={evaluate.isPending} onChange={(event) => { setVariety(event.target.value); evaluate.reset(); }}><option value="Rashi" lang={language}>{agmarknetVarietyName("Rashi", language)}</option>{prices.data?.data.filter((row) => row.variety_name !== "Rashi").map((row) => <option key={row.variety_name} value={row.variety_name} lang={language}>{agmarknetVarietyName(row.variety_name, language)}</option>)}</select></label></div>
     {prices.error && <ErrorState error={prices.error} />}
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
       {data.stale && <div role="alert" className="data-disclosure">{t.staleSnapshot(reasonText(data.stale_reasons))}</div>}

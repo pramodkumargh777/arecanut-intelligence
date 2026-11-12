@@ -72,8 +72,9 @@ The kit's palette is merged into the existing tokens in `frontend/src/styles.css
 | `--brand-deep` | Deep Forest `#06271E` | Dark surfaces |
 | `--brand-leaf` | Leaf Green `#6E9F43` | 3.1:1 on white: only large or bold text (e.g. "Pulse" in the wordmark) and graphics |
 | `--brand-leaf-light`, `--brand-sap`, `--brand-ivory`, `--brand-cocoa` | Supporting accents | Use sparingly |
-| `--ink` / `--muted` / `--subtle` | `#17211D` / `#525F57` / `#65736B` | 16.5:1, 6.7:1 and 5.0:1 on white |
-| `--line` / `--surface-2` | `#DDE4DD` / `#F6F8F4` | Borders and soft surfaces |
+| `--ink` / `--muted` / `--subtle` | `#17211D` / `#525F57` / `#5E6C64` | 16.5:1, 6.7:1 and 5.5:1 on white; `--subtle` is 4.9:1 on `--brand-tint` |
+| `--line` / `--surface-2` | `#D3DCD3` / `#F6F8F4` | Card borders and soft surfaces |
+| `--control-line` | `#86928A` (dark `#6A8274`) | Input and select borders: at least 3:1 on `--surface` and `--surface-2` in both themes |
 
 Data surfaces stay neutral. Price rises and falls always carry an arrow and a word ("up", "down"). They are currently
 also coloured green (`#166534`) and red (`--bad-ink`). The guide warns against equating direction with benefit, since

@@ -39,6 +39,9 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { ImportsPanel } from "../components/ImportsPanel";
 import { eventsBetween, MARKET_EVENTS } from "../services/market-events";
+import { MarketIndexPage, MarketPage } from "./MarketPage";
+import { MARKET_PLACES } from "../services/markets";
+import { marketSeo, seoPage } from "../services/seo-pages";
 
 const state = vi.hoisted(() => ({
   cooperative: [] as object[],
@@ -47,15 +50,17 @@ const state = vi.hoisted(() => ({
   cooperativePage: {} as object,
   intelligence: {} as object,
   language: "en" as "en" | "kn",
+  branch: [] as object[],
 }));
 
 vi.mock("@tanstack/react-query", () => ({
   useMutation: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, data: undefined, error: null }),
   useQueryClient: () => ({ invalidateQueries: vi.fn(), removeQueries: vi.fn() }),
   // Market search suggestions load only after a search box is focused, which a static render never does.
-  useQueries: ({ queries }: { queries: { queryKey: string[] }[] }) => queries[0]?.queryKey[0] === "market-suggestions" ? queries.map(() => ({ data: undefined })) : state.cooperative,
+  useQueries: ({ queries }: { queries: { queryKey: string[] }[] }) => queries[0]?.queryKey[0] === "market-suggestions" ? queries.map(() => ({ data: undefined }))
+    : queries[0]?.queryKey[0] === "branch-latest" ? state.branch : state.cooperative,
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
-    if (queryKey[0] === "home-official-prices") return state.official;
+    if (queryKey[0] === "home-official-prices" || queryKey[0] === "market-apmc") return state.official;
     if (queryKey[0] === "varieties") return { data: ["Rashi"], isLoading: false };
     if (queryKey[0] === "market-comparison") return { data: { data: state.comparison }, isLoading: false };
     if (queryKey[0] === "cooperative") return state.cooperativePage;
@@ -94,6 +99,7 @@ beforeEach(() => {
   state.official = ready({ data: [siddapur] });
   state.comparison = [];
   state.language = "en";
+  state.branch = [];
   state.intelligence = { data: undefined, isLoading: true };
   state.cooperativePage = ready({
     data: [], latest_by_branch: [], branches: [], varieties: [], series: [], counts: [], recent_fetches: [],
@@ -751,5 +757,63 @@ describe("rolling price", () => {
     // The resting state is the final digit, so the price is right even if the roll animation never runs.
     expect(html).toContain("translateY(-90%)"); // the 9 in 46,789
     expect(html).toContain("translateY(-40%)"); // the 4
+  });
+});
+
+describe("town pages", () => {
+  const renderTown = (slug: string) => render(<Routes><Route path="/market/:slug" element={<MarketPage />} /></Routes>, `/market/${slug}`);
+
+  it("shows each source at the town in its own card, with the grower's variety names linked to their pages", () => {
+    state.branch = [ready({ data: [{ ...cooperativeQuote("tss-chali", "Sirsi", "CHALI"), id: "tss-chali" }, { ...cooperativeQuote("tss-rashi", "Sirsi", "RASHI"), id: "tss-rashi", average_price: 45024 }] })];
+    state.official = ready({ data: [{ ...quote, id: "sirsi-apmc", market_name: "Sirsi APMC", modal_price: 44100 }, siddapur] });
+    const html = renderTown("sirsi");
+    expect(html).toContain("<h1>Sirsi arecanut rates</h1>");
+    expect(html).toContain("TSS · Sirsi branch");
+    // Catalogue order (Rashi before Chali), whatever order the API used.
+    expect(html.indexOf('href="/variety/rashi"')).toBeLessThan(html.indexOf('href="/variety/chali"'));
+    expect(html).toContain("₹45,024");
+    expect(html).toContain("APMC · Sirsi");
+    expect(html).toContain("₹44,100");
+    // Another market's APMC row that matched the search is left out.
+    expect(html).not.toContain("₹51,000");
+    expect(html).toContain('href="/market/siddapur"');
+  });
+
+  it("says when a source has published nothing recently instead of showing an empty card", () => {
+    state.branch = [ready({ data: [] })];
+    state.official = ready({ data: [] });
+    expect(renderTown("sirsi")).toContain("No published rate in the last 45 days.");
+  });
+
+  it("treats an unknown town as a missing page", () => {
+    expect(renderTown("atlantis")).toContain("Page not found");
+  });
+
+  it("lists every town under its district, in Kannada too", () => {
+    const html = render(<MarketIndexPage />, "/market");
+    for (const place of MARKET_PLACES) expect(html).toContain(`href="/market/${place.slug}"`);
+    expect(html).toContain("Dakshina Kannada district");
+    state.language = "kn";
+    expect(render(<MarketIndexPage />, "/market")).toContain("ಶಿರಸಿ");
+  });
+
+  it("gives each town its own title naming only the sources it has", () => {
+    const sirsi = MARKET_PLACES.find((place) => place.slug === "sirsi")!;
+    expect(marketSeo(sirsi).en.title).toBe("Sirsi arecanut price today: TSS, APMC rates | Areca Pulse");
+    expect(seoPage("/market/puttur")?.en.title).toBe("Puttur arecanut price today: APMC rates | Areca Pulse");
+    expect(seoPage("/market")?.path).toBe("/market");
+    expect(new Set(MARKET_PLACES.map((place) => place.slug)).size).toBe(MARKET_PLACES.length);
+  });
+});
+
+
+describe("AGMARKNET variety names", () => {
+  it("shows Kannada names where one is established, and the source's own spelling otherwise", async () => {
+    const { agmarknetVarietyName } = await import("../services/agmarknetVarieties");
+    expect(agmarknetVarietyName("Rashi", "kn")).toBe("ರಾಶಿ");
+    expect(agmarknetVarietyName("Sippegotu", "kn")).toBe("ಸಿಪ್ಪೆಗೋಟು");
+    expect(agmarknetVarietyName("Cqca", "kn")).toBe("Cqca");
+    expect(agmarknetVarietyName("api", "en")).toBe("Api");
+    expect(agmarknetVarietyName("Rashi", "en")).toBe("Rashi");
   });
 });

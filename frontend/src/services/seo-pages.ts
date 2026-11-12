@@ -7,6 +7,7 @@
  * search in both scripts ("ಅಡಿಕೆ ಧಾರಣೆ", "adike rate", "arecanut price"). Name only sources and places the page shows.
  */
 import { VARIETIES, type GrowerVariety } from "./varieties";
+import { COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKETS_PATH, marketFromPath, marketPath, type MarketPlace } from "./markets";
 
 export type SeoText = { title: string; description: string };
 export type SeoPage = { path: string; label: { kn: string; en: string }; kn: SeoText; en: SeoText };
@@ -178,7 +179,34 @@ export function varietySeo(variety: GrowerVariety): SeoPage {
   };
 }
 
+/** The list of towns, linked from the footer and navigation; each town page links back to it. */
+export const MARKETS_SEO: SeoPage = {
+  path: MARKETS_PATH, label: { kn: "ಊರಿನ ಅಡಿಕೆ ಧಾರಣೆ", en: "Arecanut rates by town" },
+  kn: { title: "ಊರಿನ ಅಡಿಕೆ ಧಾರಣೆ · Arecanut rates by town | ಅಡಿಕೆ ನಾಡಿ", description: "ಶಿವಮೊಗ್ಗ, ಶಿರಸಿ, ಸಾಗರ, ತೀರ್ಥಹಳ್ಳಿ, ಚನ್ನಗಿರಿ, ಪುತ್ತೂರು ಮತ್ತು ಇತರ ಊರುಗಳ ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ಸಹಕಾರಿ ಸಂಘ ಮತ್ತು ಎಪಿಎಂಸಿ ದರಗಳು, ದಿನಾಂಕದೊಂದಿಗೆ." },
+  en: { title: "Arecanut rates by town: Shivamogga, Sirsi, Puttur and more | Areca Pulse", description: "Today's arecanut (adike) rates town by town: Shivamogga, Sirsi, Sagara, Thirthahalli, Channagiri, Puttur and more. Cooperative and APMC rates, each with its date." },
+};
+
+/** The sources a town page shows, named as the page names them. */
+function placeSources(place: MarketPlace, language: "kn" | "en") {
+  const sources = COOPERATIVE_ORDER.filter((source) => place.branches[source]).map((source) => COOPERATIVE_NAMES[source][language]);
+  return place.apmc ? [...sources, language === "kn" ? "ಎಪಿಎಂಸಿ" : "APMC"] : sources;
+}
+
+export function marketSeo(place: MarketPlace): SeoPage {
+  const join = (language: "kn" | "en") => placeSources(place, language).join(language === "kn" ? ", " : ", ");
+  return {
+    path: marketPath(place.slug), label: { kn: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ`, en: `${place.en} arecanut rate` },
+    kn: { title: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ ಇಂದು · ${place.en} adike rate today | ಅಡಿಕೆ ನಾಡಿ`,
+      description: `${place.kn} (${place.district.kn}) ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ${join("kn")} ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ಮತ್ತು ಇತರ ತಳಿಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.` },
+    en: { title: `${place.en} arecanut price today: ${join("en")} rates | Areca Pulse`,
+      description: `Latest arecanut (adike) rates in ${place.en}, ${place.district.en}: ${join("en")}. Rashi, Chali, Bette and more, per quintal, each with its date and source.` },
+  };
+}
+
 export function seoPage(path: string): SeoPage | undefined {
   const variety = varietyFromPath(path);
-  return variety ? varietySeo(variety) : SEO_PAGES.find((page) => page.path === path);
+  if (variety) return varietySeo(variety);
+  const place = marketFromPath(path);
+  if (place) return marketSeo(place);
+  return path === MARKETS_PATH ? MARKETS_SEO : SEO_PAGES.find((page) => page.path === path);
 }

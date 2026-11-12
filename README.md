@@ -96,7 +96,12 @@ market records: restore or re-fetch authorised data explicitly.
 Market pages (overview, prices, analytics, comparison) switch between the official AGMARKNET feed and cooperative
 feeds without mixing price bases. Tables sort, paginate and export bounded CSV. Charts are lazy-loaded and show
 observed values only. `/forecasts` and `/forecasts/evaluation` chart actual backtests, including poor performance.
-`/workspace` stores organization or role dashboard profiles (filters and sections) in browser localStorage only.
+`/market` lists towns, and `/market/:slug` (for example `/market/sirsi`) shows that town's cooperative branch and APMC
+rates side by side, each with its own date; the list of towns and the exact source names are in
+`frontend/src/services/markets.ts`, and the build writes each town's latest rates into its HTML for search engines.
+Town pages are search landing pages and are not linked from the app's menus. They read
+`GET /cooperative/branch-latest?source=&branch=`, which returns a branch's latest verified rate per variety from the
+last 45 days. `/workspace` stores organization or role dashboard profiles (filters and sections) in browser localStorage only.
 
 `/` (latest rates) and `/sell-or-hold` are written for growers on phones, in Kannada by default with an English toggle that each browser remembers. Other pages have translated navigation but English content. Rates stay separate by cooperative and only rates from the same date are ranked. Sell-or-hold shows what the Karnataka monthly price did after a chosen month in past years, and how many years would have covered the reader's own costs. It gives no recommendation, and `shared/hold-history.ts` leaves out one-month spikes such as Rashi in January 2024, naming them on the page. Sections with no data (official daily feed, arrivals, advisories, quality inspections) stay hidden until they have some. The former home page is now at `/overview`.
 

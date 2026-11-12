@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import type { ForecastingPerformance, ModelEvaluation, StoredPrediction, TrackSeries } from "../services/forecasting";
 import { showsValues } from "../services/forecasting";
-import { defineCopy, useCopy, useFormat } from "../services/language";
+import { defineCopy, useCopy, useFormat, useLanguage } from "../services/language";
+import { agmarknetVarietyName } from "../services/agmarknetVarieties";
 import { LazyTrackChart } from "./LazyCharts";
 import { useSlidingPill } from "./useSlidingPill";
 
@@ -103,6 +104,7 @@ export function ForecastShowcase({ evaluations, track, trackModel, predictions, 
   predictions: StoredPrediction[]; performance: ForecastingPerformance | undefined;
 }) {
   const t = useCopy(COPY);
+  const { language } = useLanguage();
   const format = useFormat();
   const name = (model: string) => t.models[model] ?? model;
   const varieties = useMemo(() => [...new Set(evaluations.map((row) => row.variety))].sort(), [evaluations]);
@@ -154,7 +156,7 @@ export function ForecastShowcase({ evaluations, track, trackModel, predictions, 
   return <div className="fx-showcase">
     <div className="fx-toolbar">
       <label className="fx-select"><span>{t.variety}</span>
-        <select value={variety} onChange={(event) => setVariety(event.target.value)}>{varieties.map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
+        <select value={variety} onChange={(event) => setVariety(event.target.value)}>{varieties.map((value) => <option key={value} value={value} lang={language}>{agmarknetVarietyName(value, language)}</option>)}</select></label>
       {/* Up to three horizons get word labels; more get a "Months ahead" label and numbered buttons so six still fit a phone. */}
       <div ref={pill} className={`fx-segmented${horizons.length > 3 ? " is-numeric" : ""}`} role="group" aria-label={t.horizon}>
         {horizons.length > 3 && <span className="fx-segmented-label">{t.monthsAhead}</span>}

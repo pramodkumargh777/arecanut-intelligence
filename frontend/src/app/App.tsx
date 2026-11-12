@@ -22,6 +22,8 @@ const SupplyPage = lazy(() => import("../pages/SupplyPage").then((module) => ({ 
 const AssistantPage = lazy(() => import("../pages/AssistantPage").then((module) => ({ default: module.AssistantPage })));
 const WorkspacePage = lazy(() => import("../pages/WorkspacePage").then((module) => ({ default: module.WorkspacePage })));
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
+const MarketPage = lazy(() => import("../pages/MarketPage").then((module) => ({ default: module.MarketPage })));
+const MarketIndexPage = lazy(() => import("../pages/MarketPage").then((module) => ({ default: module.MarketIndexPage })));
 const ForecastsPage = lazy(() => import("../pages/ForecastsPage").then((module) => ({ default: module.ForecastsPage })));
 
 export function App() {
@@ -32,6 +34,9 @@ export function App() {
           <Route index element={<Suspense fallback={<LoadingState />}><HomePage /></Suspense>} />
           {/* The same rates screen at an address of its own per variety, for search engines and shared links. */}
           <Route path="variety/:key" element={<Suspense fallback={<LoadingState />}><HomePage /></Suspense>} />
+          {/* One page per town, for searches such as "Sirsi adike rate". */}
+          <Route path="market" element={<Suspense fallback={<LoadingState />}><MarketIndexPage /></Suspense>} />
+          <Route path="market/:slug" element={<Suspense fallback={<LoadingState />}><MarketPage /></Suspense>} />
           <Route path="sell-or-hold" element={<Suspense fallback={<LoadingState />}><SellOrHoldPage /></Suspense>} />
           <Route path="overview" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<OverviewPage />} /></Suspense>} />
           <Route path="prices" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<PricesPage />} /></Suspense>} />
