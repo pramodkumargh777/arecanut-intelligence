@@ -29,7 +29,8 @@ User question (English or Kannada)
 | `api/src/assistant/places.ts` | Reviewed list of places with Kannada spellings, used by the grounding check |
 | `api/src/assistant/pesticides.ts` | Banned and restricted pesticides, withheld from retrieval and rejected in model text |
 | `api/src/assistant/diseases.ts` | Arecanut diseases and pests with Kannada names, used to keep advice with its disease. Have a Kannada-reading agronomist check it |
-| `api/src/assistant/compose.ts` | Evidence building, prompt, citation numbering, rule-based fallback |
+| `api/src/assistant/compose.ts` | Evidence building, prompt, citation numbering, sentence salvage and one retry, rule-based fallback |
+| `api/src/assistant/knowledge-cards.ts` | Expert-reviewed answers to common crop questions; drafts are inert until approved |
 | `api/src/assistant/routes.ts` | HTTP endpoints, rate limiting, audit log |
 | `api/migrations/0019_assistant_documents.sql` | `documents`, `document_chunks`, `document_chunks_fts`, `assistant_interactions`, `assistant_rate_limits` |
 | `data-platform/documents/` | Python document ingester and source manifest |
@@ -70,7 +71,14 @@ When a calculator lacks inputs it returns `needs_input` and lists them. It never
   - calls a price today's, current or "now" when no price in the data is from today;
   - ranks prices across sources. With several sources in the data, each sentence calling a price best, highest or lowest must name exactly one source, and every source needs its own ranking.
 
-  Rejected text is replaced by the rule-based interpretation, and the UI says why. For document questions that interpretation quotes the best matching passages word for word, with their citations.
+  A draft that fails is not thrown away at once:
+  1. Sentences that pass on their own are kept, when they are at least half of the draft and pass together. The answer says how many were left out.
+  2. Otherwise the model is asked once more, with the reasons, and step 1 applies to the second draft.
+  3. If that fails too, the rule-based interpretation is used.
+
+  A hyphenated range such as "35-45" is read as 35 and 45, not as 35 and −45.
+
+  For document questions the rule-based interpretation gives an approved knowledge card as written, quotes readable passages word for word, and never quotes scanned Kannada passages: old non-Unicode Kannada fonts come out of OCR as garbled text. For those it lists the pages to open and who to ask (KVK, ICAR-CPCRI, taluk horticulture office).
 - **Every price answer states its dates.** `interpretation.data_dates` is built by rules, never by the model, and gives each feed's reporting date and the age of daily prices (for example `TSS 3 Nov 2026 (3 days old)`).
 - **Advice stays with its disease.** A question naming a disease in `diseases.ts` only receives passages naming that disease, cut where the next disease starts. If none exists, the answer says so instead of offering another disease's advice. Questions that name no listed disease are not filtered. Grounding does not check that a sentence is supported by its citation, so this filter is what prevents those errors.
 - **Cooperative labels are matched to growers' words.** `COOPERATIVE_VARIETY_LABELS` in `tools.ts` shows MAMCOS `RASHI EDI` and `NEW RASHIEDI` for "Rashi". Each label keeps its own rows and name, nothing is averaged across labels, and the answer states the mapping. Official AGMARKNET calculations stay exact-variety. A question naming a place shows only that place's branches.
@@ -158,11 +166,29 @@ Ingestion behaviour:
   - `POST /admin/documents/reindex` rebuilds FTS (also required after a database restore, because `npm run db:backup` skips the FTS5 virtual table that D1 cannot export).
   - `POST /admin/documents/embed` embeds chunks through the Worker's provider.
 
+## Knowledge cards
+
+`api/src/assistant/knowledge-cards.ts` holds short Kannada and English answers to the crop questions growers ask most,
+written from the ingested booklets. A card is used only after a subject expert approves it: set `status: "reviewed"`,
+`reviewed_by` (name and role) and `reviewed_on`. Approved cards are retrieved before booklet passages, cited as
+"Areca Pulse note reviewed by …", and count as verified evidence, so their numbers may be repeated.
+
+The first card (koleroga) is a **draft**. It was written from the scanned 1989 CPCRI folder, whose scan drops the lime
+quantity for Bordeaux mixture; the reviewer should check every sentence and number against the printed pages. Tests
+check that no card names a restricted pesticide and that each card's Kannada and English text carry the same numbers.
+
+## Conversations and feedback
+
+- **Follow-ups.** The page sends the previous question as `context.previous_question`. A follow-up that matches no tool on its own ("and Chali?") reuses the previous question's tools with its own variety or place; one that does match keeps its tools and inherits only a missing variety or district. The answer carries `follow_up: true`.
+- **Feedback.** `POST /api/v1/assistant/feedback` `{interaction_id, rating: "up" | "down"}` stores one rating per answer (migration `0023`), only from the client that asked. `GET /assistant/status` reports `feedback_last_7_days`.
+- **The page** (`/assistant`) is a conversation: the answer first in the reader's language, rate cards, numbered source links, copy, share and feedback, suggested next questions, and a folded "How this answer was made" with the model, checks and data used. The conversation is kept in the browser tab's session storage only.
+
 ## Endpoints
 
 | Method | Path | Auth |
 |---|---|---|
-| POST | `/api/v1/assistant/query` — `{question, language?: auto\|en\|kn, calculation?, use_llm?}` | public, rate-limited |
+| POST | `/api/v1/assistant/query` — `{question, language?: auto\|en\|kn, calculation?, use_llm?, context?: {previous_question}}` | public, rate-limited |
+| POST | `/api/v1/assistant/feedback` — `{interaction_id, rating: up\|down}` | the client that asked |
 | GET | `/api/v1/assistant/status` — provider, corpus, limits, guarantees | public |
 | GET | `/api/v1/assistant/tools` | public |
 | GET | `/api/v1/documents`, `/api/v1/documents/search?q=` | public |

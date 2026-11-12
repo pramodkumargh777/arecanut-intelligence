@@ -18,7 +18,8 @@ import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
 import { RollingNumber } from "../components/RollingNumber";
 import type { ModelEvaluation } from "../services/forecasting";
 import { TSS_VARIETIES } from "../../../shared/tss-varieties";
-import { AssistantPage } from "./AssistantPage";
+import { Answer, AssistantPage, followUps } from "./AssistantPage";
+import type { AssistantAnswer } from "../services/assistant";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { OverviewPage } from "./OverviewPage";
 import { HistoricalAnalyticsPage } from "./HistoricalAnalyticsPage";
@@ -815,5 +816,61 @@ describe("AGMARKNET variety names", () => {
     expect(agmarknetVarietyName("Cqca", "kn")).toBe("Cqca");
     expect(agmarknetVarietyName("api", "en")).toBe("Api");
     expect(agmarknetVarietyName("Rashi", "en")).toBe("Rashi");
+  });
+});
+
+describe("assistant conversation", () => {
+  const answer = (overrides: Partial<AssistantAnswer> = {}): AssistantAnswer => ({
+    language: "en", tools: [{ tool: "get_current_prices", status: "ok", title: "Current prices", summary: "", reporting_period: "2026-11-11", args: {} }],
+    facts: [{ label: "TSS Sirsi – CHALI", value: 41430, unit: "INR/quintal", basis: "COOPERATIVE_TENDER_AVERAGE", reporting_period: "2026-11-11", source_key: "t", source_name: "TSS", citation: "S1", tool: "get_current_prices" },
+      { label: "CPCRI publication", value: "garbled passage text", unit: null, reporting_period: null, source_key: "d", citation: "D1", tool: "search_agricultural_documents" }],
+    interpretation: { text: "The latest TSS Chali average at Sirsi was reported on 11 Nov 2026 [S1].", generated_by: "llm", note: "", data_dates: "Price dates: TSS 11 Nov 2026 (1 day old).",
+      grounding: { status: "passed", reasons: [], ungrounded_numbers: [], unknown_citations: [], removed_sentences: 1, attempts: 1 } },
+    assumptions: [], uncertainty: [], missing: [], limitations: [], excerpts: [],
+    citations: [{ ref: "S1", key: "t", kind: "data", label: "TSS tender rates", publisher: "TSS", url: "https://example.test/tss", reporting_period: "2026-11-11", retrieved_at: null }],
+    disclaimer: "Market information only.", llm: { status: "used", provider: "workers_ai", model: "qwen", reason: null }, injection_flags: [], answer_text: "",
+    planning: "rules", planning_error: null, interaction_id: "11111111-1111-4111-8111-111111111111", duration_ms: 3200, entities: { variety: "Chali" }, ...overrides,
+  });
+  const renderAnswer = (value: AssistantAnswer, latest = true) => render(<Answer question="Chali price?" answer={value} fresh={false} latest={latest} onAsk={() => undefined} />, "/assistant");
+
+  it("opens on a welcome with examples in the reader's language", () => {
+    state.language = "kn";
+    const html = render(<AssistantPage />, "/assistant");
+    expect(html).toContain("ಏನು ತಿಳಿಯಬೇಕು?");
+    expect(html).toContain("ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?");
+    expect(html).not.toContain("What is the latest Rashi price?");
+  });
+
+  it("puts the answer first, with linked citations, a rate card and its source", () => {
+    const html = renderAnswer(answer());
+    expect(html.indexOf("The latest TSS Chali average")).toBeLessThan(html.indexOf("₹41,430"));
+    expect(html).toContain('href="#11111111-1111-4111-8111-111111111111-S1"');
+    expect(html).toContain('id="11111111-1111-4111-8111-111111111111-S1"');
+    expect(html).toContain("Price dates: TSS 11 Nov 2026");
+    // Document passages are cited as sources, never shown as figures.
+    expect(html).not.toContain("garbled passage text");
+  });
+
+  it("keeps how the answer was made folded away, and in plain words", () => {
+    const html = renderAnswer(answer({ llm: { status: "grounding_failed", provider: "workers_ai", model: "qwen", reason: "x" },
+      interpretation: { ...answer().interpretation, generated_by: "rules", grounding: { status: "failed", reasons: ["Numbers not present in verified data: 35."], ungrounded_numbers: [35], unknown_citations: [] } } }));
+    const folded = html.slice(html.indexOf('<details class="chat-how">'));
+    expect(html.indexOf("Numbers not present")).toBeGreaterThan(html.indexOf('<details class="chat-how">'));
+    expect(folded).toContain("could not be verified, so this is written directly from the data");
+  });
+
+  it("offers share, copy and feedback, and follow-ups only on the latest answer", () => {
+    const html = renderAnswer(answer());
+    expect(html).toContain('aria-label="Helpful"');
+    expect(html).toContain("Copy");
+    expect(html).toContain("Compare Chali prices across markets");
+    expect(renderAnswer(answer(), false)).not.toContain("Compare Chali prices across markets");
+  });
+
+  it("suggests follow-ups the assistant can answer, in Kannada for Kannada readers", () => {
+    expect(followUps(answer(), "kn")[0]).toBe("ಚಾಲಿ ದರವನ್ನು ಮಾರುಕಟ್ಟೆಗಳಲ್ಲಿ ಹೋಲಿಸಿ");
+    const crop = answer({ tools: [{ tool: "search_agricultural_documents", status: "ok", title: "", summary: "", reporting_period: null, args: {} }] });
+    expect(followUps(crop, "en")).toContain("How to manage yellow leaf disease?");
+    expect(followUps(answer({ tools: [{ tool: "compare_markets", status: "ok", title: "", summary: "", reporting_period: null, args: {} }] }), "en")).not.toContain("Compare Chali prices across markets");
   });
 });

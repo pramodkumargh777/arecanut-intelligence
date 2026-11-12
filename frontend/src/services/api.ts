@@ -58,6 +58,7 @@ export type QueuePage<T> = { data: T[]; total: number; limit: number; offset: nu
 export const api = {
   assistantStatus: () => request<AssistantStatus>("/assistant/status"),
   askAssistant: (query: AssistantQuery) => request<AssistantAnswer>("/assistant/query", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(query) }),
+  assistantFeedback: (interactionId: string, rating: "up" | "down") => request<{ saved: boolean }>("/assistant/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ interaction_id: interactionId, rating }) }),
   intelligence: <T extends Production | Trade | Weather | Bulletin>(domain: ModuleDomain) => request<ModuleData<T>>(`/intelligence/${domain}`),
   sourceCaptureUrl: (id: string) => `${API_BASE_URL}/intelligence/captures/${encodeURIComponent(id)}`,
   refreshIntelligence: (domain: "weather" | "news", token: string) => request<{ count?: number }>(`/admin/intelligence/${domain}/refresh`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),

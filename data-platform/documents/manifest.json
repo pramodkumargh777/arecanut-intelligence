@@ -1,5 +1,5 @@
 {
-  "_comment": "Documents for ANI assistant retrieval. Every URL was verified (HTTP 200) on 2026-11-05. CPCRI documents come from its Free Publications page (cpcri.gov.in/page/publications_free_by_type/50). A PDF without trustworthy text is read by OCR automatically; set \"ocr\" to force or never to override. publication_date is only set when the document itself (or its official page) states it; publication_date_evidence records where. Add a document only when its publisher permits reading and quoting with attribution. Scanned tables can hold OCR digit errors, so the assistant never lets a model restate numbers from scanned passages. Not added: Kannada root-grub folder arecanutk.pdf (scan too poor for OCR), CPCRI Technical Bulletin 39 CP2809.pdf (over the 25 MB limit), ARECA_KANNADA_2018Pdf.pdf and calareca011.pdf (poorer copies of documents already listed).",
+  "_comment": "Documents for ANI assistant retrieval. Every URL was verified (HTTP 200) on 2026-11-05. CPCRI documents come from its Free Publications page (cpcri.gov.in/page/publications_free_by_type/50). A PDF without trustworthy text is read by OCR automatically; set \"ocr\" to force or never to override. publication_date is only set when the document itself (or its official page) states it; publication_date_evidence records where. Add a document only when its publisher permits reading and quoting with attribution. Scanned tables can hold OCR digit errors, so the assistant never lets a model restate numbers from scanned passages. Not added: Kannada root-grub folder arecanutk.pdf (scan too poor for OCR), CPCRI Technical Bulletin 39 CP2809.pdf (over the 25 MB limit), ARECA_KANNADA_2018Pdf.pdf and calareca011.pdf (poorer copies of documents already listed). Added 2026-11-12 (each URL verified HTTP 200 and its text checked): CPCRI Ready Reckoner (March 2022, born-digital) and seven MAMCOS advisory pages in Unicode Kannada (body only, via the MAMCOS extractor). Not added: CPCRI Technical Bulletin 96 Improved.pdf (76 MB, over the 25 MB limit); the Kannada folders on the old CPCRI server 14.139.158.118 (server not responding); no UHS Bagalkot or KVK arecanut advisory PDF could be found online.",
   "documents": [
     {
       "key": "cpcri-disease-management-arecanut-cocoa",
@@ -299,6 +299,110 @@
       "publication_date_basis": null,
       "publication_date_evidence": "No publication date is printed in the document.",
       "reuse_note": "Government of India (DASD) publication; quoted with attribution."
+    },
+    {
+      "key": "cpcri-ready-reckoner-cocoa-coconut-arecanut-2022",
+      "title": "Ready Reckoner on Cocoa, Coconut and Arecanut (Ready Reckoner No. 1)",
+      "publisher": "ICAR-Central Plantation Crops Research Institute (CPCRI), Kasaragod",
+      "document_type": "cpcri_publication",
+      "language": "en",
+      "source_url": "https://cpcri.gov.in/filemgr/webfs/publication/READYRECKONERENGLISH3.pdf",
+      "mime_type": "application/pdf",
+      "publication_date": "2022-03",
+      "publication_date_basis": "stated",
+      "publication_date_evidence": "Inner title page states 'March, 2022'. Born-digital text layer (not a scan). Arecanut section is printed pages 27-38.",
+      "reuse_note": "Public ICAR-CPCRI extension publication; quoted with attribution for advisory reference only."
+    },
+    {
+      "key": "mamcos-areca-cultivation-kn",
+      "title": "ಅಡಿಕೆ ಬೆಳೆಯ ಸಮಗ್ರ ಬೇಸಾಯ ಕ್ರಮಗಳು (Comprehensive Areca Cultivation Practices)",
+      "publisher": "MAMCOS, Shivamogga (Malnad Areca Marketing Co-operative Society)",
+      "document_type": "agricultural_research",
+      "language": "kn",
+      "source_url": "https://mamcos.info/public/areca/cultivation",
+      "mime_type": "text/html",
+      "reuse_note": "Public MAMCOS (Malnad Areca Marketing Co-operative Society, Shivamogga) advisory page in Unicode Kannada; the cultivation page credits the Arecanut Research Station, Navile, Keladi Shivappa Nayaka University of Agricultural and Horticultural Sciences, Shivamogga. Quoted with attribution for advisory reference only; confirm reuse with MAMCOS together with the price-data permission.",
+      "publication_date": null,
+      "publication_date_basis": null,
+      "publication_date_evidence": "The page states no publication date."
+    },
+    {
+      "key": "mamcos-areca-yellow-leaf-disease-kn",
+      "title": "ಹಳದಿ ಎಲೆ ರೋಗ (Yellow Leaf Disease in Areca)",
+      "publisher": "MAMCOS, Shivamogga (Malnad Areca Marketing Co-operative Society)",
+      "document_type": "agricultural_research",
+      "language": "kn",
+      "source_url": "https://mamcos.info/public/areca/yellow-leaf-disease",
+      "mime_type": "text/html",
+      "reuse_note": "Public MAMCOS (Malnad Areca Marketing Co-operative Society, Shivamogga) advisory page in Unicode Kannada; the cultivation page credits the Arecanut Research Station, Navile, Keladi Shivappa Nayaka University of Agricultural and Horticultural Sciences, Shivamogga. Quoted with attribution for advisory reference only; confirm reuse with MAMCOS together with the price-data permission.",
+      "publication_date": null,
+      "publication_date_basis": null,
+      "publication_date_evidence": "The page states no publication date."
+    },
+    {
+      "key": "mamcos-areca-root-grub-kn",
+      "title": "ಅಡಿಕೆಯಲ್ಲಿ ಬೇರು ಹುಳು (Root Grub in Areca)",
+      "publisher": "MAMCOS, Shivamogga (Malnad Areca Marketing Co-operative Society)",
+      "document_type": "agricultural_research",
+      "language": "kn",
+      "source_url": "https://mamcos.info/public/areca/root-grub",
+      "mime_type": "text/html",
+      "reuse_note": "Public MAMCOS (Malnad Areca Marketing Co-operative Society, Shivamogga) advisory page in Unicode Kannada; the cultivation page credits the Arecanut Research Station, Navile, Keladi Shivappa Nayaka University of Agricultural and Horticultural Sciences, Shivamogga. Quoted with attribution for advisory reference only; confirm reuse with MAMCOS together with the price-data permission.",
+      "publication_date": null,
+      "publication_date_basis": null,
+      "publication_date_evidence": "The page states no publication date."
+    },
+    {
+      "key": "mamcos-areca-bordeaux-mixture-kn",
+      "title": "ಬೋರ್ಡೋ ದ್ರಾವಣದ ತಯಾರಿಕೆ (Preparation of Bordeaux Mixture)",
+      "publisher": "MAMCOS, Shivamogga (Malnad Areca Marketing Co-operative Society)",
+      "document_type": "agricultural_research",
+      "language": "kn",
+      "source_url": "https://mamcos.info/public/areca/bordeaux-mixture",
+      "mime_type": "text/html",
+      "reuse_note": "Public MAMCOS (Malnad Areca Marketing Co-operative Society, Shivamogga) advisory page in Unicode Kannada; the cultivation page credits the Arecanut Research Station, Navile, Keladi Shivappa Nayaka University of Agricultural and Horticultural Sciences, Shivamogga. Quoted with attribution for advisory reference only; confirm reuse with MAMCOS together with the price-data permission.",
+      "publication_date": null,
+      "publication_date_basis": null,
+      "publication_date_evidence": "The page states no publication date."
+    },
+    {
+      "key": "mamcos-areca-water-soluble-fertilizers-kn",
+      "title": "ನೀರಿನಲ್ಲಿ ಕರಗುವ ರಸಗೊಬ್ಬರಗಳು (Water-Soluble Fertilizers)",
+      "publisher": "MAMCOS, Shivamogga (Malnad Areca Marketing Co-operative Society)",
+      "document_type": "agricultural_research",
+      "language": "kn",
+      "source_url": "https://mamcos.info/public/areca/water-soluble-fertilizers",
+      "mime_type": "text/html",
+      "reuse_note": "Public MAMCOS (Malnad Areca Marketing Co-operative Society, Shivamogga) advisory page in Unicode Kannada; the cultivation page credits the Arecanut Research Station, Navile, Keladi Shivappa Nayaka University of Agricultural and Horticultural Sciences, Shivamogga. Quoted with attribution for advisory reference only; confirm reuse with MAMCOS together with the price-data permission.",
+      "publication_date": null,
+      "publication_date_basis": null,
+      "publication_date_evidence": "The page states no publication date."
+    },
+    {
+      "key": "mamcos-areca-intercropping-kn",
+      "title": "ಅಡಿಕೆಯಲ್ಲಿ ಅಂತರ ಹಾಗೂ ಮಿಶ್ರಬೆಳೆ ಪದ್ಧತಿ (Intercropping and Mixed Cropping in Areca)",
+      "publisher": "MAMCOS, Shivamogga (Malnad Areca Marketing Co-operative Society)",
+      "document_type": "agricultural_research",
+      "language": "kn",
+      "source_url": "https://mamcos.info/public/areca/intercropping",
+      "mime_type": "text/html",
+      "reuse_note": "Public MAMCOS (Malnad Areca Marketing Co-operative Society, Shivamogga) advisory page in Unicode Kannada; the cultivation page credits the Arecanut Research Station, Navile, Keladi Shivappa Nayaka University of Agricultural and Horticultural Sciences, Shivamogga. Quoted with attribution for advisory reference only; confirm reuse with MAMCOS together with the price-data permission.",
+      "publication_date": null,
+      "publication_date_basis": null,
+      "publication_date_evidence": "The page states no publication date."
+    },
+    {
+      "key": "mamcos-areca-husk-compost-kn",
+      "title": "ಅಡಿಕೆ ಸಿಪ್ಪೆಯಿಂದ ಕಾಂಪೋಸ್ಟ್ ಗೊಬ್ಬರ ತಯಾರಿಕೆ (Compost from Areca Husk)",
+      "publisher": "MAMCOS, Shivamogga (Malnad Areca Marketing Co-operative Society)",
+      "document_type": "agricultural_research",
+      "language": "kn",
+      "source_url": "https://mamcos.info/public/areca/husk-compost",
+      "mime_type": "text/html",
+      "reuse_note": "Public MAMCOS (Malnad Areca Marketing Co-operative Society, Shivamogga) advisory page in Unicode Kannada; the cultivation page credits the Arecanut Research Station, Navile, Keladi Shivappa Nayaka University of Agricultural and Horticultural Sciences, Shivamogga. Quoted with attribution for advisory reference only; confirm reuse with MAMCOS together with the price-data permission.",
+      "publication_date": null,
+      "publication_date_basis": null,
+      "publication_date_evidence": "The page states no publication date."
     }
   ]
 }

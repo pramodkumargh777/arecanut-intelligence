@@ -319,6 +319,24 @@ def extract_pib(markup: str) -> list[Page]:
     return [Page(None, text[:end.end()].strip())]
 
 
+MAMCOS_CONTENT_MARKER = '<div class="text-slate-900">'
+MAMCOS_MIN_TEXT = 400
+
+
+def extract_mamcos(markup: str) -> list[Page]:
+    """MAMCOS advisory page body: the article container up to the site footer; menus, news ticker and footer dropped."""
+    start = markup.find(MAMCOS_CONTENT_MARKER)
+    if start < 0:
+        raise IngestError("MAMCOS page layout not recognised (content container missing); not ingesting page chrome.")
+    end = markup.find("<footer", start)
+    if end < 0:
+        raise IngestError("MAMCOS page has no footer after the content; layout changed.")
+    text = html_to_text(markup[start:end])
+    if len(text) < MAMCOS_MIN_TEXT:
+        raise IngestError(f"MAMCOS page body is only {len(text)} characters; layout changed or page empty.")
+    return [Page(None, text)]
+
+
 def extract_html(markup: str) -> list[Page]:
     text = html_to_text(markup)
     if not text:
@@ -348,6 +366,8 @@ def extract(entry: dict[str, Any], data: bytes, *, ocr_cache: Path | None = None
         elif entry.get("publication_date") and stated != entry["publication_date"]:
             raise IngestError(f"Manifest publication_date {entry['publication_date']} differs from the release's stated date {stated}.")
         return pages, warnings
+    if "mamcos.info" in entry["source_url"]:
+        return extract_mamcos(markup), warnings
     return extract_html(markup), warnings
 
 

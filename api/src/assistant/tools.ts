@@ -3,6 +3,7 @@
  * verified values into facts with their source, reporting period and price basis, and states what is missing.
  * Tools are read-only; the only POST target is the stateless /decisions/calculate calculator.
  */
+import { cardsFor } from "./knowledge-cards";
 import { z } from "zod";
 import { MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
 import { holdHistory } from "../../../shared/hold-history";
@@ -842,6 +843,18 @@ async function searchAgriculturalDocuments(ctx: ToolContext, args: ToolArgs<"sea
     semanticThreshold: ctx.semanticThreshold, semanticScanLimit: ctx.semanticScanLimit, language: ctx.language,
   });
   target.excerpts = [];
+  // Expert-approved knowledge cards come first: clean text a reviewer has checked against the booklet pages.
+  const cards = cardsFor(args.query);
+  for (const card of cards) {
+    const language = ctx.language === "kn" ? "kn" : "en";
+    const key = addSource(target, {
+      key: `card:${card.id}`, kind: "document", label: card.title[language],
+      publisher: `Areca Pulse note reviewed by ${card.reviewed_by}`, url: card.sources[0]?.url ?? null,
+      reporting_period: card.reviewed_on ?? null, retrieved_at: null, publication_date: card.reviewed_on ?? null,
+      page: card.sources.map((source) => `${source.document}, ${source.pages}`).join("; "),
+    });
+    target.excerpts.push({ source_key: key, text: card.body[language], language, reviewed: true });
+  }
   for (const hit of retrieval.hits) {
     const page = pageLabel(hit);
     const key = addSource(target, {
@@ -851,10 +864,10 @@ async function searchAgriculturalDocuments(ctx: ToolContext, args: ToolArgs<"sea
     const snippet = hit.text.length > 600 ? `${hit.text.slice(0, 600).replace(/\s+\S*$/, "")} …` : hit.text;
     target.facts.push({ label: `${DOCUMENT_TYPE_LABEL[hit.document_type] ?? hit.document_type}${hit.heading ? ` – ${hit.heading}` : ""}`, value: snippet, unit: null,
       basis: hit.matched_by.join("+"), reporting_period: hit.publication_date, source_key: key });
-    target.excerpts.push({ source_key: key, text: hit.text, scanned: isScanned(hit) });
+    target.excerpts.push({ source_key: key, text: hit.text, scanned: isScanned(hit), language: hit.language });
   }
   if (!retrieval.corpus.chunks) target.missing.push("No agricultural documents have been ingested yet (see data-platform/documents).");
-  else if (!retrieval.hits.length) target.missing.push(retrieval.diseases.length
+  else if (!retrieval.hits.length && !cards.length) target.missing.push(retrieval.diseases.length
     ? `No passage in ${retrieval.corpus.documents} ingested document(s) discusses ${retrieval.diseases.join(" or ")}. Passages about other diseases are not shown, because their advice does not apply.`
     : `No passage in ${retrieval.corpus.documents} ingested document(s) is relevant to the question.`);
   if (retrieval.semantic_status === "failed") target.uncertainty.push(`Semantic search was unavailable (${retrieval.semantic_error}); keyword matches only.`);
@@ -881,7 +894,8 @@ async function searchAgriculturalDocuments(ctx: ToolContext, args: ToolArgs<"sea
   }
   target.limitations.push("Passages are quoted from the cited publications. They are general guidance, not a diagnosis; confirm field problems with ICAR-CPCRI or the State Horticulture Department.");
   target.reporting_period = null;
-  target.summary = retrieval.hits.length ? `${retrieval.hits.length} relevant passage(s) (${retrieval.mode} retrieval).` : target.missing.at(-1) ?? "No passages found.";
+  target.summary = retrieval.hits.length || cards.length
+    ? `${cards.length ? `${cards.length} reviewed note(s); ` : ""}${retrieval.hits.length} relevant passage(s) (${retrieval.mode} retrieval).` : target.missing.at(-1) ?? "No passages found.";
   return finalize(target);
 }
 

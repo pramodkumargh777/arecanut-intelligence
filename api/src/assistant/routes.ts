@@ -74,7 +74,34 @@ const querySchema = z.object({
   language: z.enum(["auto", "en", "kn"]).optional(),
   calculation: calculationInput.optional(),
   use_llm: z.boolean().optional(),
+  /** The reader's previous question in this conversation, so "and Chali?" is understood. */
+  context: z.object({ previous_question: z.string().trim().min(2).max(1000) }).strict().optional(),
 }).strict();
+
+const feedbackSchema = z.object({ interaction_id: z.string().uuid(), rating: z.enum(["up", "down"]) }).strict();
+
+/** Entities a follow-up inherits when it does not name its own. Sources and dates are not carried over. */
+const CARRIED_ENTITIES = ["variety", "district"] as const;
+
+/**
+ * A follow-up such as "and Chali?" or "what about Sirsi?" names too little to choose tools. When the question alone
+ * matches no tool, the previous question's tools are used with the new question's entities on top; when it does, only
+ * a missing variety or district is carried over. Returns the text to search and explain with.
+ */
+export function withConversation(question: string, previous?: string): { classification: Classification; question: string; followUp: boolean } {
+  const current = classifyQuestion(question);
+  if (!previous) return { classification: current, question, followUp: false };
+  const prior = classifyQuestion(previous);
+  const defined = Object.fromEntries(Object.entries(current.entities).filter(([, value]) => value !== undefined && value !== ""));
+  if (!current.tools.length && prior.tools.length) {
+    return {
+      classification: { tools: prior.tools, entities: { ...prior.entities, ...defined }, calculation: { ...prior.calculation, ...current.calculation } },
+      question: `${previous}\n${question}`, followUp: true,
+    };
+  }
+  const carried = Object.fromEntries(CARRIED_ENTITIES.filter((key) => !defined[key] && prior.entities[key]).map((key) => [key, prior.entities[key]]));
+  return { classification: { ...current, entities: { ...current.entities, ...carried } }, question, followUp: Object.keys(carried).length > 0 };
+}
 
 function tradeDirection(question: string): "import" | "export" | undefined {
   const imports = /\bimport(s|ed)?\b|ಆಮದು/i.test(question);
@@ -118,8 +145,11 @@ export function createAssistantRoutes(caller: ApiCaller) {
     const injectionFlags = detectInjection(question);
     const chat = parsed.data.use_llm === false ? null : chatProvider(config(c.env));
     const embedder = embeddingProvider(config(c.env));
-    const classification = classifyQuestion(question);
-    let plan = classification.tools.map((tool) => ({ tool, args: argumentsFor(tool, question, classification, calculation) }));
+    const conversation = withConversation(question, parsed.data.context?.previous_question);
+    const { classification } = conversation;
+    // The text tools search with and the model explains: the follow-up together with the question it follows.
+    const asked = conversation.question;
+    let plan = classification.tools.map((tool) => ({ tool, args: argumentsFor(tool, asked, classification, calculation) }));
     let planning: "rules" | "llm" | "none" = plan.length ? "rules" : "none";
     let planningError: string | null = null;
     if (!plan.length && chat && !injectionFlags.length) {
@@ -132,11 +162,11 @@ export function createAssistantRoutes(caller: ApiCaller) {
     }
 
     const ctx: ToolContext = {
-      call: (path, init) => caller(path, init, c.env), db, question, language, embedder,
+      call: (path, init) => caller(path, init, c.env), db, question: asked, language, embedder,
       semanticThreshold: semanticThreshold(c.env), now,
     };
     const results: ToolResult[] = await Promise.all(plan.map((step) => runTool(step.tool, step.args, ctx)));
-    const answer = await composeAnswer({ question, language, results, chat, injectionFlags, llmDisabled: parsed.data.use_llm === false, now });
+    const answer = await composeAnswer({ question: asked, language, results, chat, injectionFlags, llmDisabled: parsed.data.use_llm === false, now });
 
     const durationMs = Date.now() - started;
     const interactionId = crypto.randomUUID();
@@ -149,7 +179,21 @@ export function createAssistantRoutes(caller: ApiCaller) {
       .run()
       .catch((error) => console.error("assistant audit insert failed", error));
 
-    return c.json({ ...answer, planning, planning_error: planningError, entities: classification.entities, interaction_id: interactionId, duration_ms: durationMs });
+    return c.json({ ...answer, planning, planning_error: planningError, entities: classification.entities, follow_up: conversation.followUp,
+      interaction_id: interactionId, duration_ms: durationMs });
+  });
+
+  routes.post("/assistant/feedback", async (c) => {
+    const parsed = feedbackSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: "Provide interaction_id and rating (up or down)." }, 400);
+    const clientHash = await sha256Hex(`${c.env.ASSISTANT_CLIENT_SALT || "ani-assistant"}|${c.req.header("CF-Connecting-IP") ?? "local"}`);
+    // Only the reader who asked can rate an answer, which also keeps the counts from being stuffed.
+    const asked = await c.env.DB.prepare("SELECT client_hash FROM assistant_interactions WHERE id = ?").bind(parsed.data.interaction_id).first<{ client_hash: string }>();
+    if (!asked || asked.client_hash !== clientHash) return c.json({ error: "Answer not found." }, 404);
+    await c.env.DB.prepare(`INSERT INTO assistant_feedback (interaction_id, rating, client_hash, created_at) VALUES (?, ?, ?, ?)
+      ON CONFLICT (interaction_id) DO UPDATE SET rating = excluded.rating, created_at = excluded.created_at`)
+      .bind(parsed.data.interaction_id, parsed.data.rating === "up" ? 1 : -1, clientHash, new Date().toISOString()).run();
+    return c.json({ saved: true });
   });
 
   routes.get("/assistant/status", async (c) => {
@@ -166,6 +210,9 @@ export function createAssistantRoutes(caller: ApiCaller) {
       rate_limit_per_hour: rateLimit(c.env),
       questions_retained: c.env.ASSISTANT_LOG_QUESTIONS === "true",
       last_24_hours: recent.results,
+      feedback_last_7_days: await c.env.DB.prepare(`SELECT SUM(rating = 1) AS up, SUM(rating = -1) AS down FROM assistant_feedback WHERE created_at >= ?`)
+        .bind(new Date(Date.now() - 7 * 86_400_000).toISOString()).first<{ up: number | null; down: number | null }>()
+        .then((row) => ({ up: row?.up ?? 0, down: row?.down ?? 0 })).catch(() => ({ up: 0, down: 0 })),
       tools: TOOL_NAMES.length,
       guarantees: [
         "Numbers, prices and forecasts come only from Areca Pulse tools and calculators; model text containing any other number is rejected.",

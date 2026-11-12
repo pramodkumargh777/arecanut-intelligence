@@ -24,6 +24,8 @@ export type AssistantFact = {
   reporting_period: string | null;
   source_key: string;
   note?: string | null;
+  /** Set on market prices: the feed the price came from (MAMCOS, TSS, AGMARKNET daily…). */
+  source_name?: string | null;
   citation: string;
   tool: string;
 };
@@ -33,7 +35,7 @@ export type AssistantCalculation = Partial<Record<
   number
 >> & { variety?: string };
 
-export type AssistantQuery = { question: string; language?: "auto" | AssistantLanguage; calculation?: AssistantCalculation; use_llm?: boolean };
+export type AssistantQuery = { question: string; language?: "auto" | AssistantLanguage; calculation?: AssistantCalculation; use_llm?: boolean; context?: { previous_question: string } };
 
 export type AssistantAnswer = {
   language: AssistantLanguage;
@@ -43,7 +45,7 @@ export type AssistantAnswer = {
     text: string;
     generated_by: "llm" | "rules";
     note: string;
-    grounding: { status: "passed" | "failed"; reasons: string[]; ungrounded_numbers: number[]; unknown_citations: string[] } | null;
+    grounding: { status: "passed" | "failed"; reasons: string[]; ungrounded_numbers: number[]; unknown_citations: string[]; removed_sentences?: number; attempts?: number } | null;
     data_dates: string | null;
   };
   assumptions: string[];
@@ -60,6 +62,9 @@ export type AssistantAnswer = {
   planning_error: string | null;
   interaction_id: string;
   duration_ms: number;
+  entities?: { variety?: string; district?: string };
+  /** The question was read together with the previous one. */
+  follow_up?: boolean;
 };
 
 export type ProviderStatus = { provider: string; model: string | null; configured: boolean; reason: string | null };
@@ -74,6 +79,7 @@ export type AssistantStatus = {
   rate_limit_per_hour: number;
   questions_retained: boolean;
   last_24_hours: { llm_status: string; requests: number }[];
+  feedback_last_7_days?: { up: number; down: number };
   tools: number;
   guarantees: string[];
 };

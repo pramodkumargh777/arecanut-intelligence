@@ -2,14 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyMigrations, LocalDatabase } from "../test-support/local-d1";
 import { app, type Env } from "../index";
 import { classifyQuestion, extractCalculationHints } from "./classify";
-import { composeAnswer, dataDates, planToolsWithModel, quotePassage } from "./compose";
+import { answerSentences, composeAnswer, dataDates, planToolsWithModel, quotePassage, salvageSentences } from "./compose";
+import { cardsFor, KNOWLEDGE_CARDS, type KnowledgeCard } from "./knowledge-cards";
 import { diseasesNamed, focusOnDisease } from "./diseases";
 import { checkGrounding, detectInjection, extractNumbers, sanitizeUntrusted } from "./grounding";
 import { detectLanguage, expandTerms } from "./language";
 import { restrictedPesticides } from "./pesticides";
 import { chatProvider, providerStatus, stripThinking, withoutReasoning, type ChatProvider, type EmbeddingProvider } from "./providers";
 import { cosineQ8, decodeEmbedding, ftsExpression, quantizeEmbedding, searchDocuments } from "./retrieval";
-import { argumentsFor } from "./routes";
+import { argumentsFor, withConversation } from "./routes";
 import { matchCooperativeVarieties, validateToolArgs } from "./tools";
 import type { ToolResult } from "./types";
 
@@ -870,5 +871,145 @@ describe("assistant query endpoint", () => {
     expect(status).toMatchObject({ available: true, chat: { provider: "none", configured: false }, tools: 14, questions_retained: false });
     const tools = await (await app.request("/api/v1/assistant/tools", {}, env)).json() as any;
     expect(tools.data).toHaveLength(14);
+  });
+});
+
+describe("answers that survive one unverifiable figure", () => {
+  const docResult = (excerpt: { text: string; scanned?: boolean; language?: string; reviewed?: boolean }): ToolResult => ({
+    tool: "search_agricultural_documents", status: "ok", title: "Agricultural documents", summary: "",
+    facts: [], sources: [{ key: "doc:1", kind: "document", label: "Koleroga folder, p. 2", publisher: "CPCRI", url: "https://cpcri.gov.in/x.pdf", reporting_period: null, retrieved_at: null }],
+    excerpts: [{ source_key: "doc:1", ...excerpt }], assumptions: [], uncertainty: [], missing: [], limitations: [], reporting_period: null, args: {},
+  });
+
+  it("reads a hyphenated range as two numbers, not a negative one", () => {
+    expect(extractNumbers("repeat after 35-45 days")).toEqual([35, 45]);
+    expect(extractNumbers("a fall of -4.5 per cent")).toEqual([-4.5]);
+  });
+
+  it("drops only the sentence with the unverified number and keeps the rest of the answer", async () => {
+    const chat = mockChat("Koleroga is controlled by spraying Bordeaux mixture before the monsoon [D1]. Repeat the spray after 35–45 days [D1]. Collect and destroy fallen nuts [D1].");
+    const answer = await composeAnswer({ question: "How to control koleroga?", language: "en", results: [docResult({ text: "Spray Bordeaux mixture before the monsoon. Collect and destroy fallen nuts." })], chat, injectionFlags: [] });
+    expect(answer.llm.status).toBe("used");
+    expect(answer.interpretation.text).not.toContain("35");
+    expect(answer.interpretation.text).toContain("Collect and destroy fallen nuts");
+    expect(answer.interpretation.grounding?.removed_sentences).toBe(1);
+    expect(chat.calls).toBe(1);
+  });
+
+  it("does not keep a remnant when most of the answer fails, and retries once with the reasons", async () => {
+    const replies = ["Spray 30% mixture [D1]. Repeat after 90 days [D1].", "Spray Bordeaux mixture before the monsoon [D1]."];
+    let prompt = "";
+    const chat = { name: "mock" as const, model: "m", calls: 0, async chat(messages: { content: string }[]) { prompt = messages.at(-1)!.content; return replies[this.calls++]; } };
+    const answer = await composeAnswer({ question: "How to control koleroga?", language: "en", results: [docResult({ text: "Spray Bordeaux mixture before the monsoon." })], chat: chat as ChatProvider, injectionFlags: [] });
+    expect(chat.calls).toBe(2);
+    expect(prompt).toContain("Your previous draft was rejected");
+    expect(answer.llm.status).toBe("used");
+    expect(answer.interpretation.grounding?.attempts).toBe(2);
+  });
+
+  it("keeps a sentence and its citation together", () => {
+    expect(answerSentences("First point [D1]. Second point [S2].\nThird.")).toEqual(["First point [D1].", "Second point [S2].", "Third."]);
+    expect(salvageSentences("Only one sentence 999.", () => ({ status: "failed", reasons: [], ungrounded_numbers: [], unknown_citations: [], wrong_periods: [], wrong_places: [] }))).toBeNull();
+  });
+
+  it("never quotes garbled scanned Kannada; it points to the page and to who can help", async () => {
+    const answer = await composeAnswer({ question: "ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", language: "kn", results: [docResult({ text: "ಕ ಅಡಿತೆಂಯಿಲ್ಲ DOWD ಯಾದಳು", scanned: true, language: "kn" })], chat: null, injectionFlags: [] });
+    expect(answer.interpretation.text).not.toContain("DOWD");
+    expect(answer.interpretation.text).toContain("[D1] Koleroga folder, p. 2");
+    expect(answer.interpretation.text).toContain("ಕೃಷಿ ವಿಜ್ಞಾನ ಕೇಂದ್ರ");
+  });
+
+  it("still quotes a clean English passage", async () => {
+    const answer = await composeAnswer({ question: "koleroga control", language: "en", results: [docResult({ text: "Spray Bordeaux mixture before the monsoon.", scanned: true, language: "en" })], chat: null, injectionFlags: [] });
+    expect(answer.interpretation.text).toContain("“Spray Bordeaux mixture before the monsoon.”");
+  });
+
+  it("gives an approved card as the answer, and lets the model repeat its numbers", async () => {
+    const card = docResult({ text: "Spray 1% Bordeaux mixture; repeat after 40–45 days.", reviewed: true, language: "en" });
+    const rules = await composeAnswer({ question: "koleroga", language: "en", results: [card], chat: null, injectionFlags: [] });
+    expect(rules.interpretation.text.startsWith("Spray 1% Bordeaux mixture; repeat after 40–45 days. [D1]")).toBe(true);
+    const model = await composeAnswer({ question: "koleroga", language: "en", results: [card], chat: mockChat("Repeat the spray after 40–45 days [D1]."), injectionFlags: [] });
+    expect(model.llm.status).toBe("used");
+  });
+});
+
+describe("knowledge cards", () => {
+  const approved: KnowledgeCard = { ...KNOWLEDGE_CARDS[0], status: "reviewed", reviewed_by: "Test reviewer", reviewed_on: "2026-11-12" };
+
+  it("never uses a draft card", () => {
+    expect(KNOWLEDGE_CARDS.every((card) => card.status === "draft" || (card.reviewed_by && card.reviewed_on))).toBe(true);
+    expect(cardsFor("How to manage Mahali disease?", [{ ...approved, status: "draft" }])).toEqual([]);
+  });
+
+  it("matches an approved card by the disease the question names, in either language", () => {
+    expect(cardsFor("How to manage Mahali disease?", [approved]).map((card) => card.id)).toEqual(["koleroga-management"]);
+    expect(cardsFor("ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", [approved])).toHaveLength(1);
+    expect(cardsFor("How to manage yellow leaf disease?", [approved])).toEqual([]);
+  });
+
+  it("names no restricted pesticide and keeps every card's numbers in both languages", () => {
+    for (const card of KNOWLEDGE_CARDS) {
+      expect(restrictedPesticides(`${card.body.en} ${card.body.kn}`)).toEqual([]);
+      expect(extractNumbers(card.body.kn).sort()).toEqual(extractNumbers(card.body.en).sort());
+    }
+  });
+});
+
+describe("conversations", () => {
+  it("answers a short follow-up with the previous question's tools and its own variety", () => {
+    const followUp = withConversation("and Chali?", "What is the latest Rashi price?");
+    expect(followUp.followUp).toBe(true);
+    expect(followUp.classification.tools).toEqual(classifyQuestion("What is the latest Rashi price?").tools);
+    expect(classifyQuestion("Chali").entities.variety).toMatch(/chali/i);
+    expect(classifyQuestion("Rashi").entities.variety).toMatch(/rashi/i);
+    expect(followUp.classification.entities.variety).toBe(classifyQuestion("Chali").entities.variety);
+    expect(followUp.question).toBe("What is the latest Rashi price?\nand Chali?");
+  });
+
+  it("carries the variety into a new kind of question, but not when the question names its own", () => {
+    const forecast = withConversation("What is the forecast?", "Latest Rashi price?");
+    expect(forecast.classification.entities.variety).toBe(classifyQuestion("Rashi").entities.variety);
+    expect(forecast.question).toBe("What is the forecast?");
+    expect(withConversation("Chali forecast?", "Latest Rashi price?").classification.entities.variety).toBe(classifyQuestion("Chali").entities.variety);
+    expect(withConversation("and Chali?").followUp).toBe(false);
+  });
+
+  it("takes the previous question in the request and says the answer is a follow-up", async () => {
+    const { status, body } = await ask({ question: "and Chali?", use_llm: false, context: { previous_question: "What is the latest Rashi price?" } });
+    expect(status).toBe(200);
+    expect(body.follow_up).toBe(true);
+    expect(body.tools.length).toBeGreaterThan(0);
+    expect((await ask({ question: "x?", context: { previous_question: "" } })).status).toBe(400);
+  });
+});
+
+describe("answer feedback", () => {
+  const rate = (body: unknown, ip = "local") => app.request("/api/v1/assistant/feedback", {
+    method: "POST", headers: { "Content-Type": "application/json", ...(ip === "local" ? {} : { "CF-Connecting-IP": ip }) }, body: JSON.stringify(body),
+  }, env);
+
+  it("stores one rating per answer from the reader who asked, and reports the counts", async () => {
+    const { body } = await ask({ question: "What is the latest Rashi price?", use_llm: false });
+    expect((await rate({ interaction_id: body.interaction_id, rating: "down" })).status).toBe(200);
+    expect((await rate({ interaction_id: body.interaction_id, rating: "up" })).status).toBe(200);
+    expect((await rate({ interaction_id: body.interaction_id, rating: "up" }, "203.0.113.9")).status).toBe(404);
+    expect((await rate({ interaction_id: crypto.randomUUID(), rating: "up" })).status).toBe(404);
+    expect((await rate({ interaction_id: body.interaction_id, rating: "meh" })).status).toBe(400);
+    const status = await (await app.request("/api/v1/assistant/status", {}, env)).json() as { feedback_last_7_days: { up: number; down: number } };
+    expect(status.feedback_last_7_days).toEqual({ up: 1, down: 0 });
+  });
+});
+
+describe("crop-practice questions reach the documents", () => {
+  it("sends Bordeaux, compost, intercropping, irrigation and nursery questions to document search, in both languages", () => {
+    for (const question of ["ಬೋರ್ಡೋ ದ್ರಾವಣ ತಯಾರಿಕೆ ಹೇಗೆ?", "ಅಡಿಕೆ ಸಿಪ್ಪೆಯಿಂದ ಕಾಂಪೋಸ್ಟ್ ಮಾಡುವುದು ಹೇಗೆ?", "ಅಡಿಕೆಯಲ್ಲಿ ಮಿಶ್ರಬೆಳೆ ಯಾವುದು?", "ಅಂತರ ಬೆಳೆ ಯಾವುದು ಸೂಕ್ತ?",
+      "ಬೇಸಿಗೆಯಲ್ಲಿ ನೀರಾವರಿ ಎಷ್ಟು?", "ನರ್ಸರಿ ಹೇಗೆ ಮಾಡುವುದು?", "How to make compost from areca husk?", "Which crops can I intercrop with arecanut?"]) {
+      expect(classifyQuestion(question).tools, question).toContain("search_agricultural_documents");
+    }
+  });
+
+  it("keeps husk and Sippegotu price questions on prices", () => {
+    expect(classifyQuestion("ಸಿಪ್ಪೆಗೋಟು ಬೆಲೆ ಎಷ್ಟು?").tools).not.toContain("search_agricultural_documents");
+    expect(classifyQuestion("Arecanut husk price today").tools).not.toContain("search_agricultural_documents");
   });
 });
