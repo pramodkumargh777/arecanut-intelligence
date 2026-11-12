@@ -5,7 +5,7 @@ import { FALLBACK_CATALOG } from "../../../shared/commodities";
 import { HomePage } from "./HomePage";
 import { MarketDataPage } from "./CooperativeMarketPage";
 import { ComparePage } from "./ComparePage";
-import { AppShell } from "../components/AppShell";
+import { AppShell, searchablePath } from "../components/AppShell";
 import { PricesPage } from "./PricesPage";
 import { readPage, readPreset, readSort, withoutFilters, withParams } from "../services/priceFilters";
 import { NotFoundPage } from "./NotFoundPage";
@@ -920,5 +920,19 @@ describe("rate tile labels", () => {
     expect(rateLabel("MAMCOS median of branch averages – RASHI EDI", "MAMCOS", "en")).toEqual({ title: "Median of branch averages · RASHI EDI", measure: null });
     expect(rateLabel("Karnataka monthly arrival-weighted modal price – Rashi", "AGMARKNET monthly", "kn")).toEqual({ title: "Karnataka monthly · Rashi", measure: "ಆವಕ ಆಧಾರಿತ ಮೋಡಲ್ ದರ" });
     expect(rateLabel("Reference index – Rashi", "Areca Pulse reference index", "en")).toEqual({ title: "Reference index · Rashi", measure: null });
+  });
+});
+
+describe("pages search engines may index", () => {
+  it("allows every address in the sitemap, including town and variety pages that are not in the menu", async () => {
+    const { SEO_PAGES, MARKETS_SEO, marketSeo, varietySeo } = await import("../services/seo-pages");
+    const paths = [...SEO_PAGES.map((page) => page.path), MARKETS_SEO.path, ...MARKET_PLACES.map((place) => marketSeo(place).path), ...VARIETIES.map((variety) => varietySeo(variety).path)];
+    const blocked = paths.filter((path) => !searchablePath(path));
+    expect(blocked).toEqual([]);
+    expect(paths.length).toBeGreaterThan(60);
+  });
+
+  it("keeps private pages and unknown addresses out", () => {
+    for (const path of ["/workspace", "/data-quality", "/market/atlantis", "/variety/not-a-variety", "/nothing-here"]) expect(searchablePath(path), path).toBe(false);
   });
 });

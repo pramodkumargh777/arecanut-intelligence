@@ -3,14 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-</head>
-<body>
 <title>Areca Pulse System Map</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one wide engineering drawing, then the publication states, then what is and is not running. */
+/* Layout: one wide engineering drawing, then the publication states, then the assistant's path, then what is running. */
 :root {
   --bg: #f6f7f2; --surface: #ffffff; --band: #edf0e6; --fg: #1f2a22; --muted: #5d6a60; --line: #c9d0c1;
   --live: #1f6b45; --blocked: #a55a08; --blocked-bg: #fbf1e1;
@@ -33,7 +31,7 @@ figure { margin: 0; }
 .scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 figcaption { margin-top: 10px; color: var(--muted); font-size: 14.5px; max-width: 80ch; }
 svg { display: block; color: var(--fg); max-width: 100%; height: auto; }
-#system { min-width: 1040px; } #states { min-width: 780px; }
+#system { min-width: 1040px; } #states { min-width: 780px; } #assistant { min-width: 900px; }
 .t { font-family: var(--sans); font-size: 12.5px; fill: var(--muted); }
 .h { font-family: var(--sans); font-size: 14px; font-weight: 600; fill: var(--fg); }
 .g { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--muted); }
@@ -61,16 +59,17 @@ tr:last-child td { border-bottom: 0; }
 code { font-family: var(--mono); font-size: .88em; }
 .note { color: var(--muted); font-size: 14.5px; margin-top: 10px; }
 </style>
-
+</head>
+<body>
 <main class="page">
   <header>
     <h1>Areca Pulse system map</h1>
-    <p class="lede">How Arecanut Intelligence collects, checks, stores and serves its data, as deployed from commit <code>238b2e0</code>. Status was read from the live API on 6 Nov 2026.</p>
+    <p class="lede">How Areca Pulse (ಅಡಿಕೆ ನಾಡಿ, adikenaadi.com) collects, checks, stores and serves its data, as deployed from commit <code>c060067</code>. Status was read from the live API on 12 Nov 2026.</p>
   </header>
 
   <figure>
     <div class="scroll">
-    <svg id="system" viewBox="0 0 1200 680" role="img" aria-label="Public sources and off-platform jobs write through a Cloudflare Worker into a D1 database. Readers load the React app from Cloudflare Pages and call the Worker's public API, which reads from D1. The AGMARKNET daily job and the R2 archive are built but not running.">
+    <svg id="system" viewBox="0 0 1200 680" role="img" aria-label="GitHub Actions fetch AGMARKNET through a relay Worker in Mumbai and post imports to the main Cloudflare Worker, which also collects cooperative rates on a schedule and writes everything to a D1 database. Readers load the React app from Cloudflare Pages and call the Worker's public API and assistant, which read from D1 and use Workers AI. The R2 archive is built but not set up.">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m" d="M0 0 10 5 0 10z"/></marker>
         <marker id="arrow-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m-b" d="M0 0 10 5 0 10z"/></marker>
@@ -82,29 +81,33 @@ code { font-family: var(--mono); font-size: .88em; }
 
       <!-- Off-platform actors, top row -->
       <text class="g" x="20" y="20">Off-platform jobs and people</text>
-      <text class="g" x="660" y="20">Readers</text>
+      <text class="g" x="710" y="20">Readers</text>
 
-      <rect class="box-b" x="20" y="30" width="130" height="45" rx="6"/>
-      <text class="h" x="32" y="49">data.gov.in</text><text class="t" x="32" y="66">AGMARKNET daily</text>
-      <rect class="box-b" x="190" y="30" width="155" height="45" rx="6"/>
-      <text class="h" x="202" y="49">GitHub Actions</text><text class="t" x="202" y="66">twice daily, Python</text>
-      <rect class="box" x="360" y="30" width="135" height="45" rx="6"/>
-      <text class="h" x="372" y="49">Laptop jobs</text><text class="t" x="372" y="66">docs, forecasting</text>
-      <rect class="box" x="510" y="30" width="135" height="45" rx="6"/>
-      <text class="h" x="522" y="49">Reviewer</text><text class="t" x="522" y="66">Data quality page</text>
-      <rect class="box" x="660" y="30" width="325" height="45" rx="6"/>
-      <text class="h" x="672" y="49">Browser: growers and traders</text><text class="t" x="672" y="66">React app, Kannada by default</text>
+      <rect class="box" x="20" y="30" width="110" height="45" rx="6"/>
+      <text class="h" x="32" y="49">data.gov.in</text><text class="t" x="32" y="66">AGMARKNET</text>
+      <rect class="box" x="150" y="30" width="125" height="45" rx="6"/>
+      <text class="h" x="162" y="49">Relay Worker</text><text class="t" x="162" y="66">Mumbai location</text>
+      <rect class="box" x="295" y="30" width="150" height="45" rx="6"/>
+      <text class="h" x="307" y="49">GitHub Actions</text><text class="t" x="307" y="66">imports, rebuilds</text>
+      <rect class="box" x="460" y="30" width="110" height="45" rx="6"/>
+      <text class="h" x="472" y="49">Laptop jobs</text><text class="t" x="472" y="66">document ingest</text>
+      <rect class="box" x="585" y="30" width="110" height="45" rx="6"/>
+      <text class="h" x="597" y="49">Reviewer</text><text class="t" x="597" y="66">Data quality</text>
+      <rect class="box" x="710" y="30" width="275" height="45" rx="6"/>
+      <text class="h" x="722" y="49">Browser: adikenaadi.com</text><text class="t" x="722" y="66">growers and traders, Kannada by default</text>
 
-      <path class="a-b" d="M150 52H189" marker-end="url(#arrow-b)"/>
-      <text class="e e-b" x="170" y="44" text-anchor="middle">fetch</text>
+      <!-- AGMARKNET goes through the relay: data.gov.in answers from Mumbai, not from GitHub's runners -->
+      <path class="a" d="M295 52H276" marker-end="url(#arrow)"/>
+      <path class="a" d="M150 52H131" marker-end="url(#arrow)"/>
+      <text class="e" x="148" y="96">fetch via relay</text>
 
       <!-- Writers into the admin API -->
-      <path class="a-b" d="M267 75V135H510V237" marker-end="url(#arrow-b)"/>
-      <text class="e e-b" x="282" y="128">POST /admin/import</text>
-      <path class="a" d="M427 75V108H565V237" marker-end="url(#arrow)"/>
-      <text class="e" x="435" y="102">documents, experiments</text>
-      <path class="a" d="M620 75V237" marker-end="url(#arrow)"/>
-      <text class="e" x="612" y="150" text-anchor="end">review</text>
+      <path class="a" d="M370 75V128H505V237" marker-end="url(#arrow)"/>
+      <text class="e" x="382" y="122">POST /admin/import</text>
+      <path class="a" d="M515 75V108H565V237" marker-end="url(#arrow)"/>
+      <text class="e" x="523" y="100">documents</text>
+      <path class="a" d="M640 75V237" marker-end="url(#arrow)"/>
+      <text class="e" x="632" y="150" text-anchor="end">review</text>
 
       <!-- Readers into the public API -->
       <path class="a" d="M727 75V237" marker-end="url(#arrow)"/>
@@ -117,11 +120,11 @@ code { font-family: var(--mono); font-size: .88em; }
       <!-- Public sources, left column -->
       <text class="g" x="20" y="222">Public sources</text>
       <rect class="box" x="20" y="235" width="205" height="38" rx="6"/>
-      <text class="h" x="32" y="250">MAMCOS</text><text class="t" x="32" y="265">HTML, twice daily</text>
+      <text class="h" x="32" y="250">MAMCOS</text><text class="t" x="32" y="265">HTML, 09:00 and 20:00 IST</text>
       <rect class="box" x="20" y="281" width="205" height="38" rx="6"/>
-      <text class="h" x="32" y="296">TSS</text><text class="t" x="32" y="311">JSON, twice daily</text>
+      <text class="h" x="32" y="296">TSS</text><text class="t" x="32" y="311">JSON, 09:00 and 20:00 IST</text>
       <rect class="box" x="20" y="327" width="205" height="38" rx="6"/>
-      <text class="h" x="32" y="342">TUMCOS</text><text class="t" x="32" y="357">HTML, twice daily</text>
+      <text class="h" x="32" y="342">TUMCOS</text><text class="t" x="32" y="357">HTML, 09:00 and 20:00 IST</text>
       <rect class="box" x="20" y="373" width="205" height="38" rx="6"/>
       <text class="h" x="32" y="388">AGMARKNET monthly</text><text class="t" x="32" y="403">CSV, 09:00 IST</text>
       <rect class="box" x="20" y="419" width="205" height="38" rx="6"/>
@@ -138,7 +141,7 @@ code { font-family: var(--mono); font-size: .88em; }
 
       <rect class="box" x="305" y="238" width="165" height="135" rx="6"/>
       <text class="h" x="317" y="260">Scheduled run</text>
-      <text class="t" x="317" y="281">09:00 and 20:00 IST</text><text class="t" x="317" y="299">permission gate</text><text class="t" x="317" y="317">fetch and validate</text><text class="t" x="317" y="335">auto-publish checks</text><text class="t" x="317" y="353">re-evaluate forecasts</text>
+      <text class="t" x="317" y="281">09:00 and 20:00 IST</text><text class="t" x="317" y="299">permission gate</text><text class="t" x="317" y="317">fetch and validate</text><text class="t" x="317" y="335">auto-publish checks</text><text class="t" x="317" y="353">summaries, forecasts</text>
 
       <rect class="box" x="485" y="238" width="160" height="135" rx="6"/>
       <text class="h" x="497" y="260">Admin API</text>
@@ -146,20 +149,20 @@ code { font-family: var(--mono); font-size: .88em; }
 
       <rect class="box" x="660" y="238" width="135" height="135" rx="6"/>
       <text class="h" x="672" y="260">Public API</text>
-      <text class="t" x="672" y="281">rates, history</text><text class="t" x="672" y="299">forecasts, supply</text><text class="t" x="672" y="317">intelligence</text><text class="t" x="672" y="335">calculators</text>
+      <text class="t" x="672" y="281">rates, town pages</text><text class="t" x="672" y="299">history, forecasts</text><text class="t" x="672" y="317">supply, intelligence</text><text class="t" x="672" y="335">calculators</text><text class="t" x="672" y="353">answer feedback</text>
 
       <rect class="box" x="840" y="238" width="140" height="135" rx="6"/>
       <text class="h" x="852" y="260">Assistant</text>
-      <text class="t" x="852" y="281">picks tools by rule</text><text class="t" x="852" y="299">finds passages</text><text class="t" x="852" y="317">grounding check</text><text class="t" x="852" y="335">rule-based fallback</text>
+      <text class="t" x="852" y="281">rules pick tools</text><text class="t" x="852" y="299">reads follow-ups</text><text class="t" x="852" y="317">reviewed notes first</text><text class="t" x="852" y="335">checks each sentence</text><text class="t" x="852" y="353">data-only fallback</text>
 
       <path class="a" d="M840 300H796" marker-end="url(#arrow)"/>
       <text class="e" x="818" y="292" text-anchor="middle">tools</text>
 
       <!-- Other Cloudflare services -->
       <rect class="box" x="1040" y="205" width="125" height="65" rx="6"/>
-      <text class="h" x="1052" y="228">Pages</text><text class="t" x="1052" y="248">static React build</text>
+      <text class="h" x="1052" y="228">Pages</text><text class="t" x="1052" y="246">React build, rebuilt</text><text class="t" x="1052" y="262">after each collection</text>
       <rect class="box" x="1040" y="290" width="125" height="85" rx="6"/>
-      <text class="h" x="1052" y="313">Workers AI</text><text class="t" x="1052" y="333">Qwen3 prose</text><text class="t" x="1052" y="351">BGE-M3 vectors</text>
+      <text class="h" x="1052" y="313">Workers AI</text><text class="t" x="1052" y="333">Qwen3-30B prose</text><text class="t" x="1052" y="351">BGE-M3 vectors</text>
       <path class="a" d="M980 330H1039" marker-end="url(#arrow)"/>
       <text class="e e-band" x="1014" y="321" text-anchor="middle">explain</text>
       <rect class="box-b" x="1040" y="520" width="125" height="70" rx="6"/>
@@ -179,7 +182,7 @@ code { font-family: var(--mono); font-size: .88em; }
 
       <!-- Database -->
       <rect class="group" x="290" y="490" width="705" height="150" rx="8"/>
-      <text class="g" x="304" y="511">D1: ani-market-data, the system of record, 70 tables</text>
+      <text class="g" x="304" y="511">D1: ani-market-data, the system of record, 68 tables</text>
       <rect class="box" x="305" y="525" width="165" height="100" rx="6"/>
       <text class="h" x="317" y="548">Cooperative quotes</text><text class="t" x="317" y="568">pending, verified</text><text class="t" x="317" y="586">raw snapshots</text><text class="t" x="317" y="604">review log</text>
       <rect class="box" x="485" y="525" width="160" height="100" rx="6"/>
@@ -187,15 +190,15 @@ code { font-family: var(--mono); font-size: .88em; }
       <rect class="box" x="660" y="525" width="160" height="100" rx="6"/>
       <text class="h" x="672" y="548">Reference data</text><text class="t" x="672" y="568">monthly prices</text><text class="t" x="672" y="586">forecast snapshots</text><text class="t" x="672" y="604">supply, intelligence</text>
       <rect class="box" x="835" y="525" width="145" height="100" rx="6"/>
-      <text class="h" x="847" y="548">Documents</text><text class="t" x="847" y="568">21 booklets</text><text class="t" x="847" y="586">258 passages</text><text class="t" x="847" y="604">int8 vectors</text>
+      <text class="h" x="847" y="548">Documents</text><text class="t" x="847" y="568">29 documents</text><text class="t" x="847" y="586">335 passages</text><text class="t" x="847" y="604">audit log, feedback</text>
 
       <!-- Key -->
       <text class="g" x="20" y="512">Key</text>
       <path class="a" d="M20 534H70" marker-end="url(#arrow)"/><text class="t" x="80" y="538">running today</text>
-      <path class="a-b" d="M20 560H70" marker-end="url(#arrow-b)"/><text class="t" x="80" y="564">built, but blocked or off</text>
+      <path class="a-b" d="M20 560H70" marker-end="url(#arrow-b)"/><text class="t" x="80" y="564">built, but not set up</text>
     </svg>
     </div>
-    <figcaption>Every write goes through the Worker into D1, and readers only receive published data: verified daily rates, and monthly reports that passed source validation. The dashed amber parts are built but are not carrying data today.</figcaption>
+    <figcaption>Every write goes through the Worker into D1, and readers only receive published data: verified daily and cooperative rates, and monthly reports that passed source validation. AGMARKNET is fetched through a separate relay Worker because data.gov.in answers from Cloudflare's Mumbai location but times out from GitHub's runners. The dashed amber part is built but not set up.</figcaption>
   </figure>
 
   <figure>
@@ -222,26 +225,57 @@ code { font-family: var(--mono); font-size: .88em; }
       <path class="a" d="M580 170H735V94" marker-end="url(#arrow2)"/><text class="e" x="745" y="140">reviewer approves</text>
     </svg>
     </div>
-    <figcaption>The checks are: passes validation, publishable unit, no unaccepted review flag, no clash with a verified price for that branch and date, and within 20% of the variety's median over the last 30 days, using at least 3 quotes. Every approval is logged, with automatic ones under <code>auto-validation-v1</code>.</figcaption>
+    <figcaption>The checks are: passes validation, publishable unit, no unaccepted review flag, no clash with a verified price for that branch and date, and, once the variety has at least 3 quotes in the last 30 days, within 20% of their median. A newly seen variety has no median yet, so it publishes on the other checks alone. Every approval is logged, with automatic ones under <code>auto-validation-v1</code>.</figcaption>
+  </figure>
+
+  <figure>
+    <h2>How the assistant answers</h2>
+    <div class="scroll">
+    <svg id="assistant" viewBox="0 -4 1000 240" role="img" aria-label="A question, with the previous question for follow-ups, is classified by rules into tools. The tools read verified data and documents, with expert-reviewed notes first. Workers AI writes the explanation. Each sentence is checked against the evidence: passing text is shown, failing sentences are dropped, the model gets one retry, and otherwise a data-only answer is shown.">
+      <defs>
+        <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m" d="M0 0 10 5 0 10z"/></marker>
+      </defs>
+      <rect class="box-on-page" x="20" y="35" width="150" height="70" rx="6"/><text class="h" x="95" y="62" text-anchor="middle">Question</text><text class="t" x="95" y="80" text-anchor="middle">plus the previous one</text>
+      <rect class="box-on-page" x="215" y="35" width="150" height="70" rx="6"/><text class="h" x="290" y="62" text-anchor="middle">Pick tools</text><text class="t" x="290" y="80" text-anchor="middle">keyword rules</text>
+      <rect class="box-on-page" x="410" y="35" width="170" height="70" rx="6"/><text class="h" x="495" y="62" text-anchor="middle">Gather evidence</text><text class="t" x="495" y="80" text-anchor="middle">rates, reviewed notes,</text><text class="t" x="495" y="96" text-anchor="middle">document passages</text>
+      <rect class="box-on-page" x="625" y="35" width="150" height="70" rx="6"/><text class="h" x="700" y="62" text-anchor="middle">Write</text><text class="t" x="700" y="80" text-anchor="middle">Workers AI, Qwen3</text>
+      <rect class="box-on-page" x="820" y="35" width="160" height="70" rx="6"/><text class="h" x="900" y="62" text-anchor="middle">Check</text><text class="t" x="900" y="80" text-anchor="middle">numbers, dates, places,</text><text class="t" x="900" y="96" text-anchor="middle">citations, language</text>
+
+      <rect class="live-state" x="845" y="165" width="135" height="58" rx="6"/><text class="h" x="912" y="189" text-anchor="middle">Answer shown</text><text class="t" x="912" y="207" text-anchor="middle">with its sources</text>
+      <rect class="box-on-page" x="555" y="165" width="200" height="58" rx="6"/><text class="h" x="655" y="189" text-anchor="middle">Data-only answer</text><text class="t" x="655" y="207" text-anchor="middle">rules; no scanned Kannada quotes</text>
+
+      <path class="a" d="M170 70H214" marker-end="url(#arrow3)"/>
+      <path class="a" d="M365 70H409" marker-end="url(#arrow3)"/>
+      <path class="a" d="M580 70H624" marker-end="url(#arrow3)"/>
+      <path class="a" d="M775 70H819" marker-end="url(#arrow3)"/>
+      <!-- Passing text (or most of its sentences) is shown; a failing draft goes back once over the top; a second failure goes to the rules. -->
+      <path class="a" d="M912 105V164" marker-end="url(#arrow3)"/><text class="e" x="920" y="140">passes</text>
+      <path class="a" d="M900 35V18H700V34" marker-end="url(#arrow3)"/><text class="e" x="800" y="12" text-anchor="middle">fails: one retry</text>
+      <path class="a" d="M832 105V194H756" marker-end="url(#arrow3)"/><text class="e" x="794" y="186" text-anchor="middle">fails</text>
+    </svg>
+    </div>
+    <figcaption>Every figure in an answer comes from a tool result or an expert-reviewed knowledge card, never from the model. A sentence the check cannot verify is dropped; if most of the text fails, the model gets one retry with the reasons, and if that fails too the reader gets the data-only answer. Readers can rate each answer; the ratings are stored without the question text.</figcaption>
   </figure>
 
   <section>
     <h2>What is running today</h2>
     <div class="tablewrap"><table>
-      <thead><tr><th>Part</th><th>Status</th><th>What it needs</th></tr></thead>
+      <thead><tr><th>Part</th><th>Status</th><th>Detail, and what it needs</th></tr></thead>
       <tbody>
-        <tr><td>Website, public API and assistant</td><td><span class="pill pill-live">Running</span></td><td>Nothing. Assistant: Qwen3 and BGE-M3, 258 of 258 passages embedded.</td></tr>
-        <tr><td>AGMARKNET monthly refresh</td><td><span class="pill pill-live">Running</span></td><td>Nothing. It ran at 09:00 IST on 6 Nov.</td></tr>
-        <tr><td>Forecast re-evaluation</td><td><span class="pill pill-live">Deployed</span></td><td>Its first run is 09:00 IST on 7 Nov. Rashi shows <code>stale</code> until then.</td></tr>
-        <tr><td>MAMCOS, TSS and TUMCOS collection</td><td><span class="pill pill-live">Enabled</span></td><td>Tested from the live Worker on 6 Nov. Scheduled publishing first runs at 20:00 IST that day. Written permission references and redistribution status are still to be recorded.</td></tr>
-        <tr><td>AGMARKNET daily feed</td><td><span class="pill pill-b">Skipped</span></td><td>GitHub repository variables and secrets. The Cloudflare <code>INGESTION_TOKEN</code> is set. Each import then needs a reviewer's approval.</td></tr>
-        <tr><td>Weather and news refresh</td><td><span class="pill pill-live">Enabled</span></td><td>Tested from the live Worker on 6 Nov. Weather covers the Sirsi point only. News re-reads three fixed pages, so it does not find new releases. Open-Meteo's free tier is non-commercial.</td></tr>
+        <tr><td>Website, public API and town pages</td><td><span class="pill pill-live">Running</span></td><td>adikenaadi.com on Cloudflare Pages. Town pages (<code>/market/…</code>) and variety pages carry their latest rates in the HTML; the site is rebuilt at 09:20 and 20:20 IST, after each collection.</td></tr>
+        <tr><td>Assistant</td><td><span class="pill pill-live">Running</span></td><td>Qwen3-30B and BGE-M3 on Workers AI; 335 of 335 passages embedded from 29 documents. In the 24 hours before this was read, the model wrote 9 answers, 1 fell back to the data-only answer and 3 were asked for data only.</td></tr>
+        <tr><td>AGMARKNET daily feed</td><td><span class="pill pill-live">Running</span></td><td>GitHub Actions at 08:47 and 23:15 IST, through the Mumbai relay Worker; latest reporting date 12 Nov 2026. Rows that pass every check are verified on import.</td></tr>
+        <tr><td>AGMARKNET history and long-history top-up</td><td><span class="pill pill-live">Scheduled</span></td><td>History at 07:00 IST daily; the long-history archive top-up at 08:00 IST on the 3rd to the 10th of each month.</td></tr>
+        <tr><td>MAMCOS, TSS and TUMCOS collection</td><td><span class="pill pill-live">Running</span></td><td>Latest reporting date 11 Nov 2026; last fetched at 09:01 IST on 12 Nov. Collection permission is recorded; redistribution is not confirmed yet, so written permission from each cooperative is still needed.</td></tr>
+        <tr><td>AGMARKNET monthly refresh</td><td><span class="pill pill-live">Running</span></td><td>At 09:00 IST with the scheduled run.</td></tr>
+        <tr><td>Forecasting</td><td><span class="pill pill-live">Scheduled</span></td><td>GitHub Actions at 08:30 IST on the 20th of each month; the latest experiment is from 9 Nov 2026. The Worker re-evaluates stored forecasts as new monthly data arrives.</td></tr>
+        <tr><td>Weather and news refresh</td><td><span class="pill pill-live">Enabled</span></td><td>Weather covers the Sirsi point only. News re-reads fixed pages, so it does not find new releases. Open-Meteo's free tier is non-commercial.</td></tr>
+        <tr><td>Knowledge cards</td><td><span class="pill pill-b">Awaiting review</span></td><td>Built. One draft card (koleroga) waits for an expert to check it against the CPCRI pages; drafts are never used in answers.</td></tr>
         <tr><td>R2 evidence archive</td><td><span class="pill pill-b">Not set up</span></td><td>Optional. Create the bucket and uncomment the binding when D1 size becomes a concern.</td></tr>
       </tbody>
     </table></div>
-    <p class="note">Laptop jobs are run by hand. The document ingester posts passages and vectors from CPCRI, DASD and government PDFs. The forecasting engine reads a local copy of D1 and posts experiments; models never train inside the Worker.</p>
+    <p class="note">Laptop jobs are run by hand: the document ingester posts passages and vectors from CPCRI, DASD, government and MAMCOS sources (MAMCOS pages through their own body-only extractor). The forecasting engine reads a copy of D1 and posts experiments; models never train inside the Worker.</p>
   </section>
 </main>
-
 </body>
 </html>

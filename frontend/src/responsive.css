@@ -198,7 +198,10 @@
   /* The report date stays on one line; on the narrowest phones the label gives way, never the date. */
   .home-hero > * { min-width: 0; max-width: 100%; }
   .home-date-pill { max-width: 100%; padding: 6px 9px; gap: 5px; font-size: 12px !important; white-space: nowrap; overflow: hidden; }
-  .home-date-pill > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* Clipping for the ellipsis also clips vertically, and Kannada conjuncts (ನ್ನೆ in ನಿನ್ನೆ) reach well below the
+     baseline, so the line is given room for them: a taller line box, and a little padding inside the clip. */
+  .home-date-pill { line-height: 1.8; }
+  .home-date-pill > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 2px; }
   /* The import figure sits under its heading, left-aligned, rather than floating at the right edge. */
   .imports-figure { justify-items: start; text-align: left; }
   /* One dropdown beside its label instead of the picture pills, which would take two rows. */
