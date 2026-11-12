@@ -64,5 +64,11 @@ export type ToolResult = {
   /** Plain statements built from this tool's facts, in the reader's language; shown when no model text is used. */
   highlights?: string[];
   /** Untrusted document text passed to the language model as quoted evidence (documents/news only). */
-  excerpts?: { source_key: string; text: string; scanned?: boolean }[];
+  excerpts?: {
+    source_key: string; text: string; scanned?: boolean;
+    /** Language of the source document ("en", "kn"). */
+    language?: string;
+    /** An expert-reviewed knowledge card (knowledge-cards.ts): clean text whose numbers count as verified. */
+    reviewed?: boolean;
+  }[];
 };

@@ -29,7 +29,8 @@ export function sanitizeUntrusted(text: string, maxLength = 1500): string {
     .slice(0, maxLength);
 }
 
-const NUMBER = /(?<![A-Za-z#])-?\d[\d,]*(?:\.\d+)?/g;
+// A minus sign right after a digit is a range dash ("35-45" is 35 to 45), not a negative number.
+const NUMBER = /(?<![A-Za-z#\d])-?\d[\d,]*(?:\.\d+)?/g;
 
 /** Every numeric token in the text, after Kannada-digit normalisation and comma removal. */
 export function extractNumbers(text: string): number[] {
@@ -84,6 +85,10 @@ export type GroundingResult = {
   unknown_citations: string[];
   wrong_periods: string[];
   wrong_places: string[];
+  /** Sentences dropped because they failed on their own; the rest passed (see compose.ts). */
+  removed_sentences?: number;
+  /** Model calls made for this answer: 1, or 2 after one corrective retry. */
+  attempts?: number;
 };
 
 /** The parts of a verified fact the check needs in order to tie a value to its own period and place. */

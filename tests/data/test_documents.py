@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "data-platform"))
 from documents import ingest  # noqa: E402
 from documents.ingest import (  # noqa: E402
+    extract_mamcos,
     Chunk, IngestError, Page, build_payload, chunk_pages, download, extract, extract_pib, ingest_document, load_manifest,
     post_document, quantize_embedding, stated_pib_date, validate_entry,
 )
@@ -193,6 +194,24 @@ class ExtractionTests(unittest.TestCase):
     def test_pib_layout_change_is_an_error(self):
         with self.assertRaisesRegex(IngestError, "layout"):
             extract_pib("<html><body>Changed</body></html>")
+
+    def test_mamcos_page_body_only(self):
+        body = "ಹಳದಿ ಎಲೆ ರೋಗ ಅಡಿಕೆಯಲ್ಲಿ ಬರುವ ಪ್ರಮುಖ ರೋಗವಾಗಿದ್ದು, ಎಲೆಗಳು ಹಳದಿಯಾಗುತ್ತವೆ. " * 8
+        markup = ("<html><nav>ಮುಖಪುಟ ಮಾಮ್‌ಕೋಸ್ ಬಗ್ಗೆ Menu</nav><div class=\"ticker\">ಇತ್ತೀಚಿನ ಸುದ್ದಿಗಳು</div>"
+                  f"<div class=\"text-slate-900\"><h1>ಹಳದಿ ಎಲೆ ರೋಗ</h1><p>{body}</p></div><footer>ಸಂಪರ್ಕಿಸಿ 08182-250513</footer></html>")
+        mamcos = entry(source_url="https://mamcos.info/public/areca/yellow-leaf-disease", mime_type="text/html",
+                       document_type="agricultural_research", language="kn")
+        [page], warnings = extract(mamcos, markup.encode())
+        self.assertEqual(warnings, [])
+        self.assertTrue(page.text.startswith("ಹಳದಿ ಎಲೆ ರೋಗ"))
+        for chrome in ("Menu", "ಇತ್ತೀಚಿನ ಸುದ್ದಿಗಳು", "08182"):
+            self.assertNotIn(chrome, page.text)
+
+    def test_mamcos_layout_change_is_an_error(self):
+        with self.assertRaisesRegex(IngestError, "layout"):
+            extract_mamcos("<html><body>Changed</body></html>")
+        with self.assertRaisesRegex(IngestError, "only"):
+            extract_mamcos('<div class="text-slate-900">short</div><footer></footer>')
 
 
 class ChunkingTests(unittest.TestCase):

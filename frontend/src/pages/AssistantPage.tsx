@@ -1,232 +1,360 @@
-import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowUp, Check, Copy, ExternalLink, Plus, SlidersHorizontal, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { api } from "../services/api";
-import type { AssistantAnswer, AssistantCalculation, AssistantQuery } from "../services/assistant";
-import { EmptyState, ErrorState, LoadingState } from "../components/State";
-import { defineCopy, useCopy, useFormat, useLanguage } from "../services/language";
-import { AboutData } from "../components/AboutData";
+import type { AssistantAnswer, AssistantCalculation, AssistantFact, AssistantQuery } from "../services/assistant";
+import { defineCopy, useCopy, useLanguage, type Language } from "../services/language";
+import { agmarknetVarietyName } from "../services/agmarknetVarieties";
+import { ShareButton } from "../components/ShareButton";
+import { SHARE_INVITE } from "../services/share";
 
-const EXAMPLES: { text: string; language: "en" | "kn" }[] = [
-  { text: "What is the latest Rashi arecanut price in Karnataka?", language: "en" },
-  { text: "Compare Chali prices across markets", language: "en" },
-  { text: "What is the forecast for Rashi next month?", language: "en" },
-  { text: "Karnataka arecanut production in recent years", language: "en" },
-  { text: "How to manage Mahali (fruit rot) disease?", language: "en" },
-  { text: "ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?", language: "kn" },
-  { text: "ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", language: "kn" },
-];
+const EXAMPLES: Record<Language, string[]> = {
+  kn: ["ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?", "ಚಾಲಿ ದರವನ್ನು ಮಾರುಕಟ್ಟೆಗಳಲ್ಲಿ ಹೋಲಿಸಿ", "ರಾಶಿ ಈಗ ಮಾರಬೇಕೇ ಕಾಯಬೇಕೇ?", "ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಉತ್ಪಾದನೆ ಎಷ್ಟು?", "ಶಿರಸಿಯಲ್ಲಿ ಹವಾಮಾನ ಹೇಗಿದೆ?"],
+  en: ["What is the latest Rashi price?", "Compare Chali prices across markets", "Should I sell Rashi now or wait?", "How to manage koleroga (Mahali)?", "Karnataka arecanut production in recent years", "Weather in Sirsi"],
+};
 
 const CALCULATION_KEYS = ["price", "quantity_quintals", "commission_percent", "transport_cost", "other_selling_cost", "hold_days", "storage_cost", "annual_finance_percent", "weight_loss_percent", "scenario_price"] as const;
 type CalculationKey = typeof CALCULATION_KEYS[number];
 
 const COPY = defineCopy({
   en: {
-    fields: { price: "Sale price (INR/quintal)", quantity_quintals: "Quantity (quintals)", commission_percent: "Commission (%)", transport_cost: "Transport cost (total INR)",
-      other_selling_cost: "Other selling cost (total INR)", hold_days: "Hold period (days)", storage_cost: "Storage cost (total INR)", annual_finance_percent: "Annual finance rate (%)",
-      weight_loss_percent: "Weight loss while holding (%)", scenario_price: "Your scenario future price (INR/quintal)" } as Record<CalculationKey, string>,
-    llm: {
-      used: "Language model used; text passed grounding checks", not_configured: "No language model configured; rule-based explanation",
-      disabled: "Language model switched off for this question; rule-based explanation", skipped_injection: "Language model skipped: question resembled an instruction override",
-      skipped_no_data: "Language model skipped: no verified data to explain", failed: "Language model unavailable; rule-based explanation",
-      grounding_failed: "Model text rejected by grounding checks; rule-based explanation",
-    } as Record<AssistantAnswer["llm"]["status"], string>,
-    unavailable: "Unavailable",
-    title: "Areca Pulse intelligence assistant", intro: "Ask about arecanut prices, markets, weather or crop care. Every number in an answer comes from a cited source or from your own figures.",
-    statusUnavailable: (message: string) => `Assistant status unavailable: ${message}`, howMade: "How answers are made",
-    howMadeText: "Answers come from Areca Pulse's own price, forecast, production, trade, weather and advisory endpoints and from ingested CPCRI, DASD and government documents. A language model may only explain those values, and its text is rejected if it adds numbers, unknown citations or price predictions. Arecanut only for now.",
-    model: "Language model:", notConfigured: "not configured", index: "Document index:", indexValue: (documents: number, chunks: number) => `${documents} documents, ${chunks} passages`,
-    embeddings: (count: number, semantic: boolean) => `(${count} with ${semantic ? "semantic" : "stored"} embeddings${semantic ? "" : "; keyword search only"})`,
-    limit: (perHour: number, retained: boolean) => `Limit ${perHour} questions/hour · Questions ${retained ? "are" : "are not"} retained.`,
-    ask: "Ask a question", askHint: "English or Kannada. Ask about prices, comparisons, the market index, arrivals, forecasts, production, trade, weather, crop risk, news or research documents.",
-    question: "Question", answerLanguage: "Answer language", detect: "Detect from question", explanation: "Explanation", llmOption: "Language model (grounding-checked)", rulesOption: "Rule-based only",
-    calculationInputs: "Calculation inputs", none: "None", ownFigures: "Provide my own figures", collecting: "Collecting verified data…", submit: "Ask", examples: "Examples",
-    querying: "Querying Areca Pulse data sources",
-    interpretation: "Interpretation", byModel: "Interpretation · language model", byRules: "Interpretation · rule-based", grounding: (status: string) => ` · grounding ${status}`,
-    reason: (text: string) => `Reason: ${text}`, rejected: (reasons: string) => `Rejected model text: ${reasons}`,
-    injection: (flags: string) => `Instruction-override patterns detected: ${flags}. Only verified data is shown.`,
-    facts: "Verified facts", factsHint: "Values copied from Areca Pulse sources. Price basis is shown separately; different bases are not comparable.", factsTable: "Verified facts table",
-    fact: "Fact", value: "Value", unit: "Unit", basis: "Basis", reportingPeriod: "Reporting period", source: "Source", note: "Note",
-    noFacts: "No verified figures for this question", noFactsHint: "The assistant does not fill gaps from model knowledge. See missing data below.",
-    tools: "Data tools used", toolsTable: "Tools table", selection: (how: string) => `Tool selection: ${how}`, plannerError: (error: string) => ` · planner error: ${error}`,
-    planning: { llm: "language-model planner (arguments validated)", rules: "keyword rules", none: "no matching tool" } as Record<string, string>,
-    tool: "Tool", status: "Status", summary: "Summary", noTool: "No Areca Pulse tool matched this question. Try naming a variety, market, district or topic.",
-    assumptions: "Calculation assumptions", uncertainty: "Uncertainty", missing: "Missing data", limitations: "Limitations",
-    excerpts: "Document excerpts", excerptsHint: "Quoted passages from ingested documents. Treat as reference material, not a diagnosis; consult an agricultural officer before acting.",
-    sources: "Sources", sourcesHint: "Retrieval times shown in IST.", sourcesTable: "Sources table", ref: "Ref", publisher: "Publisher", published: "Published", page: "Page", retrieved: "Retrieved",
+    title: "Ask Areca Pulse", intro: "Prices, markets, crop care and weather, answered from verified sources. Every figure is cited.",
+    newChat: "New conversation", placeholder: "Ask about prices, markets, diseases or weather…", send: "Send", options: "Options",
+    answerLanguage: "Answer language", detect: "Detect from question", explanation: "Explanation", llmOption: "Written by the assistant (checked)", rulesOption: "Data only",
+    calculationInputs: "My own figures for a calculation", fields: { price: "Sale price (₹/quintal)", quantity_quintals: "Quantity (quintals)", commission_percent: "Commission (%)", transport_cost: "Transport cost (₹ total)",
+      other_selling_cost: "Other selling cost (₹ total)", hold_days: "Hold period (days)", storage_cost: "Storage cost (₹ total)", annual_finance_percent: "Annual interest (%)",
+      weight_loss_percent: "Weight loss while holding (%)", scenario_price: "Your expected future price (₹/quintal)" } as Record<CalculationKey, string>,
+    welcome: "What would you like to know?", welcomeHint: "Ask in Kannada or English. Answers use Areca Pulse's own rates and published research, and say where each figure comes from.",
+    thinking: ["Checking the latest rates…", "Reading the research documents…", "Writing the answer…", "Checking every figure…"],
+    you: "You", assistant: "Areca Pulse", failed: "The answer could not be fetched.", retry: "Try again",
+    rates: "Rates in this answer", figures: "Figures", sources: "Sources", page: "p.", missing: "Not available",
+    copy: "Copy", copied: "Copied", share: "Share", shareOpening: "Opening…", shareDone: "Shared", shareWhatsapp: "WhatsApp opened", shareAria: "Share this answer",
+    helpful: "Helpful", notHelpful: "Not helpful", thanks: "Thanks for the feedback",
+    followUps: "Ask next", followUpRead: "Read with your previous question",
+    how: "How this answer was made",
+    llm: { used: "Written by the assistant from the data below; every figure was checked against its source.", not_configured: "Written directly from the data (no language model).",
+      disabled: "Written directly from the data, as you asked.", skipped_injection: "Written directly from the data: the question looked like an instruction to the system.",
+      skipped_no_data: "No data matched, so nothing was written by the language model.", failed: "The language model was unavailable, so this is written directly from the data.",
+      grounding_failed: "The language model's text could not be verified, so this is written directly from the data." } as Record<AssistantAnswer["llm"]["status"], string>,
+    removed: (count: number) => `${count} sentence${count === 1 ? "" : "s"} that could not be verified ${count === 1 ? "was" : "were"} left out.`,
+    retried: "The first draft failed a check and was rewritten once.",
+    model: "Model", checks: "Checks", rejectedBecause: "Rejected because", tools: "Data used", assumptions: "Assumptions", uncertainty: "Uncertainty", limitations: "Limitations", time: "Time",
+    footer: (limit: number, retained: boolean) => `Up to ${limit} questions an hour · Questions are ${retained ? "kept for quality checks" : "not stored"}.`,
+    answerReady: "Answer ready",
   },
   kn: {
-    fields: { price: "ಮಾರಾಟ ದರ (₹/ಕ್ವಿಂಟಾಲ್)", quantity_quintals: "ಪ್ರಮಾಣ (ಕ್ವಿಂಟಾಲ್)", commission_percent: "ಕಮಿಷನ್ (%)", transport_cost: "ಸಾಗಣೆ ವೆಚ್ಚ (ಒಟ್ಟು ₹)",
-      other_selling_cost: "ಇತರ ಮಾರಾಟ ವೆಚ್ಚ (ಒಟ್ಟು ₹)", hold_days: "ಕಾಯುವ ಅವಧಿ (ದಿನಗಳು)", storage_cost: "ಸಂಗ್ರಹ ವೆಚ್ಚ (ಒಟ್ಟು ₹)", annual_finance_percent: "ವಾರ್ಷಿಕ ಬಡ್ಡಿ ದರ (%)",
-      weight_loss_percent: "ಕಾಯುವಾಗ ತೂಕ ನಷ್ಟ (%)", scenario_price: "ನಿಮ್ಮ ಮುಂದಿನ ದರದ ಊಹೆ (₹/ಕ್ವಿಂಟಾಲ್)" },
-    llm: {
-      used: "ಭಾಷಾ ಮಾದರಿ ಬಳಸಲಾಗಿದೆ; ಪಠ್ಯ ಆಧಾರ ಪರಿಶೀಲನೆಯಲ್ಲಿ ಉತ್ತೀರ್ಣ", not_configured: "ಭಾಷಾ ಮಾದರಿ ಹೊಂದಿಸಿಲ್ಲ; ನಿಯಮ ಆಧಾರಿತ ವಿವರಣೆ",
-      disabled: "ಈ ಪ್ರಶ್ನೆಗೆ ಭಾಷಾ ಮಾದರಿ ಆಫ್ ಮಾಡಲಾಗಿದೆ; ನಿಯಮ ಆಧಾರಿತ ವಿವರಣೆ", skipped_injection: "ಭಾಷಾ ಮಾದರಿ ಬಿಡಲಾಗಿದೆ: ಪ್ರಶ್ನೆ ಸೂಚನೆ ಬದಲಿಸುವ ಪ್ರಯತ್ನದಂತಿತ್ತು",
-      skipped_no_data: "ಭಾಷಾ ಮಾದರಿ ಬಿಡಲಾಗಿದೆ: ವಿವರಿಸಲು ಪರಿಶೀಲಿತ ದತ್ತಾಂಶವಿಲ್ಲ", failed: "ಭಾಷಾ ಮಾದರಿ ಲಭ್ಯವಿಲ್ಲ; ನಿಯಮ ಆಧಾರಿತ ವಿವರಣೆ",
-      grounding_failed: "ಆಧಾರ ಪರಿಶೀಲನೆಯಲ್ಲಿ ಮಾದರಿ ಪಠ್ಯ ತಿರಸ್ಕೃತ; ನಿಯಮ ಆಧಾರಿತ ವಿವರಣೆ",
-    },
-    unavailable: "ಲಭ್ಯವಿಲ್ಲ",
-    title: "ಅಡಿಕೆ ನಾಡಿ ಮಾಹಿತಿ ಸಹಾಯಕ", intro: "ಅಡಿಕೆ ದರ, ಮಾರುಕಟ್ಟೆ, ಹವಾಮಾನ ಅಥವಾ ಬೆಳೆ ಆರೈಕೆಯ ಬಗ್ಗೆ ಕೇಳಿ. ಉತ್ತರದ ಪ್ರತಿ ಸಂಖ್ಯೆಯೂ ಉಲ್ಲೇಖಿತ ಮೂಲದಿಂದ ಅಥವಾ ನಿಮ್ಮ ಅಂಕಿಗಳಿಂದ ಬರುತ್ತದೆ.",
-    statusUnavailable: (message: string) => `ಸಹಾಯಕದ ಸ್ಥಿತಿ ಲಭ್ಯವಿಲ್ಲ: ${message}`, howMade: "ಉತ್ತರಗಳನ್ನು ಹೇಗೆ ತಯಾರಿಸಲಾಗುತ್ತದೆ",
-    howMadeText: "ಉತ್ತರಗಳು ಅಡಿಕೆ ನಾಡಿಯ ದರ, ಮುನ್ಸೂಚನೆ, ಉತ್ಪಾದನೆ, ವ್ಯಾಪಾರ, ಹವಾಮಾನ ಮತ್ತು ಸಲಹಾ ಸೇವೆಗಳಿಂದ ಹಾಗೂ CPCRI, DASD ಮತ್ತು ಸರ್ಕಾರದ ದಾಖಲೆಗಳಿಂದ ಬರುತ್ತವೆ. ಭಾಷಾ ಮಾದರಿ ಆ ಮೌಲ್ಯಗಳನ್ನು ವಿವರಿಸಬಹುದು ಮಾತ್ರ; ಅದು ಹೊಸ ಸಂಖ್ಯೆ, ಅಜ್ಞಾತ ಉಲ್ಲೇಖ ಅಥವಾ ದರ ಮುನ್ಸೂಚನೆ ಸೇರಿಸಿದರೆ ಪಠ್ಯವನ್ನು ತಿರಸ್ಕರಿಸಲಾಗುತ್ತದೆ. ಸದ್ಯಕ್ಕೆ ಅಡಿಕೆ ಮಾತ್ರ.",
-    model: "ಭಾಷಾ ಮಾದರಿ:", notConfigured: "ಹೊಂದಿಸಿಲ್ಲ", index: "ದಾಖಲೆ ಸೂಚಿ:", indexValue: (documents: number, chunks: number) => `${documents} ದಾಖಲೆಗಳು, ${chunks} ಭಾಗಗಳು`,
-    embeddings: (count: number, semantic: boolean) => `(${count} ${semantic ? "ಅರ್ಥ ಆಧಾರಿತ" : "ಸಂಗ್ರಹಿತ"} ಹುಡುಕಾಟದೊಂದಿಗೆ${semantic ? "" : "; ಪದ ಹುಡುಕಾಟ ಮಾತ್ರ"})`,
-    limit: (perHour: number, retained: boolean) => `ಗಂಟೆಗೆ ${perHour} ಪ್ರಶ್ನೆಗಳ ಮಿತಿ · ಪ್ರಶ್ನೆಗಳನ್ನು ${retained ? "ಉಳಿಸಲಾಗುತ್ತದೆ" : "ಉಳಿಸುವುದಿಲ್ಲ"}.`,
-    ask: "ಪ್ರಶ್ನೆ ಕೇಳಿ", askHint: "ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ. ದರ, ಹೋಲಿಕೆ, ಮಾರುಕಟ್ಟೆ ಸೂಚ್ಯಂಕ, ಆವಕ, ಮುನ್ಸೂಚನೆ, ಉತ್ಪಾದನೆ, ವ್ಯಾಪಾರ, ಹವಾಮಾನ, ಬೆಳೆ ಅಪಾಯ, ಸುದ್ದಿ ಅಥವಾ ಸಂಶೋಧನಾ ದಾಖಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಿ.",
-    question: "ಪ್ರಶ್ನೆ", answerLanguage: "ಉತ್ತರದ ಭಾಷೆ", detect: "ಪ್ರಶ್ನೆಯಿಂದ ಗುರುತಿಸಿ", explanation: "ವಿವರಣೆ", llmOption: "ಭಾಷಾ ಮಾದರಿ (ಆಧಾರ ಪರಿಶೀಲನೆಯೊಂದಿಗೆ)", rulesOption: "ನಿಯಮ ಆಧಾರಿತ ಮಾತ್ರ",
-    calculationInputs: "ಲೆಕ್ಕದ ಅಂಕಿಗಳು", none: "ಯಾವುದೂ ಇಲ್ಲ", ownFigures: "ನನ್ನ ಅಂಕಿಗಳನ್ನು ನೀಡುತ್ತೇನೆ", collecting: "ಪರಿಶೀಲಿತ ದತ್ತಾಂಶ ಸಂಗ್ರಹಿಸಲಾಗುತ್ತಿದೆ…", submit: "ಕೇಳಿ", examples: "ಉದಾಹರಣೆಗಳು",
-    querying: "ಅಡಿಕೆ ನಾಡಿ ದತ್ತಾಂಶ ಮೂಲಗಳನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ",
-    interpretation: "ವಿವರಣೆ", byModel: "ವಿವರಣೆ · ಭಾಷಾ ಮಾದರಿ", byRules: "ವಿವರಣೆ · ನಿಯಮ ಆಧಾರಿತ", grounding: (status: string) => ` · ಆಧಾರ ಪರಿಶೀಲನೆ ${status}`,
-    reason: (text: string) => `ಕಾರಣ: ${text}`, rejected: (reasons: string) => `ತಿರಸ್ಕೃತ ಮಾದರಿ ಪಠ್ಯ: ${reasons}`,
-    injection: (flags: string) => `ಸೂಚನೆ ಬದಲಿಸುವ ಪ್ರಯತ್ನ ಕಂಡುಬಂದಿದೆ: ${flags}. ಪರಿಶೀಲಿತ ದತ್ತಾಂಶ ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.`,
-    facts: "ಪರಿಶೀಲಿತ ಸಂಗತಿಗಳು", factsHint: "ಅಡಿಕೆ ನಾಡಿ ಮೂಲಗಳಿಂದ ನಕಲಿಸಿದ ಮೌಲ್ಯಗಳು. ದರದ ಆಧಾರವನ್ನು ಪ್ರತ್ಯೇಕವಾಗಿ ತೋರಿಸಲಾಗಿದೆ; ಬೇರೆ ಆಧಾರಗಳನ್ನು ಹೋಲಿಸಲಾಗದು.", factsTable: "ಪರಿಶೀಲಿತ ಸಂಗತಿಗಳ ಪಟ್ಟಿ",
-    fact: "ಸಂಗತಿ", value: "ಮೌಲ್ಯ", unit: "ಘಟಕ", basis: "ಆಧಾರ", reportingPeriod: "ವರದಿ ಅವಧಿ", source: "ಮೂಲ", note: "ಟಿಪ್ಪಣಿ",
-    noFacts: "ಈ ಪ್ರಶ್ನೆಗೆ ಪರಿಶೀಲಿತ ಅಂಕಿಗಳಿಲ್ಲ", noFactsHint: "ಸಹಾಯಕ ಮಾದರಿಯ ಸ್ವಂತ ಜ್ಞಾನದಿಂದ ಖಾಲಿ ತುಂಬುವುದಿಲ್ಲ. ಕೆಳಗೆ ಇಲ್ಲದ ದತ್ತಾಂಶ ನೋಡಿ.",
-    tools: "ಬಳಸಿದ ದತ್ತಾಂಶ ಸಾಧನಗಳು", toolsTable: "ಸಾಧನಗಳ ಪಟ್ಟಿ", selection: (how: string) => `ಸಾಧನ ಆಯ್ಕೆ: ${how}`, plannerError: (error: string) => ` · ಯೋಜಕ ದೋಷ: ${error}`,
-    planning: { llm: "ಭಾಷಾ ಮಾದರಿ ಯೋಜಕ (ಪರಿಶೀಲಿತ ಅಂಶಗಳು)", rules: "ಪದ ನಿಯಮಗಳು", none: "ಹೊಂದುವ ಸಾಧನವಿಲ್ಲ" },
-    tool: "ಸಾಧನ", status: "ಸ್ಥಿತಿ", summary: "ಸಾರಾಂಶ", noTool: "ಈ ಪ್ರಶ್ನೆಗೆ ಯಾವ ಅಡಿಕೆ ನಾಡಿ ಸಾಧನವೂ ಹೊಂದಲಿಲ್ಲ. ತಳಿ, ಮಾರುಕಟ್ಟೆ, ಜಿಲ್ಲೆ ಅಥವಾ ವಿಷಯವನ್ನು ಹೆಸರಿಸಿ ಕೇಳಿ.",
-    assumptions: "ಲೆಕ್ಕದ ಊಹೆಗಳು", uncertainty: "ಅನಿಶ್ಚಿತತೆ", missing: "ಇಲ್ಲದ ದತ್ತಾಂಶ", limitations: "ಮಿತಿಗಳು",
-    excerpts: "ದಾಖಲೆಗಳ ಭಾಗಗಳು", excerptsHint: "ಸಂಗ್ರಹಿಸಿದ ದಾಖಲೆಗಳಿಂದ ಉಲ್ಲೇಖಿಸಿದ ಭಾಗಗಳು. ಉಲ್ಲೇಖಕ್ಕೆ ಮಾತ್ರ, ರೋಗ ನಿರ್ಣಯವಲ್ಲ; ಕ್ರಮ ಕೈಗೊಳ್ಳುವ ಮೊದಲು ಕೃಷಿ ಅಧಿಕಾರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.",
-    sources: "ಮೂಲಗಳು", sourcesHint: "ಸಂಗ್ರಹದ ಸಮಯ ಭಾರತೀಯ ಕಾಲಮಾನದಲ್ಲಿ.", sourcesTable: "ಮೂಲಗಳ ಪಟ್ಟಿ", ref: "ಉಲ್ಲೇಖ", publisher: "ಪ್ರಕಟಣಕಾರ", published: "ಪ್ರಕಟಣೆ", page: "ಪುಟ", retrieved: "ಸಂಗ್ರಹಿಸಿದ್ದು",
+    title: "ಅಡಿಕೆ ನಾಡಿಯನ್ನು ಕೇಳಿ", intro: "ದರ, ಮಾರುಕಟ್ಟೆ, ಬೆಳೆ ಆರೈಕೆ ಮತ್ತು ಹವಾಮಾನ: ಪರಿಶೀಲಿತ ಮೂಲಗಳಿಂದ ಉತ್ತರ. ಪ್ರತಿ ಅಂಕಿಗೂ ಮೂಲ ಇದೆ.",
+    newChat: "ಹೊಸ ಸಂಭಾಷಣೆ", placeholder: "ದರ, ಮಾರುಕಟ್ಟೆ, ರೋಗ ಅಥವಾ ಹವಾಮಾನದ ಬಗ್ಗೆ ಕೇಳಿ…", send: "ಕಳುಹಿಸಿ", options: "ಆಯ್ಕೆಗಳು",
+    answerLanguage: "ಉತ್ತರದ ಭಾಷೆ", detect: "ಪ್ರಶ್ನೆಯಿಂದ ಗುರುತಿಸಿ", explanation: "ವಿವರಣೆ", llmOption: "ಸಹಾಯಕ ಬರೆದದ್ದು (ಪರಿಶೀಲಿತ)", rulesOption: "ದತ್ತಾಂಶ ಮಾತ್ರ",
+    calculationInputs: "ಲೆಕ್ಕಕ್ಕೆ ನನ್ನ ಅಂಕಿಗಳು", fields: { price: "ಮಾರಾಟ ದರ (₹/ಕ್ವಿಂಟಾಲ್)", quantity_quintals: "ಪ್ರಮಾಣ (ಕ್ವಿಂಟಾಲ್)", commission_percent: "ಕಮಿಷನ್ (%)", transport_cost: "ಸಾಗಣೆ ವೆಚ್ಚ (ಒಟ್ಟು ₹)",
+      other_selling_cost: "ಇತರ ಮಾರಾಟ ವೆಚ್ಚ (ಒಟ್ಟು ₹)", hold_days: "ಕಾಯುವ ಅವಧಿ (ದಿನಗಳು)", storage_cost: "ಸಂಗ್ರಹ ವೆಚ್ಚ (ಒಟ್ಟು ₹)", annual_finance_percent: "ವಾರ್ಷಿಕ ಬಡ್ಡಿ (%)",
+      weight_loss_percent: "ಕಾಯುವಾಗ ತೂಕ ನಷ್ಟ (%)", scenario_price: "ನಿಮ್ಮ ನಿರೀಕ್ಷಿತ ಮುಂದಿನ ದರ (₹/ಕ್ವಿಂಟಾಲ್)" } as Record<CalculationKey, string>,
+    welcome: "ಏನು ತಿಳಿಯಬೇಕು?", welcomeHint: "ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ. ಉತ್ತರಗಳು ಅಡಿಕೆ ನಾಡಿಯ ದರಗಳು ಮತ್ತು ಪ್ರಕಟಿತ ಸಂಶೋಧನೆಯಿಂದ ಬರುತ್ತವೆ; ಪ್ರತಿ ಅಂಕಿಯ ಮೂಲವನ್ನು ತಿಳಿಸುತ್ತವೆ.",
+    thinking: ["ಇತ್ತೀಚಿನ ದರಗಳನ್ನು ನೋಡಲಾಗುತ್ತಿದೆ…", "ಸಂಶೋಧನಾ ದಾಖಲೆಗಳನ್ನು ಓದಲಾಗುತ್ತಿದೆ…", "ಉತ್ತರ ಬರೆಯಲಾಗುತ್ತಿದೆ…", "ಪ್ರತಿ ಅಂಕಿಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…"],
+    you: "ನೀವು", assistant: "ಅಡಿಕೆ ನಾಡಿ", failed: "ಉತ್ತರ ಪಡೆಯಲಾಗಲಿಲ್ಲ.", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+    rates: "ಈ ಉತ್ತರದ ದರಗಳು", figures: "ಅಂಕಿಗಳು", sources: "ಮೂಲಗಳು", page: "ಪು.", missing: "ಲಭ್ಯವಿಲ್ಲ",
+    copy: "ನಕಲಿಸಿ", copied: "ನಕಲಿಸಲಾಗಿದೆ", share: "ಹಂಚಿಕೊಳ್ಳಿ", shareOpening: "ತೆರೆಯುತ್ತಿದೆ…", shareDone: "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ", shareWhatsapp: "ವಾಟ್ಸಾಪ್ ತೆರೆಯಿತು", shareAria: "ಈ ಉತ್ತರವನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
+    helpful: "ಉಪಯುಕ್ತ", notHelpful: "ಉಪಯುಕ್ತವಲ್ಲ", thanks: "ಪ್ರತಿಕ್ರಿಯೆಗೆ ಧನ್ಯವಾದ",
+    followUps: "ಮುಂದೆ ಕೇಳಿ", followUpRead: "ಹಿಂದಿನ ಪ್ರಶ್ನೆಯೊಂದಿಗೆ ಅರ್ಥೈಸಲಾಗಿದೆ",
+    how: "ಈ ಉತ್ತರವನ್ನು ಹೇಗೆ ತಯಾರಿಸಲಾಯಿತು",
+    llm: { used: "ಕೆಳಗಿನ ದತ್ತಾಂಶದಿಂದ ಸಹಾಯಕ ಬರೆದದ್ದು; ಪ್ರತಿ ಅಂಕಿಯನ್ನು ಅದರ ಮೂಲದೊಂದಿಗೆ ಪರಿಶೀಲಿಸಲಾಗಿದೆ.", not_configured: "ದತ್ತಾಂಶದಿಂದ ನೇರವಾಗಿ ಬರೆದದ್ದು (ಭಾಷಾ ಮಾದರಿ ಇಲ್ಲ).",
+      disabled: "ನೀವು ಕೇಳಿದಂತೆ ದತ್ತಾಂಶದಿಂದ ನೇರವಾಗಿ ಬರೆದದ್ದು.", skipped_injection: "ಪ್ರಶ್ನೆ ವ್ಯವಸ್ಥೆಗೆ ಸೂಚನೆಯಂತಿತ್ತು, ಆದ್ದರಿಂದ ದತ್ತಾಂಶದಿಂದ ನೇರವಾಗಿ ಬರೆದದ್ದು.",
+      skipped_no_data: "ಹೊಂದುವ ದತ್ತಾಂಶ ಸಿಗಲಿಲ್ಲ, ಆದ್ದರಿಂದ ಭಾಷಾ ಮಾದರಿ ಏನೂ ಬರೆದಿಲ್ಲ.", failed: "ಭಾಷಾ ಮಾದರಿ ಲಭ್ಯವಿರಲಿಲ್ಲ, ಆದ್ದರಿಂದ ದತ್ತಾಂಶದಿಂದ ನೇರವಾಗಿ ಬರೆದದ್ದು.",
+      grounding_failed: "ಭಾಷಾ ಮಾದರಿಯ ಪಠ್ಯವನ್ನು ಪರಿಶೀಲಿಸಲಾಗಲಿಲ್ಲ, ಆದ್ದರಿಂದ ದತ್ತಾಂಶದಿಂದ ನೇರವಾಗಿ ಬರೆದದ್ದು." },
+    removed: (count: number) => `ಪರಿಶೀಲಿಸಲಾಗದ ${count} ವಾಕ್ಯವನ್ನು ಬಿಡಲಾಗಿದೆ.`,
+    retried: "ಮೊದಲ ಕರಡು ಪರಿಶೀಲನೆಯಲ್ಲಿ ವಿಫಲವಾಯಿತು; ಒಮ್ಮೆ ಮತ್ತೆ ಬರೆಯಲಾಗಿದೆ.",
+    model: "ಮಾದರಿ", checks: "ಪರಿಶೀಲನೆ", rejectedBecause: "ತಿರಸ್ಕರಿಸಿದ ಕಾರಣ", tools: "ಬಳಸಿದ ದತ್ತಾಂಶ", assumptions: "ಊಹೆಗಳು", uncertainty: "ಅನಿಶ್ಚಿತತೆ", limitations: "ಮಿತಿಗಳು", time: "ಸಮಯ",
+    footer: (limit: number, retained: boolean) => `ಗಂಟೆಗೆ ಗರಿಷ್ಠ ${limit} ಪ್ರಶ್ನೆಗಳು · ಪ್ರಶ್ನೆಗಳನ್ನು ${retained ? "ಗುಣಮಟ್ಟ ಪರಿಶೀಲನೆಗಾಗಿ ಉಳಿಸಲಾಗುತ್ತದೆ" : "ಉಳಿಸುವುದಿಲ್ಲ"}.`,
+    answerReady: "ಉತ್ತರ ಸಿದ್ಧ",
   },
 });
 
-const humanize = (value: string) => value.replace(/_/g, " ");
+type Copy = typeof COPY["en"];
 
-function List({ title, items }: { title: string; items: string[] }) {
-  if (!items.length) return null;
-  return <section className="panel table-panel"><div className="panel-heading"><div><h2>{title}</h2></div></div><div className="prose-block"><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></div></section>;
+/** Suggested next questions for what was just asked. Each is phrased so the assistant's own tools can answer it. */
+export function followUps(answer: AssistantAnswer, language: Language): string[] {
+  const tools = new Set(answer.tools.map((tool) => tool.tool));
+  const variety = answer.entities?.variety;
+  const name = variety ? agmarknetVarietyName(variety, language) : language === "kn" ? "ರಾಶಿ" : "Rashi";
+  const kn = language === "kn";
+  const priceQuestions = [
+    kn ? `${name} ದರವನ್ನು ಮಾರುಕಟ್ಟೆಗಳಲ್ಲಿ ಹೋಲಿಸಿ` : `Compare ${name} prices across markets`,
+    kn ? `${name} ಈಗ ಮಾರಬೇಕೇ ಕಾಯಬೇಕೇ?` : `Should I sell ${name} now or wait?`,
+    kn ? `ಮುಂದಿನ ತಿಂಗಳ ${name} ದರದ ಮುನ್ಸೂಚನೆ ಏನು?` : `${name} price forecast`,
+    kn ? `${name} ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?` : `What is the latest ${name} price?`,
+  ];
+  if (tools.has("get_current_prices")) return [priceQuestions[0], priceQuestions[1], priceQuestions[2]];
+  if (tools.has("compare_markets") || tools.has("get_price_forecast") || tools.has("calculate_sell_hold") || tools.has("get_historical_prices")) {
+    return priceQuestions.filter((_, index) => !(index === 0 && tools.has("compare_markets")) && !(index === 1 && tools.has("calculate_sell_hold")) && !(index === 2 && tools.has("get_price_forecast"))).slice(0, 3);
+  }
+  if (tools.has("search_agricultural_documents")) return kn
+    ? ["ಹಳದಿ ಎಲೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", "ಬೇರು ಹುಳು ನಿಯಂತ್ರಣ ಹೇಗೆ?", "ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?"]
+    : ["How to manage yellow leaf disease?", "How to control root grub?", "How to manage koleroga (Mahali)?"];
+  if (tools.has("get_production_statistics") || tools.has("get_trade_statistics")) return kn
+    ? ["ಅಡಿಕೆ ಆಮದು ಎಷ್ಟು?", "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಉತ್ಪಾದನೆ ಎಷ್ಟು?", priceQuestions[3]]
+    : ["Arecanut imports in recent years", "Karnataka arecanut production in recent years", priceQuestions[3]];
+  return EXAMPLES[language].slice(0, 3);
+}
+
+const CITE = /(\[(?:S|D|N)\d+\])/g;
+const plain = (text: string) => text.replace(/\s*\[(?:S|D|N)\d+\]/g, "").trim();
+
+/** Answer text with its citation labels as small links to the source list below it. */
+function CitedText({ text, anchor }: { text: string; anchor: string }) {
+  return <>{text.split("\n").filter(Boolean).map((line, index) => <p key={index}>{line.split(CITE).map((part, at) => {
+    const ref = /^\[((?:S|D|N)\d+)\]$/.exec(part)?.[1];
+    return ref ? <a key={at} className="chat-cite" href={`#${anchor}-${ref}`}>{ref}</a> : <span key={at}>{part}</span>;
+  })}</p>)}</>;
+}
+
+/** Shows a fresh answer a few words at a time; a restored or reduced-motion answer appears at once. */
+function useReveal(text: string, animate: boolean) {
+  const [shown, setShown] = useState(animate ? 0 : Infinity);
+  useEffect(() => {
+    if (!animate || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setShown(Infinity); return; }
+    const words = text.split(/(\s+)/).length;
+    const step = Math.max(2, Math.ceil(words / 45));
+    const timer = window.setInterval(() => setShown((count) => { if (count >= words) { window.clearInterval(timer); return Infinity; } return count + step; }), 22);
+    return () => window.clearInterval(timer);
+  }, [text, animate]);
+  return shown === Infinity ? text : text.split(/(\s+)/).slice(0, shown).join("");
+}
+
+const rupees = (value: number) => `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const isPrice = (fact: AssistantFact) => typeof fact.value === "number" && /INR/i.test(fact.unit ?? "") && /quintal/i.test(fact.unit ?? "");
+
+function Facts({ answer, t }: { answer: AssistantAnswer; t: Copy }) {
+  const [all, setAll] = useState(false);
+  const facts = answer.facts.filter((fact) => fact.tool !== "search_agricultural_documents");
+  const prices = facts.filter(isPrice);
+  const others = facts.filter((fact) => !isPrice(fact));
+  if (!facts.length) return null;
+  const shownPrices = all ? prices : prices.slice(0, 6);
+  return <>
+    {prices.length > 0 && <section className="chat-block" aria-label={t.rates}>
+      <h3>{t.rates}</h3>
+      <ul className="chat-rates">{shownPrices.map((fact, index) => <li key={`${fact.citation}-${index}`}>
+        <span className="chat-rate-label">{fact.label}</span>
+        <strong>{rupees(fact.value as number)}</strong>
+        <span className="chat-rate-meta">{fact.reporting_period ?? ""}{fact.source_name ? ` · ${fact.source_name}` : ""} <a className="chat-cite" href={`#${answer.interaction_id}-${fact.citation}`}>{fact.citation}</a></span>
+      </li>)}</ul>
+      {prices.length > 6 && <button type="button" className="chat-link-button" onClick={() => setAll(!all)}>{all ? "−" : `+${prices.length - 6}`}</button>}
+    </section>}
+    {others.length > 0 && <section className="chat-block" aria-label={t.figures}>
+      <h3>{t.figures}</h3>
+      <dl className="chat-figures">{others.slice(0, 12).map((fact, index) => <div key={`${fact.citation}-${index}`}>
+        <dt>{fact.label}{fact.reporting_period ? <small> · {fact.reporting_period}</small> : null}</dt>
+        <dd>{fact.value == null ? t.missing : typeof fact.value === "number" ? `${fact.value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}${fact.unit ? ` ${fact.unit}` : ""}` : `${fact.value}${fact.unit ? ` ${fact.unit}` : ""}`}
+          {" "}<a className="chat-cite" href={`#${answer.interaction_id}-${fact.citation}`}>{fact.citation}</a></dd>
+      </div>)}</dl>
+    </section>}
+  </>;
+}
+
+function HowMade({ answer, t }: { answer: AssistantAnswer; t: Copy }) {
+  const grounding = answer.interpretation.grounding;
+  const list = (title: string, items: string[]) => items.length ? <div><h4>{title}</h4><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></div> : null;
+  return <details className="chat-how">
+    <summary>{t.how}</summary>
+    <div className="chat-how-body">
+      <p>{t.llm[answer.llm.status]}</p>
+      {grounding?.removed_sentences ? <p>{t.removed(grounding.removed_sentences)}</p> : null}
+      {grounding?.attempts === 2 && grounding.status === "passed" ? <p>{t.retried}</p> : null}
+      {answer.follow_up && <p>{t.followUpRead}</p>}
+      {list(t.tools, answer.tools.map((tool) => `${tool.title}${tool.reporting_period ? ` · ${tool.reporting_period}` : ""}`))}
+      {list(t.assumptions, answer.assumptions)}
+      {list(t.uncertainty, answer.uncertainty)}
+      {list(t.limitations, answer.limitations)}
+      {grounding?.status === "failed" && grounding.reasons.length > 0 && <div lang="en"><h4>{t.rejectedBecause}</h4><ul>{grounding.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></div>}
+      <p className="chat-how-meta" lang="en">{answer.llm.model ? `${t.model}: ${answer.llm.model} · ` : ""}{t.time}: {(answer.duration_ms / 1000).toLocaleString("en-IN", { maximumFractionDigits: 1 })} s</p>
+    </div>
+  </details>;
+}
+
+function Feedback({ answer, t }: { answer: AssistantAnswer; t: Copy }) {
+  const [rating, setRating] = useState<"up" | "down" | null>(null);
+  const rate = (value: "up" | "down") => {
+    setRating(value);
+    void api.assistantFeedback(answer.interaction_id, value).catch(() => setRating(null));
+  };
+  return <span className="chat-feedback" role="group" aria-label={rating ? t.thanks : t.helpful}>
+    <button type="button" className="chat-icon-button" aria-pressed={rating === "up"} aria-label={t.helpful} title={t.helpful} onClick={() => rate("up")}><ThumbsUp size={16} aria-hidden="true" /></button>
+    <button type="button" className="chat-icon-button" aria-pressed={rating === "down"} aria-label={t.notHelpful} title={t.notHelpful} onClick={() => rate("down")}><ThumbsDown size={16} aria-hidden="true" /></button>
+    {rating && <span className="chat-feedback-thanks" role="status">{t.thanks}</span>}
+  </span>;
+}
+
+export function Answer({ question, answer, fresh, latest, onAsk }: { question: string; answer: AssistantAnswer; fresh: boolean; latest: boolean; onAsk: (text: string) => void }) {
+  const t = useCopy(COPY);
+  const { language } = useLanguage();
+  const text = useReveal(answer.interpretation.text, fresh);
+  const done = text === answer.interpretation.text;
+  const [copied, setCopied] = useState(false);
+  const anchor = answer.interaction_id;
+  const missing = !answer.facts.length && !answer.excerpts.length ? answer.missing : [];
+  const sharing = () => [`*${question}*`, "", plain(answer.interpretation.text), ...(answer.interpretation.data_dates ? ["", answer.interpretation.data_dates] : []), "", `${SHARE_INVITE}: ${window.location.origin}/assistant`].join("\n");
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(sharing()); setCopied(true); window.setTimeout(() => setCopied(false), 2000); } catch { /* The text stays selectable. */ }
+  };
+  return <article className="chat-answer" lang={answer.language} aria-label={t.assistant}>
+    <header className="chat-answer-head"><span className="chat-avatar" aria-hidden="true"><Sparkles size={15} /></span><strong>{t.assistant}</strong></header>
+    <div className="chat-text"><CitedText text={text} anchor={anchor} /></div>
+    {done && <>
+      {answer.interpretation.data_dates && <p className="chat-dates">{answer.interpretation.data_dates}</p>}
+      {missing.length > 0 && <ul className="chat-missing">{missing.map((item) => <li key={item}>{item}</li>)}</ul>}
+      <Facts answer={answer} t={t} />
+      {answer.citations.length > 0 && <section className="chat-block" aria-label={t.sources}>
+        <h3>{t.sources}</h3>
+        <ol className="chat-sources">{answer.citations.map((citation) => <li key={citation.ref} id={`${anchor}-${citation.ref}`}>
+          <span className="chat-cite chat-cite-static">{citation.ref}</span>
+          <span className="chat-source-text">{citation.url ? <a href={citation.url} target="_blank" rel="noopener noreferrer">{citation.label}<ExternalLink size={12} aria-hidden="true" /></a> : citation.label}
+            <small>{[citation.publisher, citation.reporting_period].filter(Boolean).join(" · ")}</small></span>
+        </li>)}</ol>
+      </section>}
+      <p className="chat-disclaimer">{answer.disclaimer}</p>
+      <footer className="chat-actions">
+        <button type="button" className="chat-icon-button chat-text-button" onClick={() => void copy()}>{copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}{copied ? t.copied : t.copy}</button>
+        <ShareButton labels={{ share: t.share, opening: t.shareOpening, shared: t.shareDone, whatsapp: t.shareWhatsapp }} ariaLabel={t.shareAria} title={question} message={sharing} />
+        <Feedback answer={answer} t={t} />
+      </footer>
+      <HowMade answer={answer} t={t} />
+      {latest && <nav className="chat-follow-ups" aria-label={t.followUps}>
+        <span>{t.followUps}</span>
+        {followUps(answer, language).map((item) => <button type="button" key={item} onClick={() => onAsk(item)}>{item}</button>)}
+      </nav>}
+    </>}
+  </article>;
+}
+
+function Thinking({ t }: { t: Copy }) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setStep((current) => Math.min(current + 1, t.thinking.length - 1)), 1700);
+    return () => window.clearInterval(timer);
+  }, [t]);
+  return <div className="chat-answer chat-thinking" role="status">
+    <header className="chat-answer-head"><span className="chat-avatar" aria-hidden="true"><Sparkles size={15} /></span><strong>{t.assistant}</strong></header>
+    <p><span className="chat-dots" aria-hidden="true"><i /><i /><i /></span><span key={step} className="chat-thinking-step">{t.thinking[step]}</span></p>
+    <div className="chat-skeleton" aria-hidden="true"><span /><span /><span /></div>
+  </div>;
+}
+
+type Turn = { id: string; question: string; answer?: AssistantAnswer; error?: string; pending?: boolean; fresh?: boolean; query: AssistantQuery };
+const STORE_KEY = "ani-assistant-conversation";
+const MAX_STORED = 12;
+
+function storedTurns(): Turn[] {
+  try {
+    const turns = JSON.parse(sessionStorage.getItem(STORE_KEY) ?? "[]") as Turn[];
+    return Array.isArray(turns) ? turns.filter((turn) => turn.answer).map((turn) => ({ ...turn, fresh: false })) : [];
+  } catch { return []; }
 }
 
 export function AssistantPage() {
   const t = useCopy(COPY);
-  const [question, setQuestion] = useState("");
-  // Answers follow the site's language toggle; the reader can still pick another language or detection for one question.
   const { language: siteLanguage } = useLanguage();
+  const [turns, setTurns] = useState<Turn[]>(storedTurns);
+  const [question, setQuestion] = useState("");
   const [language, setLanguage] = useState<"auto" | "en" | "kn">(siteLanguage);
   useEffect(() => setLanguage(siteLanguage), [siteLanguage]);
   const [useLlm, setUseLlm] = useState(true);
-  const [showCalculation, setShowCalculation] = useState(false);
   const [calculation, setCalculation] = useState<Record<string, string>>({});
-  const status = useQuery({ queryKey: ["assistant-status"], queryFn: api.assistantStatus, refetchInterval: 120_000 });
-  const ask = useMutation({ mutationFn: (query: AssistantQuery) => api.askAssistant(query) });
-  const answer = ask.data;
+  const [showCalculation, setShowCalculation] = useState(false);
+  const [announce, setAnnounce] = useState("");
+  const status = useQuery({ queryKey: ["assistant-status"], queryFn: api.assistantStatus, staleTime: 120_000 });
+  const input = useRef<HTMLTextAreaElement>(null);
+  const pending = turns.some((turn) => turn.pending);
+  // The question box grows with its text up to its CSS max-height, in browsers without field-sizing.
+  useEffect(() => {
+    const box = input.current;
+    if (!box) return;
+    box.style.height = "auto";
+    box.style.height = `${box.scrollHeight}px`;
+  }, [question]);
 
-  const submit = (text = question) => {
-    const trimmed = text.trim();
-    if (trimmed.length < 2) return;
-    const inputs: AssistantCalculation = {};
-    if (showCalculation) {
-      for (const key of CALCULATION_KEYS) {
-        const raw = calculation[key]?.trim();
-        if (raw) inputs[key] = Number(raw);
-      }
+  useEffect(() => {
+    try { sessionStorage.setItem(STORE_KEY, JSON.stringify(turns.filter((turn) => turn.answer).slice(-MAX_STORED).map(({ fresh: _fresh, ...turn }) => turn))); } catch { /* The conversation lasts until the page closes. */ }
+  }, [turns]);
+
+  /** Brings a question and its answer card to the top of the screen, above the composer. */
+  const showTurn = (id: string) => window.requestAnimationFrame(() => document.getElementById(`turn-${id}`)?.scrollIntoView({ block: "start", behavior: "smooth" }));
+
+  async function run(turn: Turn) {
+    try {
+      const answer = await api.askAssistant(turn.query);
+      setTurns((current) => current.map((item) => item.id === turn.id ? { ...item, answer, pending: false, fresh: true, error: undefined } : item));
+      setAnnounce(t.answerReady);
+      showTurn(turn.id);
+    } catch (error) {
+      setTurns((current) => current.map((item) => item.id === turn.id ? { ...item, pending: false, error: error instanceof Error ? error.message : t.failed } : item));
     }
-    ask.mutate({ question: trimmed, language, use_llm: useLlm, ...(Object.keys(inputs).length ? { calculation: inputs } : {}) });
+  }
+
+  function ask(text = question) {
+    const trimmed = text.trim();
+    if (trimmed.length < 2 || pending) return;
+    const inputs: AssistantCalculation = {};
+    if (showCalculation) for (const key of CALCULATION_KEYS) { const raw = calculation[key]?.trim(); if (raw) inputs[key] = Number(raw); }
+    const previous = [...turns].reverse().find((turn) => turn.answer)?.question;
+    const query: AssistantQuery = { question: trimmed, language, use_llm: useLlm, ...(Object.keys(inputs).length ? { calculation: inputs } : {}), ...(previous ? { context: { previous_question: previous } } : {}) };
+    const turn: Turn = { id: crypto.randomUUID(), question: trimmed, pending: true, query };
+    setTurns((current) => [...current, turn]);
+    setQuestion("");
+    setAnnounce("");
+    showTurn(turn.id);
+    void run(turn);
+  }
+
+  const retry = (turn: Turn) => {
+    setTurns((current) => current.map((item) => item.id === turn.id ? { ...item, pending: true, error: undefined } : item));
+    showTurn(turn.id);
+    void run(turn);
   };
+  const lastAnswered = [...turns].reverse().find((turn) => turn.answer)?.id;
 
-  const chat = status.data?.chat;
-  return <div className="page-stack">
-    <section className="page-heading"><div><h1>{t.title}</h1><p className="page-intro">{t.intro}</p></div></section>
+  return <div className="assistant-page" lang={siteLanguage}>
+    <header className="assistant-head">
+      <div><h1>{t.title}</h1><p>{t.intro}</p></div>
+      {turns.length > 0 && <button type="button" className="button-secondary assistant-new" disabled={pending} onClick={() => { setTurns([]); input.current?.focus(); }}><Plus size={16} aria-hidden="true" />{t.newChat}</button>}
+    </header>
 
-    {status.error ? <div className="data-disclosure">{t.statusUnavailable(status.error.message)}</div>
-      : status.data && <AboutData title={t.howMade}><p>{t.howMadeText}</p><p>
-        {t.model} <strong>{chat?.configured ? `${chat.provider} · ${chat.model}` : t.notConfigured}</strong>{chat?.reason ? ` (${chat.reason})` : ""} ·{" "}
-        {t.index} <strong>{t.indexValue(status.data.corpus.documents, status.data.corpus.chunks)}</strong> {t.embeddings(status.data.corpus.embedded_chunks, status.data.embedding.configured)} ·{" "}
-        {t.limit(status.data.rate_limit_per_hour, status.data.questions_retained)}
-      </p></AboutData>}
+    <div className="assistant-thread">
+      {!turns.length && <section className="assistant-welcome">
+        <span className="assistant-welcome-mark" aria-hidden="true"><Sparkles size={22} /></span>
+        <h2>{t.welcome}</h2><p>{t.welcomeHint}</p>
+        <div className="assistant-examples">{EXAMPLES[siteLanguage].map((example) => <button type="button" key={example} onClick={() => ask(example)}>{example}</button>)}</div>
+      </section>}
+      {turns.map((turn) => <div className="chat-turn" key={turn.id} id={`turn-${turn.id}`} aria-busy={turn.pending || undefined}>
+        <p className="chat-user" aria-label={t.you}>{turn.question}</p>
+        {turn.pending ? <Thinking t={t} />
+          : turn.error ? <div className="chat-answer chat-error" role="alert"><p>{t.failed}</p><button type="button" className="button-secondary" onClick={() => retry(turn)}>{t.retry}</button></div>
+          : turn.answer && <Answer question={turn.question} answer={turn.answer} fresh={Boolean(turn.fresh)} latest={turn.id === lastAnswered} onAsk={ask} />}
+      </div>)}
+      <p className="sr-only" role="status">{announce}</p>
+    </div>
 
-    <form className="panel table-panel" onSubmit={(event) => { event.preventDefault(); submit(); }}>
-      <div className="panel-heading"><div><h2>{t.ask}</h2><p>{t.askHint}</p></div></div>
-      <div className="calculator-grid calculator-grid-flush">
-        <label className="filter-control calculator-wide"><span>{t.question}</span>
-          <textarea required minLength={2} maxLength={1000} rows={3} value={question} disabled={ask.isPending} onChange={(event) => setQuestion(event.target.value)}
-            onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); submit(); } }} />
-        </label>
-        <label className="filter-control"><span>{t.answerLanguage}</span><select value={language} disabled={ask.isPending} onChange={(event) => setLanguage(event.target.value as typeof language)}>
-          <option value="auto">{t.detect}</option><option value="en" lang="en">English</option><option value="kn" lang="kn">ಕನ್ನಡ (Kannada)</option>
-        </select></label>
-        <label className="filter-control"><span>{t.explanation}</span><select value={useLlm ? "llm" : "rules"} disabled={ask.isPending} onChange={(event) => setUseLlm(event.target.value === "llm")}>
-          <option value="llm">{t.llmOption}</option><option value="rules">{t.rulesOption}</option>
-        </select></label>
-        <label className="filter-control"><span>{t.calculationInputs}</span><select value={showCalculation ? "yes" : "no"} disabled={ask.isPending} onChange={(event) => setShowCalculation(event.target.value === "yes")}>
-          <option value="no">{t.none}</option><option value="yes">{t.ownFigures}</option>
-        </select></label>
-        {showCalculation && CALCULATION_KEYS.map((key) => <label className="filter-control" key={key}><span>{t.fields[key]}</span>
-          <input type="number" step="any" min={0} value={calculation[key] ?? ""} disabled={ask.isPending} onChange={(event) => setCalculation((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
-        <div className="calculator-wide"><button className="button-primary" disabled={ask.isPending || question.trim().length < 2}>{ask.isPending ? t.collecting : t.submit}</button></div>
+    <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); ask(); }}>
+      <div className="assistant-input">
+        <textarea ref={input} rows={1} maxLength={1000} value={question} placeholder={t.placeholder} aria-label={t.placeholder}
+          onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); ask(); } }} />
+        <button className={`assistant-send${pending ? " is-busy" : ""}`} disabled={pending || question.trim().length < 2} aria-label={t.send} title={t.send}>
+          {pending ? <span className="assistant-spinner" aria-hidden="true" /> : <ArrowUp size={18} aria-hidden="true" />}</button>
       </div>
-      <div className="example-list"><span className="filter-label">{t.examples}</span> {EXAMPLES.map((example) => <button type="button" key={example.text} className="button-secondary example-chip" lang={example.language} disabled={ask.isPending}
-        onClick={() => { setQuestion(example.text); submit(example.text); }}>{example.text}</button>)}</div>
+      <details className="assistant-options">
+        <summary><SlidersHorizontal size={14} aria-hidden="true" />{t.options}</summary>
+        <div className="assistant-options-grid">
+          <label className="filter-control"><span>{t.answerLanguage}</span><select value={language} onChange={(event) => setLanguage(event.target.value as typeof language)}>
+            <option value="auto">{t.detect}</option><option value="en" lang="en">English</option><option value="kn" lang="kn">ಕನ್ನಡ</option></select></label>
+          <label className="filter-control"><span>{t.explanation}</span><select value={useLlm ? "llm" : "rules"} onChange={(event) => setUseLlm(event.target.value === "llm")}>
+            <option value="llm">{t.llmOption}</option><option value="rules">{t.rulesOption}</option></select></label>
+          <label className="assistant-check"><input type="checkbox" checked={showCalculation} onChange={(event) => setShowCalculation(event.target.checked)} />{t.calculationInputs}</label>
+          {showCalculation && CALCULATION_KEYS.map((key) => <label className="filter-control" key={key}><span>{t.fields[key]}</span>
+            <input type="number" step="any" min={0} inputMode="decimal" value={calculation[key] ?? ""} onChange={(event) => setCalculation((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
+        </div>
+      </details>
+      {status.data && <p className="assistant-foot">{t.footer(status.data.rate_limit_per_hour, status.data.questions_retained)}</p>}
     </form>
-
-    {ask.isPending && <LoadingState label={t.querying} />}
-    {ask.error && <ErrorState error={ask.error} onRetry={() => submit()} />}
-    {answer && !ask.isPending && <AnswerView answer={answer} />}
   </div>;
 }
 
-function AnswerView({ answer }: { answer: AssistantAnswer }) {
-  const t = useCopy(COPY);
-  const format = useFormat();
-  const grounding = answer.interpretation.grounding;
-  const formatValue = (value: number | string | null) => value == null ? t.unavailable : typeof value === "number" ? value.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : value;
-  return <>
-    <section className="panel table-panel" aria-label={t.interpretation}>
-      <div className="panel-heading"><div><h2>{answer.interpretation.generated_by === "llm" ? t.byModel : t.byRules}</h2>
-        <p>{t.llm[answer.llm.status]}{answer.llm.model ? ` · ${answer.llm.provider} ${answer.llm.model}` : ""}{grounding ? t.grounding(grounding.status) : ""} · {answer.duration_ms.toLocaleString("en-IN")} ms</p></div></div>
-      <div className="prose-block">
-        {answer.interpretation.data_dates && <p lang={answer.language}><strong>{answer.interpretation.data_dates}</strong></p>}
-        <p lang={answer.language} className="pre-wrap">{answer.interpretation.text}</p>
-        <p className="card-hint" lang={answer.language}>{answer.interpretation.note}</p>
-        {answer.llm.reason && answer.llm.status !== "used" && <p className="card-hint">{t.reason(answer.llm.reason)}</p>}
-        {grounding?.status === "failed" && <p className="card-hint">{t.rejected(grounding.reasons.join("; "))}</p>}
-        {answer.injection_flags.length > 0 && <p className="card-hint">{t.injection(answer.injection_flags.map(humanize).join(", "))}</p>}
-      </div>
-    </section>
-
-    {answer.facts.length ? <section className="panel table-panel" aria-label={t.facts}>
-      <div className="panel-heading"><div><h2>{t.facts}</h2><p>{t.factsHint}</p></div></div>
-      <div className="table-scroll" tabIndex={0} role="region" aria-label={t.factsTable}><table>
-        <thead><tr><th>{t.fact}</th><th>{t.value}</th><th>{t.unit}</th><th>{t.basis}</th><th>{t.reportingPeriod}</th><th>{t.source}</th><th>{t.note}</th></tr></thead>
-        <tbody>{answer.facts.map((fact, index) => <tr key={`${fact.citation}-${fact.label}-${index}`}>
-          <td>{fact.label}</td><td className="numeric">{formatValue(fact.value)}</td><td>{fact.unit ?? "—"}</td><td>{fact.basis ? humanize(fact.basis) : "—"}</td>
-          <td>{fact.reporting_period ?? "—"}</td><td><span className="source-tag">[{fact.citation}]</span></td><td className="cell-wrap">{fact.note ?? ""}</td>
-        </tr>)}</tbody>
-      </table></div>
-    </section> : <EmptyState title={t.noFacts}>{t.noFactsHint}</EmptyState>}
-
-    <section className="panel table-panel" aria-label={t.tools}>
-      <div className="panel-heading"><div><h2>{t.tools}</h2><p>{t.selection(t.planning[answer.planning] ?? t.planning.none)}{answer.planning_error ? t.plannerError(answer.planning_error) : ""}</p></div></div>
-      {answer.tools.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={t.toolsTable}><table>
-        <thead><tr><th>{t.tool}</th><th>{t.status}</th><th>{t.summary}</th><th>{t.reportingPeriod}</th></tr></thead>
-        <tbody>{answer.tools.map((tool, index) => <tr key={`${tool.tool}-${index}`}><td>{tool.title}</td><td>{humanize(tool.status)}</td><td className="cell-wrap">{tool.summary}</td><td>{tool.reporting_period ?? "—"}</td></tr>)}</tbody>
-      </table></div> : <div className="prose-block"><p>{t.noTool}</p></div>}
-    </section>
-
-    <List title={t.assumptions} items={answer.assumptions} />
-    <List title={t.uncertainty} items={answer.uncertainty} />
-    <List title={t.missing} items={answer.missing} />
-    <List title={t.limitations} items={answer.limitations} />
-
-    {answer.excerpts.length > 0 && <section className="panel table-panel" aria-label={t.excerpts}>
-      <div className="panel-heading"><div><h2>{t.excerpts}</h2><p>{t.excerptsHint}</p></div></div>
-      <div className="prose-block">{answer.excerpts.map((excerpt, index) => <blockquote key={`${excerpt.citation}-${index}`} className="excerpt">
-        <span className="source-tag">[{excerpt.citation}]</span> {excerpt.text}</blockquote>)}</div>
-    </section>}
-
-    {answer.citations.length > 0 && <section className="panel table-panel" aria-label={t.sources}>
-      <div className="panel-heading"><div><h2>{t.sources}</h2><p>{t.sourcesHint}</p></div></div>
-      <div className="table-scroll" tabIndex={0} role="region" aria-label={t.sourcesTable}><table>
-        <thead><tr><th>{t.ref}</th><th>{t.source}</th><th>{t.publisher}</th><th>{t.reportingPeriod}</th><th>{t.published}</th><th>{t.page}</th><th>{t.retrieved}</th></tr></thead>
-        <tbody>{answer.citations.map((citation) => <tr key={citation.ref}>
-          <td><span className="source-tag">[{citation.ref}]</span></td>
-          <td className="cell-wrap">{citation.url ? <a className="subtle-link" href={citation.url} target="_blank" rel="noopener noreferrer">{citation.label}</a> : citation.label}</td>
-          <td>{citation.publisher ?? "—"}</td><td>{citation.reporting_period ?? "—"}</td><td>{citation.publication_date ?? "—"}</td><td>{citation.page ?? "—"}</td>
-          <td>{citation.retrieved_at ? format.timestamp(citation.retrieved_at) : "—"}</td>
-        </tr>)}</tbody>
-      </table></div>
-    </section>}
-
-    <div className="data-disclosure" role="note" lang={answer.language}>{answer.disclaimer}</div>
-  </>;
-}
