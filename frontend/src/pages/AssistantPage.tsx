@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUp, ArrowUpRight, Check, ChevronDown, CloudSun, Copy, ExternalLink, IndianRupee, Plus, SlidersHorizontal, Sprout, ThumbsDown, ThumbsUp, type LucideIcon } from "lucide-react";
-import appIcon from "../assets/areca-pulse-app-icon.svg";
+/** The assistant's own mark ("Ask Areca Pulse"): the site's palm in a speech bubble. */
+import askIcon from "../assets/ask-areca-pulse.png";
 import { api } from "../services/api";
 import type { AssistantAnswer, AssistantCalculation, AssistantFact, AssistantQuery } from "../services/assistant";
 import { defineCopy, useCopy, useLanguage, type Language } from "../services/language";
 import { agmarknetVarietyName } from "../services/agmarknetVarieties";
 import { ShareButton } from "../components/ShareButton";
 import { SHARE_INVITE } from "../services/share";
+import { formatCalendarDate, formatCalendarMonth, formatPeriodKannada } from "../../../shared/dates";
 
 /** Starter questions by topic. Each one is routed to a tool by the assistant's classifier (see assistant.test.ts). */
 const TOPICS: { key: string; icon: LucideIcon; title: Record<Language, string>; questions: Record<Language, string[]> }[] = [
@@ -139,6 +141,38 @@ function useReveal(text: string, animate: boolean) {
   return shown === Infinity ? text : text.split(/(\s+)/).slice(0, shown).join("");
 }
 
+/** Kind-of-price words at the end of a server label, and how they read in Kannada. */
+const MEASURES: [RegExp, Record<Language, string>][] = [
+  [/\s*latest modal price$/i, { en: "latest modal", kn: "ಇತ್ತೀಚಿನ ಮೋಡಲ್ ದರ" }],
+  [/\s*arrival-weighted modal price$/i, { en: "arrival-weighted modal", kn: "ಆವಕ ಆಧಾರಿತ ಮೋಡಲ್ ದರ" }],
+  [/\s*modal price$/i, { en: "modal", kn: "ಮೋಡಲ್ ದರ" }],
+  [/\s*branch average$/i, { en: "branch average", kn: "ಶಾಖೆಯ ಸರಾಸರಿ" }],
+];
+
+/**
+ * A rate tile's title is the place and variety only ("AGMARKNET Yellapur APMC – Chali latest modal price" becomes
+ * "Yellapur APMC · Chali"); the source and kind of price move to the line under the figure. Variety and branch names
+ * keep the source's spelling. A label in another shape keeps its words, with " · " for the dash.
+ */
+export function rateLabel(label: string, source: string | null | undefined, language: Language) {
+  let text = label.trim();
+  const sourceWord = source?.split(/\s+/)[0];
+  if (sourceWord && text.startsWith(`${sourceWord} `)) text = text.slice(sourceWord.length + 1);
+  let measure: string | null = null;
+  const parts = text.split(/\s+–\s+/).map((part) => {
+    let cleaned = part.replace(/\s+\([^)]*\)$/, "");
+    for (const [pattern, words] of MEASURES) {
+      if (pattern.test(cleaned)) { measure = words[language]; cleaned = cleaned.replace(pattern, ""); break; }
+    }
+    return cleaned.trim();
+  }).filter(Boolean);
+  const title = parts.join(" · ");
+  return { title: title.charAt(0).toUpperCase() + title.slice(1), measure };
+}
+
+const periodText = (period: string | null, language: Language) => !period ? null
+  : language === "kn" ? formatPeriodKannada(period) : /^\d{4}-\d{2}-\d{2}$/.test(period) ? formatCalendarDate(period) : /^\d{4}-\d{2}$/.test(period) ? formatCalendarMonth(period) : period;
+
 const rupees = (value: number) => `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const isPrice = (fact: AssistantFact) => typeof fact.value === "number" && /INR/i.test(fact.unit ?? "") && /quintal/i.test(fact.unit ?? "");
 
@@ -159,7 +193,7 @@ export function PriceDates({ text }: { text: string }) {
   </div>;
 }
 
-function Facts({ answer, t }: { answer: AssistantAnswer; t: Copy }) {
+function Facts({ answer, t, language }: { answer: AssistantAnswer; t: Copy; language: Language }) {
   const [all, setAll] = useState(false);
   const facts = answer.facts.filter((fact) => fact.tool !== "search_agricultural_documents");
   const prices = facts.filter(isPrice);
@@ -169,11 +203,15 @@ function Facts({ answer, t }: { answer: AssistantAnswer; t: Copy }) {
   return <>
     {prices.length > 0 && <section className="chat-block" aria-label={t.rates}>
       <h3>{t.rates}</h3>
-      <ul className="chat-rates">{shownPrices.map((fact, index) => <li key={`${fact.citation}-${index}`}>
-        <span className="chat-rate-label">{fact.label}</span>
-        <strong>{rupees(fact.value as number)}</strong>
-        <span className="chat-rate-meta">{fact.reporting_period ?? ""}{fact.source_name ? ` · ${fact.source_name}` : ""} <CiteLink anchor={answer.interaction_id} refId={fact.citation} /></span>
-      </li>)}</ul>
+      <ul className="chat-rates">{shownPrices.map((fact, index) => {
+        const { title, measure } = rateLabel(fact.label, fact.source_name, language);
+        const meta = [fact.source_name, measure, periodText(fact.reporting_period, language)].filter(Boolean).join(" · ");
+        return <li key={`${fact.citation}-${index}`}>
+          <span className="chat-rate-label">{title}</span>
+          <strong>{rupees(fact.value as number)}</strong>
+          <span className="chat-rate-meta">{meta} <CiteLink anchor={answer.interaction_id} refId={fact.citation} /></span>
+        </li>;
+      })}</ul>
       {prices.length > 6 && <button type="button" className="chat-link-button" onClick={() => setAll(!all)}>{all ? "−" : `+${prices.length - 6}`}</button>}
     </section>}
     {others.length > 0 && <section className="chat-block" aria-label={t.figures}>
@@ -233,12 +271,12 @@ export function Answer({ question, answer, fresh, latest, onAsk }: { question: s
     try { await navigator.clipboard.writeText(sharing()); setCopied(true); window.setTimeout(() => setCopied(false), 2000); } catch { /* The text stays selectable. */ }
   };
   return <article className={`chat-answer${latest ? " is-latest" : ""}`} lang={answer.language} aria-label={t.assistant}>
-    <header className="chat-answer-head"><img className="chat-avatar" src={appIcon} alt="" width={26} height={26} /><strong>{t.assistant}</strong></header>
+    <header className="chat-answer-head"><img className="chat-avatar" src={askIcon} alt="" width={26} height={26} /><strong>{t.assistant}</strong></header>
     <div className="chat-text"><CitedText text={text} anchor={anchor} /></div>
     {done && <>
       {answer.interpretation.data_dates && <PriceDates text={answer.interpretation.data_dates} />}
       {missing.length > 0 && <ul className="chat-missing">{missing.map((item) => <li key={item}>{item}</li>)}</ul>}
-      <Facts answer={answer} t={t} />
+      <Facts answer={answer} t={t} language={language} />
       {answer.citations.length > 0 && <details className="chat-sources-box">
         <summary><span>{t.sourceCount(answer.citations.length)}</span>
           <span className="chat-sources-peek" aria-hidden="true">{answer.citations.slice(0, 4).map((citation) => <i key={citation.ref}>{citation.ref}</i>)}</span>
@@ -271,7 +309,7 @@ function Thinking({ t }: { t: Copy }) {
     return () => window.clearInterval(timer);
   }, [t]);
   return <div className="chat-answer chat-thinking" role="status">
-    <header className="chat-answer-head"><img className="chat-avatar" src={appIcon} alt="" width={26} height={26} /><strong>{t.assistant}</strong></header>
+    <header className="chat-answer-head"><img className="chat-avatar" src={askIcon} alt="" width={26} height={26} /><strong>{t.assistant}</strong></header>
     <p><span className="chat-dots" aria-hidden="true"><i /><i /><i /></span><span key={step} className="chat-thinking-step">{t.thinking[step]}</span></p>
     <div className="chat-skeleton" aria-hidden="true"><span /><span /><span /></div>
   </div>;
@@ -354,7 +392,10 @@ export function AssistantPage() {
 
   return <div className={`assistant-page${turns.length ? " has-turns" : ""}`} lang={siteLanguage}>
     <header className="assistant-head">
-      <div className="assistant-brand"><h1>{t.title}</h1><p>{t.intro}</p></div>
+      <div className="assistant-brand">
+        <img src={askIcon} alt="" width={52} height={52} className="assistant-brand-mark" />
+        <div><h1>{t.title}</h1><p>{t.intro}</p></div>
+      </div>
       {turns.length > 0 && <button type="button" className="button-secondary assistant-new" aria-label={t.newChat} title={t.newChat} disabled={pending} onClick={() => { setTurns([]); input.current?.focus(); }}><Plus size={16} aria-hidden="true" /><span className="assistant-new-label">{t.newChat}</span></button>}
     </header>
 
@@ -366,7 +407,9 @@ export function AssistantPage() {
           return <div className="assistant-topic" key={topic.key}>
             <h3><span className="assistant-topic-icon" aria-hidden="true"><Icon size={16} /></span>{topic.title[siteLanguage]}</h3>
             <ul>{topic.questions[siteLanguage].map((example) => <li key={example}><button type="button" onClick={() => ask(example)}>
-              <span>{example}</span><ArrowUpRight size={15} aria-hidden="true" /></button></li>)}</ul>
+              {/* On phones the topic headings are hidden and each question carries its topic's icon instead. */}
+              <span className="assistant-topic-q-icon" aria-hidden="true"><Icon size={15} /></span>
+              <span className="assistant-topic-q">{example}</span><ArrowUpRight size={15} aria-hidden="true" /></button></li>)}</ul>
           </div>;
         })}</div>
       </section>}

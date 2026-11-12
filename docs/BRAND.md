@@ -19,6 +19,7 @@ and price units remain alongside the data rather than in the sidebar.
 | `icon.svg` | Light sidebar lockup and mobile home link | `frontend/src/assets/areca-pulse-icon.svg` |
 | `app-icon.svg` | Dark mobile home link | `frontend/src/assets/areca-pulse-app-icon.svg` |
 | `favicon.svg` | Browser tab | `frontend/public/favicon.svg` |
+| Ask Areca Pulse mark (PNG, 160 px, transparent corners) | The assistant only: beside its page title and as the answer avatar on wider screens. The site's palm in a speech bubble, so it reads as part of Areca Pulse while saying "ask". Not a replacement for the site logo | `frontend/src/assets/ask-areca-pulse.png` |
 | `app-icon` (PNG export) | iOS home-screen icon | `frontend/public/apple-touch-icon.png` |
 | `logo-horizontal-light.svg` | Not shown in the app; for wide placements on light backgrounds | `docs/brand/` |
 | `logo-horizontal-dark.svg` | Reversed sidebar lockup in dark mode | `frontend/src/assets/areca-pulse-logo-dark.svg` |

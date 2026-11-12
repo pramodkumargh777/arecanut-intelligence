@@ -52,6 +52,10 @@ const COPY = defineCopy({
     paidOf: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count} ವರ್ಷ ಲಾಭ`,
     chartDescription: (month: string) => `${month} ತಿಂಗಳಿನಿಂದ 1–6 ತಿಂಗಳು ಕಾದಿದ್ದರೆ ಪ್ರತಿ ಹಿಂದಿನ ವರ್ಷದ ದರ ಬದಲಾವಣೆ, ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆಯೊಂದಿಗೆ`,
     legendPaid: "ಖರ್ಚು ಸರಿದೂಗಿದ ವರ್ಷ", legendNotPaid: "ಸರಿದೂಗದ ವರ್ಷ", legendNeeded: "ನಿಮ್ಮ ಖರ್ಚು ಸರಿದೂಗಲು ಬೇಕಾದ ಏರಿಕೆ", legendZone: "ಕಾಯುವುದು ಲಾಭವಾಗುವ ವಲಯ",
+    // Phone versions: the legend and column labels carry what the long chart note explains.
+    legendShort: { paid: "ಲಾಭ", notPaid: "ಲಾಭವಿಲ್ಲ", needed: "ಖರ್ಚಿನ ಗೆರೆ" },
+    monthsShort: (n: number) => `${n} ತಿಂ.`, needsShort: (p: number) => `${p > 0 ? "+" : ""}${p}%`, paidOfShort: (count: number, years: number) => `${count}/${years}`,
+    summaryNoteLongShort: (since: number) => `${since}ರಿಂದ: ಎಪಿಎಂಸಿ ಮಧ್ಯಮ ದರ (AGMARKNET). ನಿಮ್ಮ ಶಾಖೆಯ ದರ ಬೇರೆ ಇರಬಹುದು.`,
     details: "ವಿವರಗಳು", detailsHint: "ವರ್ಷವಾರು ಪಟ್ಟಿ ಮತ್ತು ಮಧ್ಯಮ ಬದಲಾವಣೆ",
     scrollHint: "ಎಲ್ಲಾ ತಿಂಗಳ ವಿವರ ನೋಡಲು ಅಡ್ಡವಾಗಿ ಸ್ವೈಪ್ ಮಾಡಿ.",
     excluded: (months: string) => `ಬಿಟ್ಟಿರುವ ತಿಂಗಳು: ${months}. ಈ ತಿಂಗಳಲ್ಲಿ ದರ 20% ಕ್ಕಿಂತ ಹೆಚ್ಚು ಬದಲಾಗಿ ಮುಂದಿನ ತಿಂಗಳು ಮರಳಿ ಬಂದಿದೆ; ಇದು ದತ್ತಾಂಶದ ದೋಷ ಇರಬಹುದು.`,
@@ -89,6 +93,10 @@ const COPY = defineCopy({
     paidOf: (count: number, years: number) => `paid off ${count} of ${years}`,
     chartDescription: (month: string) => `Price change in each past year after waiting 1 to 6 months from ${month}, against the rise needed to cover your costs`,
     legendPaid: "Year waiting paid off", legendNotPaid: "Year it did not", legendNeeded: "Rise needed to cover your costs", legendZone: "Where waiting pays off",
+    // Phone versions: the legend and column labels carry what the long chart note explains.
+    legendShort: { paid: "Paid off", notPaid: "Did not", needed: "Cost line" },
+    monthsShort: (n: number) => `${n} mo`, needsShort: (p: number) => `${p > 0 ? "+" : ""}${p}%`, paidOfShort: (count: number, years: number) => `${count}/${years}`,
+    summaryNoteLongShort: (since: number) => `Since ${since}: median APMC price (AGMARKNET). Your branch's rate can differ.`,
     details: "Details", detailsHint: "Year-by-year table and median changes",
     scrollHint: "Swipe sideways to see all months.",
     excluded: (months: string) => `Left out: ${months}. The price moved more than 20% that month and came straight back the next, which may be a data problem.`,
@@ -183,16 +191,19 @@ export function SellOrHoldPage() {
         : copy.noSeason(season.first_year, varietyName)}</span></p>}
       <section className="rate-card hold-outcomes" aria-labelledby="hold-summary">
         <header><h2 id="hold-summary">{copy.summaryTitle(monthNames[startMonth - 1])}</h2></header>
-        <p className="rate-caption">{copy.chartNote} {long ? copy.summaryNoteLong(since) : copy.summaryNote}</p>
+        <p className="rate-caption"><span className="label-full">{copy.chartNote} {long ? copy.summaryNoteLong(since) : copy.summaryNote}</span>
+          <span className="label-short" aria-hidden="true">{long ? copy.summaryNoteLongShort(since) : copy.summaryNote}</span></p>
         <HoldOutcomeChart years={history.years} monthLabel={(month) => monthText(month, language)} description={copy.chartDescription(monthNames[startMonth - 1])}
-          neededLabel={copy.needsLine} paidLabel={copy.paid} notPaidLabel={copy.notPaid}
-          legend={{ paid: copy.legendPaid, notPaid: copy.legendNotPaid, needed: copy.legendNeeded, zone: copy.legendZone }}
+          neededLabel={copy.needsLine} neededShort={copy.needsShort} paidLabel={copy.paid} notPaidLabel={copy.notPaid}
+          legend={{ paid: copy.legendPaid, notPaid: copy.legendNotPaid, needed: copy.legendNeeded, zone: copy.legendZone }} legendShort={copy.legendShort}
           columns={HOLD_HORIZONS.map((months) => {
             const summary = history.summaries.find((item) => item.months === months)!;
             const needed = breakEven(months);
             const values = history.years.flatMap((year) => year.changes.filter((change) => change.months === months && change.percent !== null && !change.excluded).map((change) => change.percent!));
-            const covered = needed === null || summary.median_percent === null ? null : copy.paidOf(values.filter((value) => value >= needed).length, values.length);
-            return { months, label: copy.months(months), needed, covered };
+            const paidYears = needed === null ? 0 : values.filter((value) => value >= needed).length;
+            const covered = needed === null || summary.median_percent === null ? null : copy.paidOf(paidYears, values.length);
+            const coveredShort = needed === null || summary.median_percent === null ? null : copy.paidOfShort(paidYears, values.length);
+            return { months, label: copy.months(months), shortLabel: copy.monthsShort(months), needed, covered, coveredShort };
           })} />
       </section>
 

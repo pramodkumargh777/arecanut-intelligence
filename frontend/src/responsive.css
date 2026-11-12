@@ -497,3 +497,16 @@
   .growth-table th[scope="row"] { padding-right: 4px; }
   .growth-table tfoot th[scope="row"] { white-space: normal; max-width: 96px; line-height: 1.35; }
 }
+
+/* A label with a shorter phone version: the full words where they fit, the short ones on phones. Screen readers
+   always read the full label (the short copy is aria-hidden), so on phones the full one is only hidden visually. */
+.label-short { display: none; }
+@media (max-width: 640px) {
+  .label-full { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .label-short { display: inline; }
+}
+
+/* Sell or wait chart on phones: the shaded zone explains itself beside the cost line, so its legend item goes. */
+@media (max-width: 640px) {
+  .hold-key-zone-item { display: none !important; }
+}
