@@ -3,18 +3,21 @@ import brandIcon from "../assets/areca-pulse-icon.svg";
 import darkLogo from "../assets/areca-pulse-logo-dark.svg";
 import { defineCopy, useLanguage } from "../services/language";
 import { useTheme } from "../services/theme";
-import { BRAND, BrandName } from "../services/brand";
-
-/** WhatsApp number (country code, no plus) that receives reports of wrong prices or missing markets. */
-const REPORT_WHATSAPP = "918660862841";
+import { Mail } from "lucide-react";
+import { BRAND, BrandName, CONTACT } from "../services/brand";
 
 const COPY = defineCopy({
   en: {
     reportTitle: "Spotted a wrong price or a missing market?",
-    reportText: "Message us on WhatsApp. Reports from growers help keep every rate right.",
+    reportText: "Message us on WhatsApp or write to us. Reports from growers help keep every rate right.",
     reportButton: "Chat on WhatsApp",
     reportAria: "Report a wrong price or missing market on WhatsApp (opens WhatsApp)",
     reportMessage: (url: string) => `Hi Areca Pulse, I want to report a wrong price or missing market:\n\n\nPage: ${url}`,
+    emailButton: "Email us",
+    emailAria: `Report a wrong price or missing market by email to ${CONTACT.email}`,
+    emailSubject: "Wrong price or missing market",
+    contact: "Contact", emailLabel: "Email", whatsappLabel: "WhatsApp",
+    rights: "All rights reserved.",
     tagline: "Know the market. See the opportunity.",
     made: "Daily arecanut rates for growers in Karnataka, in Kannada and English.",
     rates: "Rates", tools: "Tools", sources: "Data sources",
@@ -26,10 +29,15 @@ const COPY = defineCopy({
   },
   kn: {
     reportTitle: "ದರ ತಪ್ಪಾಗಿದೆಯೇ ಅಥವಾ ಮಾರುಕಟ್ಟೆ ಕಾಣುತ್ತಿಲ್ಲವೇ?",
-    reportText: "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಸಂದೇಶ ಕಳುಹಿಸಿ. ಬೆಳೆಗಾರರ ಮಾಹಿತಿಯಿಂದ ಪ್ರತಿ ದರ ಸರಿಯಾಗಿರುತ್ತದೆ.",
+    reportText: "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಸಂದೇಶ ಕಳುಹಿಸಿ ಅಥವಾ ಇಮೇಲ್ ಮಾಡಿ. ಬೆಳೆಗಾರರ ಮಾಹಿತಿಯಿಂದ ಪ್ರತಿ ದರ ಸರಿಯಾಗಿರುತ್ತದೆ.",
     reportButton: "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ತಿಳಿಸಿ",
     reportAria: "ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆಯನ್ನು ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ತಿಳಿಸಿ (ವಾಟ್ಸಾಪ್ ತೆರೆಯುತ್ತದೆ)",
     reportMessage: (url: string) => `ನಮಸ್ಕಾರ ಅಡಿಕೆ ನಾಡಿ, ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆ ಬಗ್ಗೆ ತಿಳಿಸಲು ಬಯಸುತ್ತೇನೆ:\n\n\nಪುಟ: ${url}`,
+    emailButton: "ಇಮೇಲ್ ಮಾಡಿ",
+    emailAria: `ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆಯನ್ನು ${CONTACT.email} ಗೆ ಇಮೇಲ್ ಮೂಲಕ ತಿಳಿಸಿ`,
+    emailSubject: "ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆ",
+    contact: "ಸಂಪರ್ಕ", emailLabel: "ಇಮೇಲ್", whatsappLabel: "ವಾಟ್ಸಾಪ್",
+    rights: "ಎಲ್ಲ ಹಕ್ಕುಗಳನ್ನು ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ.",
     tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.",
     made: "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಬೆಳೆಗಾರರಿಗೆ ದಿನದ ಧಾರಣೆ, ಕನ್ನಡ ಮತ್ತು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ.",
     rates: "ದರಗಳು", tools: "ಸಾಧನಗಳು", sources: "ದತ್ತಾಂಶ ಮೂಲಗಳು",
@@ -59,14 +67,19 @@ export function SiteFooter() {
   const location = useLocation();
   // The page address goes into the message, so a report says which rates it is about.
   const page = `${typeof window === "undefined" ? "" : window.location.origin}${location.pathname}${location.search}`;
-  const whatsapp = `https://wa.me/${REPORT_WHATSAPP}?text=${encodeURIComponent(copy.reportMessage(page))}`;
+  const whatsapp = `https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(copy.reportMessage(page))}`;
+  const reportEmail = `mailto:${CONTACT.email}?subject=${encodeURIComponent(copy.emailSubject)}&body=${encodeURIComponent(copy.reportMessage(page))}`;
   return <footer className="site-footer" lang={language}>
     <div className="site-footer-inner">
       <section className="footer-report" aria-labelledby="footer-report-title">
         <span className="footer-report-badge" aria-hidden="true"><WhatsAppIcon size={22} /></span>
         <div className="footer-report-text"><h2 id="footer-report-title">{copy.reportTitle}</h2><p>{copy.reportText}</p></div>
-        <a className="footer-whatsapp" href={whatsapp} target="_blank" rel="noreferrer" aria-label={copy.reportAria}>
-          <WhatsAppIcon /><strong>{copy.reportButton}</strong></a>
+        <div className="footer-report-actions">
+          <a className="footer-whatsapp" href={whatsapp} target="_blank" rel="noreferrer" aria-label={copy.reportAria}>
+            <WhatsAppIcon /><strong>{copy.reportButton}</strong></a>
+          <a className="footer-email" href={reportEmail} aria-label={copy.emailAria}>
+            <Mail size={18} aria-hidden="true" /><strong>{copy.emailButton}</strong></a>
+        </div>
       </section>
 
       <div className="footer-grid">
@@ -77,6 +90,12 @@ export function SiteFooter() {
           </Link>
           <p className="footer-tagline">{copy.tagline}</p>
           <p className="footer-made">{copy.made}</p>
+          <address className="footer-contact" aria-label={copy.contact}>
+            <a href={`mailto:${CONTACT.email}`}><Mail size={16} aria-hidden="true" />
+              <span className="sr-only">{copy.emailLabel}: </span><span translate="no" lang="en">{CONTACT.email}</span></a>
+            <a href={`https://wa.me/${CONTACT.whatsapp}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={16} />
+              <span className="sr-only">{copy.whatsappLabel}: </span><span translate="no" lang="en">{CONTACT.whatsappDisplay}</span></a>
+          </address>
         </div>
         <nav className="footer-column" aria-labelledby="footer-rates"><h2 id="footer-rates">{copy.rates}</h2>
           <ul>{RATE_LINKS.map((to) => <li key={to}><Link to={to}>{copy.links[to]}</Link></li>)}</ul></nav>
@@ -88,8 +107,8 @@ export function SiteFooter() {
 
       <p className="footer-disclaimer">{copy.disclaimer}</p>
       <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} {BRAND[language].name}</span>
-        <span>{copy.region}</span>
+        <span>© {new Date().getFullYear()} {BRAND[language].name}. {copy.rights}</span>
+        <span className="footer-bottom-meta"><span translate="no" lang="en">{CONTACT.domain}</span><span aria-hidden="true">·</span><span>{copy.region}</span></span>
       </div>
     </div>
   </footer>;

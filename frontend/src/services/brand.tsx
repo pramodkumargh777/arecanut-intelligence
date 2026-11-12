@@ -9,7 +9,16 @@ export const BRAND: Record<Language, { name: string; descriptor: string }> = {
   kn: { name: "ಅಡಿಕೆ ನಾಡಿ", descriptor: "ಧಾರಣೆ, ಏರಿಳಿತ, ಸುದ್ದಿ" },
 };
 
-export const brandLabel = (language: Language) => `${BRAND[language].name} · ${BRAND[language].descriptor}`;
+/** Public contact details, shown in the footer. index.html's structured data and security.txt (vite.config.ts) repeat the email. */
+export const CONTACT = {
+  email: "contact@adikenaadi.com",
+  /** Country code and number without the plus, as wa.me expects. */
+  whatsapp: "918660862841",
+  whatsappDisplay: "+91 86608 62841",
+  domain: "adikenaadi.com",
+} as const;
+
+export const brandLabel =(language: Language) => `${BRAND[language].name} · ${BRAND[language].descriptor}`;
 
 /** The two-tone wordmark: the second word carries the leaf accent. */
 export function BrandName() {

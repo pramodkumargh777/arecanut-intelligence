@@ -30,6 +30,8 @@ export function App() {
       <AppErrorBoundary><Routes>
         <Route element={<AppShell />}>
           <Route index element={<Suspense fallback={<LoadingState />}><HomePage /></Suspense>} />
+          {/* The same rates screen at an address of its own per variety, for search engines and shared links. */}
+          <Route path="variety/:key" element={<Suspense fallback={<LoadingState />}><HomePage /></Suspense>} />
           <Route path="sell-or-hold" element={<Suspense fallback={<LoadingState />}><SellOrHoldPage /></Suspense>} />
           <Route path="overview" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<OverviewPage />} /></Suspense>} />
           <Route path="prices" element={<Suspense fallback={<LoadingState />}><MarketDataPage official={<PricesPage />} /></Suspense>} />

@@ -4,6 +4,7 @@ import { marketFeeds, routeAvailable } from "../../../shared/commodities";
 import { commodityName, useCommodity } from "../services/commodity";
 import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
 import { BRAND, brandLabel, BrandName } from "../services/brand";
+import { seoPage, varietyFromPath } from "../services/seo-pages";
 import { CommodityGate } from "./CommodityGate";
 import { MarketSearch } from "./MarketSearch";
 import { SiteFooter } from "./SiteFooter";
@@ -95,9 +96,11 @@ export function AppShell() {
   const sidebar = useRef<HTMLElement>(null);
   const mainColumn = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
-  const currentItem = navigation.find((item) => item.to === location.pathname || (item.to === "/intelligence" && location.pathname.startsWith("/intelligence/")));
+  // A variety page (/variety/rashi) is the rates page at another address.
+  const ratesPage = location.pathname === "/" || Boolean(varietyFromPath(location.pathname));
+  const currentItem = navigation.find((item) => (item.to === "/" ? ratesPage : item.to === location.pathname) || (item.to === "/intelligence" && location.pathname.startsWith("/intelligence/")));
   const currentPage = currentItem ? (language === "kn" ? currentItem.kn : currentItem.label) : copy.notFound;
-  const growerPage = GROWER_PAGES.includes(location.pathname);
+  const growerPage = ratesPage || GROWER_PAGES.includes(location.pathname);
   // The prices page has its own search box, so the top-bar one would be a second control for the same thing.
   const showTopSearch = location.pathname !== "/prices";
   const marketParams = new URLSearchParams(location.search);
@@ -131,9 +134,15 @@ export function AppShell() {
     navigate(`${location.pathname}${params.toString() ? `?${params}` : ""}`);
   }
 
+  // Search engines read the page after scripts run, so the title, description and canonical address follow the page
+  // and the language. Pages without their own search text keep the plain "page · site" title.
   useEffect(() => {
-    document.title = `${currentPage} · ${BRAND[language].name}`;
-  }, [currentPage, language]);
+    const seo = seoPage(location.pathname)?.[language];
+    document.title = seo?.title ?? `${currentPage} · ${BRAND[language].name}`;
+    if (seo) document.querySelector('meta[name="description"]')?.setAttribute("content", seo.description);
+    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (canonical) canonical.href = `${new URL(canonical.href).origin}${location.pathname}`;
+  }, [currentPage, language, location.pathname]);
 
   // Private pages, and addresses that match no page, are kept out of search results.
   const searchable = Boolean(currentItem) && !PRIVATE_PAGES.includes(location.pathname);
@@ -212,7 +221,7 @@ export function AppShell() {
               // The reason is visible as a badge and spoken in full, not only in a hover tooltip that touch and screen-reader users miss.
               return <NavLink key={to} to={["/overview", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)}
                 // A collapsed menu shows icons only, so the name appears on hover; screen readers still read the hidden label.
-                title={collapsed ? `${language === "kn" ? kn : label}${available ? "" : ` · ${unavailableText}`}` : available ? undefined : unavailableText} className={({ isActive }) => `nav-link ${isActive ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
+                title={collapsed ? `${language === "kn" ? kn : label}${available ? "" : ` · ${unavailableText}`}` : available ? undefined : unavailableText} className={({ isActive }) => `nav-link ${isActive || (to === "/" && ratesPage) ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
                 <Icon size={15} strokeWidth={1.8} /><span lang={language}>{language === "kn" ? kn : label}</span>
                 {!available && <><span className="nav-badge" aria-hidden="true">{copy.noSource}</span><span className="sr-only">({unavailableText})</span></>}
               </NavLink>;
