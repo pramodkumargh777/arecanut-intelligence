@@ -1013,3 +1013,17 @@ describe("crop-practice questions reach the documents", () => {
     expect(classifyQuestion("Arecanut husk price today").tools).not.toContain("search_agricultural_documents");
   });
 });
+
+describe("prices and dates written the way growers read them", () => {
+  const facts = [{ label: "TSS Sirsi – RASHI", value: 45274, unit: "INR/quintal", basis: "COOPERATIVE_TENDER_AVERAGE", reporting_period: "2026-11-06", source_key: "t", source_name: "TSS" }];
+  const evidence = ["- TSS Sirsi – RASHI: 45,274 INR/quintal; basis COOPERATIVE_TENDER_AVERAGE; period 2026-11-06 [S1]"];
+
+  it("accepts ₹ amounts per quintal and day-month-year dates, in English and Kannada", () => {
+    expect(checkGrounding("TSS Rashi at Sirsi was ₹45,274 per quintal, reported on 6 Nov 2026 [S1].", evidence, ["S1"], facts).status).toBe("passed");
+    expect(checkGrounding("ಶಿರಸಿಯಲ್ಲಿ TSS Rashi ದರ ಕ್ವಿಂಟಾಲ್‌ಗೆ ₹45,274, 6 ನವೆಂಬರ್ 2026 ರಂದು ವರದಿಯಾಗಿದೆ [S1].", evidence, ["S1"], facts).status).toBe("passed");
+  });
+
+  it("still rejects the same price under a wrong date", () => {
+    expect(checkGrounding("TSS Rashi at Sirsi was ₹45,274 per quintal, reported on 9 Nov 2026 [S1].", evidence, ["S1"], facts).status).toBe("failed");
+  });
+});

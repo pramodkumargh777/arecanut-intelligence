@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUp, Check, Copy, ExternalLink, Plus, SlidersHorizontal, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Check, ChevronDown, CloudSun, Copy, ExternalLink, IndianRupee, Plus, SlidersHorizontal, Sprout, ThumbsDown, ThumbsUp, type LucideIcon } from "lucide-react";
+import appIcon from "../assets/areca-pulse-app-icon.svg";
 import { api } from "../services/api";
 import type { AssistantAnswer, AssistantCalculation, AssistantFact, AssistantQuery } from "../services/assistant";
 import { defineCopy, useCopy, useLanguage, type Language } from "../services/language";
@@ -8,10 +9,18 @@ import { agmarknetVarietyName } from "../services/agmarknetVarieties";
 import { ShareButton } from "../components/ShareButton";
 import { SHARE_INVITE } from "../services/share";
 
-const EXAMPLES: Record<Language, string[]> = {
-  kn: ["ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?", "ಚಾಲಿ ದರವನ್ನು ಮಾರುಕಟ್ಟೆಗಳಲ್ಲಿ ಹೋಲಿಸಿ", "ರಾಶಿ ಈಗ ಮಾರಬೇಕೇ ಕಾಯಬೇಕೇ?", "ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಉತ್ಪಾದನೆ ಎಷ್ಟು?", "ಶಿರಸಿಯಲ್ಲಿ ಹವಾಮಾನ ಹೇಗಿದೆ?"],
-  en: ["What is the latest Rashi price?", "Compare Chali prices across markets", "Should I sell Rashi now or wait?", "How to manage koleroga (Mahali)?", "Karnataka arecanut production in recent years", "Weather in Sirsi"],
-};
+/** Starter questions by topic. Each one is routed to a tool by the assistant's classifier (see assistant.test.ts). */
+const TOPICS: { key: string; icon: LucideIcon; title: Record<Language, string>; questions: Record<Language, string[]> }[] = [
+  { key: "prices", icon: IndianRupee, title: { en: "Prices", kn: "ದರಗಳು" }, questions: {
+    en: ["What is the latest Rashi price?", "Compare Chali prices across markets", "Should I sell Rashi now or wait?"],
+    kn: ["ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?", "ಚಾಲಿ ದರವನ್ನು ಮಾರುಕಟ್ಟೆಗಳಲ್ಲಿ ಹೋಲಿಸಿ", "ರಾಶಿ ಈಗ ಮಾರಬೇಕೇ ಕಾಯಬೇಕೇ?"] } },
+  { key: "crop", icon: Sprout, title: { en: "Crop care", kn: "ಬೆಳೆ ಆರೈಕೆ" }, questions: {
+    en: ["How to manage koleroga (Mahali)?", "How to manage yellow leaf disease?", "How to prepare Bordeaux mixture?"],
+    kn: ["ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", "ಹಳದಿ ಎಲೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", "ಬೋರ್ಡೋ ದ್ರಾವಣ ತಯಾರಿಕೆ ಹೇಗೆ?"] } },
+  { key: "market", icon: CloudSun, title: { en: "Markets & weather", kn: "ಮಾರುಕಟ್ಟೆ ಮತ್ತು ಹವಾಮಾನ" }, questions: {
+    en: ["Karnataka arecanut production in recent years", "Arecanut imports in recent years", "Weather in Sirsi"],
+    kn: ["ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಉತ್ಪಾದನೆ ಎಷ್ಟು?", "ಅಡಿಕೆ ಆಮದು ಎಷ್ಟು?", "ಶಿರಸಿಯಲ್ಲಿ ಹವಾಮಾನ ಹೇಗಿದೆ?"] } },
+];
 
 const CALCULATION_KEYS = ["price", "quantity_quintals", "commission_percent", "transport_cost", "other_selling_cost", "hold_days", "storage_cost", "annual_finance_percent", "weight_loss_percent", "scenario_price"] as const;
 type CalculationKey = typeof CALCULATION_KEYS[number];
@@ -19,15 +28,15 @@ type CalculationKey = typeof CALCULATION_KEYS[number];
 const COPY = defineCopy({
   en: {
     title: "Ask Areca Pulse", intro: "Prices, markets, crop care and weather, answered from verified sources. Every figure is cited.",
-    newChat: "New conversation", placeholder: "Ask about prices, markets, diseases or weather…", send: "Send", options: "Options",
+    newChat: "New conversation", placeholder: "Ask about prices, crops or weather…", send: "Send", options: "Options",
     answerLanguage: "Answer language", detect: "Detect from question", explanation: "Explanation", llmOption: "Written by the assistant (checked)", rulesOption: "Data only",
     calculationInputs: "My own figures for a calculation", fields: { price: "Sale price (₹/quintal)", quantity_quintals: "Quantity (quintals)", commission_percent: "Commission (%)", transport_cost: "Transport cost (₹ total)",
       other_selling_cost: "Other selling cost (₹ total)", hold_days: "Hold period (days)", storage_cost: "Storage cost (₹ total)", annual_finance_percent: "Annual interest (%)",
       weight_loss_percent: "Weight loss while holding (%)", scenario_price: "Your expected future price (₹/quintal)" } as Record<CalculationKey, string>,
-    welcome: "What would you like to know?", welcomeHint: "Ask in Kannada or English. Answers use Areca Pulse's own rates and published research, and say where each figure comes from.",
+    tryAsking: "Try asking",
     thinking: ["Checking the latest rates…", "Reading the research documents…", "Writing the answer…", "Checking every figure…"],
     you: "You", assistant: "Areca Pulse", failed: "The answer could not be fetched.", retry: "Try again",
-    rates: "Rates in this answer", figures: "Figures", sources: "Sources", page: "p.", missing: "Not available",
+    rates: "Rates in this answer", figures: "Figures", sources: "Sources", sourceCount: (count: number) => `Sources · ${count}`, page: "p.", missing: "Not available",
     copy: "Copy", copied: "Copied", share: "Share", shareOpening: "Opening…", shareDone: "Shared", shareWhatsapp: "WhatsApp opened", shareAria: "Share this answer",
     helpful: "Helpful", notHelpful: "Not helpful", thanks: "Thanks for the feedback",
     followUps: "Ask next", followUpRead: "Read with your previous question",
@@ -44,15 +53,15 @@ const COPY = defineCopy({
   },
   kn: {
     title: "ಅಡಿಕೆ ನಾಡಿಯನ್ನು ಕೇಳಿ", intro: "ದರ, ಮಾರುಕಟ್ಟೆ, ಬೆಳೆ ಆರೈಕೆ ಮತ್ತು ಹವಾಮಾನ: ಪರಿಶೀಲಿತ ಮೂಲಗಳಿಂದ ಉತ್ತರ. ಪ್ರತಿ ಅಂಕಿಗೂ ಮೂಲ ಇದೆ.",
-    newChat: "ಹೊಸ ಸಂಭಾಷಣೆ", placeholder: "ದರ, ಮಾರುಕಟ್ಟೆ, ರೋಗ ಅಥವಾ ಹವಾಮಾನದ ಬಗ್ಗೆ ಕೇಳಿ…", send: "ಕಳುಹಿಸಿ", options: "ಆಯ್ಕೆಗಳು",
+    newChat: "ಹೊಸ ಸಂಭಾಷಣೆ", placeholder: "ದರ, ಬೆಳೆ ಅಥವಾ ಹವಾಮಾನದ ಬಗ್ಗೆ ಕೇಳಿ…", send: "ಕಳುಹಿಸಿ", options: "ಆಯ್ಕೆಗಳು",
     answerLanguage: "ಉತ್ತರದ ಭಾಷೆ", detect: "ಪ್ರಶ್ನೆಯಿಂದ ಗುರುತಿಸಿ", explanation: "ವಿವರಣೆ", llmOption: "ಸಹಾಯಕ ಬರೆದದ್ದು (ಪರಿಶೀಲಿತ)", rulesOption: "ದತ್ತಾಂಶ ಮಾತ್ರ",
     calculationInputs: "ಲೆಕ್ಕಕ್ಕೆ ನನ್ನ ಅಂಕಿಗಳು", fields: { price: "ಮಾರಾಟ ದರ (₹/ಕ್ವಿಂಟಾಲ್)", quantity_quintals: "ಪ್ರಮಾಣ (ಕ್ವಿಂಟಾಲ್)", commission_percent: "ಕಮಿಷನ್ (%)", transport_cost: "ಸಾಗಣೆ ವೆಚ್ಚ (ಒಟ್ಟು ₹)",
       other_selling_cost: "ಇತರ ಮಾರಾಟ ವೆಚ್ಚ (ಒಟ್ಟು ₹)", hold_days: "ಕಾಯುವ ಅವಧಿ (ದಿನಗಳು)", storage_cost: "ಸಂಗ್ರಹ ವೆಚ್ಚ (ಒಟ್ಟು ₹)", annual_finance_percent: "ವಾರ್ಷಿಕ ಬಡ್ಡಿ (%)",
       weight_loss_percent: "ಕಾಯುವಾಗ ತೂಕ ನಷ್ಟ (%)", scenario_price: "ನಿಮ್ಮ ನಿರೀಕ್ಷಿತ ಮುಂದಿನ ದರ (₹/ಕ್ವಿಂಟಾಲ್)" } as Record<CalculationKey, string>,
-    welcome: "ಏನು ತಿಳಿಯಬೇಕು?", welcomeHint: "ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ. ಉತ್ತರಗಳು ಅಡಿಕೆ ನಾಡಿಯ ದರಗಳು ಮತ್ತು ಪ್ರಕಟಿತ ಸಂಶೋಧನೆಯಿಂದ ಬರುತ್ತವೆ; ಪ್ರತಿ ಅಂಕಿಯ ಮೂಲವನ್ನು ತಿಳಿಸುತ್ತವೆ.",
+    tryAsking: "ಹೀಗೆ ಕೇಳಿ ನೋಡಿ",
     thinking: ["ಇತ್ತೀಚಿನ ದರಗಳನ್ನು ನೋಡಲಾಗುತ್ತಿದೆ…", "ಸಂಶೋಧನಾ ದಾಖಲೆಗಳನ್ನು ಓದಲಾಗುತ್ತಿದೆ…", "ಉತ್ತರ ಬರೆಯಲಾಗುತ್ತಿದೆ…", "ಪ್ರತಿ ಅಂಕಿಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…"],
     you: "ನೀವು", assistant: "ಅಡಿಕೆ ನಾಡಿ", failed: "ಉತ್ತರ ಪಡೆಯಲಾಗಲಿಲ್ಲ.", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-    rates: "ಈ ಉತ್ತರದ ದರಗಳು", figures: "ಅಂಕಿಗಳು", sources: "ಮೂಲಗಳು", page: "ಪು.", missing: "ಲಭ್ಯವಿಲ್ಲ",
+    rates: "ಈ ಉತ್ತರದ ದರಗಳು", figures: "ಅಂಕಿಗಳು", sources: "ಮೂಲಗಳು", sourceCount: (count: number) => `ಮೂಲಗಳು · ${count}`, page: "ಪು.", missing: "ಲಭ್ಯವಿಲ್ಲ",
     copy: "ನಕಲಿಸಿ", copied: "ನಕಲಿಸಲಾಗಿದೆ", share: "ಹಂಚಿಕೊಳ್ಳಿ", shareOpening: "ತೆರೆಯುತ್ತಿದೆ…", shareDone: "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ", shareWhatsapp: "ವಾಟ್ಸಾಪ್ ತೆರೆಯಿತು", shareAria: "ಈ ಉತ್ತರವನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
     helpful: "ಉಪಯುಕ್ತ", notHelpful: "ಉಪಯುಕ್ತವಲ್ಲ", thanks: "ಪ್ರತಿಕ್ರಿಯೆಗೆ ಧನ್ಯವಾದ",
     followUps: "ಮುಂದೆ ಕೇಳಿ", followUpRead: "ಹಿಂದಿನ ಪ್ರಶ್ನೆಯೊಂದಿಗೆ ಅರ್ಥೈಸಲಾಗಿದೆ",
@@ -93,17 +102,27 @@ export function followUps(answer: AssistantAnswer, language: Language): string[]
   if (tools.has("get_production_statistics") || tools.has("get_trade_statistics")) return kn
     ? ["ಅಡಿಕೆ ಆಮದು ಎಷ್ಟು?", "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಉತ್ಪಾದನೆ ಎಷ್ಟು?", priceQuestions[3]]
     : ["Arecanut imports in recent years", "Karnataka arecanut production in recent years", priceQuestions[3]];
-  return EXAMPLES[language].slice(0, 3);
+  return TOPICS.map((topic) => topic.questions[language][0]);
 }
 
 const CITE = /(\[(?:S|D|N)\d+\])/g;
+
+/** Sources are folded by default; following a citation unfolds them so the link lands on its source. */
+function openSource(id: string) {
+  const details = document.getElementById(id)?.closest("details");
+  if (details && !details.open) details.open = true;
+}
+function CiteLink({ anchor, refId }: { anchor: string; refId: string }) {
+  const id = `${anchor}-${refId}`;
+  return <a className="chat-cite" href={`#${id}`} onClick={() => openSource(id)}>{refId}</a>;
+}
 const plain = (text: string) => text.replace(/\s*\[(?:S|D|N)\d+\]/g, "").trim();
 
 /** Answer text with its citation labels as small links to the source list below it. */
 function CitedText({ text, anchor }: { text: string; anchor: string }) {
   return <>{text.split("\n").filter(Boolean).map((line, index) => <p key={index}>{line.split(CITE).map((part, at) => {
     const ref = /^\[((?:S|D|N)\d+)\]$/.exec(part)?.[1];
-    return ref ? <a key={at} className="chat-cite" href={`#${anchor}-${ref}`}>{ref}</a> : <span key={at}>{part}</span>;
+    return ref ? <CiteLink key={at} anchor={anchor} refId={ref} /> : <span key={at}>{part}</span>;
   })}</p>)}</>;
 }
 
@@ -123,6 +142,23 @@ function useReveal(text: string, animate: boolean) {
 const rupees = (value: number) => `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const isPrice = (fact: AssistantFact) => typeof fact.value === "number" && /INR/i.test(fact.unit ?? "") && /quintal/i.test(fact.unit ?? "");
 
+/**
+ * "Price dates: TSS 6 Nov 2026 (6 days old); MAMCOS 30 Oct 2026 – 3 Nov 2026 (9 days old)." as a label and one line
+ * per feed, so each feed's date can be read at a glance. Text in another shape is shown as it is.
+ */
+export function PriceDates({ text }: { text: string }) {
+  const match = /^([^:]+):\s*(.+?)\.?$/.exec(text.trim());
+  const items = match ? match[2].split(/;\s*/).filter(Boolean) : [];
+  if (!match || !items.length) return <p className="chat-dates"><span>{text}</span></p>;
+  return <div className="chat-dates">
+    <span className="chat-dates-label">{match[1]}</span>
+    <ul>{items.map((item) => {
+      const age = /\(([^)]*)\)\s*$/.exec(item);
+      return <li key={item}>{age ? <>{item.slice(0, age.index).trim()} <small>{age[1]}</small></> : item}</li>;
+    })}</ul>
+  </div>;
+}
+
 function Facts({ answer, t }: { answer: AssistantAnswer; t: Copy }) {
   const [all, setAll] = useState(false);
   const facts = answer.facts.filter((fact) => fact.tool !== "search_agricultural_documents");
@@ -136,7 +172,7 @@ function Facts({ answer, t }: { answer: AssistantAnswer; t: Copy }) {
       <ul className="chat-rates">{shownPrices.map((fact, index) => <li key={`${fact.citation}-${index}`}>
         <span className="chat-rate-label">{fact.label}</span>
         <strong>{rupees(fact.value as number)}</strong>
-        <span className="chat-rate-meta">{fact.reporting_period ?? ""}{fact.source_name ? ` · ${fact.source_name}` : ""} <a className="chat-cite" href={`#${answer.interaction_id}-${fact.citation}`}>{fact.citation}</a></span>
+        <span className="chat-rate-meta">{fact.reporting_period ?? ""}{fact.source_name ? ` · ${fact.source_name}` : ""} <CiteLink anchor={answer.interaction_id} refId={fact.citation} /></span>
       </li>)}</ul>
       {prices.length > 6 && <button type="button" className="chat-link-button" onClick={() => setAll(!all)}>{all ? "−" : `+${prices.length - 6}`}</button>}
     </section>}
@@ -145,7 +181,7 @@ function Facts({ answer, t }: { answer: AssistantAnswer; t: Copy }) {
       <dl className="chat-figures">{others.slice(0, 12).map((fact, index) => <div key={`${fact.citation}-${index}`}>
         <dt>{fact.label}{fact.reporting_period ? <small> · {fact.reporting_period}</small> : null}</dt>
         <dd>{fact.value == null ? t.missing : typeof fact.value === "number" ? `${fact.value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}${fact.unit ? ` ${fact.unit}` : ""}` : `${fact.value}${fact.unit ? ` ${fact.unit}` : ""}`}
-          {" "}<a className="chat-cite" href={`#${answer.interaction_id}-${fact.citation}`}>{fact.citation}</a></dd>
+          {" "}<CiteLink anchor={answer.interaction_id} refId={fact.citation} /></dd>
       </div>)}</dl>
     </section>}
   </>;
@@ -196,21 +232,23 @@ export function Answer({ question, answer, fresh, latest, onAsk }: { question: s
   const copy = async () => {
     try { await navigator.clipboard.writeText(sharing()); setCopied(true); window.setTimeout(() => setCopied(false), 2000); } catch { /* The text stays selectable. */ }
   };
-  return <article className="chat-answer" lang={answer.language} aria-label={t.assistant}>
-    <header className="chat-answer-head"><span className="chat-avatar" aria-hidden="true"><Sparkles size={15} /></span><strong>{t.assistant}</strong></header>
+  return <article className={`chat-answer${latest ? " is-latest" : ""}`} lang={answer.language} aria-label={t.assistant}>
+    <header className="chat-answer-head"><img className="chat-avatar" src={appIcon} alt="" width={26} height={26} /><strong>{t.assistant}</strong></header>
     <div className="chat-text"><CitedText text={text} anchor={anchor} /></div>
     {done && <>
-      {answer.interpretation.data_dates && <p className="chat-dates">{answer.interpretation.data_dates}</p>}
+      {answer.interpretation.data_dates && <PriceDates text={answer.interpretation.data_dates} />}
       {missing.length > 0 && <ul className="chat-missing">{missing.map((item) => <li key={item}>{item}</li>)}</ul>}
       <Facts answer={answer} t={t} />
-      {answer.citations.length > 0 && <section className="chat-block" aria-label={t.sources}>
-        <h3>{t.sources}</h3>
-        <ol className="chat-sources">{answer.citations.map((citation) => <li key={citation.ref} id={`${anchor}-${citation.ref}`}>
+      {answer.citations.length > 0 && <details className="chat-sources-box">
+        <summary><span>{t.sourceCount(answer.citations.length)}</span>
+          <span className="chat-sources-peek" aria-hidden="true">{answer.citations.slice(0, 4).map((citation) => <i key={citation.ref}>{citation.ref}</i>)}</span>
+          <ChevronDown size={16} aria-hidden="true" className="chat-sources-chevron" /></summary>
+        <ol className="chat-sources" aria-label={t.sources}>{answer.citations.map((citation) => <li key={citation.ref} id={`${anchor}-${citation.ref}`}>
           <span className="chat-cite chat-cite-static">{citation.ref}</span>
           <span className="chat-source-text">{citation.url ? <a href={citation.url} target="_blank" rel="noopener noreferrer">{citation.label}<ExternalLink size={12} aria-hidden="true" /></a> : citation.label}
             <small>{[citation.publisher, citation.reporting_period].filter(Boolean).join(" · ")}</small></span>
         </li>)}</ol>
-      </section>}
+      </details>}
       <p className="chat-disclaimer">{answer.disclaimer}</p>
       <footer className="chat-actions">
         <button type="button" className="chat-icon-button chat-text-button" onClick={() => void copy()}>{copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}{copied ? t.copied : t.copy}</button>
@@ -233,7 +271,7 @@ function Thinking({ t }: { t: Copy }) {
     return () => window.clearInterval(timer);
   }, [t]);
   return <div className="chat-answer chat-thinking" role="status">
-    <header className="chat-answer-head"><span className="chat-avatar" aria-hidden="true"><Sparkles size={15} /></span><strong>{t.assistant}</strong></header>
+    <header className="chat-answer-head"><img className="chat-avatar" src={appIcon} alt="" width={26} height={26} /><strong>{t.assistant}</strong></header>
     <p><span className="chat-dots" aria-hidden="true"><i /><i /><i /></span><span key={step} className="chat-thinking-step">{t.thinking[step]}</span></p>
     <div className="chat-skeleton" aria-hidden="true"><span /><span /><span /></div>
   </div>;
@@ -301,6 +339,8 @@ export function AssistantPage() {
     setTurns((current) => [...current, turn]);
     setQuestion("");
     setAnnounce("");
+    // On touch screens the keyboard would cover the answer that is loading, so it is closed.
+    if (window.matchMedia?.("(pointer: coarse)").matches) input.current?.blur();
     showTurn(turn.id);
     void run(turn);
   }
@@ -312,17 +352,23 @@ export function AssistantPage() {
   };
   const lastAnswered = [...turns].reverse().find((turn) => turn.answer)?.id;
 
-  return <div className="assistant-page" lang={siteLanguage}>
+  return <div className={`assistant-page${turns.length ? " has-turns" : ""}`} lang={siteLanguage}>
     <header className="assistant-head">
-      <div><h1>{t.title}</h1><p>{t.intro}</p></div>
-      {turns.length > 0 && <button type="button" className="button-secondary assistant-new" disabled={pending} onClick={() => { setTurns([]); input.current?.focus(); }}><Plus size={16} aria-hidden="true" />{t.newChat}</button>}
+      <div className="assistant-brand"><h1>{t.title}</h1><p>{t.intro}</p></div>
+      {turns.length > 0 && <button type="button" className="button-secondary assistant-new" aria-label={t.newChat} title={t.newChat} disabled={pending} onClick={() => { setTurns([]); input.current?.focus(); }}><Plus size={16} aria-hidden="true" /><span className="assistant-new-label">{t.newChat}</span></button>}
     </header>
 
     <div className="assistant-thread">
-      {!turns.length && <section className="assistant-welcome">
-        <span className="assistant-welcome-mark" aria-hidden="true"><Sparkles size={22} /></span>
-        <h2>{t.welcome}</h2><p>{t.welcomeHint}</p>
-        <div className="assistant-examples">{EXAMPLES[siteLanguage].map((example) => <button type="button" key={example} onClick={() => ask(example)}>{example}</button>)}</div>
+      {!turns.length && <section className="assistant-topics" aria-label={t.tryAsking}>
+        <h2>{t.tryAsking}</h2>
+        <div className="assistant-topic-grid">{TOPICS.map((topic) => {
+          const Icon = topic.icon;
+          return <div className="assistant-topic" key={topic.key}>
+            <h3><span className="assistant-topic-icon" aria-hidden="true"><Icon size={16} /></span>{topic.title[siteLanguage]}</h3>
+            <ul>{topic.questions[siteLanguage].map((example) => <li key={example}><button type="button" onClick={() => ask(example)}>
+              <span>{example}</span><ArrowUpRight size={15} aria-hidden="true" /></button></li>)}</ul>
+          </div>;
+        })}</div>
       </section>}
       {turns.map((turn) => <div className="chat-turn" key={turn.id} id={`turn-${turn.id}`} aria-busy={turn.pending || undefined}>
         <p className="chat-user" aria-label={t.you}>{turn.question}</p>

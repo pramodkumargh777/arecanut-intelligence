@@ -18,7 +18,7 @@ import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
 import { RollingNumber } from "../components/RollingNumber";
 import type { ModelEvaluation } from "../services/forecasting";
 import { TSS_VARIETIES } from "../../../shared/tss-varieties";
-import { Answer, AssistantPage, followUps } from "./AssistantPage";
+import { Answer, AssistantPage, followUps, PriceDates } from "./AssistantPage";
 import type { AssistantAnswer } from "../services/assistant";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { OverviewPage } from "./OverviewPage";
@@ -836,9 +836,14 @@ describe("assistant conversation", () => {
   it("opens on a welcome with examples in the reader's language", () => {
     state.language = "kn";
     const html = render(<AssistantPage />, "/assistant");
-    expect(html).toContain("ಏನು ತಿಳಿಯಬೇಕು?");
+    expect(html).toContain("ಹೀಗೆ ಕೇಳಿ ನೋಡಿ");
+    for (const topic of ["ದರಗಳು", "ಬೆಳೆ ಆರೈಕೆ", "ಮಾರುಕಟ್ಟೆ ಮತ್ತು ಹವಾಮಾನ"]) expect(html).toContain(topic);
     expect(html).toContain("ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?");
+    expect(html).toContain("ಬೋರ್ಡೋ ದ್ರಾವಣ ತಯಾರಿಕೆ ಹೇಗೆ?");
     expect(html).not.toContain("What is the latest Rashi price?");
+    // The top bar and sidebar carry the logo; the page title does not repeat it.
+    expect(html).not.toContain("assistant-brand-mark");
+    expect(html).toContain('<div class="assistant-brand"><h1>');
   });
 
   it("puts the answer first, with linked citations, a rate card and its source", () => {
@@ -846,7 +851,11 @@ describe("assistant conversation", () => {
     expect(html.indexOf("The latest TSS Chali average")).toBeLessThan(html.indexOf("₹41,430"));
     expect(html).toContain('href="#11111111-1111-4111-8111-111111111111-S1"');
     expect(html).toContain('id="11111111-1111-4111-8111-111111111111-S1"');
-    expect(html).toContain("Price dates: TSS 11 Nov 2026");
+    expect(html).toContain('<span class="chat-dates-label">Price dates</span>');
+    expect(html).toContain("<li>TSS 11 Nov 2026 <small>1 day old</small></li>");
+    // Sources start folded; the citation link unfolds them.
+    expect(html).toMatch(/<details class="chat-sources-box"><summary><span>Sources · 1<\/span>/);
+    expect(html).toMatch(/<img class="chat-avatar"/);
     // Document passages are cited as sources, never shown as figures.
     expect(html).not.toContain("garbled passage text");
   });
@@ -872,5 +881,19 @@ describe("assistant conversation", () => {
     const crop = answer({ tools: [{ tool: "search_agricultural_documents", status: "ok", title: "", summary: "", reporting_period: null, args: {} }] });
     expect(followUps(crop, "en")).toContain("How to manage yellow leaf disease?");
     expect(followUps(answer({ tools: [{ tool: "compare_markets", status: "ok", title: "", summary: "", reporting_period: null, args: {} }] }), "en")).not.toContain("Compare Chali prices across markets");
+  });
+});
+
+describe("price dates in an answer", () => {
+  it("shows one line per feed under a label, with the age set apart", () => {
+    const html = render(<PriceDates text="Price dates: AGMARKNET daily 6 Nov 2026 (6 days old); MAMCOS 30 Oct 2026 – 3 Nov 2026 (9 days old); AGMARKNET monthly Oct 2026." />);
+    expect(html).toContain('<span class="chat-dates-label">Price dates</span>');
+    expect(html.match(/<li>/g)).toHaveLength(3);
+    expect(html).toContain("<li>MAMCOS 30 Oct 2026 – 3 Nov 2026 <small>9 days old</small></li>");
+    expect(html).toContain("<li>AGMARKNET monthly Oct 2026</li>");
+  });
+
+  it("shows any other shape of text as it is", () => {
+    expect(render(<PriceDates text="No dates" />)).toContain("<span>No dates</span>");
   });
 });
