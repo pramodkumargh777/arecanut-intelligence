@@ -16,6 +16,12 @@ export const CONTACT = {
   whatsapp: "918660862841",
   whatsappDisplay: "+91 86608 62841",
   domain: "adikenaadi.com",
+  /** Official social accounts: shown in the footer and listed as sameAs in index.html's structured data. */
+  social: {
+    instagram: { handle: "adike_naadi", url: "https://www.instagram.com/adike_naadi/" },
+    x: { handle: "adikenaadi", url: "https://x.com/adikenaadi" },
+    youtube: { handle: "adikenaadi", url: "https://www.youtube.com/@adikenaadi" },
+  },
 } as const;
 
 export const brandLabel =(language: Language) => `${BRAND[language].name} · ${BRAND[language].descriptor}`;
