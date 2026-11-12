@@ -284,9 +284,6 @@
   /* Menu: full-size rows that are easy to tap. */
   .nav-link { min-height: 44px; padding: 8px 10px; font-size: 15px; gap: 12px; }
   .nav-advanced summary { min-height: 44px; font-size: 15px; }
-  .brand-dark-logo { display: none; }
-  .brand-lockup-phone { display: flex; }
-  .brand-lockup-phone .brand-icon { width: 40px; height: 31px; }
 
   /* Small links get enough height to tap. */
   .home-sections a { display: inline-flex; align-items: center; min-height: 36px; }

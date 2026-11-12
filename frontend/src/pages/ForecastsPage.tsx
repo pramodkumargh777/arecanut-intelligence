@@ -135,7 +135,7 @@ const COPY = defineCopy({
     calibration: "ಹೊಂದಾಣಿಕೆ", holdout: "ಪರೀಕ್ಷಾ ಅವಧಿ", nextInterval: (percent: number) => `ಮುಂದಿನ ತಿಂಗಳ ${percent}% ಶ್ರೇಣಿ`,
     backtestNote: (from: string, to: string, coverage: number, next: string) => `ಹೊಂದಾಣಿಕೆ ತಿಂಗಳುಗಳಲ್ಲಿ ಮೂಲ ಅಂದಾಜುಗಳಿಗೆ ಅಂಕ ನೀಡುವುದಿಲ್ಲ; ಅವು ಶ್ರೇಣಿಯ ಅಗಲವನ್ನು ನಿರ್ಧರಿಸುತ್ತವೆ. ಪರೀಕ್ಷಾ ಅವಧಿ ${from} – ${to}. ಅಳೆದ ಶ್ರೇಣಿ ವ್ಯಾಪ್ತಿ: ${coverage}%, ಗುರಿ 80%.${next} ಹಿಂದಿನ ದೋಷಗಳು ಮುಂದಿನ ನಿಖರತೆಯನ್ನು ಖಾತರಿಪಡಿಸುವುದಿಲ್ಲ.`,
     nextNote: (month: string, low: string, high: string) => ` ಮುಂದಿನ ತಿಂಗಳ (${month}) ಶ್ರೇಣಿ: ${low}–${high}.`,
-    backtestSource: (variety: string) => `AGMARKNET ತಿಂಗಳ ವರದಿ · ${variety} · Areca Pulse ಹಳೆಯ ಮೂಲ ಅಂದಾಜು ಮೌಲ್ಯಮಾಪನ`,
+    backtestSource: (variety: string) => `AGMARKNET ತಿಂಗಳ ವರದಿ · ${variety} · ಅಡಿಕೆ ನಾಡಿ ಹಳೆಯ ಮೂಲ ಅಂದಾಜು ಮೌಲ್ಯಮಾಪನ`,
     errorTitle: "ಪರೀಕ್ಷಾ ಅವಧಿಯ ಹಿಂದಿನ ದೋಷ", errorHint: (model: string) => `ಪ್ರತಿ ಪರೀಕ್ಷಾ ತಿಂಗಳ ದೋಷ · ಆಯ್ದ ಮಾದರಿ (${model}) ಮತ್ತು ಕೊನೆಯ ಮೌಲ್ಯದ ಮಾನದಂಡ`,
     models: { last_value: "ಕೊನೆಯ ಮೌಲ್ಯ", seasonal_naive: "ಋತುಮಾನ ಸರಳ" },
     selfBenchmark: "ಆಯ್ದ ಮಾದರಿಯೇ ಮಾನದಂಡ · ಸುಧಾರಣೆ ಇಲ್ಲ", skillUnavailable: "ಸುಧಾರಣೆ ಲಭ್ಯವಿಲ್ಲ", better: (p: string) => `ಕೊನೆಯ ಮೌಲ್ಯಕ್ಕಿಂತ ${p}% ಕಡಿಮೆ ದೋಷ`,

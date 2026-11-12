@@ -7,7 +7,7 @@ compatibility_date = "2025-01-09"
 crons = ["30 3 * * *", "30 14 * * *"]
 
 [vars]
-CORS_ORIGIN = "https://arecanut-intel.pages.dev,http://localhost:5173,http://127.0.0.1:5173"
+CORS_ORIGIN = "https://adikenaadi.com,https://www.adikenaadi.com,https://arecanut-intel.pages.dev,http://localhost:5173,http://127.0.0.1:5173"
 MIN_INDEX_MARKETS = "3"
 REFERENCE_STATE = "Karnataka"
 # Daily cooperative collection. Each source also needs a permission grant recorded in

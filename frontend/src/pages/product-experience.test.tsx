@@ -252,7 +252,7 @@ describe("market experience", () => {
     expect(text).toContain("• Branch 8: ₹48007");
     expect(text).not.toContain("Branch 9:");
     expect(text).toContain("…and 2 more");
-    expect(text.split("\n").at(-1)).toBe("ದಿನದ ಅಡಿಕೆ ಧಾರಣೆ ನೋಡಿ: https://example.test/?v=rashi");
+    expect(text.split("\n").at(-1)).toBe("ಅಡಿಕೆ ನಾಡಿಯಲ್ಲಿ ದಿನದ ಅಡಿಕೆ ಧಾರಣೆ ನೋಡಿ: https://example.test/?v=rashi");
     expect(shareMessage({ title: "APMC", lines: [{ place: "Market One", price: "₹100", date: "2 Oct 2026" }], more: String, note: "", url: "u" })).toContain("• Market One: ₹100 (2 Oct 2026)");
   });
 
