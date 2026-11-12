@@ -56,6 +56,17 @@ const GROWER_PAGES = ["/", "/sell-or-hold"];
 /** A visitor's own saved profiles and the reviewer queue have nothing for search engines. */
 const PRIVATE_PAGES = ["/workspace", "/data-quality"];
 
+/**
+ * Whether search engines may index an address. A page is searchable when it is in the menu or is one of the pages
+ * written for search (seo-pages.ts: the same list as the sitemap, including variety and town pages that are not in the
+ * menu). Private pages and addresses that match no page are kept out. Tested against every sitemap address.
+ */
+export function searchablePath(pathname: string) {
+  if (PRIVATE_PAGES.includes(pathname)) return false;
+  if (seoPage(pathname)) return true;
+  return navigation.some((item) => item.to === pathname || (item.to === "/intelligence" && pathname.startsWith("/intelligence/")));
+}
+
 const SHELL_COPY = defineCopy({
   en: {
     skip: "Skip to content", openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation", navigation: "Main navigation",
@@ -146,7 +157,7 @@ export function AppShell() {
   }, [currentPage, language, location.pathname]);
 
   // Private pages, and addresses that match no page, are kept out of search results.
-  const searchable = Boolean(currentItem) && !PRIVATE_PAGES.includes(location.pathname);
+  const searchable = searchablePath(location.pathname);
   useEffect(() => {
     let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
     if (searchable) return robots?.remove();
