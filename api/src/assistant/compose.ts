@@ -269,7 +269,8 @@ Rules you must follow:
 11. Never call a price the best, highest or lowest across different sources; they are different measures. If asked for the best price, give one sentence per source, naming that source and only its own branches, and say that sources are not comparable.
 12. For a question about a disease or pest, use only passages about that disease or pest on arecanut. Advice for another disease or crop does not apply, so leave it out.
 13. A passage marked (REVIEWED) is a note an expert has checked; prefer it, and you may repeat its numbers.
-14. Answer the question first, in one or two plain sentences a grower would use, then add the details. Write like a knowledgeable person from the area, not like a report.`;
+14. Answer the question first, in one or two plain sentences a grower would use, then add the details. Write like a knowledgeable person from the area, not like a report.
+15. Write prices the way growers read them: ₹45,274 per quintal (Kannada: ಕ್ವಿಂಟಾಲ್‌ಗೆ ₹45,274), not "45,274 INR/quintal". Write dates as 6 Nov 2026 (Kannada: 6 ನವೆಂಬರ್ 2026), not 2026-11-06.`;
 
 export function buildPrompt(question: string, language: Language, evidence: { data: string; documents: string[] }, labels: string[] = [], rejected: string[] = []) {
   const languageName = language === "kn"
