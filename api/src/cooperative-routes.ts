@@ -119,6 +119,32 @@ cooperativeRoutes.get("/cooperative/prices", async (c) => {
   });
 });
 
+/** How far back a branch's latest rates are looked for. Older rates are left out rather than shown as current. */
+export const BRANCH_LATEST_DAYS = 45;
+
+/**
+ * One branch's latest verified rate for every variety it reported within BRANCH_LATEST_DAYS. Used by the market pages
+ * and the daily rate card, which need every variety at one place rather than one variety at every place. Each row keeps
+ * its own reporting date; nothing is combined across varieties, dates or sources.
+ */
+cooperativeRoutes.get("/cooperative/branch-latest", async (c) => {
+  const source = sourceSchema.safeParse(c.req.query("source"));
+  if (!source.success) return c.json({ error: "Unsupported cooperative source." }, 400);
+  const commodity = commoditySchema.safeParse(c.req.query("commodity") ?? "arecanut");
+  if (!commodity.success) return c.json({ error: "Unsupported commodity." }, 400);
+  const branch = z.string().trim().min(1).max(60).safeParse(c.req.query("branch"));
+  if (!branch.success) return c.json({ error: "Provide the branch name as the source publishes it." }, 400);
+  const to = calendarTodayIST();
+  const from = shiftDays(to, -(BRANCH_LATEST_DAYS - 1));
+  const { results } = await c.env.DB.prepare(`SELECT id,source_key,commodity,branch,reporting_date,variety,minimum_price,maximum_price,average_price,
+      price_type,price_basis,price_unit,unit_status,normal_price,source_url,fetched_at,status
+    FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY variety ORDER BY reporting_date DESC) AS variety_rank FROM cooperative_quotes
+      WHERE source_key=? AND commodity=? AND branch=? AND status='verified' AND reporting_date BETWEEN ? AND ?)
+    WHERE variety_rank = 1 ORDER BY variety`).bind(source.data, commodity.data, branch.data, from, to).all<CooperativeQuote>();
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({ source: source.data, commodity: commodity.data, branch: branch.data, window: { from, to, days: BRANCH_LATEST_DAYS }, data: results });
+});
+
 cooperativeRoutes.get("/admin/cooperative/quality", async (c) => {
   if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   const source = c.req.query("source") ? sourceSchema.safeParse(c.req.query("source")) : null;

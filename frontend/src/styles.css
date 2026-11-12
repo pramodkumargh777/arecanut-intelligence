@@ -26,10 +26,12 @@
   --ink: #17211d;
   --ink-2: #3f4a44;
   --muted: #525f57;          /* 6.7:1 on white */
-  --line: #dde4dd;
+  --line: #d3dcd3;
   --line-strong: #cdd6ce;
+  /* Borders of inputs and selects: at least 3:1 on --surface and --surface-2 (WCAG 1.4.11). */
+  --control-line: #86928a;
   /* Secondary text and meaningful icons on light surfaces: 5.0:1 on white (#a1a1aa was 2.6:1). */
-  --subtle: #65736b;
+  --subtle: #5e6c64;         /* 4.9:1 on --brand-tint, 5.5:1 on white */
   --accent: var(--brand);
   --warn-bg: #fffbeb; --warn-ink: #92400e; --warn-line: #fde68a;
   --bad-bg: #fef2f2; --bad-ink: #991b1b; --bad-line: #fecaca;
@@ -59,7 +61,7 @@
   --brand-descriptor: #e2e9d9;
   --brand-word: #f8f6ee;
   --brand-word-accent: #b6d279;
-  --bg: #101b17;
+  --bg: #0b1511;
   --surface: #192722;
   --surface-2: #22332b;
   --brand-tint: #293e30;
@@ -67,8 +69,9 @@
   --ink-2: #d3ddd2;
   --muted: #b3c2b5;
   --subtle: #a4b8aa;
-  --line: #33463b;
+  --line: #3b5144;
   --line-strong: #526a5b;
+  --control-line: #6a8274;
   --warn-bg: #403522; --warn-ink: #f2d198; --warn-line: #806541;
   --bad-bg: #432b2b; --bad-ink: #f2b9ae; --bad-line: #81504c;
   --shadow: 0 1px 2px rgb(0 0 0 / 15%);
@@ -147,8 +150,8 @@ small { font-size: 11px; color: var(--muted); }
 .topbar-preferences { display: flex; align-items: center; gap: 12px; flex: none; }
 .theme-toggle { flex: none; }
 .commodity-select { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
-.commodity-select select { height: 34px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 8px; font-size: 13px; }
-.search-field { display: flex; align-items: center; gap: 8px; width: 220px; height: 34px; color: var(--muted); padding: 0 10px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); }
+.commodity-select select { height: 34px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 8px; font-size: 13px; }
+.search-field { display: flex; align-items: center; gap: 8px; width: 220px; height: 34px; color: var(--muted); padding: 0 10px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); }
 .search-field:focus-within { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .search-field input { border: 0; outline: 0; width: 100%; background: transparent; font-size: 13px; color: var(--ink); }
 /* Market suggestions under a search box. */
@@ -418,7 +421,7 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 .filter-bar .filter-control { flex: 1 1 170px; max-width: 280px; }
 /* Month and year side by side inside one filter; the month gets the wider share for its name. */
 .month-year-fields { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 6px; }
-.month-year select { width: 100%; height: 34px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 6px; font-size: 13px; }
+.month-year select { width: 100%; height: 34px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 6px; font-size: 13px; }
 .month-year select:focus-visible { outline: 0; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .advanced-filters { flex: 0 0 auto; min-width: 0; align-self: flex-end; }
 .advanced-filters[open] { flex-basis: 100%; }
@@ -429,14 +432,14 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 .panel .filter-bar { margin-bottom: 14px; padding: 0; border: 0; box-shadow: none; }
 .filter-label { display: flex; align-items: center; gap: 7px; flex-basis: 100%; color: var(--muted); font-size: 12px; font-weight: 500; }
 .filter-control, .variety-select { display: grid; gap: 5px; min-width: 0; color: var(--muted); font-size: 12px; font-weight: 500; }
-.filter-control input, .filter-control select, .filter-control textarea, .variety-select select, .token-form input { width: 100%; height: 34px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 9px; font-size: 13px; font-weight: 400; transition: border-color .12s ease; }
+.filter-control input, .filter-control select, .filter-control textarea, .variety-select select, .token-form input { width: 100%; height: 34px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 9px; font-size: 13px; font-weight: 400; transition: border-color .12s ease; }
 .filter-control textarea { height: auto; padding: 9px; line-height: 1.5; resize: vertical; }
 .filter-control input:hover, .filter-control select:hover, .filter-control textarea:hover, .variety-select select:hover { border-color: var(--muted); }
 .filter-control :focus-visible, .variety-select :focus-visible, .token-form :focus-visible { outline: 0; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .variety-select { min-width: 174px; max-width: 100%; }
 .variety-select select { max-width: 260px; }
 .analytics-filters, .compare-heading-tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
-.period-select { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 9px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); color: var(--muted); background: var(--surface); }
+.period-select { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 9px; border: 1px solid var(--control-line); border-radius: var(--radius-sm); color: var(--muted); background: var(--surface); }
 .period-select select { border: 0; background: transparent; color: var(--ink); font-size: 13px; padding: 0 2px; height: 100%; outline: 0; }
 .filter-context { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 13px; }
 .filter-context strong { color: var(--ink); }
@@ -606,7 +609,7 @@ th.numeric .sort-button span { order: -1; }
 /* "More varieties" is one more pill in the row; it fills in when one of its varieties is chosen. The real select lies
    invisibly over the face, which is only as wide as its own label (a select is as wide as its longest option). */
 .variety-more { position: relative; display: inline-flex; }
-.variety-more-face { display: inline-flex; align-items: center; height: 34px; padding: 0 30px 0 14px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 14px; line-height: 1.3; white-space: nowrap; cursor: pointer;
+.variety-more-face { display: inline-flex; align-items: center; height: 34px; padding: 0 30px 0 14px; border: 1px solid var(--control-line); border-radius: 999px; color: var(--ink-2); font-size: 14px; line-height: 1.3; white-space: nowrap; cursor: pointer;
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; }
 .variety-more select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
 .variety-more:hover .variety-more-face { border-color: var(--brand-leaf); }
@@ -616,7 +619,7 @@ th.numeric .sort-button span { order: -1; }
 .variety-more-active select option, .variety-more-active select optgroup { color: var(--ink); background: var(--surface); font-weight: 400; }
 /* Phones only (see responsive.css): one dropdown in place of the picture pills. */
 .variety-phone { display: none; min-width: 0; }
-.variety-phone select { appearance: none; width: 100%; height: 46px; padding: 0 38px 0 14px; border: 1px solid var(--line-strong); border-radius: 12px; color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer;
+.variety-phone select { appearance: none; width: 100%; height: 46px; padding: 0 38px 0 14px; border: 1px solid var(--control-line); border-radius: 12px; color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer;
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 15px center; }
 .variety-phone select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* Price cards share the width instead of one narrow centred column. */
@@ -773,14 +776,14 @@ a.rate-more-toggle { text-decoration: none; }
 .rate-card-foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: auto; padding: 4px 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .rate-card-foot a { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; color: var(--brand); font-weight: 600; text-decoration: none !important; }
 
-:root[data-theme="dark"] .topbar { background: rgb(16 27 23 / 92%); }
+:root[data-theme="dark"] .topbar { background: rgb(11 21 17 / 92%); }
 :root[data-theme="dark"] .nav-link.active { background: var(--brand-tint); }
 :root[data-theme="dark"] .featured-card { background: #204333; border-color: #426751; }
 :root[data-theme="dark"] .button-primary,
 :root[data-theme="dark"] .approve-button,
 :root[data-theme="dark"] .language-toggle button[aria-pressed="true"],
 :root[data-theme="dark"] .variety-card[aria-pressed="true"], :root[data-theme="dark"] .variety-more-active .variety-more-face { color: #10251a; }
-:root[data-theme="dark"] .variety-more-face, :root[data-theme="dark"] .variety-phone select {
+:root[data-theme="dark"] .variety-more-face, :root[data-theme="dark"] .variety-phone select, :root[data-theme="dark"] .fx-select select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b3c2b5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 :root[data-theme="dark"] .variety-more-active .variety-more-face {
@@ -876,10 +879,12 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .fx-showcase .num { text-align: right; font-variant-numeric: tabular-nums; }
 
 .fx-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
-.fx-select { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 0 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.fx-select { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 0 0 14px; border: 1px solid var(--control-line); border-radius: 10px; background: var(--surface-2); }
 .fx-select:focus-within { border-color: var(--brand-leaf); }
 .fx-select span { color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
-.fx-select select { width: auto; min-width: 120px; height: 40px; min-height: 0; padding: 0 34px 0 0; border: 0; border-radius: 0 10px 10px 0; background-color: transparent; background-position: right 12px center; color: var(--ink); font-size: 14px; font-weight: 650; box-shadow: none; outline: none; }
+.fx-select select { appearance: none; -webkit-appearance: none; width: auto; min-width: 120px; height: 40px; min-height: 0; padding: 0 36px 0 2px; border: 0; border-radius: 0 10px 10px 0; color: var(--ink); font-size: 14px; font-weight: 650; box-shadow: none; outline: none; cursor: pointer;
+  /* The browser's own select style adds its own left padding (it differed by browser), so it is replaced by the site's chevron. */
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; }
 .fx-segmented { display: inline-flex; height: 42px; padding: 3px; gap: 2px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
 .fx-segmented button { min-height: 0; height: 34px; padding: 0 16px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .fx-segmented button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 14%), inset 0 0 0 1px var(--line); }
@@ -1229,3 +1234,21 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   100% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--brand-leaf) 0%, transparent); transform: scale(1); }
 }
 @media (prefers-reduced-motion: reduce) { .home-date-pill.is-fresh .home-date-dot { animation: none; } }
+
+/* Town pages (/market, /market/:slug): the home page's rate cards, one per source, plus links to nearby towns. */
+.market-kicker { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px !important; font-size: 12.5px !important; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle) !important; }
+.market-card-title { margin: 0; font-size: 16px; font-weight: 650; color: var(--ink); }
+.market-variety-link { color: inherit; text-decoration: none; }
+.market-variety-link:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+.market-share { margin-top: 14px; }
+.market-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.market-chips a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 14px; font-weight: 550; text-decoration: none; transition: border-color .12s ease, color .12s ease; }
+.market-chips a:hover { border-color: var(--brand); color: var(--brand); }
+.market-chips .market-chip-all { border-style: dashed; }
+.market-index { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.market-index a { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; transition: border-color .12s ease; }
+.market-index a:hover { border-color: var(--brand); }
+.market-index strong { font-size: 16.5px; font-weight: 600; }
+.market-index span { grid-column: 1; font-size: 12.5px; color: var(--muted); letter-spacing: .02em; }
+.market-index svg { grid-column: 2; grid-row: 1 / span 2; color: var(--muted); }
+

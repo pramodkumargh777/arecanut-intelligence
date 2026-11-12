@@ -99,7 +99,8 @@ export function AppShell() {
   // A variety page (/variety/rashi) is the rates page at another address.
   const ratesPage = location.pathname === "/" || Boolean(varietyFromPath(location.pathname));
   const currentItem = navigation.find((item) => (item.to === "/" ? ratesPage : item.to === location.pathname) || (item.to === "/intelligence" && location.pathname.startsWith("/intelligence/")));
-  const currentPage = currentItem ? (language === "kn" ? currentItem.kn : currentItem.label) : copy.notFound;
+  // Pages outside the menu (town pages reached from search) are named from their search-engine label.
+  const currentPage = currentItem ? (language === "kn" ? currentItem.kn : currentItem.label) : seoPage(location.pathname)?.label[language] ?? copy.notFound;
   const growerPage = ratesPage || GROWER_PAGES.includes(location.pathname);
   // The prices page has its own search box, so the top-bar one would be a second control for the same thing.
   const showTopSearch = location.pathname !== "/prices";

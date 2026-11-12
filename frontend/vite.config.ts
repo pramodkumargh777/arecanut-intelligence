@@ -2,15 +2,18 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { SEO_PAGES, varietyNames, varietySeo, type SeoPage } from "./src/services/seo-pages";
+import { MARKETS_SEO, marketSeo, SEO_PAGES, varietyNames, varietySeo, type SeoPage } from "./src/services/seo-pages";
+import { COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKET_PLACES, sortByCatalogue, varietyForLabel, type MarketPlace } from "./src/services/markets";
 import { VARIETIES, type GrowerVariety } from "./src/services/varieties";
 import { PLACE_NAMES_KN } from "./src/services/places";
+import type { CooperativeQuote } from "./src/services/cooperative";
 
 /** Where the site is served. Link previews and the sitemap need absolute addresses. */
 const DEFAULT_SITE_URL = "https://adikenaadi.com";
 
 /** Public pages listed in the sitemap. Workspace and data-quality pages are private to each visitor or reviewer. */
-const SITEMAP_PATHS = SEO_PAGES.map((page) => page.path);
+const MARKET_PAGES = [MARKETS_SEO, ...MARKET_PLACES.map(marketSeo)];
+const SITEMAP_PATHS = [...SEO_PAGES, ...MARKET_PAGES].map((page) => page.path);
 
 const escapeHtml = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -83,6 +86,52 @@ function ratesHtml(variety: GrowerVariety, rows: Rate[]) {
     + `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ. Rates as each cooperative publishes them.</p></main>`;
 }
 
+type PlaceRate = { source: string; name: string; date: string; price: number | null; minimum: number | null; maximum: number | null };
+
+/**
+ * Each town's latest rates from every source it has, read from the public API when the site is built. A town whose
+ * rates cannot be read is written without them; the live page still loads them.
+ */
+async function placeRates(apiUrl: string, place: MarketPlace) {
+  const oldest = new Date(Date.now() - STATIC_RATE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const rows: PlaceRate[] = [];
+  for (const source of COOPERATIVE_ORDER) {
+    const branch = place.branches[source];
+    if (!branch) continue;
+    const response = await fetch(`${apiUrl}/cooperative/branch-latest?${new URLSearchParams({ source, branch })}`, { signal: AbortSignal.timeout(20_000) });
+    if (!response.ok) throw new Error(`${source} ${branch}: HTTP ${response.status}`);
+    const body = await response.json() as { data: CooperativeQuote[] };
+    for (const row of sortByCatalogue(source, body.data.filter((item) => item.reporting_date >= oldest))) {
+      const variety = varietyForLabel(source, row.variety);
+      rows.push({ source: `${COOPERATIVE_NAMES[source].kn} · ${COOPERATIVE_NAMES[source].en}`, name: source === "tumcos" ? "ಅಡಿಕೆ · Arecanut" : variety ? `${variety.kn} · ${variety.en}` : row.variety,
+        date: row.reporting_date, price: row.average_price, minimum: row.minimum_price, maximum: row.maximum_price });
+    }
+  }
+  if (place.apmc) {
+    const response = await fetch(`${apiUrl}/prices?${new URLSearchParams({ q: place.apmc, from: oldest, limit: "200", sort: "reporting_date", order: "desc", include_count: "false" })}`, { signal: AbortSignal.timeout(20_000) });
+    if (!response.ok) throw new Error(`APMC ${place.apmc}: HTTP ${response.status}`);
+    const body = await response.json() as { data: { market_name: string; variety_name: string; grade?: string | null; reporting_date: string; modal_price: number; minimum_price: number; maximum_price: number }[] };
+    const seen = new Set<string>();
+    for (const row of body.data) {
+      const key = `${row.variety_name}|${row.grade ?? ""}`;
+      if (row.market_name !== place.apmc || seen.has(key)) continue;
+      seen.add(key);
+      rows.push({ source: "ಎಪಿಎಂಸಿ · APMC", name: row.grade ? `${row.variety_name} (${row.grade})` : row.variety_name, date: row.reporting_date, price: row.modal_price, minimum: row.minimum_price, maximum: row.maximum_price });
+    }
+  }
+  return rows;
+}
+
+/** A town's rates as plain HTML, the same rows the town page shows once it loads. */
+function placeHtml(place: MarketPlace, rows: PlaceRate[]) {
+  const body = rows.map((row) => `<tr><td>${escapeHtml(row.source)}</td><td>${escapeHtml(row.name)}</td><td><time datetime="${row.date}">${day(row.date)}</time></td><td>${rupees(row.price)}</td><td>${row.minimum !== null && row.maximum !== null ? `${rupees(row.minimum)} – ${rupees(row.maximum)}` : ""}</td></tr>`).join("");
+  return `<main class="static-rates"><style>.static-rates{max-width:760px;margin:0 auto;padding:24px 16px}.static-rates table{width:100%;border-collapse:collapse;margin:16px 0}.static-rates th,.static-rates td{text-align:left;padding:8px 6px;border-bottom:1px solid rgba(128,128,128,.3);font-size:14px}</style>`
+    + `<h1>${escapeHtml(place.kn)} ಅಡಿಕೆ ಧಾರಣೆ · ${escapeHtml(place.en)} arecanut rates</h1>`
+    + `<p>${escapeHtml(place.district.kn)} ಜಿಲ್ಲೆ · ${escapeHtml(place.district.en)} district. ಇತ್ತೀಚಿನ ವರದಿಯಾದ ದರಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. Latest reported rates, per quintal.</p>`
+    + `<table><thead><tr><th>ಮೂಲ · Source</th><th>ತಳಿ · Variety</th><th>ದಿನಾಂಕ · Date</th><th>ದರ · Rate</th><th>ಕನಿಷ್ಠ – ಗರಿಷ್ಠ · Range</th></tr></thead><tbody>${body}</tbody></table>`
+    + `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆ; ಮೂಲಗಳನ್ನು ಒಟ್ಟುಗೂಡಿಸಿಲ್ಲ. Rates as each source publishes them; sources are never combined.</p></main>`;
+}
+
 /** Public contact address. Also in src/services/brand.tsx (footer) and index.html (structured data). */
 const CONTACT_EMAIL = "contact@adikenaadi.com";
 
@@ -122,9 +171,18 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
       const write = (page: SeoPage, content = "") => {
         const file = resolve(outDir, page.path === "/" ? "index.html" : `${page.path.slice(1)}.html`);
         mkdirSync(dirname(file), { recursive: true });
-        writeFileSync(file, pageHtml(home, siteUrl, page, varietyPages, content));
+        writeFileSync(file, pageHtml(home, siteUrl, page, [...varietyPages, ...MARKET_PAGES], content));
       };
       for (const page of SEO_PAGES) write(page);
+      write(MARKETS_SEO);
+      for (const [index, place] of MARKET_PLACES.entries()) {
+        let content = "";
+        if (apiUrl?.startsWith("https://")) {
+          try { const rows = await placeRates(apiUrl.replace(/\/+$/, ""), place); if (rows.length) content = placeHtml(place, rows); }
+          catch (error) { console.warn(`Rates were not written into ${place.en}'s page: ${error instanceof Error ? error.message : error}`); }
+        }
+        write(MARKET_PAGES[index + 1], content);
+      }
       varieties.forEach((variety, index) => write(varietyPages[index], ratesHtml(variety, rates.get(variety.key)!)));
       if (varietyPages.length) {
         const today = new Date().toISOString().slice(0, 10);

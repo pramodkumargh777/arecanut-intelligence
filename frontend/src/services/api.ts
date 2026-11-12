@@ -91,6 +91,9 @@ export const api = {
   savedCalculations: (token: string) => request<{ data: Calculation[] }>("/admin/decisions", { headers: { Authorization: `Bearer ${token}` } }),
   cooperativePrices: (source: CooperativeSource, variety?: string, commodity?: CooperativeCommodity, range: { from?: string; to?: string } = {}, limit?: number) =>
     request<CooperativeData>(`/cooperative/prices${queryString({ source, variety, commodity, from: range.from || undefined, to: range.to || undefined, limit: limit ? String(limit) : undefined })}`),
+  /** One branch's latest verified rate per variety (last 45 days), for the market pages and the daily rate card. */
+  branchLatest: (source: CooperativeSource, branch: string) =>
+    request<{ source: CooperativeSource; branch: string; window: { from: string; to: string; days: number }; data: CooperativeQuote[] }>(`/cooperative/branch-latest${queryString({ source, branch })}`),
   cooperativeQuality: (token: string, source?: CooperativeSource, offset = 0, limit = QUEUE_PAGE_SIZE) => request<QueuePage<CooperativeQuote>>(`/admin/cooperative/quality${queryString({ source, limit: String(limit), offset: String(offset) })}`, { headers: { Authorization: `Bearer ${token}` } }),
   refreshMamcos: (token: string) => request<RefreshSummary>("/admin/cooperative/refresh", { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
   refreshTss: (token: string, date: string, includeLots = false) => request<RefreshSummary & { excluded_count: number }>("/admin/cooperative/tss/refresh", {
