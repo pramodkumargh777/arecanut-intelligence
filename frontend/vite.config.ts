@@ -2,7 +2,7 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
 /** Where the site is served. Link previews and the sitemap need absolute addresses. */
-const DEFAULT_SITE_URL = "https://arecanut-intel.pages.dev";
+const DEFAULT_SITE_URL = "https://adikenaadi.com";
 
 /** Public pages listed in the sitemap. Workspace and data-quality pages are private to each visitor or reviewer. */
 const SITEMAP_PATHS = [

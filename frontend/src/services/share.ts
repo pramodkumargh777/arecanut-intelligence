@@ -4,8 +4,9 @@ export type ShareLine = { place: string; price: string; date?: string };
 /** Lines beyond this are counted, not listed, so the message stays readable in a chat. */
 export const MAX_SHARE_LINES = 8;
 
-/** Forwards mostly reach Kannada-reading growers, so the invitation is Kannada even when shared from the English site. */
-export const SHARE_INVITE = "ದಿನದ ಅಡಿಕೆ ಧಾರಣೆ ನೋಡಿ";
+/** Forwards mostly reach Kannada-reading growers, so the invitation is Kannada even when shared from the English site.
+ * It names the site, so every forward carries the name. */
+export const SHARE_INVITE = "ಅಡಿಕೆ ನಾಡಿಯಲ್ಲಿ ದಿನದ ಅಡಿಕೆ ಧಾರಣೆ ನೋಡಿ";
 
 /**
  * Plain text for a chat message: title, report date, one line per rate, the price basis and a link back.

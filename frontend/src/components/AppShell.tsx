@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { marketFeeds, routeAvailable } from "../../../shared/commodities";
 import { commodityName, useCommodity } from "../services/commodity";
 import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
+import { BRAND, brandLabel, BrandName } from "../services/brand";
 import { CommodityGate } from "./CommodityGate";
 import { MarketSearch } from "./MarketSearch";
 import { SiteFooter } from "./SiteFooter";
@@ -131,8 +132,8 @@ export function AppShell() {
   }
 
   useEffect(() => {
-    document.title = `${currentPage} · Areca Pulse`;
-  }, [currentPage]);
+    document.title = `${currentPage} · ${BRAND[language].name}`;
+  }, [currentPage, language]);
 
   // Private pages, and addresses that match no page, are kept out of search results.
   const searchable = Boolean(currentItem) && !PRIVATE_PAGES.includes(location.pathname);
@@ -240,8 +241,8 @@ export function AppShell() {
             {collapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
           </button>
           {/* Phones and tablets only. The bare palm mark, not the tiled app icon, so it reads as the logo beside outlined buttons; the dark logo is cropped to its mark. */}
-          <Link to="/" className="topbar-brand" aria-label={BRAND_LABEL}><img className={`topbar-brand-mark${theme === "dark" ? " topbar-brand-mark-dark" : ""}`} src={theme === "dark" ? darkLogo : brandIcon} alt="" />
-            <span className="topbar-brand-name" aria-hidden="true" lang="en">Areca <span className="brand-name-accent">Pulse</span></span></Link>
+          <Link to="/" className="topbar-brand" aria-label={brandLabel(language)}><img className={`topbar-brand-mark${theme === "dark" ? " topbar-brand-mark-dark" : ""}`} src={theme === "dark" ? darkLogo : brandIcon} alt="" />
+            <span className="topbar-brand-name" aria-hidden="true" lang={language}><BrandName /></span></Link>
           <div className="breadcrumb"><span>{currentCommodity}</span><span className="breadcrumb-sep">/</span><strong>{currentPage}</strong></div>
           {!growerPage && <button type="button" className="button-secondary market-tools-toggle" aria-expanded={marketToolsOpen} aria-controls="header-market-tools" aria-label={copy.marketTools} onClick={() => setMarketToolsOpen((open) => !open)}><SlidersHorizontal size={15} aria-hidden="true" />{copy.tools}<ChevronDown className="market-tools-chevron" size={15} aria-hidden="true" /></button>}
           {!growerPage && <div id="header-market-tools" className={`topbar-tools${marketToolsOpen ? " topbar-tools-open" : ""}`}>
@@ -269,33 +270,26 @@ export function AppShell() {
   );
 }
 
-const BRAND_LABEL = "Areca Pulse · Market Intelligence";
-
 /**
  * Compact lockup: the brand symbol beside a live-text wordmark. The full horizontal logo is not shrunk into the sidebar,
- * because its descriptor and tagline become unreadably small (brand guide: use the icon at small sizes). Live text also
- * renders in the app's own Inter, which an SVG loaded through <img> cannot use.
+ * because its descriptor and tagline become unreadably small (brand guide: use the icon at small sizes) and its name is
+ * drawn in English only. Live text also renders in the app's own Inter, which an SVG loaded through <img> cannot use.
  */
 function BrandLockup() {
   const theme = useTheme();
-  return <Link to="/" className="brand-lockup" aria-label={BRAND_LABEL}>
+  const { language } = useLanguage();
+  const words = <span className="brand-words" aria-hidden="true" lang={language}>
+    <span className="brand-name"><BrandName /></span>
+    <span className="brand-descriptor">{BRAND[language].descriptor}</span>
+  </span>;
+  return <Link to="/" className="brand-lockup" aria-label={brandLabel(language)}>
     {/* Shown instead of the lockup when the desktop menu is collapsed. */}
     <img className="brand-collapsed-icon" src={theme === "dark" ? appIcon : brandIcon} alt="" width={36} height={28} />
-    {/* On phones the dark logo's built-in tagline is too small to read, so the mark and live wordmark replace it. */}
-    {theme === "dark" ? <><img className="brand-dark-logo" src={darkLogo} alt="" />
-      <span className="brand-lockup-row brand-lockup-phone">
-        <img className="brand-icon topbar-brand-mark-dark" src={darkLogo} alt="" width={40} height={31} />
-        <span className="brand-words" aria-hidden="true" lang="en">
-          <span className="brand-name">Areca <span className="brand-name-accent">Pulse</span></span>
-          <span className="brand-descriptor">Market Intelligence</span>
-        </span>
-      </span></> :
+    {/* One lockup for both languages and both themes, so the name looks the same whichever is chosen. */}
     <span className="brand-lockup-row">
-      <img className="brand-icon" src={brandIcon} alt="" width={40} height={31} />
-      <span className="brand-words" aria-hidden="true" lang="en">
-        <span className="brand-name">Areca <span className="brand-name-accent">Pulse</span></span>
-        <span className="brand-descriptor">Market Intelligence</span>
-      </span>
-    </span>}
+      {theme === "dark" ? <img className="brand-icon topbar-brand-mark-dark" src={darkLogo} alt="" width={40} height={31} />
+        : <img className="brand-icon" src={brandIcon} alt="" width={40} height={31} />}
+      {words}
+    </span>
   </Link>;
 }

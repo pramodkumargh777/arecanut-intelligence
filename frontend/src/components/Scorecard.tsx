@@ -71,7 +71,7 @@ const COPY = defineCopy({
     historySource: "AGMARKNET ತಿಂಗಳ ವರದಿ · ಆವಕ ಆಧಾರಿತ ರಾಜ್ಯ ಸರಾಸರಿ",
     validation: "ಮುನ್ಸೂಚನೆಯ ದೃಢೀಕರಣ", noForecast: "ಈ ಬೆಳೆಗೆ ಮುನ್ಸೂಚನೆ ಸಂಪರ್ಕಿಸಿಲ್ಲ.",
     forecastCounts: (candidate: number, notBetter: number, outcomes: number) => `${candidate} ಪ್ರಾಯೋಗಿಕ ಮತ್ತು ${notBetter} ಮೂಲ ಅಂದಾಜಿಗಿಂತ ಉತ್ತಮವಲ್ಲದ ಮೌಲ್ಯಮಾಪನಗಳು; ${outcomes} ಮುಂದಿನ ಫಲಿತಾಂಶಗಳು ಹೊಂದಿಕೆಯಾಗಿವೆ.`,
-    forecastSource: "Areca Pulse ಮುನ್ಸೂಚನೆ ವ್ಯವಸ್ಥೆ · ಹಂತ ಹಂತದ ಹಿಂದಿನ ಪರೀಕ್ಷೆಗಳು",
+    forecastSource: "ಅಡಿಕೆ ನಾಡಿ ಮುನ್ಸೂಚನೆ ವ್ಯವಸ್ಥೆ · ಹಂತ ಹಂತದ ಹಿಂದಿನ ಪರೀಕ್ಷೆಗಳು",
   },
 });
 

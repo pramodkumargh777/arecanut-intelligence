@@ -3,6 +3,7 @@ import brandIcon from "../assets/areca-pulse-icon.svg";
 import darkLogo from "../assets/areca-pulse-logo-dark.svg";
 import { defineCopy, useLanguage } from "../services/language";
 import { useTheme } from "../services/theme";
+import { BRAND, BrandName } from "../services/brand";
 
 /** WhatsApp number (country code, no plus) that receives reports of wrong prices or missing markets. */
 const REPORT_WHATSAPP = "918660862841";
@@ -28,14 +29,14 @@ const COPY = defineCopy({
     reportText: "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಸಂದೇಶ ಕಳುಹಿಸಿ. ಬೆಳೆಗಾರರ ಮಾಹಿತಿಯಿಂದ ಪ್ರತಿ ದರ ಸರಿಯಾಗಿರುತ್ತದೆ.",
     reportButton: "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ತಿಳಿಸಿ",
     reportAria: "ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆಯನ್ನು ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ತಿಳಿಸಿ (ವಾಟ್ಸಾಪ್ ತೆರೆಯುತ್ತದೆ)",
-    reportMessage: (url: string) => `ನಮಸ್ಕಾರ Areca Pulse, ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆ ಬಗ್ಗೆ ತಿಳಿಸಲು ಬಯಸುತ್ತೇನೆ:\n\n\nಪುಟ: ${url}`,
+    reportMessage: (url: string) => `ನಮಸ್ಕಾರ ಅಡಿಕೆ ನಾಡಿ, ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆ ಬಗ್ಗೆ ತಿಳಿಸಲು ಬಯಸುತ್ತೇನೆ:\n\n\nಪುಟ: ${url}`,
     tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.",
     made: "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಬೆಳೆಗಾರರಿಗೆ ದಿನದ ಧಾರಣೆ, ಕನ್ನಡ ಮತ್ತು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ.",
     rates: "ದರಗಳು", tools: "ಸಾಧನಗಳು", sources: "ದತ್ತಾಂಶ ಮೂಲಗಳು",
     links: { "/": "ಇತ್ತೀಚಿನ ಧಾರಣೆ", "/prices": "ಮಾರುಕಟ್ಟೆ ದರಗಳು", "/analytics": "ದರ ಪ್ರವೃತ್ತಿ", "/compare": "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ",
       "/sell-or-hold": "ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ", "/assistant": "ಪ್ರಶ್ನೆ ಕೇಳಿ", "/intelligence": "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ" } as Record<string, string>,
     sourceNotes: { MAMCOS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿವಮೊಗ್ಗ", TSS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿರಸಿ", TUMCOS: "ಸಹಕಾರಿ ಸಂಘ, ಚನ್ನಗಿರಿ", AGMARKNET: "ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳು, data.gov.in" } as Record<string, string>,
-    disclaimer: "ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ, ವರದಿ ದಿನಾಂಕದೊಂದಿಗೆ. Areca Pulse ಸ್ವತಂತ್ರ ತಾಣ, ಯಾವುದೇ ಸಹಕಾರಿ ಸಂಘ ಅಥವಾ ಎಪಿಎಂಸಿಗೆ ಸಂಬಂಧಿಸಿಲ್ಲ. ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ, ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ.",
+    disclaimer: "ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ, ವರದಿ ದಿನಾಂಕದೊಂದಿಗೆ. ಅಡಿಕೆ ನಾಡಿ ಸ್ವತಂತ್ರ ತಾಣ, ಯಾವುದೇ ಸಹಕಾರಿ ಸಂಘ ಅಥವಾ ಎಪಿಎಂಸಿಗೆ ಸಂಬಂಧಿಸಿಲ್ಲ. ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ, ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ.",
     region: "ಕರ್ನಾಟಕ, ಭಾರತ",
   },
 });
@@ -70,9 +71,9 @@ export function SiteFooter() {
 
       <div className="footer-grid">
         <div className="footer-brand">
-          <Link to="/" className="footer-logo" aria-label="Areca Pulse">
+          <Link to="/" className="footer-logo" aria-label={BRAND[language].name}>
             <img className={`footer-logo-mark${theme === "dark" ? " footer-logo-mark-dark" : ""}`} src={theme === "dark" ? darkLogo : brandIcon} alt="" />
-            <span lang="en"><span className="footer-logo-name">Areca <span className="brand-name-accent">Pulse</span></span><span className="footer-logo-descriptor">Market Intelligence</span></span>
+            <span lang={language}><span className="footer-logo-name"><BrandName /></span><span className="footer-logo-descriptor">{BRAND[language].descriptor}</span></span>
           </Link>
           <p className="footer-tagline">{copy.tagline}</p>
           <p className="footer-made">{copy.made}</p>
@@ -87,7 +88,7 @@ export function SiteFooter() {
 
       <p className="footer-disclaimer">{copy.disclaimer}</p>
       <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} Areca Pulse</span>
+        <span>© {new Date().getFullYear()} {BRAND[language].name}</span>
         <span>{copy.region}</span>
       </div>
     </div>
