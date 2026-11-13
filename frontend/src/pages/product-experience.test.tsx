@@ -958,10 +958,11 @@ describe("social links", () => {
     expect(html).toContain('<a href="https://www.instagram.com/adike_naadi/" target="_blank" rel="noopener noreferrer" aria-label="Areca Pulse on Instagram, @adike_naadi (opens Instagram)"');
     expect(html).toContain('<a href="https://x.com/adikenaadi" target="_blank" rel="noopener noreferrer" aria-label="Areca Pulse on X, @adikenaadi (opens X)"');
     expect(html).toContain('<a href="https://www.youtube.com/@adikenaadi" target="_blank" rel="noopener noreferrer" aria-label="Areca Pulse on YouTube, @adikenaadi (opens YouTube)"');
+    expect(html).toContain('<a href="https://www.facebook.com/adikenaadi" target="_blank" rel="noopener noreferrer" aria-label="Areca Pulse on Facebook, adikenaadi (opens Facebook)"');
   });
 
   it("names the same accounts in the structured data search engines read", () => {
-    expect(readFileSync("frontend/index.html", "utf8")).toContain('"sameAs": ["https://www.instagram.com/adike_naadi/", "https://x.com/adikenaadi", "https://www.youtube.com/@adikenaadi"]');
+    expect(readFileSync("frontend/index.html", "utf8")).toContain('"sameAs": ["https://www.instagram.com/adike_naadi/", "https://x.com/adikenaadi", "https://www.youtube.com/@adikenaadi", "https://www.facebook.com/adikenaadi"]');
   });
 });
 

@@ -21,6 +21,7 @@ export const CONTACT = {
     instagram: { handle: "adike_naadi", url: "https://www.instagram.com/adike_naadi/" },
     x: { handle: "adikenaadi", url: "https://x.com/adikenaadi" },
     youtube: { handle: "adikenaadi", url: "https://www.youtube.com/@adikenaadi" },
+    facebook: { handle: "adikenaadi", url: "https://www.facebook.com/adikenaadi" },
   },
 } as const;
 
