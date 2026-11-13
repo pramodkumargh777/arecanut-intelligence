@@ -542,10 +542,9 @@
   .footer-rights, .footer-domain { display: none; }
   .footer-bottom-meta { gap: 6px; }
 }
-/* Narrow phones (320–380px): smaller social squares so they still sit beside the logo; the descriptor may wrap. */
+/* Narrow phones (320–380px): four social icons do not fit beside the logo, so they take their own row under the contact lines. */
 @media (max-width: 380px) {
-  .footer-brand > .footer-social { gap: 4px; }
-  .footer-social a { width: 36px; height: 36px; }
+  .footer-brand > .footer-social { grid-column: 1 / -1; grid-row: auto; margin-top: 12px; }
 }
 /* Daily aggregates on phones: the short period ("2–8 Nov") stays on one line. */
 @media (max-width: 640px) {

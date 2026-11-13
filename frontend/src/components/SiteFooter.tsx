@@ -20,6 +20,7 @@ const COPY = defineCopy({
     contact: "Contact", emailLabel: "Email", whatsappLabel: "WhatsApp",
     follow: "Follow Areca Pulse", onInstagram: (handle: string) => `Areca Pulse on Instagram, @${handle} (opens Instagram)`, onX: (handle: string) => `Areca Pulse on X, @${handle} (opens X)`,
     onYouTube: (handle: string) => `Areca Pulse on YouTube, @${handle} (opens YouTube)`,
+    onFacebook: (handle: string) => `Areca Pulse on Facebook, ${handle} (opens Facebook)`,
     rights: "All rights reserved.",
     tagline: "Know the market. See the opportunity.",
     made: "Daily arecanut rates for growers in Karnataka, in Kannada and English.",
@@ -46,6 +47,7 @@ const COPY = defineCopy({
     contact: "ಸಂಪರ್ಕ", emailLabel: "ಇಮೇಲ್", whatsappLabel: "ವಾಟ್ಸಾಪ್",
     follow: "ಅಡಿಕೆ ನಾಡಿಯನ್ನು ಅನುಸರಿಸಿ", onInstagram: (handle: string) => `ಇನ್‌ಸ್ಟಾಗ್ರಾಮ್‌ನಲ್ಲಿ ಅಡಿಕೆ ನಾಡಿ, @${handle} (ಇನ್‌ಸ್ಟಾಗ್ರಾಮ್ ತೆರೆಯುತ್ತದೆ)`, onX: (handle: string) => `X ನಲ್ಲಿ ಅಡಿಕೆ ನಾಡಿ, @${handle} (X ತೆರೆಯುತ್ತದೆ)`,
     onYouTube: (handle: string) => `ಯೂಟ್ಯೂಬ್‌ನಲ್ಲಿ ಅಡಿಕೆ ನಾಡಿ, @${handle} (ಯೂಟ್ಯೂಬ್ ತೆರೆಯುತ್ತದೆ)`,
+    onFacebook: (handle: string) => `ಫೇಸ್‌ಬುಕ್‌ನಲ್ಲಿ ಅಡಿಕೆ ನಾಡಿ, ${handle} (ಫೇಸ್‌ಬುಕ್ ತೆರೆಯುತ್ತದೆ)`,
     rights: "ಎಲ್ಲ ಹಕ್ಕುಗಳನ್ನು ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ.",
     tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.",
     made: "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಬೆಳೆಗಾರರಿಗೆ ದಿನದ ಧಾರಣೆ, ಕನ್ನಡ ಮತ್ತು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ.",
@@ -74,6 +76,13 @@ function InstagramIcon({ size = 18 }: { size?: number }) {
 function XIcon({ size = 16 }: { size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>;
+}
+
+/** The Facebook "f" mark, filled like the YouTube mark so the row reads as one set. */
+function FacebookIcon({ size = 18 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+    <path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v2.9h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z" />
   </svg>;
 }
 
@@ -133,6 +142,8 @@ export function SiteFooter() {
               title={`@${CONTACT.social.x.handle}`}><XIcon /></a></li>
             <li><a href={CONTACT.social.youtube.url} target="_blank" rel="noopener noreferrer" aria-label={copy.onYouTube(CONTACT.social.youtube.handle)}
               title={`@${CONTACT.social.youtube.handle}`}><YouTubeIcon /></a></li>
+            <li><a href={CONTACT.social.facebook.url} target="_blank" rel="noopener noreferrer" aria-label={copy.onFacebook(CONTACT.social.facebook.handle)}
+              title={CONTACT.social.facebook.handle}><FacebookIcon /></a></li>
           </ul>
         </div>
         <nav className="footer-column" aria-labelledby="footer-rates"><h2 id="footer-rates">{copy.rates}</h2>
