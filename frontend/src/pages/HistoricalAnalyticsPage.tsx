@@ -69,6 +69,8 @@ const COPY = defineCopy({
     dailyUnit: (source: string, confirmed: boolean) => `${source} · INR/quintal${confirmed ? " — source-confirmed" : " — operator assumption"} · Coverage is captured reporting days / calendar days, not complete trading days.`,
     bothDates: "Select both daily aggregation dates.", noCaptured: "No captured quotations for this selection", exportAggregates: "Export aggregates CSV",
     aggregatesAria: "Captured daily aggregates", aggregatesCaption: "Equal-weight average of captured daily branch averages; empty periods remain empty",
+    collectedFrom: (date: string) => `Rates from ${date}, when collection began. Earlier periods have no captured rates.`,
+    meanShort: "Mean ₹/qtl", minShort: "Min", maxShort: "Max", reportedMissingShort: "Days / missing",
     period: "Period", mean: "Mean · INR/qtl", minDaily: "Min daily average", maxDaily: "Max daily average", reportedMissing: "Reported / missing dates", noCapturedRecord: "No captured record",
     dailyMethodology: (assumed: boolean) => `Equal-weight arithmetic mean of captured daily reported averages for one exact variety and branch. Coverage is observed days / calendar days in the selected range, not a claim about trading-day completeness. No interpolation or volume weighting.${assumed ? " TSS and TUMCOS INR/quintal is an operator assumption." : ""} Not the official monthly arrival-weighted report.`,
     underlying: (n: number) => `Underlying source observations (${n})`,
@@ -128,6 +130,8 @@ const COPY = defineCopy({
     dailyUnit: (source: string, confirmed: boolean) => `${source} · ₹/ಕ್ವಿಂಟಾಲ್${confirmed ? " — ಮೂಲದಿಂದ ದೃಢಪಟ್ಟಿದೆ" : " — ನಿರ್ವಾಹಕರ ಊಹೆ"} · ವ್ಯಾಪ್ತಿ = ಸಂಗ್ರಹಿಸಿದ ವರದಿ ದಿನಗಳು / ಕ್ಯಾಲೆಂಡರ್ ದಿನಗಳು, ಸಂಪೂರ್ಣ ವಹಿವಾಟು ದಿನಗಳಲ್ಲ.`,
     bothDates: "ಎರಡೂ ದಿನಾಂಕಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ.", noCaptured: "ಈ ಆಯ್ಕೆಗೆ ಸಂಗ್ರಹಿಸಿದ ದರಗಳಿಲ್ಲ", exportAggregates: "ಸರಾಸರಿಗಳ CSV ಡೌನ್‌ಲೋಡ್",
     aggregatesAria: "ಸಂಗ್ರಹಿಸಿದ ದೈನಂದಿನ ಸರಾಸರಿಗಳು", aggregatesCaption: "ಸಂಗ್ರಹಿಸಿದ ದೈನಂದಿನ ಶಾಖೆ ಸರಾಸರಿಗಳ ಸಮಾನ ತೂಕದ ಸರಾಸರಿ; ಖಾಲಿ ಅವಧಿಗಳು ಖಾಲಿಯಾಗಿಯೇ ಇರುತ್ತವೆ",
+    collectedFrom: (date: string) => `${date}ರಿಂದ ದರಗಳು, ಸಂಗ್ರಹ ಆರಂಭವಾದಾಗಿನಿಂದ. ಹಿಂದಿನ ಅವಧಿಗಳಿಗೆ ಸಂಗ್ರಹಿಸಿದ ದರಗಳಿಲ್ಲ.`,
+    meanShort: "ಸರಾಸರಿ ₹/ಕ್ವಿಂ", minShort: "ಕನಿಷ್ಠ", maxShort: "ಗರಿಷ್ಠ", reportedMissingShort: "ದಿನ / ಇಲ್ಲದ",
     period: "ಅವಧಿ", mean: "ಸರಾಸರಿ · ₹/ಕ್ವಿಂ", minDaily: "ಕನಿಷ್ಠ ದೈನಂದಿನ ಸರಾಸರಿ", maxDaily: "ಗರಿಷ್ಠ ದೈನಂದಿನ ಸರಾಸರಿ", reportedMissing: "ವರದಿಯಾದ / ಇಲ್ಲದ ದಿನಗಳು", noCapturedRecord: "ಸಂಗ್ರಹಿಸಿದ ದಾಖಲೆ ಇಲ್ಲ",
     dailyMethodology: (assumed: boolean) => `ಒಂದು ನಿಖರ ತಳಿ ಮತ್ತು ಶಾಖೆಗೆ ಸಂಗ್ರಹಿಸಿದ ದೈನಂದಿನ ವರದಿಯಾದ ಸರಾಸರಿಗಳ ಸಮಾನ ತೂಕದ ಸರಾಸರಿ. ವ್ಯಾಪ್ತಿ = ದಾಖಲಾದ ದಿನಗಳು / ಆಯ್ದ ಅವಧಿಯ ಕ್ಯಾಲೆಂಡರ್ ದಿನಗಳು. ಖಾಲಿ ಜಾಗ ತುಂಬುವುದಿಲ್ಲ, ಪ್ರಮಾಣದ ತೂಕ ಇಲ್ಲ.${assumed ? " TSS ಮತ್ತು TUMCOS ₹/ಕ್ವಿಂಟಾಲ್ ನಿರ್ವಾಹಕರ ಊಹೆ." : ""} ಇದು ಅಧಿಕೃತ ತಿಂಗಳ ಆವಕ ಆಧಾರಿತ ವರದಿಯಲ್ಲ.`,
     underlying: (n: number) => `ಮೂಲ ದಾಖಲೆಗಳು (${n})`,
@@ -233,6 +237,25 @@ function MonthlyEvidenceReview({ id, variety }: { id: string; variety: string })
   </details>;
 }
 
+/** A period in few characters for phones: "2–8 Nov", "26 Oct – 1 Nov", or "Nov 2026" for a whole month. */
+export function shortPeriod(from: string, to: string, months: readonly string[], monthly: boolean) {
+  const [fromYear, fromMonth, fromDay] = from.split("-").map(Number), [, toMonth, toDay] = to.split("-").map(Number);
+  const month = (index: number) => /^[A-Za-z]/.test(months[index - 1]) ? months[index - 1].slice(0, 3) : months[index - 1];
+  if (monthly) return `${month(fromMonth)} ${fromYear}`;
+  return fromMonth === toMonth ? `${fromDay}–${toDay} ${month(toMonth)}` : `${fromDay} ${month(fromMonth)} – ${toDay} ${month(toMonth)}`;
+}
+
+/** Leading periods with no captured day are left out: they come from before collection began, not from a gap. */
+export function fromFirstCapture<T extends { reporting_days: number }>(rows: T[]) {
+  const first = rows.findIndex((row) => row.reporting_days > 0);
+  return first < 0 ? [] : rows.slice(first);
+}
+
+/** Full words for wide screens and screen readers; the short form on phones (see .label-short in responsive.css). */
+function dual(full: string, short: string) {
+  return <><span className="label-full">{full}</span><span className="label-short" aria-hidden="true">{short}</span></>;
+}
+
 function DailyAggregation() {
   const t = useCopy(COPY);
   const c = useCopy(COMMON);
@@ -245,6 +268,7 @@ function DailyAggregation() {
   const query = useQuery({ queryKey: ["aggregates", source, variety, selectedBranch, from, to, interval],
     queryFn: () => api.aggregates({ source, variety, branch: selectedBranch, from, to, interval }), enabled: Boolean(selectedBranch && from && to) });
   const data = query.data;
+  const shown = fromFirstCapture(data?.data ?? []);
   return <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.daily}</h2><p>{t.dailyHint}</p></div></div>
     <div className="filter-bar">
       <label className="filter-control"><span>{t.dailySource}</span><select value={source} onChange={(event) => { const next = event.target.value === "tss" || event.target.value === "tumcos" ? event.target.value : "mamcos"; setSource(next); setVariety(next === "tss" ? "RASHI" : next === "tumcos" ? "areca" : "RASHI EDI"); setBranch(""); }}><option value="mamcos">MAMCOS</option><option value="tss">TSS</option><option value="tumcos">TUMCOS</option></select></label>
@@ -258,7 +282,9 @@ function DailyAggregation() {
     {!from || !to ? <ErrorState error={new Error(t.bothDates)} /> : quotes.error ? <ErrorState error={quotes.error} /> : !selectedBranch ? <EmptyState title={t.noCaptured} /> : query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} /> : data && <>
       <button className="button-secondary" style={{ margin: "12px 0" }} onClick={() => download([["period", "from", "to", "source", "branch", "variety", "mean_average_price", "price_unit", "reporting_days", "calendar_days", "unit_status", "fetched_at"],
         ...data.data.map((row) => [row.period, row.from, row.to, source, selectedBranch, variety, row.mean_average_price, "INR/quintal", row.reporting_days, row.calendar_days, row.unit_status, row.fetched_at])], "areca-pulse-captured-aggregates.csv")}>{t.exportAggregates}</button>
-      <div className="table-scroll" tabIndex={0} role="region" aria-label={t.aggregatesAria}><table><caption>{t.aggregatesCaption}</caption><thead><tr><th>{t.period}</th><th className="numeric">{t.mean}</th><th className="numeric">{t.minDaily}</th><th className="numeric">{t.maxDaily}</th><th className="numeric">{t.reportedMissing}</th><th>{t.fetchedAt}</th></tr></thead><tbody>{data.data.map((row) => <tr key={row.period}><td>{format.date(row.from)} – {format.date(row.to)}</td><td className="numeric">{number(row.mean_average_price)}</td><td className="numeric">{number(row.minimum_average)}</td><td className="numeric">{number(row.maximum_average)}</td><td className="numeric">{row.reporting_days} / {row.calendar_days - row.reporting_days}</td><td>{row.fetched_at ? format.timestamp(row.fetched_at) : t.noCapturedRecord}</td></tr>)}</tbody></table></div>
+      {!shown.length ? <EmptyState title={t.noCaptured} /> : <>
+      {shown.length < data.data.length && data.observations[0] && <p className="data-disclosure">{t.collectedFrom(format.date(data.observations[0].reporting_date))}</p>}
+      <div className="table-scroll" tabIndex={0} role="region" aria-label={t.aggregatesAria}><table className="aggregate-table"><caption>{t.aggregatesCaption}</caption><thead><tr><th>{t.period}</th><th className="numeric">{dual(t.mean, t.meanShort)}</th><th className="numeric">{dual(t.minDaily, t.minShort)}</th><th className="numeric">{dual(t.maxDaily, t.maxShort)}</th><th className="numeric">{dual(t.reportedMissing, t.reportedMissingShort)}</th><th>{t.fetchedAt}</th></tr></thead><tbody>{shown.map((row) => <tr key={row.period}><td>{dual(`${format.date(row.from)} – ${format.date(row.to)}`, shortPeriod(row.from, row.to, t.months, interval === "monthly"))}</td><td className="numeric">{number(row.mean_average_price)}</td><td className="numeric">{number(row.minimum_average)}</td><td className="numeric">{number(row.maximum_average)}</td><td className="numeric">{row.reporting_days} / {row.calendar_days - row.reporting_days}</td><td>{row.fetched_at ? format.timestamp(row.fetched_at) : t.noCapturedRecord}</td></tr>)}</tbody></table></div></>}
       <div className="monthly-details"><p className="phone-hide">{t.dailyMethodology(source !== "mamcos")}</p><details><summary>{t.underlying(data.observations.length)}</summary>{data.observations.map((row) => <p key={row.reporting_date}>{format.date(row.reporting_date)} · {number(row.average_price)} · <a href={row.source_url} target="_blank" rel="noreferrer">{c.source}</a> · {t.platformFetched(format.timestamp(row.fetched_at))}</p>)}</details></div>
     </>}
   </section>;

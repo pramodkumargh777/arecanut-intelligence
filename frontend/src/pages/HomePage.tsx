@@ -194,10 +194,10 @@ function ChangeLine({ change, today, language }: { change: PriceChange | null; t
   const copy = COPY[language];
   if (!change) return null;
   const when = ageDays(change.previous_date, today) === 1 ? copy.yesterday : dateText(change.previous_date, language);
-  if (change.amount === 0) return <span className="rate-change" title={copy.vs(when)}><Minus size={13} aria-hidden="true" />{copy.noChange}</span>;
+  if (change.amount === 0) return <span className="rate-change" title={copy.vs(when)}><Minus size={14} aria-hidden="true" />{copy.noChange}</span>;
   const rising = change.amount > 0;
   return <span className={`rate-change ${rising ? "hold-up" : "hold-down"}`} title={copy.vs(when)}>
-    {rising ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />}
+    {rising ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />}
     {rising ? "+" : "−"}{rupees(Math.abs(change.amount))} ({signedPercent(change.percent).replace("-", "−")})
     <span className="sr-only"> {copy.vs(when)}</span>
   </span>;
@@ -367,7 +367,7 @@ export function HomePage() {
   const newestAge = newest ? ageDays(newest, today) : null;
   const moreToggle = (key: string, total: number) => total > VISIBLE_ROWS && <button type="button" className="rate-more-toggle" aria-expanded={cards[key] === "open"}
     onClick={() => toggle(key)}>
-    {cards[key] === "open" ? copy.showFewer : copy.showAll(total)}<ChevronDown size={15} aria-hidden="true" /></button>;
+    {cards[key] === "open" ? copy.showFewer : copy.showAll(total)}<ChevronDown size={16} aria-hidden="true" /></button>;
   // One line per cooperative from its latest report. Sources stay separate because each works out its average differently.
   const glance = publishing.flatMap((source) => {
     const { latest, rows } = orderRows(rowsFor(source.key));
@@ -452,7 +452,7 @@ export function HomePage() {
           {/* Phones: unit and branch count on one quiet line under the range, so neither wraps alone. */}
           <p className="glance-sub">{copy.perQuintalWord} · {copy.glanceBranches(count)}</p>
           <div className="glance-tile-foot">
-            {trend ? <span className={`glance-trend ${trend.className}`}><trend.Icon size={13} aria-hidden="true" />{trend.text} {signedPercent(breadth.median_percent!).replace("-", "−")}</span>
+            {trend ? <span className={`glance-trend ${trend.className}`}><trend.Icon size={14} aria-hidden="true" />{trend.text} {signedPercent(breadth.median_percent!).replace("-", "−")}</span>
               : <span className="glance-trend" title={copy.noCompareHint}>{copy.noCompare}</span>}
             <span className="glance-branches">{copy.glanceBranches(count)}</span>
           </div>
@@ -483,16 +483,16 @@ export function HomePage() {
             <div><h3 id={`rates-${source.key}`}>{language === "kn" ? source.kn : source.en}</h3>
               <span className="rate-card-basis">{copy.unitFoot(source.assumedUnit)}</span>
               {latest && <span className="rate-card-sub rate-card-latest">{copy.cardSub(dateText(latest, language), rows.length)}</span>}</div>
-            {rows[0] && <a className="rate-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
+            {rows[0] && <a className="rate-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={14} aria-hidden="true" /></a>}
           </header>
           {sourceQueries.some((query) => query.isPending) ? <SkeletonRows label={copy.loading} /> : <>
             {sourceQueries.some((query) => query.isError) && <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => sourceQueries.filter((query) => query.isError).forEach((query) => void query.refetch())} />}
             {!rows.length && !sourceQueries.some((query) => query.isError) && <p className="rate-empty">{copy.noRows}</p>}
             {rows.length > 0 && <>
             {latest && breadth.median_percent !== null && <div className="market-breadth" aria-label={copy.marketOn(dateText(latest, language))}>
-              <span className="hold-up"><ArrowUp size={13} aria-hidden="true" /><b>{breadth.up}</b> {copy.up}</span>
-              <span className="hold-down"><ArrowDown size={13} aria-hidden="true" /><b>{breadth.down}</b> {copy.down}</span>
-              {breadth.flat > 0 && <span><Minus size={13} aria-hidden="true" /><b>{breadth.flat}</b> {copy.flat}</span>}
+              <span className="hold-up"><ArrowUp size={14} aria-hidden="true" /><b>{breadth.up}</b> {copy.up}</span>
+              <span className="hold-down"><ArrowDown size={14} aria-hidden="true" /><b>{breadth.down}</b> {copy.down}</span>
+              {breadth.flat > 0 && <span><Minus size={14} aria-hidden="true" /><b>{breadth.flat}</b> {copy.flat}</span>}
               <span className={`market-breadth-median ${breadth.median_percent > 0 ? "hold-up" : breadth.median_percent < 0 ? "hold-down" : ""}`}>{copy.typical} <b>{signedPercent(breadth.median_percent).replace("-", "−")}</b></span>
             </div>}
             <ul className="rate-list">{(cards[source.key] ? rows : collapsed).map((row) => <RateRow key={`${row.branch}|${varietyKey(row.variety)}`} reveal={reveal(source.key, row, collapsed)} row={row} today={today} language={language} showLabel
@@ -509,7 +509,7 @@ export function HomePage() {
               more: copy.shareMore, note: copy.shareBasis(source.assumedUnit), url: varietyShareUrl(variety.key),
             })} />}
             {/* Phones hide the header, so its source link moves down here. */}
-            {rows[0] && <a className="rate-foot-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
+            {rows[0] && <a className="rate-foot-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={14} aria-hidden="true" /></a>}
             <Link to={`/prices?feed=${source.key}${published.length === 1 ? `&variety=${encodeURIComponent(published[0])}` : ""}`} aria-label={copy.moreFrom(source.en)}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
         </section>;
       })}
@@ -523,7 +523,7 @@ export function HomePage() {
       {showTumcos && <section className="rate-card rate-card-coop" aria-labelledby="rates-tumcos">
         <header className="rate-card-head">
           <div><h3 id="rates-tumcos">TUMCOS</h3><span className="rate-card-basis">{copy.unitFoot(true)}</span><span className="rate-card-sub">{copy.tumcosSub}</span></div>
-          {tumcos[0] && <a className="rate-source" href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
+          {tumcos[0] && <a className="rate-source" href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={14} aria-hidden="true" /></a>}
         </header>
         {tumcosQuery?.isPending ? <SkeletonRows label={copy.loading} rows={1} /> : tumcosQuery?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void tumcosQuery.refetch()} /> : tumcos.length ? <ul className="rate-list">{tumcos.map((row) => <RateRow key={row.branch} row={row} today={today} language={language} showLabel highest={false} change={priceChange(row, tumcosHistory)}
           label={copy.tumcosLabel} sourceTag="TUMCOS" priceKey={copy.rowKey} />)}</ul> : <p className="rate-empty">{copy.tumcosEmpty}</p>}
@@ -532,7 +532,7 @@ export function HomePage() {
           title: copy.shareTumcosTitle, date: copy.shareReport(dateText(tumcos[0].reporting_date, language)),
           lines: tumcos.map((row) => ({ place: branchName(row.branch, language), price: rupees(row.average_price) })),
           more: copy.shareMore, note: copy.shareTumcosNote, url: varietyShareUrl(variety.key),
-        })} />}{tumcos[0] && <a className="rate-foot-source" href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
+        })} />}{tumcos[0] && <a className="rate-foot-source" href={tumcos[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={14} aria-hidden="true" /></a>}
           <Link to="/prices?feed=tumcos" aria-label={copy.moreFrom("TUMCOS")}>{copy.explore} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
       </section>}
 
@@ -543,7 +543,7 @@ export function HomePage() {
           <div className="rate-place"><strong>{row.market_name}</strong><span className="rate-meta"><span>{row.district} · {dateText(row.reporting_date, language)} · {ageText(ageDays(row.reporting_date, today), language)}</span><span className="rate-label" lang="en">{row.variety_name}{row.grade ? ` · ${copy.grade}: ${row.grade}` : ""}<span className="rate-label-source"> · {row.source_name}</span></span></span></div>
           <div className="rate-price"><strong><RollingNumber text={rupees(row.modal_price)} /></strong></div>
         </li>)}</ul>
-        <Link className="rate-more-toggle" to="/prices?feed=official">{copy.officialOthers}<ArrowRight size={15} aria-hidden="true" /></Link></>}
+        <Link className="rate-more-toggle" to="/prices?feed=official">{copy.officialOthers}<ArrowRight size={16} aria-hidden="true" /></Link></>}
       <footer className="rate-card-foot">{apmcRow ? <ShareButton labels={shareLabels} ariaLabel={copy.shareAria("APMC")} title={copy.shareOfficialTitle} message={() => shareMessage({
         title: copy.shareOfficialTitle,
         date: copy.shareReport(dateText(apmcRow.reporting_date, language)),

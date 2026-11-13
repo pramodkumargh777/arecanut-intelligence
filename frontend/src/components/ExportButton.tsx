@@ -6,6 +6,6 @@ import { Download } from "lucide-react";
  */
 export function ExportButton({ label, disabled, onClick }: { label: string; disabled?: boolean; onClick: () => void }) {
   return <button type="button" className="button-secondary export-button" aria-label={label} title={label} disabled={disabled} onClick={onClick}>
-    <Download size={15} aria-hidden="true" /><span className="export-label">{label}</span><span className="export-short" aria-hidden="true">CSV</span>
+    <Download size={16} aria-hidden="true" /><span className="export-label">{label}</span><span className="export-short" aria-hidden="true">CSV</span>
   </button>;
 }

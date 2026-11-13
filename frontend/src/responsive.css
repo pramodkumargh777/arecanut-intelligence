@@ -514,3 +514,40 @@
 @media (max-width: 640px) {
   .hold-key-zone-item { display: none !important; }
 }
+
+/* Phone footer: one compact block. The WhatsApp button carries its own icon, so the badge goes, and it is the card's
+   only button, full width: growers report on WhatsApp, and the email address is spelled out under the brand.
+   The social icons share the logo's row. */
+@media (max-width: 640px) {
+  .site-footer { margin-top: 24px; }
+  .site-footer-inner { padding: 18px 0 18px; }
+  .footer-report { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px; border-radius: 14px; }
+  .footer-report-badge { display: none; }
+  .footer-report-text p { margin-top: 2px; }
+  .footer-report-actions > .footer-whatsapp { flex: 1 1 auto; min-height: 46px; justify-content: center; }
+  .footer-report-actions > .footer-email { display: none; }
+  .footer-grid { display: block; padding: 20px 0 16px; }
+  .footer-brand { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+  .footer-brand > * { grid-column: 1 / -1; }
+  .footer-brand > .footer-logo { grid-column: 1; grid-row: 1; }
+  .footer-brand > .footer-social { grid-column: 2; grid-row: 1; margin: 0; gap: 6px; flex-wrap: nowrap; }
+  .footer-social a { width: 40px; height: 40px; }
+  .footer-tagline { margin-top: 12px; }
+  .footer-made { max-width: none; margin-top: 2px; }
+  .footer-contact { gap: 0; margin-top: 8px; }
+  /* Legal note above, then the quietest line on the page: "© 2026 Areca Pulse · Karnataka, India". The domain is
+     already in the address bar, and "All rights reserved" adds nothing legally, so phones drop both. */
+  .footer-disclaimer { margin-top: 14px; font-size: 13px; line-height: 1.6; }
+  .footer-bottom { flex-wrap: nowrap; gap: 6px; justify-content: flex-start; margin-top: 10px; font-size: 12.5px; color: var(--subtle); }
+  .footer-rights, .footer-domain { display: none; }
+  .footer-bottom-meta { gap: 6px; }
+}
+/* Narrow phones (320–380px): smaller social squares so they still sit beside the logo; the descriptor may wrap. */
+@media (max-width: 380px) {
+  .footer-brand > .footer-social { gap: 4px; }
+  .footer-social a { width: 36px; height: 36px; }
+}
+/* Daily aggregates on phones: the short period ("2–8 Nov") stays on one line. */
+@media (max-width: 640px) {
+  .aggregate-table td:first-child, .aggregate-table th { white-space: nowrap; }
+}

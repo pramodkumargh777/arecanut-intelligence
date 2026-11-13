@@ -9,6 +9,7 @@ import { BRAND, BrandName, CONTACT } from "../services/brand";
 const COPY = defineCopy({
   en: {
     reportTitle: "Spotted a wrong price or a missing market?",
+    reportTitleShort: "Wrong or missing rate?",
     reportText: "Message us on WhatsApp or write to us. Reports from growers help keep every rate right.",
     reportButton: "Chat on WhatsApp",
     reportAria: "Report a wrong price or missing market on WhatsApp (opens WhatsApp)",
@@ -22,15 +23,19 @@ const COPY = defineCopy({
     rights: "All rights reserved.",
     tagline: "Know the market. See the opportunity.",
     made: "Daily arecanut rates for growers in Karnataka, in Kannada and English.",
+    madeShort: "Daily areca rates in Kannada and English.",
     rates: "Rates", tools: "Tools", sources: "Data sources",
     links: { "/": "Latest rates", "/prices": "Explore prices", "/analytics": "Price trends", "/compare": "Compare markets",
       "/sell-or-hold": "Sell or wait", "/assistant": "Ask a question", "/intelligence": "Market intelligence" } as Record<string, string>,
     sourceNotes: { MAMCOS: "Cooperative, Shivamogga", TSS: "Cooperative, Sirsi", TUMCOS: "Cooperative, Channagiri", AGMARKNET: "APMC markets, data.gov.in" } as Record<string, string>,
     disclaimer: "Rates as each source publishes them, with the report date. Areca Pulse is independent, not affiliated with any cooperative or APMC. Market information only, not financial advice.",
+    /** Phones: the same three points in three lines. */
+    disclaimerShort: "Rates as published by each source, with dates. Independent, not affiliated with any cooperative or APMC. Not financial advice.",
     region: "Karnataka, India",
   },
   kn: {
     reportTitle: "ದರ ತಪ್ಪಾಗಿದೆಯೇ ಅಥವಾ ಮಾರುಕಟ್ಟೆ ಕಾಣುತ್ತಿಲ್ಲವೇ?",
+    reportTitleShort: "ತಪ್ಪು ಅಥವಾ ಕಾಣದ ದರ?",
     reportText: "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಸಂದೇಶ ಕಳುಹಿಸಿ ಅಥವಾ ಇಮೇಲ್ ಮಾಡಿ. ಬೆಳೆಗಾರರ ಮಾಹಿತಿಯಿಂದ ಪ್ರತಿ ದರ ಸರಿಯಾಗಿರುತ್ತದೆ.",
     reportButton: "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ತಿಳಿಸಿ",
     reportAria: "ತಪ್ಪು ದರ ಅಥವಾ ಕಾಣದ ಮಾರುಕಟ್ಟೆಯನ್ನು ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ತಿಳಿಸಿ (ವಾಟ್ಸಾಪ್ ತೆರೆಯುತ್ತದೆ)",
@@ -44,11 +49,14 @@ const COPY = defineCopy({
     rights: "ಎಲ್ಲ ಹಕ್ಕುಗಳನ್ನು ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ.",
     tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.",
     made: "ಕರ್ನಾಟಕದ ಅಡಿಕೆ ಬೆಳೆಗಾರರಿಗೆ ದಿನದ ಧಾರಣೆ, ಕನ್ನಡ ಮತ್ತು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ.",
+    madeShort: "ಕನ್ನಡ ಮತ್ತು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ದಿನದ ಅಡಿಕೆ ಧಾರಣೆ.",
     rates: "ದರಗಳು", tools: "ಸಾಧನಗಳು", sources: "ದತ್ತಾಂಶ ಮೂಲಗಳು",
     links: { "/": "ಇತ್ತೀಚಿನ ಧಾರಣೆ", "/prices": "ಮಾರುಕಟ್ಟೆ ದರಗಳು", "/analytics": "ದರ ಪ್ರವೃತ್ತಿ", "/compare": "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ",
       "/sell-or-hold": "ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ", "/assistant": "ಪ್ರಶ್ನೆ ಕೇಳಿ", "/intelligence": "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ" } as Record<string, string>,
     sourceNotes: { MAMCOS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿವಮೊಗ್ಗ", TSS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿರಸಿ", TUMCOS: "ಸಹಕಾರಿ ಸಂಘ, ಚನ್ನಗಿರಿ", AGMARKNET: "ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳು, data.gov.in" } as Record<string, string>,
     disclaimer: "ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ, ವರದಿ ದಿನಾಂಕದೊಂದಿಗೆ. ಅಡಿಕೆ ನಾಡಿ ಸ್ವತಂತ್ರ ತಾಣ, ಯಾವುದೇ ಸಹಕಾರಿ ಸಂಘ ಅಥವಾ ಎಪಿಎಂಸಿಗೆ ಸಂಬಂಧಿಸಿಲ್ಲ. ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ, ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ.",
+    /** Empty: the Kannada note keeps its full wording on phones. */
+    disclaimerShort: "",
     region: "ಕರ್ನಾಟಕ, ಭಾರತ",
   },
 });
@@ -94,12 +102,12 @@ export function SiteFooter() {
   return <footer className="site-footer" lang={language}>
     <div className="site-footer-inner">
       <section className="footer-report" aria-labelledby="footer-report-title">
-        <span className="footer-report-badge" aria-hidden="true"><WhatsAppIcon size={22} /></span>
-        <div className="footer-report-text"><h2 id="footer-report-title">{copy.reportTitle}</h2><p>{copy.reportText}</p></div>
+        <span className="footer-report-badge" aria-hidden="true"><WhatsAppIcon size={24} /></span>
+        <div className="footer-report-text"><h2 id="footer-report-title"><span className="label-full">{copy.reportTitle}</span><span className="label-short" aria-hidden="true">{copy.reportTitleShort}</span></h2><p>{copy.reportText}</p></div>
         <div className="footer-report-actions">
           <a className="footer-whatsapp" href={whatsapp} target="_blank" rel="noreferrer" aria-label={copy.reportAria}>
             <WhatsAppIcon /><strong>{copy.reportButton}</strong></a>
-          <a className="footer-email" href={reportEmail} aria-label={copy.emailAria}>
+          <a className="footer-email" href={reportEmail} aria-label={copy.emailAria} title={copy.emailButton}>
             <Mail size={18} aria-hidden="true" /><strong>{copy.emailButton}</strong></a>
         </div>
       </section>
@@ -111,7 +119,7 @@ export function SiteFooter() {
             <span lang={language}><span className="footer-logo-name"><BrandName /></span><span className="footer-logo-descriptor">{BRAND[language].descriptor}</span></span>
           </Link>
           <p className="footer-tagline">{copy.tagline}</p>
-          <p className="footer-made">{copy.made}</p>
+          <p className="footer-made"><span className="label-full">{copy.made}</span><span className="label-short" aria-hidden="true">{copy.madeShort}</span></p>
           <address className="footer-contact" aria-label={copy.contact}>
             <a href={`mailto:${CONTACT.email}`}><Mail size={16} aria-hidden="true" />
               <span className="sr-only">{copy.emailLabel}: </span><span translate="no" lang="en">{CONTACT.email}</span></a>
@@ -135,10 +143,12 @@ export function SiteFooter() {
           <ul className="footer-sources">{SOURCES.map((name) => <li key={name}><span lang="en">{name}</span><small>{copy.sourceNotes[name]}</small></li>)}</ul></div>
       </div>
 
-      <p className="footer-disclaimer">{copy.disclaimer}</p>
+      <p className="footer-disclaimer">{copy.disclaimerShort
+        ? <><span className="label-full">{copy.disclaimer}</span><span className="label-short" aria-hidden="true">{copy.disclaimerShort}</span></>
+        : copy.disclaimer}</p>
       <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} {BRAND[language].name}. {copy.rights}</span>
-        <span className="footer-bottom-meta"><span translate="no" lang="en">{CONTACT.domain}</span><span aria-hidden="true">·</span><span>{copy.region}</span></span>
+        <span>© {new Date().getFullYear()} {BRAND[language].name}<span className="footer-rights">. {copy.rights}</span></span>
+        <span className="footer-bottom-meta"><span className="footer-domain" translate="no" lang="en">{CONTACT.domain}</span><span aria-hidden="true">·</span><span>{copy.region}</span></span>
       </div>
     </div>
   </footer>;

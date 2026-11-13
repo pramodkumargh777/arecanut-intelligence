@@ -36,7 +36,9 @@ import { SellOrHoldPage } from "./SellOrHoldPage";
 import { chartPalette } from "../components/chartPalette";
 import { shareMessage } from "../services/share";
 import { marketSuggestion, matchSuggestions } from "../services/marketSuggestions";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { fromFirstCapture, shortPeriod } from "./HistoricalAnalyticsPage";
+import { MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
 import { runInNewContext } from "node:vm";
 import { ImportsPanel } from "../components/ImportsPanel";
 import { eventsBetween, MARKET_EVENTS } from "../services/market-events";
@@ -960,5 +962,33 @@ describe("social links", () => {
 
   it("names the same accounts in the structured data search engines read", () => {
     expect(readFileSync("frontend/index.html", "utf8")).toContain('"sameAs": ["https://www.instagram.com/adike_naadi/", "https://x.com/adikenaadi", "https://www.youtube.com/@adikenaadi"]');
+  });
+});
+
+describe("icon scale", () => {
+  it("draws every icon at a size from the brand scale, with the default stroke", () => {
+    const files = (readdirSync("frontend/src", { recursive: true }) as string[]).filter((file) => file.endsWith(".tsx") && !file.endsWith(".test.tsx"));
+    const sizes = new Set<string>();
+    for (const file of files) {
+      const source = readFileSync(`frontend/src/${file}`, "utf8");
+      for (const match of source.matchAll(/\bsize=\{(\d+)\}/g)) sizes.add(match[1]);
+      expect(source, file).not.toMatch(/strokeWidth=\{/);
+    }
+    expect([...sizes].sort()).toEqual(["14", "16", "18", "24"]);
+  });
+});
+
+describe("daily aggregates", () => {
+  it("writes periods compactly for phones", () => {
+    expect(shortPeriod("2026-11-02", "2026-11-08", MONTH_NAMES_EN, false)).toBe("2–8 Nov");
+    expect(shortPeriod("2026-10-26", "2026-11-01", MONTH_NAMES_EN, false)).toBe("26 Oct – 1 Nov");
+    expect(shortPeriod("2026-11-01", "2026-11-30", MONTH_NAMES_EN, true)).toBe("Nov 2026");
+    expect(shortPeriod("2026-11-02", "2026-11-08", MONTH_NAMES_KN, false)).toBe("2–8 ನವೆಂಬರ್");
+  });
+
+  it("leaves out only the empty periods before the first captured day", () => {
+    const rows = [0, 0, 2, 0, 3].map((reporting_days, index) => ({ period: String(index), reporting_days }));
+    expect(fromFirstCapture(rows).map((row) => row.period)).toEqual(["2", "3", "4"]);
+    expect(fromFirstCapture([{ reporting_days: 0 }])).toEqual([]);
   });
 });

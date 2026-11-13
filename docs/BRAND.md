@@ -81,6 +81,32 @@ Data surfaces stay neutral. Price rises and falls always carry an arrow and a wo
 also coloured green (`#166534`) and red (`--bad-ink`). The guide warns against equating direction with benefit, since
 a rise helps a seller and costs a buyer. Whether to make them neutral is an open product decision (see below).
 
+## Icons
+
+Interface icons come from one family, [lucide-react](https://lucide.dev), so line style and corner shape match
+everywhere. The few brand marks lucide does not carry (WhatsApp, Instagram, X, YouTube in `SiteFooter.tsx`) are
+drawn on the same 24-unit grid.
+
+| Size | Use | Examples |
+|---|---|---|
+| 14px | Inside or beside small text (13–14px) | Up/down arrows on a rate, "Source ↗", chips, "All rates →" |
+| 16px | Regular interface icons beside body text | Navigation, search field, card headings, footer contact links |
+| 18px | Icon buttons and actions that stand alone | Menu, theme toggle, send, the arrows on home's "Explore further" links |
+| 24px | Feature icons and empty states, inside a box or circle | No-data state, WhatsApp report badge, Data quality heading |
+
+- **Stroke:** lucide's default (2) everywhere. Do not pass `strokeWidth`, so lines weigh the same at every size.
+- **Colour:** icons inherit text colour (`currentColor`). Forest green (`--brand`) for primary icons; leaf green
+  (`--brand-leaf`) only for selected states and highlights, never as the colour of small text beside the icon.
+- **Backgrounds:** cards share one surface. Do not give each card or icon its own coloured background.
+- **Labels:** an icon sits beside a word wherever a grower might not know the symbol. An icon alone is allowed only
+  for universal controls (close, menu, theme, copy, send), and it always carries an `aria-label` in the page's
+  language. Decorative icons next to a label are `aria-hidden`.
+- **Why not larger:** the site leads with text and numbers. Icons are sized to their label, so they never outweigh
+  it or push rates down on a phone.
+
+A test in `frontend/src/pages/product-experience.test.tsx` fails if any icon uses a size outside 14 / 16 / 18 / 24
+or sets `strokeWidth`.
+
 ## Naming
 
 Use **Areca Pulse** in anything a customer reads: the UI, page titles, downloads, assistant answers and documentation.

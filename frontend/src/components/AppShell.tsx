@@ -223,7 +223,7 @@ export function AppShell() {
       <aside ref={sidebar} id="main-navigation" aria-label={copy.navigation} role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen || undefined} className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
         <div className="brand">
           <BrandLockup />
-          <button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label={copy.closeMenu}><X size={19} /></button>
+          <button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label={copy.closeMenu}><X size={18} /></button>
         </div>
         <nav className="main-nav" aria-label={copy.navigation}>
           {(() => {
@@ -234,14 +234,14 @@ export function AppShell() {
               return <NavLink key={to} to={["/overview", "/prices", "/analytics", "/compare"].includes(to) ? `${to}${marketSearch}` : `${to}${commoditySearch}`} end={end} onClick={() => setMenuOpen(false)}
                 // A collapsed menu shows icons only, so the name appears on hover; screen readers still read the hidden label.
                 title={collapsed ? `${language === "kn" ? kn : label}${available ? "" : ` · ${unavailableText}`}` : available ? undefined : unavailableText} className={({ isActive }) => `nav-link ${isActive || (to === "/" && ratesPage) ? "active" : ""} ${available ? "" : "nav-link-unavailable"}`}>
-                <Icon size={15} strokeWidth={1.8} /><span lang={language}>{language === "kn" ? kn : label}</span>
+                <Icon size={16} /><span lang={language}>{language === "kn" ? kn : label}</span>
                 {!available && <><span className="nav-badge" aria-hidden="true">{copy.noSource}</span><span className="sr-only">({unavailableText})</span></>}
               </NavLink>;
             });
             return <>
               {links(primaryNavigation)}
               <details className="nav-advanced" open={advancedGroups.some((group) => group.items.some((item) => item.to === location.pathname)) || undefined}>
-                <summary title={collapsed ? copy.moreTools : undefined}><Ellipsis className="nav-advanced-icon" size={15} aria-hidden="true" /><span>{copy.moreTools}</span></summary>
+                <summary title={collapsed ? copy.moreTools : undefined}><Ellipsis className="nav-advanced-icon" size={16} aria-hidden="true" /><span>{copy.moreTools}</span></summary>
                 {advancedGroups.map((group) => <div key={group.label} role="group" aria-label={language === "kn" ? group.kn : group.label}>
                   <div className="nav-group" aria-hidden="true">{language === "kn" ? group.kn : group.label}</div>
                   {links(group.items)}
@@ -256,16 +256,16 @@ export function AppShell() {
       </aside>
       <div className="main-column" ref={mainColumn}>
         <header className={`topbar${location.pathname === "/" ? " topbar-home" : ""}`}>
-          <button ref={menuButton} className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label={copy.openMenu} aria-expanded={menuOpen} aria-controls="main-navigation"><Menu size={21} /></button>
+          <button ref={menuButton} className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label={copy.openMenu} aria-expanded={menuOpen} aria-controls="main-navigation"><Menu size={18} /></button>
           {/* Desktop only, at the start of the top bar so it stays in view whatever the menu's height. */}
           <button type="button" className="icon-button sidebar-collapse" onClick={toggleCollapsed} aria-label={collapsed ? copy.expand : copy.collapse} title={collapsed ? copy.expand : copy.collapse} aria-controls="main-navigation">
-            {collapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
+            {collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
           </button>
           {/* Phones and tablets only. The bare palm mark, not the tiled app icon, so it reads as the logo beside outlined buttons; the dark logo is cropped to its mark. */}
           <Link to="/" className="topbar-brand" aria-label={brandLabel(language)}><img className={`topbar-brand-mark${theme === "dark" ? " topbar-brand-mark-dark" : ""}`} src={theme === "dark" ? darkLogo : brandIcon} alt="" />
             <span className="topbar-brand-name" aria-hidden="true" lang={language}><BrandName /></span></Link>
           <div className="breadcrumb"><span>{currentCommodity}</span><span className="breadcrumb-sep">/</span><strong>{currentPage}</strong></div>
-          {!growerPage && <button type="button" className="button-secondary market-tools-toggle" aria-expanded={marketToolsOpen} aria-controls="header-market-tools" aria-label={copy.marketTools} onClick={() => setMarketToolsOpen((open) => !open)}><SlidersHorizontal size={15} aria-hidden="true" />{copy.tools}<ChevronDown className="market-tools-chevron" size={15} aria-hidden="true" /></button>}
+          {!growerPage && <button type="button" className="button-secondary market-tools-toggle" aria-expanded={marketToolsOpen} aria-controls="header-market-tools" aria-label={copy.marketTools} onClick={() => setMarketToolsOpen((open) => !open)}><SlidersHorizontal size={16} aria-hidden="true" />{copy.tools}<ChevronDown className="market-tools-chevron" size={16} aria-hidden="true" /></button>}
           {!growerPage && <div id="header-market-tools" className={`topbar-tools${marketToolsOpen ? " topbar-tools-open" : ""}`}>
             <label className="commodity-select"><span>{copy.commodity}</span><select aria-label={copy.commodity} value={commodity ? commodityCode : ""} onChange={(event) => selectCommodity(event.target.value)}>
               {!commodity && <option value="" disabled>{copy.unknown(commodityCode)}</option>}
@@ -277,11 +277,11 @@ export function AppShell() {
               if (search.trim()) next.set("search", search.trim());
               navigate(next.toString() ? `/prices?${next}` : "/prices");
             }}><label className="search-field"><Search size={16} /><MarketSearch feeds={marketFeeds(commodity)} ariaLabel={copy.searchLabel} placeholder={copy.search} value={search} onChange={setSearch} onSelect={openMarket} /></label></form>}
-            <span className="region-pill"><MapPin size={13} /> {copy.region}</span>
+            <span className="region-pill"><MapPin size={14} /> {copy.region}</span>
           </div>}
           <div className="topbar-preferences">
             <LanguageToggle />
-            <button type="button" className="icon-button theme-toggle" aria-label={theme === "dark" ? copy.switchLight : copy.switchDark} title={theme === "dark" ? copy.switchLight : copy.switchDark} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}</button>
+            <button type="button" className="icon-button theme-toggle" aria-label={theme === "dark" ? copy.switchLight : copy.switchDark} title={theme === "dark" ? copy.switchLight : copy.switchDark} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button>
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><Outlet /></CommodityGate></main>

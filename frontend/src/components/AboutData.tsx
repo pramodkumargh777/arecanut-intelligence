@@ -9,7 +9,7 @@ import { useLanguage } from "../services/language";
 export function AboutData({ children, title }: { children: ReactNode; title?: string }) {
   const { language } = useLanguage();
   return <details className="about-data">
-    <summary><Info size={15} aria-hidden="true" />{title ?? (language === "kn" ? "ಈ ದತ್ತಾಂಶದ ಬಗ್ಗೆ" : "About this data")}</summary>
+    <summary><Info size={16} aria-hidden="true" />{title ?? (language === "kn" ? "ಈ ದತ್ತಾಂಶದ ಬಗ್ಗೆ" : "About this data")}</summary>
     <div className="about-data-body">{children}</div>
   </details>;
 }
