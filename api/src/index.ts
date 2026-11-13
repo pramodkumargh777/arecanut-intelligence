@@ -13,13 +13,13 @@ import { calendarDateToTime, calendarTodayIST, DAY_MS } from "../../shared/dates
 import { historyRoutes, monthRange } from "./history";
 import { decisionRoutes } from "./decisions";
 import { intelligenceRoutes, refreshSirsiWeather, refreshPib } from "./intelligence-routes";
-import { autoPublishPending } from "./cooperative-auto-publish";
+import { AUTO_REJECT_AFTER_DAYS, autoPublishPending } from "./cooperative-auto-publish";
 import { forecastRoutes, refreshChangedForecasts } from "./forecast";
 import { commodityRoutes, resolveCommodity } from "./commodity-routes";
 import { priceBasisForSource } from "../../shared/commodities";
 import { sourceStatusRoutes } from "./source-status";
 import { agmarknetHistoryRoutes } from "./agmarknet-history";
-import { AGMARKNET_DAILY_REVIEWER, AGMARKNET_DAILY_SOURCE, autoVerifyPendingDaily, autoVerifyStatements } from "./auto-verify";
+import { AGMARKNET_DAILY_REVIEWER, AGMARKNET_DAILY_SOURCE, autoRejectStaleFlagged, autoVerifyPendingDaily, autoVerifyStatements, OBSERVATION_AUTO_REJECT_DAYS } from "./auto-verify";
 import { coveredReferenceSeries, overviewSnapshot, referenceChart, refreshAllDirtySummaries, refreshDirtySummaries, type ChartInterval } from "./summaries";
 import { operationsRoutes } from "./operations-routes";
 import { logOperationalError, purgeExpiredTemporary, syncArchive } from "./archive";
@@ -785,8 +785,8 @@ export default {
       if (env.COOPERATIVE_AUTO_PUBLISH !== "true") continue;
       // Also runs after a partial failure, so rows from locations that succeeded still reach readers.
       try {
-        const { published, held } = await autoPublishPending(env.DB, source.key, now);
-        if (published || held.length) console.log(`${source.key}: ${published} auto-published, ${held.length} held for review`, held.slice(0, 5));
+        const { published, held, rejected } = await autoPublishPending(env.DB, source.key, now);
+        if (published || held.length || rejected) console.log(`${source.key}: ${published} auto-published, ${held.length} held, ${rejected} rejected after ${AUTO_REJECT_AFTER_DAYS} days held`, held.slice(0, 5));
       } catch (error) { console.error(`Scheduled ${source.key} auto-publish failed`, error); errors.push(error); }
     }
     if (evening) {
@@ -810,6 +810,10 @@ export default {
         const verified = await autoVerifyPendingDaily(env.DB);
         if (verified) console.log(`AGMARKNET daily: ${verified} pending row(s) auto-verified`);
       } catch (error) { console.error("Scheduled AGMARKNET daily auto-verification failed", error); errors.push(error); }
+      try {
+        const rejected = await autoRejectStaleFlagged(env.DB);
+        if (rejected) console.log(`AGMARKNET: ${rejected} flagged row(s) rejected after waiting ${OBSERVATION_AUTO_REJECT_DAYS} days`);
+      } catch (error) { console.error("Scheduled rejection of stale flagged rows failed", error); errors.push(error); }
     }
     // Derived-cache and archive maintenance never fail the source schedule; failures are persisted for operators.
     const maintenance: [string, unknown][] = [];

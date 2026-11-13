@@ -219,7 +219,7 @@ describe("upgrading existing arecanut data to the commodity model", () => {
     const coopAfter = db.sqlite.prepare("SELECT * FROM cooperative_quotes ORDER BY id").all();
     expect(JSON.stringify(dailyAfter.map(({ price_basis: _basis, ...row }) => row))).toBe(dailyBefore);
     // Migration 0020 applies the operator unit decision; every source value and label must still be untouched.
-    const evidence = (rows: Record<string, unknown>[]) => rows.map(({ price_basis: _basis, status: _status, price_unit: _unit, unit_status: _unitStatus, ...row }) => row);
+    const evidence = (rows: Record<string, unknown>[]) => rows.map(({ price_basis: _basis, status: _status, price_unit: _unit, unit_status: _unitStatus, hold_reason: _hold, held_at: _heldAt, ...row }) => row);
     expect(evidence(coopAfter)).toEqual(evidence(JSON.parse(coopBefore)));
     expect(Object.fromEntries(coopAfter.map((row) => [row.id, [row.status, row.price_unit, row.unit_status]]))).toEqual({
       cm: ["verified", "INR/quintal", "source_confirmed"], ct: ["verified", "INR/quintal", "assumed"], cp: ["pending", "INR/quintal", "assumed"],

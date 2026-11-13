@@ -1,0 +1,55 @@
+name: Attention alert
+
+# Once a day, after the 09:00 IST collection, checks for the few things that need a person (scripts/attention-alert.mjs):
+# a source whose collection keeps failing, stalled AGMARKNET ingestion, or a burst of held rates that points to a format
+# change. Routine exceptions resolve themselves and are not reported. While a problem lasts, one open issue labelled
+# "needs-attention" gets a daily comment, which GitHub emails to you; it is closed once everything is healthy. Read only.
+on:
+  schedule:
+    - cron: "15 4 * * *" # 09:45 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: attention-alert
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check production health
+        run: node scripts/attention-alert.mjs > "$RUNNER_TEMP/attention.md"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SITE_URL: ${{ vars.VITE_SITE_URL }}
+      - name: Open, update or close the alert issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          label=needs-attention
+          gh label create "$label" --color D93F0B --description "Production needs a person" --force
+          open=$(gh issue list --label "$label" --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -s "$RUNNER_TEMP/attention.md" ]; then
+            cat "$RUNNER_TEMP/attention.md" >> "$GITHUB_STEP_SUMMARY"
+            if [ -z "$open" ]; then
+              gh issue create --title "Areca Pulse needs attention" --label "$label" --body-file "$RUNNER_TEMP/attention.md"
+            else
+              gh issue comment "$open" --body-file "$RUNNER_TEMP/attention.md"
+            fi
+          elif [ -n "$open" ]; then
+            gh issue close "$open" --comment "Everything is healthy again."
+          else
+            echo "All healthy. Nothing needs a person." >> "$GITHUB_STEP_SUMMARY"
+          fi

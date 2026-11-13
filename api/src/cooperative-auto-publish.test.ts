@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app, type Env } from "./index";
 import { applyMigrations, LocalDatabase } from "./test-support/local-d1";
-import { AUTO_REVIEWER, autoPublishPending, holdReason, type PendingQuote } from "./cooperative-auto-publish";
+import { AUTO_REVIEWER, autoPublishPending, CONFLICT_REASON, holdReason, type PendingQuote } from "./cooperative-auto-publish";
 
 const NOW = new Date("2026-11-06T14:30:00Z");
 const TODAY = "2026-11-06";
@@ -57,7 +57,7 @@ describe("auto-publishing", () => {
   it("publishes a good quote with an audit entry under its own reviewer name", async () => {
     history();
     quote({ id: "good" });
-    expect(await autoPublishPending(db as never, "mamcos", NOW)).toEqual({ published: 1, held: [] });
+    expect(await autoPublishPending(db as never, "mamcos", NOW)).toEqual({ published: 1, held: [], rejected: 0 });
     expect(statusOf("good")).toBe("verified");
     expect(db.sqlite.prepare("SELECT action, reviewer, previous_status, new_status FROM cooperative_reviews WHERE quote_id='good'").get())
       .toEqual({ action: "approve", reviewer: AUTO_REVIEWER, previous_status: "pending", new_status: "verified" });
@@ -87,7 +87,7 @@ describe("auto-publishing", () => {
     expect(holdReason({ id: "x", commodity: "arecanut", branch: "SAGARA", reporting_date: "2026-11-05", variety: "HASA", minimum_price: 1800,
       maximum_price: 2600, average_price: 2222, price_unit: "INR/quintal", unit_status: "source_confirmed", validation_message: null, review_flags: null }, null, TODAY)).toBeNull();
     quote({ id: "a", variety: "HASA", average: 2222 });
-    expect(await autoPublishPending(db as never, "mamcos", NOW)).toEqual({ published: 1, held: [] });
+    expect(await autoPublishPending(db as never, "mamcos", NOW)).toEqual({ published: 1, held: [], rejected: 0 });
     expect(statusOf("a")).toBe("verified");
     quote({ id: "bad-range", variety: "NEW GRADE", message: "Reported prices do not satisfy minimum <= average <= maximum." });
     expect((await autoPublishPending(db as never, "mamcos", NOW)).held).toEqual([{ id: "bad-range", reason: "failed source validation" }]);
@@ -110,13 +110,76 @@ describe("auto-publishing", () => {
     expect(statusOf("tss-row")).toBe("pending");
   });
 
-  it("leaves old backlog and invalid rows for a person", async () => {
+  it("leaves backlog older than a year and invalid rows for a person", async () => {
     history();
-    quote({ id: "old", date: "2026-09-01" });
+    quote({ id: "ancient", date: "2025-10-01" });
     quote({ id: "broken", status: "invalid", message: "Reported prices do not satisfy minimum <= average <= maximum." });
-    expect(await autoPublishPending(db as never, "mamcos", NOW)).toEqual({ published: 0, held: [] });
-    expect(statusOf("old")).toBe("pending");
+    expect(await autoPublishPending(db as never, "mamcos", NOW)).toEqual({ published: 0, held: [], rejected: 0 });
+    expect(statusOf("ancient")).toBe("pending");
     expect(statusOf("broken")).toBe("invalid");
+  });
+
+  it("judges a backfilled rate against prices around its own date, not today's", async () => {
+    // September prices sat near 30,000; November's are near 46,000 (history()).
+    history();
+    for (const [index, branch] of ["KOPPA", "SORABA", "SHIVAMOGGA"].entries()) quote({ id: `sep-${index}`, branch, date: "2026-09-10", average: 30000, status: "verified" });
+    quote({ id: "sep-good", date: "2026-09-12", average: 31000 });
+    quote({ id: "sep-spike", branch: "KOPPA", date: "2026-09-12", average: 46000 });
+    const result = await autoPublishPending(db as never, "mamcos", NOW);
+    expect(statusOf("sep-good")).toBe("verified");
+    expect(result.held).toEqual([{ id: "sep-spike", reason: expect.stringContaining("more than 20%") }]);
+  });
+
+  it("records why a row is held, and clears it once the row is published", async () => {
+    history();
+    quote({ id: "spike", branch: "KOPPA", average: 90000 });
+    quote({ id: "second", branch: "SORABA", average: 46500 });
+    quote({ id: "first", branch: "SORABA", status: "verified", average: 46000 });
+    await autoPublishPending(db as never, "mamcos", NOW);
+    const reason = (id: string) => db.sqlite.prepare("SELECT hold_reason, held_at FROM cooperative_quotes WHERE id=?").get(id) as { hold_reason: string | null; held_at: string | null };
+    expect(reason("spike").hold_reason).toContain("more than 20%");
+    expect(reason("spike").held_at).toBe(NOW.toISOString());
+    expect(reason("second").hold_reason).toBe(CONFLICT_REASON);
+    expect(reason("first").hold_reason).toBeNull();
+  });
+
+  it("compares with the branch's own prices first, and allows volatile grades their usual swing", async () => {
+    // Yellapur kole sells well below the other branches; judged against its own branch it is normal.
+    for (const [index, branch] of ["Sirsi", "Siddapur", "Sagar"].entries()) quote({ id: `k-${index}`, branch, variety: "KOLE", average: 30000, status: "verified" });
+    for (const [index, average] of [18600, 18900, 20200].entries()) quote({ id: `y-${index}`, branch: "Yellapur", variety: "KOLE", date: `2026-11-0${index + 1}`, average, status: "verified" });
+    quote({ id: "yellapur", branch: "Yellapur", variety: "KOLE", average: 21300 });
+    // A grade whose prices swing widely gets a wider band, but never past 50%.
+    for (const [index, average] of [6000, 9000, 12000, 15000].entries()) quote({ id: `s-${index}`, branch: `S${index}`, variety: "SIPPE", average, status: "verified" });
+    quote({ id: "sippe-swing", branch: "S9", variety: "SIPPE", average: 15500 });
+    quote({ id: "sippe-typo", branch: "S8", variety: "SIPPE", average: 1499 });
+    const result = await autoPublishPending(db as never, "mamcos", NOW);
+    expect(statusOf("yellapur")).toBe("verified");
+    expect(statusOf("sippe-swing")).toBe("verified");
+    expect(result.held).toEqual([{ id: "sippe-typo", reason: expect.stringContaining("more than 50%") }]);
+  });
+
+  it("rejects a row still held two weeks after it was first held, keeping the reason", async () => {
+    history();
+    quote({ id: "spike", branch: "KOPPA", average: 90000 });
+    await autoPublishPending(db as never, "mamcos", NOW);
+    expect(statusOf("spike")).toBe("pending");
+    const later = await autoPublishPending(db as never, "mamcos", new Date(NOW.getTime() + 13 * 86_400_000));
+    expect(later.rejected).toBe(0);
+    const expired = await autoPublishPending(db as never, "mamcos", new Date(NOW.getTime() + 14 * 86_400_000));
+    expect(expired).toMatchObject({ rejected: 1, held: [] });
+    expect(statusOf("spike")).toBe("rejected");
+    expect(db.sqlite.prepare("SELECT action, reviewer FROM cooperative_reviews WHERE quote_id='spike'").get()).toEqual({ action: "reject", reviewer: AUTO_REVIEWER });
+    expect((db.sqlite.prepare("SELECT hold_reason FROM cooperative_quotes WHERE id='spike'").get() as { hold_reason: string }).hold_reason).toContain("more than 20%");
+  });
+
+  it("publishes today's rows before a backfill when a run cannot take everything", async () => {
+    history();
+    for (let index = 0; index < 205; index += 1) quote({ id: `back-${index}`, branch: `B${index}`, date: "2026-10-20" });
+    quote({ id: "today", branch: "SAGARA", date: TODAY });
+    const result = await autoPublishPending(db as never, "mamcos", NOW);
+    expect(result.published).toBe(200);
+    expect(statusOf("today")).toBe("verified");
+    expect((await autoPublishPending(db as never, "mamcos", NOW)).published).toBe(6);
   });
 
   it("shows published rows to readers and leaves held rows out", async () => {

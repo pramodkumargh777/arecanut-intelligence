@@ -53,3 +53,25 @@ export async function autoVerifyPendingDaily(db: D1Database): Promise<number> {
   const results = await db.batch(autoVerifyStatements(db, source.id));
   return results[0].meta.changes;
 }
+
+/** A flagged observation still unreviewed this many days after it was stored is rejected automatically. */
+export const OBSERVATION_AUTO_REJECT_DAYS = 14;
+export const OBSERVATION_AUTO_REVIEWER = "auto-validation-flagged-v1";
+
+/**
+ * Rejects AGMARKNET rows the connector flagged ('review_required', e.g. a maximum of ₹4.75 lakh a quintal, or a modal
+ * price outside its own range) once they have waited OBSERVATION_AUTO_REJECT_DAYS. They were never shown to readers;
+ * this only closes them, with an audit entry keeping the flag, so no queue needs a person. Two set-based statements.
+ */
+export async function autoRejectStaleFlagged(db: D1Database, now = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - OBSERVATION_AUTO_REJECT_DAYS * 86_400_000).toISOString().replace("T", " ").slice(0, 19);
+  const passId = now.toISOString().replace("T", " ").replace("Z", "");
+  const results = await db.batch([
+    db.prepare(`INSERT INTO observation_reviews (id, observation_id, action, reviewer, reviewed_at, previous_status, validation_message)
+      SELECT lower(hex(randomblob(16))), id, 'reject', ?, ?, validation_status, validation_message FROM market_price_observations
+      WHERE validation_status = 'review_required' AND replace(ingested_at, 'T', ' ') < ?`).bind(OBSERVATION_AUTO_REVIEWER, passId, cutoff),
+    db.prepare(`UPDATE market_price_observations SET validation_status = 'rejected' WHERE validation_status = 'review_required' AND id IN (
+      SELECT observation_id FROM observation_reviews WHERE reviewer = ? AND reviewed_at = ?)`).bind(OBSERVATION_AUTO_REVIEWER, passId),
+  ]);
+  return results[1].meta.changes;
+}
