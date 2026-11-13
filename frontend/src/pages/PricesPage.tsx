@@ -183,7 +183,7 @@ export function PricesPage() {
           onSelect={(suggestion) => { setSearchDraft(""); update({ market: suggestion.marketId ?? null, search: null }); }} /></label>
         <label className="filter-control"><span>{c.market}</span><select value={marketId} onChange={(event) => update({ market: event.target.value })}><option value="">{c.allMarkets}</option>{(markets.data ?? []).filter((market) => !district || market.district === district).map((market) => <option key={market.id} value={market.id}>{market.name}</option>)}</select></label>
         <label className="filter-control"><span>{t.varietyExact}</span><input type="search" list="price-variety-options" value={variety} onChange={(event) => update({ variety: event.target.value })} placeholder={t.varietyPlaceholder} /><datalist id="price-variety-options">{(varietyOptions.data ?? []).map((value) => <option key={value} value={value} />)}</datalist></label>
-        <button className="button-secondary clear-filters" disabled={!hasFilters} aria-label={t.clearAll} title={t.clearAll} onClick={clearFilters}><RotateCcw size={15} /> {c.reset}</button>
+        <button className="button-secondary clear-filters" disabled={!hasFilters} aria-label={t.clearAll} title={t.clearAll} onClick={clearFilters}><RotateCcw size={16} /> {c.reset}</button>
         <details className="advanced-filters">
         <summary>{c.moreFilters}{district || grade || from || to ? ` · ${c.active}` : ""}</summary>
         <div className="advanced-filter-fields">

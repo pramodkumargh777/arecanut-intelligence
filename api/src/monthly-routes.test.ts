@@ -11,7 +11,7 @@ vi.mock("./tss", async (importOriginal) => ({
   ...await importOriginal<typeof import("./tss")>(),
   refreshTss: vi.fn(),
 }));
-vi.mock("./cooperative-auto-publish", () => ({ autoPublishPending: vi.fn() }));
+vi.mock("./cooperative-auto-publish", () => ({ autoPublishPending: vi.fn(), AUTO_REJECT_AFTER_DAYS: 14 }));
 vi.mock("./forecast", async (importOriginal) => ({
   ...await importOriginal<typeof import("./forecast")>(),
   refreshChangedForecasts: vi.fn(),
@@ -114,7 +114,7 @@ describe("monthly scheduler", () => {
   it("auto-publishes only for a permitted source and only when switched on", async () => {
     vi.mocked(refreshMonthly).mockResolvedValue({ reporting_month: "2026-10", record_count: 28 });
     vi.mocked(refreshMamcos).mockResolvedValue({ fetch_id: "f", attempts: 1, received_count: 1, inserted_count: 1, duplicate_count: 0, invalid_count: 0 });
-    vi.mocked(autoPublishPending).mockResolvedValue({ published: 1, held: [] });
+    vi.mocked(autoPublishPending).mockResolvedValue({ published: 1, held: [], rejected: 0 });
 
     vi.mocked(readCooperativeSource).mockResolvedValueOnce(granted);
     await worker.scheduled({} as ScheduledEvent, { ...env, MAMCOS_SCHEDULE_ENABLED: "true" }, ctx);

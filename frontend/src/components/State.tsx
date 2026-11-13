@@ -11,7 +11,7 @@ const STATE_COPY = defineCopy({
 export function LoadingState({ label }: { label?: string }) {
   const { language } = useLanguage();
   const text = label ?? STATE_COPY[language].loading;
-  return <div className="state-card" role="status" lang={label ? undefined : language}><LoaderCircle className="spin" size={19} /><span>{text}…</span></div>;
+  return <div className="state-card" role="status" lang={label ? undefined : language}><LoaderCircle className="spin" size={18} /><span>{text}…</span></div>;
 }
 
 /** Grey rows shaped like rate rows, so a slow connection shows where the prices will appear. Screen readers hear the label. */
@@ -31,7 +31,7 @@ export function ErrorState({ error, onRetry, retryLabel }: { error: Error; onRet
   const { language } = useLanguage();
   return (
     <div className="state-card state-error" role="alert">
-      <AlertCircle size={19} /><span>{error.message}</span>
+      <AlertCircle size={18} /><span>{error.message}</span>
       {onRetry && <button className="text-button" onClick={onRetry} lang={retryLabel ? undefined : language}>{retryLabel ?? STATE_COPY[language].retry}</button>}
     </div>
   );
@@ -40,7 +40,7 @@ export function ErrorState({ error, onRetry, retryLabel }: { error: Error; onRet
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="empty-state">
-      <span className="empty-icon"><Database size={22} /></span>
+      <span className="empty-icon"><Database size={24} /></span>
       <strong>{title}</strong>
       <div>{children}</div>
     </div>

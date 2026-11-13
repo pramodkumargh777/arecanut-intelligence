@@ -283,7 +283,7 @@ export function Answer({ question, answer, fresh, latest, onAsk }: { question: s
           <ChevronDown size={16} aria-hidden="true" className="chat-sources-chevron" /></summary>
         <ol className="chat-sources" aria-label={t.sources}>{answer.citations.map((citation) => <li key={citation.ref} id={`${anchor}-${citation.ref}`}>
           <span className="chat-cite chat-cite-static">{citation.ref}</span>
-          <span className="chat-source-text">{citation.url ? <a href={citation.url} target="_blank" rel="noopener noreferrer">{citation.label}<ExternalLink size={12} aria-hidden="true" /></a> : citation.label}
+          <span className="chat-source-text">{citation.url ? <a href={citation.url} target="_blank" rel="noopener noreferrer">{citation.label}<ExternalLink size={14} aria-hidden="true" /></a> : citation.label}
             <small>{[citation.publisher, citation.reporting_period].filter(Boolean).join(" · ")}</small></span>
         </li>)}</ol>
       </details>}
@@ -408,8 +408,8 @@ export function AssistantPage() {
             <h3><span className="assistant-topic-icon" aria-hidden="true"><Icon size={16} /></span>{topic.title[siteLanguage]}</h3>
             <ul>{topic.questions[siteLanguage].map((example) => <li key={example}><button type="button" onClick={() => ask(example)}>
               {/* On phones the topic headings are hidden and each question carries its topic's icon instead. */}
-              <span className="assistant-topic-q-icon" aria-hidden="true"><Icon size={15} /></span>
-              <span className="assistant-topic-q">{example}</span><ArrowUpRight size={15} aria-hidden="true" /></button></li>)}</ul>
+              <span className="assistant-topic-q-icon" aria-hidden="true"><Icon size={16} /></span>
+              <span className="assistant-topic-q">{example}</span><ArrowUpRight size={16} aria-hidden="true" /></button></li>)}</ul>
           </div>;
         })}</div>
       </section>}

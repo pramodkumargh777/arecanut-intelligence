@@ -152,7 +152,7 @@ export function MarketPage() {
 
   return <div className="page-stack home market-page" lang={language}>
     <section className="home-heading">
-      <p className="market-kicker"><MapPin size={15} aria-hidden="true" />{district}</p>
+      <p className="market-kicker"><MapPin size={16} aria-hidden="true" />{district}</p>
       <h1>{copy.title(name)}</h1>
       <p>{copy.intro(district)}</p>
       {allLines.length > 0 && <div className="market-share"><ShareButton labels={shareLabels} ariaLabel={copy.shareAria(name)} title={copy.title(name)} message={() => shareMessage({
@@ -171,7 +171,7 @@ export function MarketPage() {
         return <section className="rate-card rate-card-coop" key={source} aria-labelledby={`market-${source}`}>
           <header className="rate-card-head">
             <div><h2 id={`market-${source}`} className="market-card-title">{copy.branch(language === "kn" ? names.kn : names.en, name)}</h2><span className="rate-card-basis">{basis}</span></div>
-            {rows[0] && <a className="rate-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={13} aria-hidden="true" /></a>}
+            {rows[0] && <a className="rate-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={14} aria-hidden="true" /></a>}
           </header>
           {query?.isPending ? <SkeletonRows label={copy.loading} rows={3} /> : query?.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void query.refetch()} />
             : rows.length ? <RateLines lines={coopLines(source, rows, language, copy.unstated)} today={today} language={language} /> : <p className="rate-empty">{copy.noRates(WINDOW_DAYS)}</p>}

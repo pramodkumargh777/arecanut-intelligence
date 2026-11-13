@@ -129,16 +129,16 @@ export function OverviewPage() {
         <div><h1>{t.title}</h1><p>{t.intro}</p></div>
         <div className="heading-controls"><SourceSlot /><label className="variety-select"><span>{t.reportedVariety}</span><select disabled={!varieties.data?.length} value={variety} onChange={(event) => setVariety(event.target.value)}><option value="">{varieties.data?.length ? t.selectVariety : t.noVarieties}</option>{(varieties.data ?? []).map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
 </div>
-        <div className="updated-chip"><CalendarDays size={13} /> {t.latestReport} <b>{niceDate(data.latest_reporting_date)}</b></div>
+        <div className="updated-chip"><CalendarDays size={14} /> {t.latestReport} <b>{niceDate(data.latest_reporting_date)}</b></div>
       </section>
 
       <IntelligenceScorecard feed="official" variety={variety} />
 
       <section className="snapshot-grid" aria-label={t.snapshot}>
         <article className="snapshot-card featured-card">
-          <div className="card-kicker"><span>{t.referenceIndex(variety)}</span><TrendingUp size={17} /></div>
+          <div className="card-kicker"><span>{t.referenceIndex(variety)}</span><TrendingUp size={18} /></div>
           <div className="snapshot-value">{data.index_status === "available" ? money(data.reference_price) : "—"}<small>{t.perQuintal}</small></div>
-          {data.index_status === "available" && data.absolute_change != null ? <div className={`change-line ${changePositive ? "positive" : "negative"}`}>{changePositive ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}{money(Math.abs(data.absolute_change))} <span>{t.vsPrevious(Math.abs(data.percent_change ?? 0).toFixed(2))}</span></div> : <div className="card-hint">{t.appearsLater}</div>}
+          {data.index_status === "available" && data.absolute_change != null ? <div className={`change-line ${changePositive ? "positive" : "negative"}`}>{changePositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}{money(Math.abs(data.absolute_change))} <span>{t.vsPrevious(Math.abs(data.percent_change ?? 0).toFixed(2))}</span></div> : <div className="card-hint">{t.appearsLater}</div>}
           <div className="feature-foot"><ShieldCheck size={14} /> {t.exactVariety(data.reporting_markets)}</div>
           <p>{t.benchmark(data.benchmark_reporting_date ? niceDate(data.benchmark_reporting_date) : c.unavailable)} {data.latest_reporting_date !== data.benchmark_reporting_date && t.olderPoint}</p>
         </article>
@@ -149,7 +149,7 @@ export function OverviewPage() {
           <div className="coverage-track"><span style={{ width: `${Math.min(100, data.reporting_markets / Math.max(data.market_coverage_required, 1) * 100)}%` }} /></div>
         </article>
         <article className="snapshot-card">
-          <div className="card-kicker"><span>{t.highest}</span><ArrowUpRightFromSquare size={15} /></div>
+          <div className="card-kicker"><span>{t.highest}</span><ArrowUpRightFromSquare size={16} /></div>
           <div className="snapshot-value">{money(data.highest_market?.modal_price)}<small>{t.perQuintal}</small></div>
           <div className="market-name">{data.highest_market?.market_name ?? t.awaiting}</div>
         </article>
@@ -163,7 +163,7 @@ export function OverviewPage() {
       <section className="content-grid">
         <article className="panel chart-panel">
           <div className="panel-heading"><div><h2>{t.movement}</h2><p>{t.movementHint}</p></div><Link to="/analytics?feed=official" className="subtle-link">{t.viewAnalytics} <ArrowUpRightFromSquare size={14} /></Link></div>
-          {index.isLoading && variety ? <LoadingState label={t.loadingHistory} /> : index.error ? <ErrorState error={index.error} onRetry={() => void index.refetch()} /> : index.data?.data.length ? <Suspense fallback={<LoadingState label={t.loadingChart} />}><PriceChart points={index.data.data} /></Suspense> : <div className="chart-empty"><ChartNoAxesCombined size={28} strokeWidth={1.3} aria-hidden="true" /><strong>{variety ? t.noHistory : t.noVarietiesAvailable}</strong><p>{t.historyLater}</p><Link to="/data-quality" className="inline-action">{t.verification} <ArrowUpRightFromSquare size={14} /></Link></div>}
+          {index.isLoading && variety ? <LoadingState label={t.loadingHistory} /> : index.error ? <ErrorState error={index.error} onRetry={() => void index.refetch()} /> : index.data?.data.length ? <Suspense fallback={<LoadingState label={t.loadingChart} />}><PriceChart points={index.data.data} /></Suspense> : <div className="chart-empty"><ChartNoAxesCombined size={24} aria-hidden="true" /><strong>{variety ? t.noHistory : t.noVarietiesAvailable}</strong><p>{t.historyLater}</p><Link to="/data-quality" className="inline-action">{t.verification} <ArrowUpRightFromSquare size={14} /></Link></div>}
           {index.data?.data.length ? <div className="chart-meta"><span><span className="legend-line" /> {t.legend}</span><span>{t.coverageVaries(index.data.minimum_market_coverage)}</span></div> : null}
         </article>
         <article className="panel pulse-panel">

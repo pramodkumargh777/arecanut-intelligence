@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyMigrations, LocalDatabase } from "./test-support/local-d1";
 import { app, type Env } from "./index";
-import { AGMARKNET_DAILY_REVIEWER, autoVerifyPendingDaily } from "./auto-verify";
+import { AGMARKNET_DAILY_REVIEWER, autoRejectStaleFlagged, autoVerifyPendingDaily, OBSERVATION_AUTO_REVIEWER } from "./auto-verify";
 
 let db: LocalDatabase;
 let env: Env["Bindings"];
@@ -107,5 +107,19 @@ describe("POST /admin/agmarknet/auto-verify", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ auto_verified_count: 1, reviewer: AGMARKNET_DAILY_REVIEWER });
     expect(statuses()).toEqual({ a: "verified" });
+  });
+});
+
+describe("flagged rows that nobody reviews", () => {
+  it("are rejected after two weeks with the flag kept, and never published", async () => {
+    await ingest([record("ok"), record("odd", { validation_status: "review_required", validation_message: "max_price 475000 exceeds 200000 INR/quintal; check unit.", maximum_price: 475000 })]);
+    const raw = (db.sqlite.prepare("SELECT ingested_at FROM market_price_observations WHERE id='odd'").get() as { ingested_at: string }).ingested_at;
+    const stored = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`);
+    expect(await autoRejectStaleFlagged(db as never, new Date(stored.getTime() + 13 * 86_400_000))).toBe(0);
+    expect(await autoRejectStaleFlagged(db as never, new Date(stored.getTime() + 15 * 86_400_000))).toBe(1);
+    expect(statuses()).toEqual({ ok: "verified", odd: "rejected" });
+    expect(db.sqlite.prepare("SELECT action, reviewer, previous_status, validation_message FROM observation_reviews WHERE observation_id='odd'").get())
+      .toEqual({ action: "reject", reviewer: OBSERVATION_AUTO_REVIEWER, previous_status: "review_required", validation_message: "max_price 475000 exceeds 200000 INR/quintal; check unit." });
+    expect(await published()).toBe(1);
   });
 });
