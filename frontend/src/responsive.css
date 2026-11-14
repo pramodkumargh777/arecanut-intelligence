@@ -550,3 +550,26 @@
 @media (max-width: 640px) {
   .aggregate-table td:first-child, .aggregate-table th { white-space: nowrap; }
 }
+/* Branch coverage on phones: branch and price side by side, the reporting date under the price ("Latest date" when
+   current). The separate date and status columns, which say the same thing, step aside. */
+.coverage-date-sub { display: none; }
+@media (max-width: 640px) {
+  .coverage-table { table-layout: auto; width: 100%; min-width: 0; }
+  .coverage-table th:nth-child(2), .coverage-table td:nth-child(2), .coverage-table th:nth-child(4), .coverage-table td:nth-child(4) { display: none; }
+  .coverage-table th:nth-child(1), .coverage-table th:nth-child(3) { width: auto; }
+  .coverage-date-sub { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 400; color: var(--muted); }
+}
+/* Monthly price outlook: on phones the variety picker shares the title's row instead of taking a row of its own;
+   wider screens keep it on its own line under the heading, as before. */
+@media (min-width: 641px) {
+  .page-heading-picker > .fx-toolbar { flex-basis: 100%; }
+}
+@media (max-width: 640px) {
+  .page-heading-picker { flex-wrap: nowrap; align-items: center; gap: 12px; }
+  .page-heading-picker > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .page-heading-picker h1 { margin: 0; }
+  .page-heading-picker > .fx-toolbar { flex: none; display: block; }
+  /* The word "Variety" is read out but not shown; the chosen name and chevron say enough at a glance. */
+  .page-heading-picker .fx-select > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .page-heading-picker .fx-select { padding-left: 4px; }
+}

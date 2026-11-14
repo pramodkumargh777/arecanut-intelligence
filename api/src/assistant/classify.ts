@@ -1,4 +1,5 @@
 /** Deterministic query classification: keyword intents (English + Kannada) and entity extraction. */
+import { PLACES } from "./places";
 import { normalizeDigits } from "./language";
 import type { ToolName } from "./types";
 
@@ -11,7 +12,7 @@ const RULES: IntentRule[] = [
   { tool: "get_price_forecast", patterns: [/\bforecast/, /\bpredict/, /\bnext month\b/, /\boutlook\b/, /\bwill (the )?price/, /\bexpected price\b/, /ಮುನ್ಸೂಚನೆ/, /ಮುಂದಿನ ತಿಂಗಳ/, /ಮುನ್ನೋಟ/] },
   { tool: "get_market_index", patterns: [/\bindex\b/, /\bbenchmark\b/, /\breference (price|index)\b/, /ಸೂಚ್ಯಂಕ/] },
   { tool: "compare_markets", patterns: [/\bcompar/, /\bversus\b/, /\bvs\.?\b/, /\bwhich (market|branch|mandi)\b/, /\b(highest|lowest|best|cheapest)\b.*\b(market|branch|price|rate)/, /ಹೋಲಿಕೆ/, /ಹೋಲಿಸ/, /ಯಾವ ಮಾರುಕಟ್ಟೆ/] },
-  { tool: "get_historical_prices", patterns: [/\bhistor/, /\btrend/, /\bpast\b/, /\blast (year|\d+ months?|month|season)\b/, /\bover (the )?(years|months)\b/, /\bmonthly prices?\b/, /\b20[12]\d\b.*\bprice/, /ಇತಿಹಾಸ/, /ಹಿಂದಿನ/, /ಪ್ರವೃತ್ತಿ/, /ಕಳೆದ ವರ್ಷ/] },
+  { tool: "get_historical_prices", patterns: [/\bhistor/, /\btrend/, /\bpast\b/, /\blast (year|\d+ months?|month|season)\b/, /\bover (the )?(years|months)\b/, /\bmonthly prices?\b/, /\b20[12]\d\b.*\bprice/, /\bhow (has|have|did)\b.*\b(move|moved|changed?|gone|went)\b/, /\b(this|past) year\b/, /\bover (the )?(year|season)\b/, /ಇತಿಹಾಸ/, /ಹಿಂದಿನ/, /ಪ್ರವೃತ್ತಿ/, /ಕಳೆದ ವರ್ಷ/, /ಈ ವರ್ಷ/, /ಏರಿಳಿತ/, /ಬದಲಾಗಿದೆ/, /ಬದಲಾವಣೆ/] },
   { tool: "get_current_prices", patterns: [/\b(price|prices|rate|rates|quote|quotation)\b/, /\btoday\b/, /\bcurrent\b/, /\blatest\b/, /ಬೆಲೆ/, /ದರ/, /ಇಂದಿನ/] },
   { tool: "get_market_arrivals", patterns: [/\barrival/, /\btraded quantit/, /\bmarket (supply|volume)\b/, /\bquantity (arrived|traded)\b/, /ಆವಕ/] },
   { tool: "get_production_statistics", patterns: [/\bproduc(e|ed|es|ing|tion)\b/, /\byield\b/, /\bhectare/, /\bcultivated area\b/, /\barea under\b/, /\boutput\b/, /\bharvest/, /ಉತ್ಪಾದನೆ/, /ಇಳುವರಿ/, /ವಿಸ್ತೀರ್ಣ/, /ಕೊಯ್ಲು/, /ಫಸಲು/] },
@@ -80,6 +81,8 @@ export type Classification = {
   entities: {
     variety?: string;
     district?: string;
+    /** A town named in the question (a PLACES name), for market-level history. */
+    market?: string;
     source?: "mamcos" | "tss" | "tumcos" | "agmarknet";
     from_month?: string;
     to_month?: string;
@@ -156,6 +159,7 @@ export function classifyQuestion(question: string): Classification {
   const entities: Classification["entities"] = {
     variety: firstMatch(question, VARIETY_ALIASES),
     district: firstMatch(question, DISTRICTS),
+    market: PLACES.find((place) => place.level === "local" && (place.latin.test(question) || place.kannada.some((name) => question.includes(name))))?.name,
     source: firstMatch(question, SOURCES),
     ...monthBounds(text),
   };

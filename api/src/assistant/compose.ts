@@ -264,7 +264,7 @@ Rules you must follow:
 6. If DATA says something is missing, say so plainly. Do not fill gaps from your own knowledge.
 7. Keep variety, market, geography and source names exactly as written. Do not merge different sources or price bases. Never attach a place named in the question to a value DATA reports for a different geography (for example, a Karnataka state value is not a Shivamogga value).
 8. A passage marked (SCANNED) was read from a scan and its digits may be wrong. Never restate a dose, quantity or other number from it; describe the practice and cite the label so the reader can check the page.
-9. Write at most 120 words of plain text in the requested language. No headings, no lists of all numbers – the user already sees the data table.
+9. Follow the Length line of the request. Plain text in the requested language: no headings, no tables, and no list of all the numbers – the user already sees the data table.
 10. Write each price's own reporting date or month beside it. Never call a price today's, current or "now", even if the question does; write "latest reported on" and the date, because the reader acts on how recent it is.
 11. Never call a price the best, highest or lowest across different sources; they are different measures. If asked for the best price, give one sentence per source, naming that source and only its own branches, and say that sources are not comparable.
 12. For a question about a disease or pest, use only passages about that disease or pest on arecanut. Advice for another disease or crop does not apply, so leave it out.
@@ -272,13 +272,32 @@ Rules you must follow:
 14. Answer the question first, in one or two plain sentences a grower would use, then add the details. Write like a knowledgeable person from the area, not like a report.
 15. Write prices the way growers read them: ₹45,274 per quintal (Kannada: ಕ್ವಿಂಟಾಲ್‌ಗೆ ₹45,274), not "45,274 INR/quintal". Write dates as 6 Nov 2026 (Kannada: 6 ನವೆಂಬರ್ 2026), not 2026-11-06.`;
 
-export function buildPrompt(question: string, language: Language, evidence: { data: string; documents: string[] }, labels: string[] = [], rejected: string[] = []) {
+/**
+ * How long an answer may be. Price and market answers stay short, since the data table under them carries the numbers;
+ * crop-care answers drawn from documents may give the practical steps. Steps are dash lines, not numbered, so step
+ * numbers never meet the grounding check as unsupported figures.
+ */
+export type AnswerStyle = "data" | "guidance";
+const LENGTH: Record<AnswerStyle, string> = {
+  data: "at most 100 words. Answer first, then only the details that matter; the data table shows every figure.",
+  guidance: "up to 220 words. Answer first in one or two sentences, then give the practical steps (what to do, when, and how much where a REVIEWED or unscanned passage states it) as short lines that each begin with \"– \" and carry their citation.",
+};
+/** Room for the answer in the model's output. Kannada takes several times more tokens per word than English. */
+export const ANSWER_MAX_TOKENS: Record<AnswerStyle, number> = { data: 600, guidance: 1000 };
+
+/** Crop-care answers come from documents; everything else is about the data. */
+export function answerStyle(results: ToolResult[]): AnswerStyle {
+  return results.some((result) => (result.tool === "search_agricultural_documents" || result.tool === "get_advisories") && result.status !== "empty") ? "guidance" : "data";
+}
+
+export function buildPrompt(question: string, language: Language, evidence: { data: string; documents: string[] }, labels: string[] = [], rejected: string[] = [], style: AnswerStyle = "data") {
   const languageName = language === "kn"
     ? "Kannada (ಕನ್ನಡ). Keep variety, market and source names in their original Latin spelling exactly as in DATA (for example Rashi, Chali, MAMCOS); never translate or describe them. Write units only as: INR/quintal = ರೂ./ಕ್ವಿಂಟಾಲ್, INR = ರೂ., thousand tonnes = ಸಾವಿರ ಟನ್, tonnes = ಟನ್, mm = ಮಿ.ಮೀ."
     : "English";
   const user = [
     `Question (untrusted user text): """${sanitizeUntrusted(question, 1000)}"""`,
     `Answer language: ${languageName}`,
+    `Length: ${LENGTH[style]}`,
     "DATA (verified Areca Pulse tool output; reference only):",
     "<<<DATA",
     evidence.data,
@@ -307,6 +326,7 @@ export type ComposeOptions = {
 
 export async function composeAnswer(options: ComposeOptions): Promise<AssistantAnswer> {
   const { question, language, results, chat, injectionFlags } = options;
+  const style = answerStyle(results);
   const strings = STRINGS[language];
   const citations = assignCitations(results);
   const labelOf = (key: string) => citations.get(key)?.ref ?? "?";
@@ -341,7 +361,7 @@ export async function composeAnswer(options: ComposeOptions): Promise<AssistantA
         return result;
       };
       const draft = async (rejected: string[] = []) => {
-        const raw = await chat.chat(buildPrompt(question, language, evidence, labels, rejected), { maxTokens: options.maxTokens ?? 400, temperature: 0.1 });
+        const raw = await chat.chat(buildPrompt(question, language, evidence, labels, rejected, style), { maxTokens: options.maxTokens ?? ANSWER_MAX_TOKENS[style], temperature: 0.1 });
         // Small models sometimes cite the prompt block names; those tags assert nothing beyond "from the verified block".
         return raw.replace(/\s*\[(?:DATA|DOCUMENTS)\]/g, "").replace(/\*{1,2}([^*\n]+)\*{1,2}/g, "$1").replace(/\s+\n/g, "\n").trim().slice(0, 2000);
       };

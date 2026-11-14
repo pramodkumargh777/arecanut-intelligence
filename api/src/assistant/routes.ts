@@ -81,7 +81,7 @@ const querySchema = z.object({
 const feedbackSchema = z.object({ interaction_id: z.string().uuid(), rating: z.enum(["up", "down"]) }).strict();
 
 /** Entities a follow-up inherits when it does not name its own. Sources and dates are not carried over. */
-const CARRIED_ENTITIES = ["variety", "district"] as const;
+const CARRIED_ENTITIES = ["variety", "district", "market"] as const;
 
 /**
  * A follow-up such as "and Chali?" or "what about Sirsi?" names too little to choose tools. When the question alone

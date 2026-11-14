@@ -137,3 +137,69 @@ export function seasonalPattern(points: HoldPoint[]): SeasonalPattern | null {
     return { ...base, high: null, low: null, spread_percent: spread, consistent_years: consistent };
   return { ...base, years: compared.length, high: high.pair, low: low.pair, spread_percent: spread, consistent_years: consistent };
 }
+
+/** Where today's price stands, and what followed similar moments before. Past outcomes only; never a forecast. */
+export type PriceContext = {
+  latest_month: string; price: number;
+  /** Latest price against the average of the 12 months before it, as a fraction (−0.12 = 12% below). */
+  vs_year_average: number;
+  band: "above" | "near" | "below";
+  /** Against the same month a year earlier, as a fraction, or null without that month. */
+  vs_last_year: number | null;
+  /** Where the price sits in its last 24 months. */
+  range: "lowest" | "near_low" | "highest" | "near_high" | null;
+  /** Past stretches in the same band, and how many were higher `months` later. */
+  analogue: { months: 3 | 6; cases: number; higher: number; median_change: number } | null;
+  /** The median size of a 3-month move, as a fraction, either way. */
+  typical_move: number | null;
+};
+
+/** How far from the yearly average counts as above or below it. */
+const BAND = 0.05;
+/** Fewer similar past stretches than this is an anecdote, so no comparison is given. */
+const MIN_ANALOGUES = 5;
+
+const monthIndex = (month: string) => Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1;
+
+export function priceContext(points: HoldPoint[]): PriceContext | null {
+  const usable = points.filter((point) => point.weighted_price !== null && point.weighted_price > 0 && !isIsolatedSpike(point));
+  if (!usable.length) return null;
+  const price = new Map(usable.map((point) => [monthIndex(point.reporting_month), point.weighted_price!]));
+  const latestPoint = usable.reduce((latest, point) => point.reporting_month > latest.reporting_month ? point : latest);
+  const last = monthIndex(latestPoint.reporting_month);
+  // The average of the 12 months before a month; at least 9 of them must exist to call it a yearly average.
+  const yearRatio = (month: number) => {
+    const before = Array.from({ length: 12 }, (_, offset) => price.get(month - 12 + offset)).filter((value): value is number => value !== undefined);
+    return before.length >= 9 ? price.get(month)! / (before.reduce((sum, value) => sum + value, 0) / before.length) : null;
+  };
+  const ratio = yearRatio(last);
+  if (ratio === null) return null;
+  const bandOf = (value: number): PriceContext["band"] => value > 1 + BAND ? "above" : value < 1 - BAND ? "below" : "near";
+  const band = bandOf(ratio);
+  const recent = Array.from({ length: 24 }, (_, offset) => price.get(last - 23 + offset)).filter((value): value is number => value !== undefined);
+  const low = Math.min(...recent), high = Math.max(...recent), now = price.get(last)!;
+  const position = high > low ? (now - low) / (high - low) : null;
+  const range = recent.length < 18 || position === null ? null : now <= low ? "lowest" : now >= high ? "highest" : position <= 0.15 ? "near_low" : position >= 0.85 ? "near_high" : null;
+  // Similar moments: earlier months in the same band, each at least `months` after the previous one counted, so one
+  // long stretch is not counted many times. The longer wait is preferred when there are enough of them.
+  const analogueFor = (months: 3 | 6) => {
+    const changes: number[] = [];
+    let previous = -Infinity;
+    for (const month of [...price.keys()].sort((a, b) => a - b)) {
+      if (month + months > last - 1 || month - previous < months || !price.has(month + months)) continue;
+      const earlier = yearRatio(month);
+      if (earlier === null || bandOf(earlier) !== band) continue;
+      changes.push(price.get(month + months)! / price.get(month)! - 1);
+      previous = month;
+    }
+    return changes.length >= MIN_ANALOGUES
+      ? { months, cases: changes.length, higher: changes.filter((change) => change > 0).length, median_change: medianOf(changes) }
+      : null;
+  };
+  const moves = [...price.keys()].filter((month) => price.has(month + 3)).map((month) => Math.abs(price.get(month + 3)! / price.get(month)! - 1));
+  return {
+    latest_month: latestPoint.reporting_month, price: now, vs_year_average: ratio - 1, band,
+    vs_last_year: price.has(last - 12) ? now / price.get(last - 12)! - 1 : null,
+    range, analogue: analogueFor(6) ?? analogueFor(3), typical_move: moves.length >= 12 ? medianOf(moves) : null,
+  };
+}

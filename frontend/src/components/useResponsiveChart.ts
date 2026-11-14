@@ -5,7 +5,11 @@ export function useResponsiveChart() {
   const [chart, setChart] = useState<EChartsType | null>(null);
 
   useEffect(() => {
-    if (!chart) return;
+    // A chart can be disposed before this runs (a quick re-render, or React's development double mount); its DOM is
+    // then gone, and observing it would throw and take the page down. Such a chart needs no resizing.
+    if (!chart || chart.isDisposed()) return;
+    const dom = chart.getDom();
+    if (!(dom instanceof Element)) return;
     const observer = new ResizeObserver(([entry]) => {
       if (!entry || chart.isDisposed()) return;
       const { width, height } = entry.contentRect;
@@ -13,7 +17,7 @@ export function useResponsiveChart() {
         chart.resize({ width, height });
       }
     });
-    observer.observe(chart.getDom());
+    observer.observe(dom);
     return () => observer.disconnect();
   }, [chart]);
 

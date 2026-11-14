@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyMigrations, LocalDatabase } from "../test-support/local-d1";
 import { app, type Env } from "../index";
 import { classifyQuestion, extractCalculationHints } from "./classify";
-import { answerSentences, composeAnswer, dataDates, planToolsWithModel, quotePassage, salvageSentences } from "./compose";
+import { runTool } from "./tools";
+import { ANSWER_MAX_TOKENS, answerStyle, buildPrompt, answerSentences, composeAnswer, dataDates, planToolsWithModel, quotePassage, salvageSentences } from "./compose";
 import { cardsFor, KNOWLEDGE_CARDS, type KnowledgeCard } from "./knowledge-cards";
 import { diseasesNamed, focusOnDisease } from "./diseases";
 import { checkGrounding, detectInjection, extractNumbers, sanitizeUntrusted } from "./grounding";
@@ -1025,5 +1026,67 @@ describe("prices and dates written the way growers read them", () => {
 
   it("still rejects the same price under a wrong date", () => {
     expect(checkGrounding("TSS Rashi at Sirsi was ₹45,274 per quintal, reported on 9 Nov 2026 [S1].", evidence, ["S1"], facts).status).toBe("failed");
+  });
+});
+
+describe("market-level price history", () => {
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  const daily = (date: string, price: number) => ({ reporting_date: date, modal_price: price, platform_fetch_timestamp: `${date}T11:00:00Z` });
+  const calls: string[] = [];
+  const ctx = (prices: unknown[]) => ({
+    call: async (path: string) => {
+      calls.push(path);
+      if (path.startsWith("/monthly-prices")) return json({ reporting_month: "2026-10", data: [{ variety_name: "Rashi" }] });
+      if (path.startsWith("/markets")) return json({ data: [{ id: "m-sagar", name: "Sagar APMC" }, { id: "m-sirsi", name: "Sirsi APMC" }] });
+      if (path.startsWith("/prices")) return json({ data: prices, has_more: false, next_cursor: null });
+      if (path.startsWith("/history/monthly")) return json({ points: [{ reporting_month: "2026-10", weighted_price: 46842, price_unit: "INR/quintal" }], expected_months: 1, observed_months: 1 });
+      return json({ error: "not found" }, 404);
+    },
+    db: null as never, question: "", language: "en" as const, embedder: null, now: new Date("2026-11-14T06:00:00Z"),
+  });
+
+  it("reads the town from the question in English or Kannada, and keeps it for follow-ups", () => {
+    expect(classifyQuestion("How has Rashi moved in Sagara this year?").entities).toMatchObject({ market: "Sagara", variety: "Rashi" });
+    expect(classifyQuestion("ಶಿರಸಿ ರಾಶಿ ದರದ ಏರಿಳಿತ").entities.market).toBe("Sirsi");
+    for (const question of ["How has Rashi moved in Sirsi this year?", "ಶಿರಸಿ ರಾಶಿ ದರದ ಏರಿಳಿತ", "ಸಾಗರದಲ್ಲಿ ಈ ವರ್ಷ ರಾಶಿ ದರ ಹೇಗೆ ಬದಲಾಗಿದೆ?"]) {
+      expect(classifyQuestion(question).tools).toContain("get_historical_prices");
+    }
+    expect(classifyQuestion("What is today's Rashi rate in Sirsi?").tools).toEqual(["get_current_prices"]);
+  });
+
+  it("gives the market's monthly medians from verified daily prices, beside the state series", async () => {
+    calls.length = 0;
+    const result = await runTool("get_historical_prices", { variety: "Rashi", market: "Sagara" }, ctx([
+      daily("2026-10-03", 46000), daily("2026-10-10", 47000), daily("2026-10-17", 48000), daily("2026-11-05", 45000),
+    ]) as never);
+    expect(calls.find((path) => path.startsWith("/prices"))).toContain("market_id=m-sagar");
+    expect(calls.find((path) => path.startsWith("/prices"))).toContain("to=2026-11-30");
+    const values = Object.fromEntries(result.facts.map((fact) => [fact.label, fact.value]));
+    expect(values["Sagar APMC – Rashi, 2026-10 (median of 3 daily modal prices)"]).toBe(47000);
+    expect(values["Sagar APMC – Rashi, 2026-11 (median of 1 daily modal price)"]).toBe(45000);
+    expect(values["Sagar APMC – Rashi, change from 2026-10 to 2026-11"]).toBeCloseTo(-4.26, 1);
+    expect(values["Rashi monthly price, latest month"]).toBe(46842);
+    expect(result.missing.join(" ")).toContain("reported Rashi in 2 of 12 months");
+  });
+
+  it("says so when a town has no APMC market, and still answers state-wide", async () => {
+    const result = await runTool("get_historical_prices", { variety: "Rashi", market: "Sringeri" }, ctx([]) as never);
+    expect(result.missing.join(" ")).toContain("No AGMARKNET market for Sringeri");
+    expect(result.facts.some((fact) => fact.label === "Rashi monthly price, latest month")).toBe(true);
+  });
+});
+
+describe("answer length", () => {
+  const tool = (name: string, status = "ok") => ({ tool: name, status }) as never;
+  it("lets crop-care answers give their steps, and keeps price answers short", () => {
+    expect(answerStyle([tool("get_current_prices"), tool("get_historical_prices")])).toBe("data");
+    expect(answerStyle([tool("search_agricultural_documents")])).toBe("guidance");
+    expect(answerStyle([tool("search_agricultural_documents", "empty"), tool("get_current_prices")])).toBe("data");
+    const prompt = (style: "data" | "guidance") => buildPrompt("q", "en", { data: "", documents: [] }, [], [], style)[1].content;
+    expect(prompt("data")).toContain("Length: at most 100 words");
+    expect(prompt("guidance")).toContain("Length: up to 220 words");
+    // Kannada needs several tokens a word, so even the short answer has room for a full 100 words.
+    expect(ANSWER_MAX_TOKENS.data).toBeGreaterThanOrEqual(600);
+    expect(ANSWER_MAX_TOKENS.guidance).toBeGreaterThan(ANSWER_MAX_TOKENS.data);
   });
 });

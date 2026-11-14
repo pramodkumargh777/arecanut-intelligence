@@ -325,6 +325,24 @@ details[open] > summary { margin-bottom: 8px; }
 .hold-season { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--brand-leaf); border-radius: var(--radius-sm);
   background: var(--brand-tint); color: var(--ink); font-size: 14.5px; line-height: 1.55; }
 .hold-season svg { flex: none; margin-top: 2px; color: var(--brand); }
+/* The insight card: a headline on where today's price stands, one line of facts, then what followed before. The past
+   outcomes line up with the headline (no list indent), each behind a small leaf dot. */
+.hold-insight { padding: 14px 16px; }
+@media (min-width: 900px) { .hold-insight { align-items: center; } }
+.hold-insight > div { container-type: inline-size; flex: 1; min-width: 0; }
+.hold-insight-body { display: grid; gap: 4px; }
+.hold-insight strong { font-size: 15.5px; font-weight: 650; line-height: 1.4; }
+.hold-insight-facts { margin: 0; font-size: 13.5px; font-weight: 550; color: var(--ink-2); }
+.hold-insight ul { display: grid; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.hold-insight li { position: relative; padding-left: 14px; }
+.hold-insight li::before { content: ""; position: absolute; left: 0; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--brand-leaf); }
+/* Wide: the headline and facts on the left, what followed before on the right, so the card has no empty half. */
+@container (min-width: 720px) {
+  .hold-insight-body { grid-template-columns: minmax(240px, 2fr) minmax(0, 3fr); grid-template-areas: "head list" "facts list"; column-gap: 28px; align-items: center; }
+  .hold-insight-body > strong { grid-area: head; align-self: end; }
+  .hold-insight-body > .hold-insight-facts { grid-area: facts; align-self: start; }
+  .hold-insight-body > ul { grid-area: list; margin: 0; padding-left: 24px; border-left: 1px solid var(--line); }
+}
 /* Yearly imports on Price trends: one figure, a few bars, the largest sources. */
 .page-stack-follow { margin-top: 20px; }
 .imports-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px 24px; }
@@ -995,6 +1013,9 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   .fx-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); }
   .fx-select { width: 100%; }
   .fx-select select { flex: 1; min-width: 0; }
+  /* A lone variety picker sizes to its choice instead of stretching across the screen with empty space after it. */
+  .fx-toolbar > .fx-select:only-child { width: auto; max-width: 100%; justify-self: start; }
+  .fx-toolbar > .fx-select:only-child select { flex: 0 1 auto; min-width: 96px; field-sizing: content; }
   .fx-segmented { height: auto; }
   .fx-segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
   .fx-segmented button { padding: 0 6px; font-size: 13px; }
@@ -1467,3 +1488,38 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 @media (min-width: 641px) and (max-width: 960px) {
   .assistant-topic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Historical anomalies: one card per event (a reversed blip, a sharp move, a data issue), with the path of prices and a
+   five-month line around it. */
+/* auto-fit: a single card takes the full width instead of leaving empty columns beside it. */
+.anomaly-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 12px; }
+.anomaly-event { container-type: inline-size; padding: 14px 16px; border: 1px solid var(--line); border-left: 3px solid var(--control-line); border-radius: var(--radius-sm); background: var(--surface); }
+.anomaly-blip { border-left-color: var(--brand-leaf); }
+.anomaly-rise { border-left-color: #166534; }
+.anomaly-fall { border-left-color: var(--bad-ink); }
+.anomaly-data { border-left-color: var(--subtle); }
+.anomaly-body { display: grid; gap: 8px; align-content: start; }
+/* A wide card reads in two columns: the event and its prices on the left, the explanation and source check on the right. */
+@container (min-width: 620px) {
+  .anomaly-body { grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); grid-template-areas: "head text" "fig text" "fig more"; column-gap: 28px; row-gap: 10px; }
+  .anomaly-body > header { grid-area: head; }
+  .anomaly-body > .anomaly-figures { grid-area: fig; align-self: start; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .anomaly-body > .anomaly-text { grid-area: text; padding-left: 14px; border-left: 1px solid var(--line); margin-left: -14px; }
+  .anomaly-body > details { grid-area: more; }
+}
+.anomaly-event header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.anomaly-kind { font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--brand); }
+[lang="kn"] .anomaly-kind { letter-spacing: 0; text-transform: none; font-size: 13px; }
+.anomaly-month { font-size: 13px; color: var(--muted); }
+/* The price path stays on one line; when the card is too narrow for both, the small chart moves below it. */
+.anomaly-figures { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.anomaly-path { display: flex; flex-wrap: nowrap; white-space: nowrap; align-items: baseline; gap: 6px; margin: 0; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; }
+.anomaly-path b { font-size: 17px; font-weight: 650; color: var(--ink); }
+.anomaly-spark { flex: none; color: var(--subtle); }
+.anomaly-spark-dot { fill: var(--brand); stroke: var(--surface); stroke-width: 1.5; }
+.anomaly-text { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
+.anomaly-event details { font-size: 13px; }
+.anomaly-rule { margin: 14px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+
+/* A unit under its column heading, e.g. "Area" over "thousand hectares", so long units do not widen the column. */
+.th-unit { display: block; margin-top: 1px; font-size: 11.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--subtle); white-space: nowrap; }
