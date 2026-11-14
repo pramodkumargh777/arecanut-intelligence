@@ -134,8 +134,9 @@ async function placeRates(apiUrl: string, place: MarketPlace) {
         date: row.reporting_date, price: row.average_price, minimum: row.minimum_price, maximum: row.maximum_price });
     }
   }
-  if (place.apmc) {
-    const response = await fetch(`${apiUrl}/prices?${new URLSearchParams({ q: place.apmc, from: oldest, limit: "200", sort: "reporting_date", order: "desc", include_count: "false" })}`, { signal: AbortSignal.timeout(20_000) });
+  const apmcId = place.apmc ? await marketId(apiUrl, place.apmc) : null;
+  if (place.apmc && apmcId) {
+    const response = await fetch(`${apiUrl}/prices?${new URLSearchParams({ market_id: apmcId, from: oldest, limit: "200", include_count: "false" })}`, { signal: AbortSignal.timeout(20_000) });
     if (!response.ok) throw new Error(`APMC ${place.apmc}: HTTP ${response.status}`);
     const body = await response.json() as { data: { market_name: string; variety_name: string; grade?: string | null; reporting_date: string; modal_price: number; minimum_price: number; maximum_price: number }[] };
     const seen = new Set<string>();
@@ -147,6 +148,22 @@ async function placeRates(apiUrl: string, place: MarketPlace) {
     }
   }
   return rows;
+}
+
+/**
+ * AGMARKNET market ids by name, read once per build. Town lookups go by market id, which the database answers from
+ * its (market, date) index; a text search (q=) scans every price row and, once per town and page, used up D1's free
+ * daily read allowance (14 Nov 2026).
+ */
+let marketIds: Promise<Map<string, string>> | null = null;
+function marketId(apiUrl: string, name: string) {
+  marketIds ??= fetch(`${apiUrl}/markets`, { signal: AbortSignal.timeout(20_000) })
+    .then(async (response) => {
+      if (!response.ok) throw new Error(`markets: HTTP ${response.status}`);
+      const body = await response.json() as { data: { id: string; name: string }[] };
+      return new Map(body.data.map((market) => [market.name, market.id]));
+    });
+  return marketIds.then((ids) => ids.get(name) ?? null);
 }
 
 /** Months of APMC history written into a town's page for search engines. */
@@ -167,10 +184,12 @@ const middle = (values: number[]) => {
 async function placeHistory(apiUrl: string, place: MarketPlace): Promise<PlaceHistory | null> {
   if (!place.apmc) return null;
   const from = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - (STATIC_HISTORY_MONTHS - 1), 1)).toISOString().slice(0, 10);
+  const id = await marketId(apiUrl, place.apmc);
+  if (!id) return null;
   const byVariety = new Map<string, Map<string, number[]>>();
   let cursor: string | null = null;
-  for (let page = 0; page < 20; page += 1) {
-    const params = new URLSearchParams({ q: place.apmc, from, limit: "1000", include_count: "false" });
+  for (let page = 0; page < 5; page += 1) {
+    const params = new URLSearchParams({ market_id: id, from, limit: "1000", include_count: "false" });
     if (cursor) params.set("cursor", cursor);
     const response = await fetch(`${apiUrl}/prices?${params}`, { signal: AbortSignal.timeout(20_000) });
     if (!response.ok) throw new Error(`APMC history ${place.apmc}: HTTP ${response.status}`);
