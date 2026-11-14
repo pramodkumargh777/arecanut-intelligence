@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { calendarTodayIST, formatCalendarMonth, formatPeriodKannada, MONTH_NAMES_EN, MONTH_NAMES_KN, shiftCalendarMonth } from "../../../shared/dates";
-import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS, seasonalPattern } from "../../../shared/hold-history";
+import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS, priceContext, type PriceContext, seasonalPattern } from "../../../shared/hold-history";
 import { ErrorState, LoadingState } from "../components/State";
 import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
 import { usePhone } from "../components/usePhone";
@@ -71,6 +71,14 @@ const COPY = defineCopy({
     season: (since: number, name: string, high: string, low: string, spread: number, consistent: number, years: number) =>
       `${since}ರಿಂದ ${name} ದರ ಸಾಮಾನ್ಯವಾಗಿ ${high} ತಿಂಗಳಲ್ಲಿ ಹೆಚ್ಚು, ${low} ತಿಂಗಳಲ್ಲಿ ಕಡಿಮೆ ಇದೆ; ಸುಮಾರು ${spread}% ಅಂತರ (${years} ರಲ್ಲಿ ${consistent} ವರ್ಷ).`,
     noSeason: (since: number, name: string) => `${since}ರಿಂದ ${name} ದರದಲ್ಲಿ ಸ್ಪಷ್ಟ ಏರಿಕೆ ಅಥವಾ ಇಳಿಕೆಯ ಕಾಲ ಕಂಡುಬಂದಿಲ್ಲ.`,
+    insightTitle: "ಇಂದಿನ ದರದ ಸ್ಥಿತಿ",
+    headline: (name: string, band: PriceContext["band"], percent: number) => band === "near" ? `${name} ದರ ಒಂದು ವರ್ಷದ ಸರಾಸರಿಯ ಹತ್ತಿರ ಇದೆ`
+      : `${name} ದರ ಒಂದು ವರ್ಷದ ಸರಾಸರಿಗಿಂತ ${percent}% ${band === "below" ? "ಕಡಿಮೆ" : "ಹೆಚ್ಚು"} ಇದೆ`,
+    rangeText: { lowest: "2 ವರ್ಷಗಳಲ್ಲೇ ಕನಿಷ್ಠ", near_low: "2 ವರ್ಷಗಳ ಕನಿಷ್ಠ ಮಟ್ಟದ ಹತ್ತಿರ", highest: "2 ವರ್ಷಗಳಲ್ಲೇ ಗರಿಷ್ಠ", near_high: "2 ವರ್ಷಗಳ ಗರಿಷ್ಠ ಮಟ್ಟದ ಹತ್ತಿರ" },
+    lastYear: (percent: number, month: string) => percent === 0 ? `${month} ರಷ್ಟೇ` : `${month} ಕ್ಕಿಂತ ${Math.abs(percent)}% ${percent < 0 ? "ಕಡಿಮೆ" : "ಹೆಚ್ಚು"}`,
+    analogue: (name: string, band: PriceContext["band"], months: number, higher: number, cases: number, change: string) =>
+      `ಹಿಂದೆ ${name} ದರ ವರ್ಷದ ಸರಾಸರಿ${band === "near" ? "ಯ ಹತ್ತಿರ" : `ಗಿಂತ 5% ಕ್ಕೂ ಅಧಿಕ ${band === "below" ? "ಕಡಿಮೆ" : "ಹೆಚ್ಚು"}`} ಇದ್ದಾಗ, ${months} ತಿಂಗಳ ನಂತರ ${cases} ರಲ್ಲಿ ${higher} ಬಾರಿ ದರ ಹೆಚ್ಚಾಗಿತ್ತು (ಸಾಮಾನ್ಯವಾಗಿ ${change}).`,
+    noSeasonMove: (name: string, move: number) => `ಯಾವುದೇ ತಿಂಗಳಲ್ಲಿ ${name} ದರ ನಿಯಮಿತವಾಗಿ ಹೆಚ್ಚು ಸಿಕ್ಕಿಲ್ಲ. 3 ತಿಂಗಳಲ್ಲಿ ದರ ಸಾಮಾನ್ಯವಾಗಿ ಸುಮಾರು ${move}% ಏರಿಳಿಯುತ್ತದೆ.`,
   },
   en: {
     title: "Sell now or wait?",
@@ -112,6 +120,14 @@ const COPY = defineCopy({
     season: (since: number, name: string, high: string, low: string, spread: number, consistent: number, years: number) =>
       `Since ${since}, ${name} has usually been highest in ${high} and lowest in ${low}, about ${spread}% apart (${consistent} of ${years} years).`,
     noSeason: (since: number, name: string) => `Since ${since}, ${name} has shown no clear high or low season.`,
+    insightTitle: "Where today's price stands",
+    headline: (name: string, band: PriceContext["band"], percent: number) => band === "near" ? `${name} is close to its one-year average`
+      : `${name} is ${percent}% ${band} its one-year average`,
+    rangeText: { lowest: "Lowest in 2 years", near_low: "Near its 2-year low", highest: "Highest in 2 years", near_high: "Near its 2-year high" },
+    lastYear: (percent: number, month: string) => percent === 0 ? `Same as ${month}` : `${Math.abs(percent)}% ${percent < 0 ? "lower" : "higher"} than ${month}`,
+    analogue: (name: string, band: PriceContext["band"], months: number, higher: number, cases: number, change: string) =>
+      `When ${name} was ${band === "near" ? "close to" : `more than 5% ${band}`} its yearly average before, it was higher ${months} months later in ${higher} of ${cases} cases (typically ${change}).`,
+    noSeasonMove: (name: string, move: number) => `No month has reliably paid better for ${name}. Over 3 months its price typically moves about ${move}% either way.`,
   },
 });
 
@@ -150,6 +166,11 @@ export function SellOrHoldPage() {
   const varietyName = language === "kn" ? COMMON_VARIETIES.find((item) => item.name === variety)?.kn ?? otherName(variety) : otherName(variety);
   // One sentence on the usual high and low months, from past years only; it does not depend on the month chosen.
   const season = data ? seasonalPattern(data.points) : null;
+  // Where the latest price sits against its own past, and what followed similar moments: context, never a forecast.
+  const context = data ? priceContext(data.points) : null;
+  const percent = (fraction: number) => Math.round(Math.abs(fraction) * 100);
+  const signedShare = (fraction: number) => `${fraction > 0 ? "+" : fraction < 0 ? "−" : ""}${percent(fraction)}%`;
+  const yearEarlier = (month: string) => `${Number(month.slice(0, 4)) - 1}${month.slice(4)}`;
   const monthNames = language === "kn" ? MONTH_NAMES_KN : MONTH_NAMES_EN;
   // Word joiners keep a pair such as "Feb–Mar" on one line.
   const monthPair = ([a, b]: [number, number]) => language === "kn" ? `${MONTH_NAMES_KN[a - 1]}\u2060–\u2060${MONTH_NAMES_KN[b - 1]}` : `${MONTH_NAMES_EN[a - 1].slice(0, 3)}\u2060–\u2060${MONTH_NAMES_EN[b - 1].slice(0, 3)}`;
@@ -186,7 +207,22 @@ export function SellOrHoldPage() {
     </section>
 
     {query.isLoading ? <LoadingState label={copy.loading} /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !history?.years.length ? <p className="rate-empty">{copy.noData}</p> : <>
-      {season && <p className="hold-season"><CalendarRange size={18} aria-hidden="true" /><span>{season.high && season.low
+      {context ? <section className="hold-season hold-insight" aria-label={copy.insightTitle}>
+        {context.band === "below" ? <TrendingDown size={18} aria-hidden="true" /> : context.band === "above" ? <TrendingUp size={18} aria-hidden="true" /> : <Minus size={18} aria-hidden="true" />}
+        <div><div className="hold-insight-body">
+          <strong>{copy.headline(varietyName, context.band, percent(context.vs_year_average))}</strong>
+          {(context.range || context.vs_last_year !== null) && <p className="hold-insight-facts">{[
+            context.range ? copy.rangeText[context.range] : null,
+            context.vs_last_year !== null ? copy.lastYear(Math.round(context.vs_last_year * 100), monthText(yearEarlier(context.latest_month), language)) : null,
+          ].filter(Boolean).join(" · ")}</p>}
+          <ul>
+            {context.analogue && <li>{copy.analogue(varietyName, context.band, context.analogue.months, context.analogue.higher, context.analogue.cases, signedShare(context.analogue.median_change))}</li>}
+            {season?.high && season.low
+              ? <li>{copy.season(season.first_year, varietyName, monthPair(season.high), monthPair(season.low), season.spread_percent, season.consistent_years, season.years)}</li>
+              : context.typical_move !== null && <li>{copy.noSeasonMove(varietyName, percent(context.typical_move))}</li>}
+          </ul>
+        </div></div>
+      </section> : season && <p className="hold-season"><CalendarRange size={18} aria-hidden="true" /><span>{season.high && season.low
         ? copy.season(season.first_year, varietyName, monthPair(season.high), monthPair(season.low), season.spread_percent, season.consistent_years, season.years)
         : copy.noSeason(season.first_year, varietyName)}</span></p>}
       <section className="rate-card hold-outcomes" aria-labelledby="hold-summary">

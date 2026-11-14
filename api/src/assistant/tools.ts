@@ -7,7 +7,7 @@ import { cardsFor } from "./knowledge-cards";
 import { z } from "zod";
 import { MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
 import { holdHistory } from "../../../shared/hold-history";
-import { namesPlace, placesIn } from "./places";
+import { namesPlace, PLACES, placesIn } from "./places";
 import { searchDocuments, pageLabel, queryTerms } from "./retrieval";
 import type { EmbeddingProvider } from "./providers";
 import type { Language } from "./language";
@@ -45,7 +45,7 @@ const calculationArgs = {
 
 export const TOOL_SCHEMAS = {
   get_current_prices: z.object({ variety: text(80).optional(), district: text(80).optional(), source: source.optional() }).strict(),
-  get_historical_prices: z.object({ variety: text(80).optional(), from_month: month.optional(), to_month: month.optional() }).strict(),
+  get_historical_prices: z.object({ variety: text(80).optional(), market: text(80).optional(), from_month: month.optional(), to_month: month.optional() }).strict(),
   compare_markets: z.object({ variety: text(80).optional(), source: source.optional() }).strict(),
   get_market_index: z.object({ variety: text(80).optional() }).strict(),
   get_market_arrivals: z.object({ district: text(80).optional(), granularity: z.enum(["daily", "weekly", "monthly", "seasonal"]).optional() }).strict(),
@@ -74,7 +74,7 @@ export type ToolArgs<T extends ToolName> = z.infer<(typeof TOOL_SCHEMAS)[T]>;
 
 export const TOOL_DESCRIPTIONS: Record<ToolName, string> = {
   get_current_prices: "Latest verified arecanut prices, listed separately by source and price basis (AGMARKNET daily APMC, AGMARKNET monthly state average, MAMCOS/TSS/TUMCOS cooperative averages).",
-  get_historical_prices: "AGMARKNET Karnataka monthly arrival-weighted modal price history for one exact variety, with rolling and year-on-year statistics.",
+  get_historical_prices: "AGMARKNET Karnataka monthly arrival-weighted modal price history for one exact variety, with rolling and year-on-year statistics; for a named town, also that APMC market's month-by-month prices from AGMARKNET daily reports.",
   compare_markets: "Compare markets or cooperative branches for one variety, within one source only.",
   get_market_index: "Areca Pulse reference index: median verified AGMARKNET modal price across markets for one variety and date.",
   get_market_arrivals: "Arrival and traded quantities from authorized imports (kept as separate measures).",
@@ -369,8 +369,14 @@ async function getHistoricalPrices(ctx: ToolContext, args: ToolArgs<"get_histori
   if (from < shiftMonth(to, -239)) from = shiftMonth(to, -239);
   if (!args.from_month && !args.to_month) target.assumptions.push(`No period was named; the 24 months ending ${to} are shown.`);
   if (args.to_month && args.to_month > latest) target.missing.push(`Monthly data is published only through ${latest}; later months are not yet available.`);
+  // A named town adds that APMC market's own months, from the daily reports, before the state-wide series.
+  if (args.market) await marketHistory(ctx, target, args.market, variety, args.from_month, args.to_month);
   const body = await getJson(ctx, `/history/monthly?${new URLSearchParams({ variety, from, to })}`);
   const points: Json[] = (body?.points ?? []).filter((point: Json) => point.weighted_price != null);
+  if (!points.length && target.facts.length) {
+    target.missing.push(`No state-wide monthly ${variety} prices between ${from} and ${to}.`);
+    return finalize(target);
+  }
   if (!points.length) {
     target.status = "empty";
     target.missing.push(`No observed months for ${variety} between ${from} and ${to}.`);
@@ -405,6 +411,73 @@ async function getHistoricalPrices(ctx: ToolContext, args: ToolArgs<"get_histori
   if (body?.methodology) target.limitations.push(body.methodology);
   target.summary = `${observed} observed month(s) of ${variety} prices from ${points[0].reporting_month} to ${last.reporting_month}.`;
   return finalize(target);
+}
+
+/** Months of daily reports read for one market's history; the AGMARKNET daily backfill reaches back to 2021. */
+const MARKET_HISTORY_MONTHS = 12;
+
+/**
+ * One APMC market's month-by-month prices for a variety: the median of each month's daily modal prices from verified
+ * AGMARKNET daily reports. The town is matched to a market by the same spelling rules the grounding check uses
+ * (Sagara finds "Sagar APMC"). Adds facts and a source to `target`; notes what is missing instead of guessing.
+ */
+async function marketHistory(ctx: ToolContext, target: ToolResult, town: string, variety: string, fromMonth?: string, toMonth?: string) {
+  const place = PLACES.find((item) => item.name.toLowerCase() === town.toLowerCase());
+  const markets: Json[] = (await getJson(ctx, "/markets").catch(() => null))?.data ?? [];
+  const market = markets.find((item) => place ? place.latin.test(String(item.name)) : String(item.name).toLowerCase().includes(town.toLowerCase()));
+  if (!market) {
+    target.missing.push(`No AGMARKNET market for ${town} reports arecanut prices, so only state-wide figures are given.`);
+    return;
+  }
+  const current = (ctx.now ?? new Date()).toISOString().slice(0, 7);
+  let to = toMonth && toMonth < current ? toMonth : current;
+  let from = fromMonth ?? shiftMonth(to, -(MARKET_HISTORY_MONTHS - 1));
+  if (from > to) [from, to] = [to, from];
+  // The last calendar day of the `to` month: day 0 of the following month.
+  const lastDay = new Date(Date.UTC(Number(to.slice(0, 4)), Number(to.slice(5, 7)), 0)).toISOString().slice(0, 10);
+  const byMonth = new Map<string, number[]>();
+  let latestFetch: string | null = null;
+  let cursor: string | null = null;
+  for (let page = 0; page < 10; page += 1) {
+    const params = new URLSearchParams({ market_id: String(market.id), variety, from: `${from}-01`, to: lastDay, limit: "1000", include_count: "false" });
+    if (cursor) params.set("cursor", cursor);
+    const body = await getJson(ctx, `/prices?${params}`);
+    for (const row of body?.data ?? []) {
+      if (typeof row.modal_price !== "number" || row.modal_price <= 0) continue;
+      const month = String(row.reporting_date).slice(0, 7);
+      byMonth.set(month, [...(byMonth.get(month) ?? []), row.modal_price]);
+      if (row.platform_fetch_timestamp && (!latestFetch || row.platform_fetch_timestamp > latestFetch)) latestFetch = row.platform_fetch_timestamp;
+    }
+    if (!body?.has_more || !body?.next_cursor) break;
+    cursor = body.next_cursor;
+  }
+  const months = [...byMonth.keys()].sort();
+  if (!months.length) {
+    target.missing.push(`${market.name} has no verified ${variety} prices between ${from} and ${to}, so only state-wide figures are given.`);
+    return;
+  }
+  const middle = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b), half = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
+  };
+  const monthly = months.map((month) => ({ month, price: middle(byMonth.get(month)!), days: byMonth.get(month)!.length }));
+  const period = `${months[0]} to ${months.at(-1)}`;
+  const key = addSource(target, {
+    key: `agmarknet-market-history:${market.id}:${variety}:${period}`, kind: "data",
+    label: `AGMARKNET daily mandi prices (data.gov.in), ${market.name}, ${variety}, ${period}, monthly medians of daily modal prices`,
+    publisher: AGMARKNET, url: "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070", reporting_period: period, retrieved_at: latestFetch,
+  });
+  const fact = (label: string, value: number, reporting_period: string, unit: string | null = "INR/quintal", note: string | null = null) =>
+    target.facts.push({ label, value: round2(value), unit, basis: unit === "INR/quintal" ? "APMC_MODAL_MONTHLY_MEDIAN" : null, reporting_period, source_key: key, source_name: "AGMARKNET daily", note });
+  const first = monthly[0], last = monthly.at(-1)!;
+  const high = monthly.reduce((best, row) => row.price > best.price ? row : best), low = monthly.reduce((best, row) => row.price < best.price ? row : best);
+  for (const row of monthly) fact(`${market.name} – ${variety}, ${row.month} (median of ${row.days} daily modal price${row.days === 1 ? "" : "s"})`, row.price, row.month);
+  fact(`${market.name} – ${variety}, highest month in range`, high.price, high.month);
+  fact(`${market.name} – ${variety}, lowest month in range`, low.price, low.month);
+  if (monthly.length > 1) fact(`${market.name} – ${variety}, change from ${first.month} to ${last.month}`, (last.price / first.price - 1) * 100, period, "%");
+  const expected = (Number(to.slice(0, 4)) - Number(from.slice(0, 4))) * 12 + Number(to.slice(5)) - Number(from.slice(5)) + 1;
+  if (monthly.length < expected) target.missing.push(`${market.name} reported ${variety} in ${monthly.length} of ${expected} months from ${from} to ${to}; the other months are not filled in.`);
+  target.limitations.push(`${market.name} figures are monthly medians of the market's daily modal prices; the state-wide series is the arrival-weighted monthly report, a different measure.`);
 }
 
 async function compareMarkets(ctx: ToolContext, args: ToolArgs<"compare_markets">): Promise<ToolResult> {

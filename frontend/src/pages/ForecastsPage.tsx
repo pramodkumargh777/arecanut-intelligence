@@ -165,8 +165,8 @@ export function ForecastsPage() {
   const data = query.data, snapshot = data?.snapshot, results = snapshot?.results, evaluation = results?.evaluation;
   const label = evaluation ? t.labels?.[evaluation.selected_model] ?? evaluation.label : undefined;
   return <div className="page-stack">
-    <section className="page-heading"><div><h1>{t.title}</h1><p>{t.intro}</p></div></section>
-    <div className="fx-toolbar"><label className="fx-select"><span>{t.variety}</span><select value={variety} disabled={evaluate.isPending} onChange={(event) => { setVariety(event.target.value); evaluate.reset(); }}><option value="Rashi" lang={language}>{agmarknetVarietyName("Rashi", language)}</option>{prices.data?.data.filter((row) => row.variety_name !== "Rashi").map((row) => <option key={row.variety_name} value={row.variety_name} lang={language}>{agmarknetVarietyName(row.variety_name, language)}</option>)}</select></label></div>
+    <section className="page-heading page-heading-picker"><div><h1>{t.title}</h1><p>{t.intro}</p></div>
+      <div className="fx-toolbar"><label className="fx-select"><span>{t.variety}</span><select value={variety} disabled={evaluate.isPending} onChange={(event) => { setVariety(event.target.value); evaluate.reset(); }}><option value="Rashi" lang={language}>{agmarknetVarietyName("Rashi", language)}</option>{prices.data?.data.filter((row) => row.variety_name !== "Rashi").map((row) => <option key={row.variety_name} value={row.variety_name} lang={language}>{agmarknetVarietyName(row.variety_name, language)}</option>)}</select></label></div></section>
     {prices.error && <ErrorState error={prices.error} />}
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
       {data.stale && <div role="alert" className="data-disclosure">{t.staleSnapshot(reasonText(data.stale_reasons))}</div>}

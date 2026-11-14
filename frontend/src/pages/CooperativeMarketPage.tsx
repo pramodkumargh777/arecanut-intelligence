@@ -467,7 +467,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
               <thead><tr><th scope="col">{c.branch}</th><th scope="col">{t.latestReportingDate}</th><th scope="col" className="numeric">{c.reportedAverage}</th><th scope="col">{c.status}</th></tr></thead>
               <tbody>{(data?.latest_by_branch ?? []).map((row) => {
                 const lag = data?.latest_reporting_date ? Math.round((Date.parse(data.latest_reporting_date) - Date.parse(row.reporting_date)) / 86_400_000) : null;
-                return <tr key={row.branch}><td className="table-market">{row.branch}</td><td>{format.date(row.reporting_date)}</td><td className="numeric">{cash(row.average_price)}</td>
+                return <tr key={row.branch}><td className="table-market">{row.branch}</td><td>{format.date(row.reporting_date)}</td><td className="numeric">{cash(row.average_price)}<small className="coverage-date-sub">{lag === 0 ? t.latestDate : format.date(row.reporting_date)}</small></td>
                   <td>{lag === 0 ? <span className="status-pill tone-good">{t.latestDate}</span> : <span className="status-pill tone-neutral">{t.daysEarlier(lag ?? 0)}</span>}</td></tr>;
               })}</tbody></table></div>
             {missingBranches.length > 0 && <p className="panel-note">{t.missingBranches(data?.variety ?? "", missingBranches.join(", "))}</p>}

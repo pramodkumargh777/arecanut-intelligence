@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { holdBreakEvenPercent, holdHistory, isIsolatedSpike, seasonalPattern, type HoldPoint } from "../../shared/hold-history";
+import { holdBreakEvenPercent, holdHistory, isIsolatedSpike, priceContext, seasonalPattern, type HoldPoint } from "../../shared/hold-history";
 
 // Rashi Karnataka monthly prices as published by AGMARKNET for November and the months compared with it.
 const RASHI: Record<string, number> = {
@@ -96,5 +96,38 @@ describe("usual high and low season", () => {
     const points = seasonal([2021, 2022, 2023], shape).map((point) => point.reporting_month === "2022-06"
       ? { ...point, weighted_price: 500, review_flags: [{ code: "large_change_from_previous" }, { code: "large_change_to_next" }] } : point);
     expect(seasonalPattern(points)).toMatchObject({ high: [10, 11], low: [2, 3] });
+  });
+});
+
+describe("price context", () => {
+  const series = (prices: number[], from = 2015) => prices.map((weighted_price, index) => ({
+    reporting_month: `${from + Math.floor(index / 12)}-${String(index % 12 + 1).padStart(2, "0")}`, weighted_price,
+  }));
+
+  it("says how far the latest price is from its yearly average, last year and its two-year range", () => {
+    const context = priceContext(series([...Array(24).fill(100), 85]))!;
+    expect(context).toMatchObject({ latest_month: "2017-01", price: 85, band: "below", range: "lowest" });
+    expect(context.vs_year_average).toBeCloseTo(-0.15);
+    expect(context.vs_last_year).toBeCloseTo(-0.15);
+  });
+
+  it("counts what followed earlier moments in the same band, once per stretch", () => {
+    // Ten years of a yearly swing: whenever the price sat low, it was higher six months later.
+    const prices = Array.from({ length: 121 }, (_, month) => 100 + 12 * Math.sin((2 * Math.PI * month) / 12));
+    const context = priceContext(series(prices))!;
+    expect(context.band).toBe("near");
+    const low = priceContext(series(prices.slice(0, 118)))!;
+    expect(low.band).toBe("below");
+    expect(low.analogue).toMatchObject({ months: 6 });
+    expect(low.analogue!.cases).toBeGreaterThanOrEqual(5);
+    expect(low.analogue!.higher).toBe(low.analogue!.cases);
+    expect(low.typical_move).toBeGreaterThan(0.1);
+  });
+
+  it("gives no comparison from too little history", () => {
+    expect(priceContext(series([100, 101, 99, 100, 102]))).toBeNull();
+    const short = priceContext(series([...Array(13).fill(100), 80]))!;
+    expect(short.analogue).toBeNull();
+    expect(short.range).toBeNull();
   });
 });

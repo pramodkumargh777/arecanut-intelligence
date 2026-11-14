@@ -38,6 +38,8 @@ import { shareMessage } from "../services/share";
 import { marketSuggestion, matchSuggestions } from "../services/marketSuggestions";
 import { readdirSync, readFileSync } from "node:fs";
 import { fromFirstCapture, shortPeriod } from "./HistoricalAnalyticsPage";
+import { MonthlySnapshot } from "./MonthlyTrendsPage";
+import { anomalyEvents } from "../services/anomalies";
 import { MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
 import { runInNewContext } from "node:vm";
 import { ImportsPanel } from "../components/ImportsPanel";
@@ -54,6 +56,7 @@ const state = vi.hoisted(() => ({
   intelligence: {} as object,
   language: "en" as "en" | "kn",
   branch: [] as object[],
+  monthly: {} as Record<string, object>,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -68,6 +71,7 @@ vi.mock("@tanstack/react-query", () => ({
     if (queryKey[0] === "market-comparison") return { data: { data: state.comparison }, isLoading: false };
     if (queryKey[0] === "cooperative") return state.cooperativePage;
     if (queryKey[0] === "intelligence") return state.intelligence;
+    if (queryKey[0] === "monthly-prices") return state.monthly[queryKey[1]] ?? { data: undefined, isLoading: false };
     // A real query is still loading until it has data, so pages never see "finished with no data" for these.
     if (queryKey[0] === "history") return { data: undefined, isLoading: true, isPending: true };
     return { data: undefined, isLoading: false };
@@ -991,5 +995,75 @@ describe("daily aggregates", () => {
     const rows = [0, 0, 2, 0, 3].map((reporting_days, index) => ({ period: String(index), reporting_days }));
     expect(fromFirstCapture(rows).map((row) => row.period)).toEqual(["2", "3", "4"]);
     expect(fromFirstCapture([{ reporting_days: 0 }])).toEqual([]);
+  });
+});
+
+describe("historical anomaly events", () => {
+  const point = (reporting_month: string, weighted_price: number | null, codes: string[] = []) =>
+    ({ reporting_month, weighted_price, review_flags: codes.map((code) => ({ code })), refresh_run_id: `run-${reporting_month}` });
+
+  it("turns Rashi's January 2024 dip, flagged on three months, into one blip", () => {
+    const events = anomalyEvents([
+      point("2023-11", 46302), point("2023-12", 47410.63, ["large_change_to_next"]),
+      point("2024-01", 36367.18, ["large_change_from_previous", "large_change_to_next"]),
+      point("2024-02", 47117.44, ["large_change_from_previous"]), point("2024-03", 47500),
+    ], 0.2);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ kind: "blip", month: "2024-01", before: 47410.63, value: 36367.18, after: 47117.44, refresh_run_id: "run-2024-01" });
+    expect(events[0].around).toEqual([46302, 47410.63, 36367.18, 47117.44, 47500]);
+  });
+
+  it("tells a lasting move from one that moved again, and says when it is too early to tell", () => {
+    const events = anomalyEvents([
+      point("2025-01", 40000), point("2025-02", 50000), point("2025-03", 51000),
+      point("2025-06", 50000), point("2025-07", 36000), point("2025-08", 41000),
+      point("2025-10", 48000), point("2025-11", 60000),
+    ], 0.2);
+    expect(events.map((event) => [event.month, event.kind, event.kind === "shift" ? event.held : null]))
+      .toEqual([["2025-11", "shift", null], ["2025-07", "shift", false], ["2025-02", "shift", true]]);
+  });
+
+  it("lists unit and price problems as data issues, and never bridges a gap", () => {
+    const events = anomalyEvents([point("2025-01", 40000), point("2025-02", 400, ["unexpected_unit"]), point("2025-04", 60000)], 0.2);
+    expect(events).toEqual([expect.objectContaining({ kind: "data", month: "2025-02", codes: ["unexpected_unit"] })]);
+  });
+});
+
+describe("historical anomaly moves over several months", () => {
+  it("merges back-to-back jumps the same way into one move", () => {
+    const point = (reporting_month: string, weighted_price: number) => ({ reporting_month, weighted_price, review_flags: [] });
+    const events = anomalyEvents([point("2017-02", 20000), point("2017-03", 25000), point("2017-04", 31800), point("2017-05", 32000)], 0.2);
+    expect(events).toEqual([expect.objectContaining({ kind: "shift", month: "2017-03", end: "2017-04", from: 20000, to: 31800, held: true })]);
+    expect((events[0] as { change: number }).change).toBeCloseTo(0.59);
+  });
+});
+
+describe("all varieties in one month", () => {
+  const row = (variety_name: string, weighted_price: number | null, reporting_month = "2026-10") =>
+    ({ variety_name, weighted_price, reporting_month, fetched_at: "2026-11-04T00:00:00Z", source_url: "https://agmarknet.example/report.csv" });
+  beforeEach(() => {
+    state.language = "en";
+    state.monthly = {
+      "": { data: { reporting_month: "2026-10", months: ["2026-10", "2026-09"], data: [row("Arecanut-Husk", 4033.78), row("Rashi", 46842), row("Chali", 34412.83), row("Factory", 16615.68)] }, isLoading: false },
+      "2026-09": { data: { reporting_month: "2026-09", months: ["2026-10", "2026-09"], data: [row("Rashi", 47503, "2026-09"), row("Chali", 37039, "2026-09")] }, isLoading: false },
+    };
+  });
+
+  it("shows one tile per variety, main grades first, with the change from the month before", () => {
+    const html = render(<MonthlySnapshot />);
+    expect(html.indexOf(">Main grades<")).toBeLessThan(html.indexOf(">Other grades and by-products<"));
+    expect(html.indexOf(">Rashi<")).toBeLessThan(html.indexOf(">Chali<"));
+    expect(html.indexOf(">Chali<")).toBeLessThan(html.indexOf(">Arecanut-Husk<"));
+    expect(html).toContain("₹46,842");
+    expect(html).toContain("↓ 1.4% <span class=\"variety-month-vs\">vs Sept</span>");
+    expect(html).toContain("No Sept report");
+    // The month and source are said once, not on every row.
+    expect(html.match(/AGMARKNET CSV/g)).toHaveLength(1);
+    expect(html).not.toContain("<table");
+  });
+
+  it("names the main grades in Kannada", () => {
+    state.language = "kn";
+    expect(render(<MonthlySnapshot />)).toContain(">ರಾಶಿ<");
   });
 });

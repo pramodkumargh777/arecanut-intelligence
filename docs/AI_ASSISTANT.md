@@ -41,7 +41,7 @@ User question (English or Kannada)
 | Tool | ANI source |
 |---|---|
 | `get_current_prices` | Monthly reference, AGMARKNET daily, MAMCOS, TSS, TUMCOS. Each keeps its own price basis and is never averaged across bases. |
-| `get_historical_prices` | Monthly history (`/history/monthly`) |
+| `get_historical_prices` | Monthly history (`/history/monthly`). When the question names a town with an APMC market (`PLACES` in `places.ts`, e.g. Sagara → Sagar APMC), also that market's monthly medians of verified AGMARKNET daily modal prices (`/prices?market_id=`), the last 12 months by default. A town with no APMC market says so and gets the state series only. |
 | `compare_markets` | Verified daily/cooperative quotations by market |
 | `get_market_index` | `/analytics/reference-index` |
 | `get_market_arrivals` | `/supply/arrivals` |
@@ -56,6 +56,12 @@ User question (English or Kannada)
 | `search_agricultural_documents` | CPCRI, DASD and government document passages |
 
 When a calculator lacks inputs it returns `needs_input` and lists them. It never substitutes a price.
+
+**Answer length** (`answerStyle` and `ANSWER_MAX_TOKENS` in `compose.ts`): price, market and other data answers are
+at most 100 words, since the data table under the answer shows every figure. Crop-care answers drawn from documents or
+advisories may run to 220 words and give practical steps as dash lines (not numbered, so step numbers never meet the
+grounding check as figures). The output budget is 600 and 1,000 tokens respectively, because Kannada uses several
+times more tokens per word than English and a smaller budget cut Kannada answers short.
 
 ## Guarantees
 

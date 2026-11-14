@@ -9,7 +9,7 @@ import type { ReferencePoint } from "../types";
 import { buildChartData, connectShortGaps, missingPeriods } from "../services/chart";
 import { calendarDateToTime, DAY_MS } from "../../../shared/dates";
 import { defineCopy, formatDate, formatMonth, useCopy, useLanguage } from "../services/language";
-import { CHART_FONT, chartMotion, useChartPalette } from "./chartPalette";
+import { CHART_FONT, chartMotion, useChartMotion, useChartPalette } from "./chartPalette";
 import { eventsBetween } from "../services/market-events";
 
 echarts.use([LineChart, ScatterChart, GridComponent, TooltipComponent, AriaComponent, MarkLineComponent, CanvasRenderer]);
@@ -61,6 +61,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
 }) {
   const t = useCopy(COPY);
   const onChartReady = useResponsiveChart();
+  const motion = useChartMotion();
   // On phones the latest price is already the first figure above the chart, so the line drops its end label and the
   // plot takes the width that label reserved.
   const phone = usePhone();
@@ -202,7 +203,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
       <div><dt>{t.low}</dt><dd>{rupees(low)}</dd><small>{lowPoint && dateText(lowPoint.reporting_date)}</small></div>
       <div><dt>{t.average}</dt><dd>{rupees(mean)}</dd><small>{t.reports(chart.observations)}</small></div>
     </dl>}
-    <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: 300, width: "100%" }} />
+    <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: 300, width: "100%" }} />
     {events.length > 0 && <ol className="chart-events" aria-label={t.eventsAria}>
       {events.map((event, index) => <li key={event.date}><span className="chart-event-number" aria-hidden="true">{index + 1}</span>
         <span><time dateTime={event.date}>{formatDate(event.date, language)}</time>{event.kind === "in-force" ? ` · ${t.inForce}` : ""} · {event[language]} <a href={event.source.url} target="_blank" rel="noreferrer" title={event.source.name}>{t.source}</a></span></li>)}

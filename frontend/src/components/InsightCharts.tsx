@@ -5,7 +5,7 @@ import * as echarts from "echarts/core";
 import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-import { CHART_FONT, chartMotion, monthAxisInterval, SERIES_COLORS, useChartPalette } from "./chartPalette";
+import { CHART_FONT, chartMotion, useChartMotion, monthAxisInterval, SERIES_COLORS, useChartPalette } from "./chartPalette";
 import { defineCopy, useCopy } from "../services/language";
 
 const CHART = defineCopy({
@@ -37,6 +37,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
 }) {
   const t = useCopy(CHART);
   const onChartReady = useResponsiveChart();
+  const motion = useChartMotion();
   const { AXIS_LABEL, AXIS_LINE, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, SERIES_COLORS, TOOLTIP, tooltipHtml, regionShade } = useChartPalette();
   const phone = usePhone();
   const ISOLATED = t.isolated;
@@ -93,7 +94,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
       ...(band ? [{ name: band.name, type: "line", data: [], color: INK[300], lineStyle: { color: INK[300], width: 6 }, showSymbol: false }] : []),
     ],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
 
 /** Vertical category bars (histograms, seasonal indices, error comparisons). Null bars are omitted, not zero-filled. */
@@ -103,6 +104,7 @@ export function CategoryBarChart({ categories, values, name, color: givenColor, 
 }) {
   const t = useCopy(CHART);
   const onChartReady = useResponsiveChart();
+  const motion = useChartMotion();
   const { AXIS_LABEL, AXIS_LINE, BRAND, GRID_LINE, INK, TOOLTIP, tooltipHtml, shade } = useChartPalette();
   const color = givenColor ?? BRAND;
   const format = (value: number | null | undefined) => value == null ? t.notAvailable : valueFormat === "inr" ? inr(value)
@@ -125,7 +127,7 @@ export function CategoryBarChart({ categories, values, name, color: givenColor, 
       ...(referenceLine ? { markLine: { silent: true, symbol: "none", animation: false, label: labelled ? { formatter: referenceLine.label, color: INK[500], fontSize: 11, position: horizontal ? "start" : labelInside ? "insideStartTop" : "end", ...(labelInside ? { backgroundColor: INK.surface, padding: [1, 4], borderRadius: 3 } : {}) } : { show: false }, lineStyle: { color: INK[400], width: 1, type: "solid" }, data: [horizontal ? { xAxis: referenceLine.value } : { yAxis: referenceLine.value }] } } : {}),
     }],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
 
 export type RangeRow = { label: string; detail?: string; minimum: number | null; central: number; maximum: number | null };
@@ -142,6 +144,7 @@ function niceBounds(lowest: number, highest: number, ticks = 5) {
 export function RankedRangeChart({ rows, centralLabel, description }: { rows: RangeRow[]; centralLabel: string; description: string }) {
   const t = useCopy(CHART);
   const onChartReady = useResponsiveChart();
+  const motion = useChartMotion();
   const { AXIS_LABEL, AXIS_LINE, BRAND, GRID_LINE, INK, TOOLTIP, tooltipHtml, shade } = useChartPalette();
   const labels = rows.map((row) => row.label);
   const hasRange = rows.map((row) => row.minimum !== null && row.maximum !== null && row.maximum >= row.minimum);
@@ -177,7 +180,7 @@ export function RankedRangeChart({ rows, centralLabel, description }: { rows: Ra
           backgroundColor: INK.surface, padding: [1, 3], borderRadius: 3, formatter: ({ value }: { value: number }) => inr(value) } },
     ],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: Math.max(rows.length > 2 ? 200 : 150, rows.length * 46 + 72), width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: Math.max(rows.length > 2 ? 200 : 150, rows.length * 46 + 72), width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
 
 /**
@@ -190,6 +193,7 @@ export function TrackRecordChart({ periods, actual, median, lower, upper, baseli
   description: string; height?: number;
 }) {
   const onChartReady = useResponsiveChart();
+  const motion = useChartMotion();
   const phone = usePhone();
   const { AXIS_LABEL, AXIS_LINE, BRAND, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
   const categories = periods.map(labels.month);
@@ -223,7 +227,7 @@ export function TrackRecordChart({ periods, actual, median, lower, upper, baseli
         color: INK[900], itemStyle: { color: INK[900], borderColor: INK.surface, borderWidth: 1 }, lineStyle: { color: INK[900], width: 2 } },
     ],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
 }
 
 /**
@@ -235,6 +239,7 @@ export function OutlookChart({ periods, prices, next, labels, description, heigh
   labels: { actual: string; outlook: string; range: string; month: (period: string) => string }; description: string; height?: number;
 }) {
   const onChartReady = useResponsiveChart();
+  const motion = useChartMotion();
   const phone = usePhone();
   const { AXIS_LABEL, AXIS_LINE, BRAND, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
   const categories = [...periods.map(labels.month), ...next.map((item) => item.label)];
@@ -267,5 +272,5 @@ export function OutlookChart({ periods, prices, next, labels, description, heigh
       { name: labels.actual, type: "line", data: [...prices, ...next.map(() => null)], symbol: "none", smooth: 0.3, smoothMonotone: "x", color: INK[900], lineStyle: { color: INK[900], width: 2.25 } },
     ],
   };
-  return <ReactEChartsCore echarts={echarts} option={option} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
+  return <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
 }

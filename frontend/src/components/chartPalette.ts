@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useTheme, type Theme } from "../services/theme";
 
 /**
@@ -95,10 +96,27 @@ export function monthAxisInterval(categories: string[]): "auto" | ((index: numbe
  * or range) settle in 0.3s. Readers who ask their device to reduce motion get static charts. Tooltips and hover
  * never animate.
  */
+/**
+ * A chart draws in once, when it first appears; later updates (the 60-second refresh, a new variety) are instant, so a
+ * chart never replays its entrance while someone is reading it.
+ */
+export function useChartMotion() {
+  const drawn = useRef(false);
+  // Marked drawn only once the entrance has had time to play: a chart re-renders straight after it appears (its
+  // resize watcher attaches), and turning animation off then would cut the entrance short.
+  useEffect(() => {
+    const timer = window.setTimeout(() => { drawn.current = true; }, ENTRANCE_MS + 200);
+    return () => window.clearTimeout(timer);
+  }, []);
+  return drawn.current ? { animation: false } : chartMotion();
+}
+
+const ENTRANCE_MS = 600;
+
 export function chartMotion() {
   const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   return reduced ? { animation: false } : {
-    animation: true, animationDuration: 600, animationEasing: "cubicOut" as const,
+    animation: true, animationDuration: ENTRANCE_MS, animationEasing: "cubicOut" as const,
     animationDurationUpdate: 300, animationEasingUpdate: "cubicOut" as const, animationThreshold: 4000,
   };
 }

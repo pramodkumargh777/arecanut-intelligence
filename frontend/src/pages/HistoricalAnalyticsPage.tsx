@@ -12,8 +12,11 @@ import { COMMON } from "../services/commonCopy";
 import { MonthlyRefresh, MonthlySnapshot } from "./MonthlyTrendsPage";
 import { MonthYearPicker } from "../components/MonthYearPicker";
 import { ExportButton } from "../components/ExportButton";
+import { anomalyEvents, type AnomalyEvent } from "../services/anomalies";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
+/** A price in whole rupees for reading; the CSV export keeps the exact figure. */
+const wholeRupees = (value: number | null) => value === null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 const completed = completedMonthIST;
 function download(rows: (string | number | null)[][], name: string) {
@@ -41,10 +44,21 @@ const COPY = defineCopy({
     anomaly: "Historical anomaly review", anomalyHint: (flagged: number, threshold: number, method: string) => `${flagged} flagged months · ${threshold}% adjacent-calendar-month threshold · ${method}`,
     flagsNote: "Flags are review signals, not proof that a price is wrong. Every observation remains visible and included in descriptive calculations. No outlier is deleted, replaced or interpolated. Only the same state and exact variety are compared; gaps are not treated as adjacent observations.",
     noFlags: "No observations meet these review rules in the selected range.",
+    anomalySummary: (blips: number, shifts: number, issues: number) => [
+      blips ? `${blips} one-month blip${blips === 1 ? "" : "s"}` : "", shifts ? `${shifts} sharp move${shifts === 1 ? "" : "s"}` : "", issues ? `${issues} data issue${issues === 1 ? "" : "s"}` : "",
+    ].filter(Boolean).join(" · "),
+    anomalyRule: (threshold: number) => `Flagged when the price moves ${threshold}% or more from one month to the next.`,
+    eventKind: { dip: "One-month dip", spike: "One-month spike", rise: "Lasting rise", fall: "Lasting fall", sharpRise: "Sharp rise", sharpFall: "Sharp fall", data: "Data issue" },
+    blipText: (name: string, change: number, value: string, month: string, back: number, before: string, after: string) =>
+      `${name} ${change < 0 ? "fell" : "rose"} ${Math.abs(change)}% to ${value} in ${month}, then ${back > 0 ? "recovered" : "fell back"} ${Math.abs(back)}% the next month. The months either side agree (${before} and ${after}), so this is most likely a reporting or arrival-mix blip, not a real price. Sell now or wait? leaves it out.`,
+    shiftText: (name: string, change: number, month: string, from: string, to: string, held: boolean | null, next: string) =>
+      `${name} ${change < 0 ? "fell" : "rose"} ${Math.abs(change)}% ${month.includes("–") ? "over" : "in"} ${month} (${from} → ${to})${held === null ? ". It is the latest month, so it is too early to tell whether it lasts." : held ? " and stayed near that level the next month, so it reflects a real price change." : `. The next month moved again, to ${next}.`}`,
+    trendAria: (month: string) => `Prices for the two months before and after ${month}`,
     flags: null as Record<string, string> | null,
     calendar: "Calendar history and rolling statistics", calendarHint: "Rolling windows are unavailable if any required month is missing. Prices and rolling means: INR/quintal.",
     exportHistory: "Export history CSV", tableAria: "Monthly historical analytics", tableCaption: "One row per calendar month; coverage and source attempt status retained",
     month: "Month", weighted: "Weighted price", mean3: "3-month mean", mean12: "12-month mean", yoyPercent: "YoY %", volPercent: "Volatility %", sourceFreshness: "Source / freshness",
+    sourceOnce: (fetched: string) => `Latest month first · each month's own source report is one tap away under Source · latest fetch ${fetched}`, sourceColumn: "Source",
     status: { observed: "observed", price_missing: "price missing", variety_missing: "variety missing", report_missing: "report missing" } as Record<string, string>,
     flagged: "Flagged for source review; value retained", refreshFailed: (message: string) => `Latest refresh failed: ${message}`,
     noObservation: "No observation", platformFetched: (time: string) => `Platform fetched: ${time}`, notFetched: "Not fetched for this variety",
@@ -94,6 +108,16 @@ const COPY = defineCopy({
     anomaly: "ಅಸಾಮಾನ್ಯ ದರಗಳ ಪರಿಶೀಲನೆ", anomalyHint: (flagged: number, threshold: number, method: string) => `${flagged} ಗುರುತಿಸಿದ ತಿಂಗಳುಗಳು · ಪಕ್ಕದ ತಿಂಗಳಿಗೆ ${threshold}% ಮಿತಿ · ${method}`,
     flagsNote: "ಗುರುತುಗಳು ಪರಿಶೀಲನೆಯ ಸೂಚನೆಗಳು ಮಾತ್ರ, ದರ ತಪ್ಪು ಎಂಬುದಕ್ಕೆ ಸಾಕ್ಷಿಯಲ್ಲ. ಪ್ರತಿ ದಾಖಲೆಯೂ ಕಾಣಿಸುತ್ತದೆ ಮತ್ತು ಲೆಕ್ಕದಲ್ಲಿ ಸೇರಿರುತ್ತದೆ. ಯಾವುದನ್ನೂ ಅಳಿಸುವುದಿಲ್ಲ, ಬದಲಿಸುವುದಿಲ್ಲ. ಅದೇ ರಾಜ್ಯ ಮತ್ತು ನಿಖರ ತಳಿಯನ್ನು ಮಾತ್ರ ಹೋಲಿಸಲಾಗುತ್ತದೆ; ಖಾಲಿ ತಿಂಗಳುಗಳನ್ನು ಪಕ್ಕದ ತಿಂಗಳು ಎಂದು ಪರಿಗಣಿಸುವುದಿಲ್ಲ.",
     noFlags: "ಆಯ್ದ ಅವಧಿಯಲ್ಲಿ ಯಾವ ದಾಖಲೆಯೂ ಈ ಪರಿಶೀಲನಾ ನಿಯಮಗಳಿಗೆ ಒಳಪಟ್ಟಿಲ್ಲ.",
+    anomalySummary: (blips: number, shifts: number, issues: number) => [
+      blips ? `${blips} ಒಂದು ತಿಂಗಳ ಏರುಪೇರು` : "", shifts ? `${shifts} ತೀವ್ರ ಬದಲಾವಣೆ` : "", issues ? `${issues} ದತ್ತಾಂಶ ದೋಷ` : "",
+    ].filter(Boolean).join(" · "),
+    anomalyRule: (threshold: number) => `ಒಂದು ತಿಂಗಳಿಂದ ಮುಂದಿನ ತಿಂಗಳಿಗೆ ದರ ${threshold}% ಅಥವಾ ಹೆಚ್ಚು ಬದಲಾದಾಗ ಗುರುತಿಸಲಾಗುತ್ತದೆ.`,
+    eventKind: { dip: "ಒಂದು ತಿಂಗಳ ಕುಸಿತ", spike: "ಒಂದು ತಿಂಗಳ ಜಿಗಿತ", rise: "ಸ್ಥಿರ ಏರಿಕೆ", fall: "ಸ್ಥಿರ ಇಳಿಕೆ", sharpRise: "ತೀವ್ರ ಏರಿಕೆ", sharpFall: "ತೀವ್ರ ಇಳಿಕೆ", data: "ದತ್ತಾಂಶ ದೋಷ" },
+    blipText: (name: string, change: number, value: string, month: string, back: number, before: string, after: string) =>
+      `${month} ತಿಂಗಳಲ್ಲಿ ${name} ದರ ${Math.abs(change)}% ${change < 0 ? "ಇಳಿದು" : "ಏರಿ"} ${value} ಆಯಿತು, ಮುಂದಿನ ತಿಂಗಳು ${Math.abs(back)}% ${back > 0 ? "ಮರಳಿ ಏರಿತು" : "ಮರಳಿ ಇಳಿಯಿತು"}. ಹಿಂದಿನ ಮತ್ತು ಮುಂದಿನ ತಿಂಗಳ ದರಗಳು (${before}, ${after}) ಒಂದಕ್ಕೊಂದು ಹೊಂದುತ್ತವೆ; ಇದು ಬಹುಶಃ ವರದಿ ಅಥವಾ ಆವಕದ ಏರುಪೇರು, ನಿಜವಾದ ದರವಲ್ಲ. "ಈಗ ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ?" ಇದನ್ನು ಬಿಟ್ಟು ಲೆಕ್ಕ ಹಾಕುತ್ತದೆ.`,
+    shiftText: (name: string, change: number, month: string, from: string, to: string, held: boolean | null, next: string) =>
+      `${month} ತಿಂಗಳಲ್ಲಿ ${name} ದರ ${Math.abs(change)}% ${change < 0 ? "ಇಳಿಯಿತು" : "ಏರಿತು"} (${from} → ${to})${held === null ? ". ಇದು ಇತ್ತೀಚಿನ ತಿಂಗಳು; ಇದು ಉಳಿಯುತ್ತದೆಯೇ ಎಂದು ಹೇಳಲು ಇನ್ನೂ ಬೇಗ." : held ? ". ಮುಂದಿನ ತಿಂಗಳೂ ಅದೇ ಮಟ್ಟದಲ್ಲಿ ಉಳಿಯಿತು; ಇದು ನಿಜವಾದ ದರ ಬದಲಾವಣೆ." : `. ಮುಂದಿನ ತಿಂಗಳು ಮತ್ತೆ ಬದಲಾಗಿ ${next} ಆಯಿತು.`}`,
+    trendAria: (month: string) => `${month} ರ ಹಿಂದಿನ ಮತ್ತು ಮುಂದಿನ ಎರಡು ತಿಂಗಳ ದರಗಳು`,
     flags: {
       large_change_from_previous: "ಹಿಂದಿನ ತಿಂಗಳಿಗಿಂತ 20% ಕ್ಕಿಂತ ಹೆಚ್ಚು ಬದಲಾವಣೆ. ಬಳಸುವ ಮೊದಲು ಮೂಲ ವರದಿಯನ್ನು ಪರಿಶೀಲಿಸಿ.",
       large_change_to_next: "ಮುಂದಿನ ತಿಂಗಳಿಗೆ 20% ಕ್ಕಿಂತ ಹೆಚ್ಚು ಬದಲಾವಣೆ. ಬಳಸುವ ಮೊದಲು ಮೂಲ ವರದಿಯನ್ನು ಪರಿಶೀಲಿಸಿ.",
@@ -105,6 +129,7 @@ const COPY = defineCopy({
     calendar: "ಕ್ಯಾಲೆಂಡರ್ ಇತಿಹಾಸ ಮತ್ತು ಚಲಿಸುವ ಸರಾಸರಿಗಳು", calendarHint: "ಅಗತ್ಯವಿರುವ ಯಾವುದೇ ತಿಂಗಳು ಇಲ್ಲದಿದ್ದರೆ ಚಲಿಸುವ ಸರಾಸರಿ ಲಭ್ಯವಿಲ್ಲ. ದರಗಳು ಮತ್ತು ಸರಾಸರಿಗಳು: ₹/ಕ್ವಿಂಟಾಲ್.",
     exportHistory: "ಇತಿಹಾಸ CSV ಡೌನ್‌ಲೋಡ್", tableAria: "ತಿಂಗಳ ಐತಿಹಾಸಿಕ ವಿಶ್ಲೇಷಣೆ", tableCaption: "ಪ್ರತಿ ಕ್ಯಾಲೆಂಡರ್ ತಿಂಗಳಿಗೆ ಒಂದು ಸಾಲು; ವ್ಯಾಪ್ತಿ ಮತ್ತು ಸಂಗ್ರಹದ ಸ್ಥಿತಿ ಉಳಿಸಲಾಗಿದೆ",
     month: "ತಿಂಗಳು", weighted: "ತೂಕದ ಸರಾಸರಿ ದರ", mean3: "3 ತಿಂಗಳ ಸರಾಸರಿ", mean12: "12 ತಿಂಗಳ ಸರಾಸರಿ", yoyPercent: "ವಾರ್ಷಿಕ ಬದಲಾವಣೆ %", volPercent: "ಏರಿಳಿತ %", sourceFreshness: "ಮೂಲ / ಹೊಸತನ",
+    sourceOnce: (fetched: string) => `ಇತ್ತೀಚಿನ ತಿಂಗಳು ಮೊದಲು · ಪ್ರತಿ ತಿಂಗಳ ಮೂಲ ವರದಿ "ಮೂಲ" ಕಾಲಮ್‌ನಲ್ಲಿ · ಕೊನೆಯ ಸಂಗ್ರಹ ${fetched}`, sourceColumn: "ಮೂಲ",
     status: { observed: "ದಾಖಲಾಗಿದೆ", price_missing: "ದರ ಇಲ್ಲ", variety_missing: "ತಳಿ ಇಲ್ಲ", report_missing: "ವರದಿ ಇಲ್ಲ" },
     flagged: "ಮೂಲ ಪರಿಶೀಲನೆಗೆ ಗುರುತಿಸಲಾಗಿದೆ; ಮೌಲ್ಯ ಉಳಿಸಲಾಗಿದೆ", refreshFailed: (message: string) => `ಇತ್ತೀಚಿನ ನವೀಕರಣ ವಿಫಲ: ${message}`,
     noObservation: "ದಾಖಲೆ ಇಲ್ಲ", platformFetched: (time: string) => `ತಂದ ಸಮಯ: ${time}`, notFetched: "ಈ ತಳಿಗೆ ತಂದಿಲ್ಲ",
@@ -166,6 +191,10 @@ export function HistoricalAnalyticsPage() {
     return prior !== undefined && (prior.weighted_price !== row.weighted_price || prior.variety_present !== row.variety_present);
   }) ?? [];
   const flagText = (flag: { code: string; explanation: string }) => t.flags?.[flag.code] ?? flag.explanation;
+  const events = data ? anomalyEvents(data.points, data.anomaly_threshold_percent / 100) : [];
+  const count = (kind: AnomalyEvent["kind"]) => events.filter((event) => event.kind === kind).length;
+  const rupee = (value: number | null) => value === null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
+  const pct = (fraction: number) => Math.round(fraction * 100);
   return <div className="page-stack">
     <section className="page-heading"><div><h1>{t.title}</h1><p className="page-intro">{t.intro}</p></div></section>
     <section className="filter-bar">
@@ -188,20 +217,50 @@ export function HistoricalAnalyticsPage() {
         {!data.observed_months ? <EmptyState title={t.noObserved}>{t.noObservedHint}</EmptyState>
           : <Suspense fallback={<LoadingState />}><PriceChart label={t.chartLabel(variety)} quotePoints={data.points.flatMap((row) => row.weighted_price === null ? [] : [{ reporting_date: `${row.reporting_month}-01`, average_price: row.weighted_price }])} calendarInterval="monthly" range={{ from: `${from}-01`, to: `${to}-01` }} /></Suspense>}
       </section>
-      <section className="panel"><div className="panel-heading"><div><h2>{t.anomaly}</h2><p>{t.anomalyHint(data.flagged_months, data.anomaly_threshold_percent, data.review_method)}</p></div></div><div className="monthly-details">
-        <p className="phone-hide">{t.flagsNote}</p>
-        {!data.flagged_months && <p>{t.noFlags}</p>}
-        {data.points.filter((row) => row.review_flags.length > 0).map((row) => <article key={row.reporting_month}><h3>{format.month(row.reporting_month)} · {variety} · {number(row.weighted_price)} {row.price_unit}</h3><ul>{row.review_flags.map((flag) => <li key={flag.code}>{flagText(flag)}</li>)}</ul>{row.refresh_run_id && !long && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</article>)}
-      </div></section>
+      <section className="panel"><div className="panel-heading"><div><h2>{t.anomaly}</h2><p>{events.length ? t.anomalySummary(count("blip"), count("shift"), count("data")) : t.noFlags}</p></div></div>
+        <div className="anomaly-list">
+          {events.map((event) => {
+            const kind = event.kind === "data" ? t.eventKind.data : event.kind === "blip" ? (event.change_in < 0 ? t.eventKind.dip : t.eventKind.spike)
+              : event.held === false ? (event.change < 0 ? t.eventKind.sharpFall : t.eventKind.sharpRise) : (event.change < 0 ? t.eventKind.fall : t.eventKind.rise);
+            const tone = event.kind === "data" ? "data" : event.kind === "blip" ? "blip" : event.change < 0 ? "fall" : "rise";
+            const month = event.kind === "shift" && event.end !== event.month ? `${format.month(event.month)} – ${format.month(event.end)}` : format.month(event.month);
+            return <article key={`${event.kind}-${event.month}`} className={`anomaly-event anomaly-${tone}`}><div className="anomaly-body">
+              <header><span className="anomaly-kind">{kind}</span><span className="anomaly-month">{month}</span></header>
+              <div className="anomaly-figures">
+                {event.kind === "blip" ? <p className="anomaly-path"><span>{rupee(event.before)}</span><span aria-hidden="true">→</span><b>{rupee(event.value)}</b><span aria-hidden="true">→</span><span>{rupee(event.after)}</span></p>
+                  : event.kind === "shift" ? <p className="anomaly-path"><span>{rupee(event.from)}</span><span aria-hidden="true">→</span><b>{rupee(event.to)}</b>{event.next !== null && <><span aria-hidden="true">→</span><span>{rupee(event.next)}</span></>}</p>
+                  : <p className="anomaly-path"><b>{number(event.value)}</b></p>}
+                <Sparkline values={event.around} label={t.trendAria(month)} />
+              </div>
+              <p className="anomaly-text">{event.kind === "blip" ? t.blipText(variety, pct(event.change_in), rupee(event.value), month, pct(event.change_out), rupee(event.before), rupee(event.after))
+                : event.kind === "shift" ? t.shiftText(variety, pct(event.change), month, rupee(event.from), rupee(event.to), event.held, rupee(event.next))
+                : event.codes.map((code) => flagText({ code, explanation: code })).join(" ")}</p>
+              {event.refresh_run_id && !long && <MonthlyEvidenceReview id={event.refresh_run_id} variety={variety} />}
+            </div></article>;
+          })}
+        </div>
+        <p className="anomaly-rule">{t.anomalyRule(data.anomaly_threshold_percent)} <span className="phone-hide">{t.flagsNote}</span></p>
+      </section>
       <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.calendar}</h2><p>{t.calendarHint}</p></div><ExportButton label={t.exportHistory} onClick={() => download([
         ["month", "weighted_price", "price_unit", "status", "review_flags", "review_explanations", "rolling_3", "rolling_12", "yoy_percent", "volatility_percent", "source_url", "fetched_at", "refresh_run_id"],
         ...data.points.map((row) => [row.reporting_month, row.weighted_price, row.price_unit, row.status, row.review_flags.map((flag) => flag.code).join("; "), row.review_flags.map((flag) => flag.explanation).join("; "), row.rolling_3, row.rolling_12, row.yoy_percent, row.volatility_percent, row.source_url, row.fetched_at, row.refresh_run_id]),
       ], "areca-pulse-monthly-history.csv")} /></div>
-        <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label={t.tableAria}><table className="month-history"><caption>{t.tableCaption}</caption><thead><tr><th>{t.month}</th><th>{c.status}</th><th className="numeric">{t.weighted}</th><th className="numeric">{t.mean3}</th><th className="numeric">{t.mean12}</th><th className="numeric">{t.yoyPercent}</th><th className="numeric">{t.volPercent}</th><th>{t.sourceFreshness}</th></tr></thead><tbody>
-          {data.points.map((row) => <tr key={row.reporting_month}><td>{format.month(row.reporting_month)}</td><td>{t.status[row.status] ?? row.status.replace(/_/g, " ")}{row.review_flags.length > 0 && <span className="status-flag" role="note" title={t.flagged}>{t.flaggedShort}<span className="sr-only"> — {t.flagged}</span></span>}{row.latest_attempt?.status === "failed" && <small className="quote-fetch" role="note">{t.refreshFailed(row.latest_attempt.error_message ?? "")}</small>}</td><td className="numeric">{number(row.weighted_price)}</td><td className="numeric">{number(row.rolling_3)}</td><td className="numeric">{number(row.rolling_12)}</td><td className="numeric">{number(row.yoy_percent)}</td><td className="numeric">{number(row.volatility_percent)}</td><td className="month-source">{row.source_url ? <a href={row.source_url} target="_blank" rel="noreferrer">{long ? t.longSource : "AGMARKNET CSV"}</a> : t.noObservation}
-            {/* The fetch day shows in the row; the exact time is in its tooltip and in the evidence below. */}
-            <small title={row.fetched_at ? t.platformFetched(format.timestamp(row.fetched_at)) : undefined}>{row.fetched_at ? t.fetchedOn(format.date(calendarTodayIST(new Date(row.fetched_at)))) : t.notFetched}</small>
-            {row.refresh_run_id && !long && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</td></tr>)}
+        {(() => {
+          const fetched = data.points.reduce((latest, row) => row.fetched_at && row.fetched_at > latest ? row.fetched_at : latest, "");
+          return <p className="rate-caption month-history-source">{t.sourceOnce(fetched ? format.date(calendarTodayIST(new Date(fetched))) : t.notFetched)}</p>;
+        })()}
+        <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label={t.tableAria}><table className="month-history"><caption className="sr-only">{t.tableCaption}</caption><thead><tr><th>{t.month}</th><th className="numeric">{t.weighted}</th><th className="numeric">{t.yoyPercent}</th><th className="numeric">{t.mean3}</th><th className="numeric">{t.mean12}</th><th className="numeric">{t.volPercent}</th><th>{t.sourceColumn}</th></tr></thead><tbody>
+          {/* Latest month first. A month's status shows only when it is not a normal report; the source is one link per row. */}
+          {[...data.points].reverse().map((row) => <tr key={row.reporting_month}>
+            <td>{format.month(row.reporting_month)}{row.status !== "observed" && <span className="month-status-tag">{t.status[row.status] ?? row.status.replace(/_/g, " ")}</span>}{row.review_flags.length > 0 && <span className="status-flag" role="note" title={t.flagged}>{t.flaggedShort}<span className="sr-only"> — {t.flagged}</span></span>}{row.latest_attempt?.status === "failed" && <small className="quote-fetch" role="note">{t.refreshFailed(row.latest_attempt.error_message ?? "")}</small>}</td>
+            <td className="numeric table-price">{wholeRupees(row.weighted_price)}</td>
+            <td className={`numeric${row.yoy_percent == null ? "" : row.yoy_percent > 0 ? " hold-up" : row.yoy_percent < 0 ? " hold-down" : ""}`}>{row.yoy_percent == null ? "—" : `${row.yoy_percent > 0 ? "↑" : row.yoy_percent < 0 ? "↓" : ""} ${Math.abs(row.yoy_percent).toFixed(1)}%`}</td>
+            <td className="numeric">{wholeRupees(row.rolling_3)}</td><td className="numeric">{wholeRupees(row.rolling_12)}</td>
+            <td className="numeric">{row.volatility_percent == null ? "—" : `${row.volatility_percent.toFixed(1)}%`}</td>
+            <td className="month-source">{row.source_url
+              ? <span className="month-source-line"><a href={row.source_url} target="_blank" rel="noreferrer" title={row.fetched_at ? t.platformFetched(format.timestamp(row.fetched_at)) : undefined}>{long ? t.longSource : "AGMARKNET"}</a>
+                {row.refresh_run_id && !long && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</span>
+              : t.noObservation}</td></tr>)}
         </tbody></table></div>
       </section>
       <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.seasonal}</h2><p>{t.seasonalHint(data.seasonal_years.length, data.seasonal_years.join(", ") || t.none)}</p></div></div>
@@ -217,6 +276,25 @@ export function HistoricalAnalyticsPage() {
     <DailyAggregation />
     <MonthlyRefresh />
   </div>;
+}
+
+/** Five months around an event as a small line, the event month marked; gaps break the line. */
+function Sparkline({ values, label }: { values: (number | null)[]; label: string }) {
+  const known = values.filter((value): value is number => value !== null);
+  if (known.length < 2) return null;
+  const low = Math.min(...known), high = Math.max(...known), width = 96, height = 32, pad = 4;
+  const x = (index: number) => pad + (index * (width - 2 * pad)) / (values.length - 1);
+  const y = (value: number) => high === low ? height / 2 : pad + ((high - value) * (height - 2 * pad)) / (high - low);
+  const segments: string[] = [];
+  values.forEach((value, index) => {
+    if (value === null) return;
+    segments.push(`${index > 0 && values[index - 1] !== null ? "L" : "M"}${x(index).toFixed(1)},${y(value).toFixed(1)}`);
+  });
+  const middle = values[2];
+  return <svg className="anomaly-spark" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
+    <path d={segments.join(" ")} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    {middle !== null && <circle cx={x(2)} cy={y(middle)} r="3.5" className="anomaly-spark-dot" />}
+  </svg>;
 }
 
 function MonthlyEvidenceReview({ id, variety }: { id: string; variety: string }) {

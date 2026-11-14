@@ -10,6 +10,12 @@ const num = (value: number | null | undefined, digits = 1) => value == null ? "�
 const label = (value: string) => value.replace(/_/g, " ");
 type Period = { from: string; to: string } | null | undefined;
 
+/** A column heading whose unit, written "Label (unit)", goes on a second, smaller line so the column stays narrow. */
+function headed(text: string) {
+  const match = /^(.*?)\s*\(([^()]+)\)$/.exec(text);
+  return match ? <>{match[1]}<small className="th-unit">{match[2]}</small></> : text;
+}
+
 const COPY = defineCopy({
   en: {
     noRecordsInRange: "No records in range", periodTo: (from: string, to: string) => `${from} to ${to}`,
@@ -211,21 +217,22 @@ function ProductionSection() {
         {(data?.geographies ?? ["Karnataka", "All India"]).map((value) => <option key={value}>{value}</option>)}</select></label></div>
     {production.isLoading ? <LoadingState /> : production.error ? <ErrorState error={production.error} onRetry={() => void production.refetch()} /> : !data?.current.length ? <EmptyState title={t.noEstimates}>{t.noEstimatesHint(geography)}</EmptyState> : <>
       <Provenance sources={data.sources} period={data.reporting_period ? t.agriculturalYears(periodText(t, data.reporting_period)) : "—"} />
-      <div className="table-scroll" tabIndex={0} role="region" aria-label={t.estimatesAria}><table><thead><tr><th>{t.year}</th><th>{t.estimateStage}</th><th>{t.area(data.unit.area)}</th><th>{t.productionCol(data.unit.production)}</th><th>{t.yieldCol(data.unit.yield)}</th>
-        {compare ? <><th>{t.comparisonProduction(data.comparison_geography!)}</th><th>{t.share}</th></> : null}<th>{t.publication}</th></tr></thead><tbody>
+      <div className="table-scroll" tabIndex={0} role="region" aria-label={t.estimatesAria}><table><thead><tr><th>{t.year}</th><th>{headed(t.area(data.unit.area))}</th><th>{headed(t.productionCol(data.unit.production))}</th><th>{headed(t.yieldCol(data.unit.yield))}</th>
+        {compare ? <><th>{t.comparisonProduction(data.comparison_geography!)}</th><th>{t.share}</th></> : null}<th>{t.publication}</th><th>{t.estimateStage}</th></tr></thead><tbody>
         {data.current.map((row: ProductionEstimate) => <tr key={row.reporting_year}><td>{row.reporting_year}</td>
-          <td>{stageText(t, row)}{row.revised ? t.revised : ""}{row.stage_changed ? t.stageUpdated : ""}</td>
           <td>{num(row.area_thousand_hectares, 3)}</td><td>{num(row.production_thousand_tonnes, 3)}</td><td>{num(row.yield_kg_hectare, 0)}</td>
           {compare ? <><td>{num(comparison.get(row.reporting_year)?.production_thousand_tonnes, 3)}</td><td>{share.get(row.reporting_year)?.percent == null ? "—" : `${share.get(row.reporting_year)!.percent}%`}</td></> : null}
-          <td><a href={row.source_url} target="_blank" rel="noreferrer">{row.publication_date ?? t.dateNotStated}</a></td></tr>)}
+          <td><a href={row.source_url} target="_blank" rel="noreferrer">{row.publication_date ?? t.dateNotStated}</a></td>
+          <td>{stageText(t, row)}{row.revised ? t.revised : ""}{row.stage_changed ? t.stageUpdated : ""}</td></tr>)}
       </tbody></table></div>
       <GrowthTable growth={data.growth} />
-      <h3>{t.revisionsTitle}</h3>
+      {/* Folded on every screen: revisions are for readers who want them, one tap away. */}
+      <details className="phone-fold"><summary>{t.revisionsTitle}{data.revisions.length ? ` (${data.revisions.length})` : ""}</summary>
       {data.revisions.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={t.revisionsAria}><table><thead><tr><th>{t.year}</th><th>{t.revision}</th><th>{t.productionChange}</th><th>{t.areaChange}</th><th>{t.yieldChange}</th><th>{t.source}</th></tr></thead><tbody>
         {data.revisions.map((row) => <tr key={`${row.reporting_year}-${row.evidence_id}`}><td>{row.reporting_year}</td><td>{row.previous_estimate_type ? t.stage[row.previous_estimate_type] ?? label(row.previous_estimate_type) : "—"} → {stageText(t, row)}</td>
           <td>{num(row.change_production_thousand_tonnes, 3)}</td><td>{num(row.change_area_thousand_hectares, 3)}</td><td>{num(row.change_yield_kg_hectare, 0)}</td>
           <td><a href={row.source_url} target="_blank" rel="noreferrer">{row.publication_date ?? t.document}</a></td></tr>)}
-      </tbody></table></div> : <p>{t.noRevisions}</p>}
+      </tbody></table></div> : <p>{t.noRevisions}</p>}</details>
       {/* Method notes are for reviewers; phones skip them, and the tables above still carry every value and stage. */}
       <ul className="phone-hide">{t.productionNotes.map((note) => <li key={note}>{note}</li>)}</ul>
       <p className="data-disclosure phone-hide">{t.districtAnalysis} {geography === "All India" ? t.selectState : districts.data?.districts.length ? t.districtRecords(districts.data.districts.length, periodText(t, districts.data.reporting_period)) : t.noDistricts}</p>
@@ -249,7 +256,7 @@ function ArrivalsSection() {
     {arrivals.isLoading ? <LoadingState /> : arrivals.error ? <ErrorState error={arrivals.error} onRetry={() => void arrivals.refetch()} /> : !data ? null : <>
       <p className="data-disclosure">{t.arrivalsMeta(periodText(t, data.reporting_period), data.requested_range.from, data.requested_range.to, data.sources.length ? data.sources.map((source) => t.imported(source.source_name, format.timestamp(source.imported_at))).join("; ") : t.noneImported, data.unit)}</p>
       {!rows.length ? <EmptyState title={t.noArrivals}>{t.noArrivalsHint}</EmptyState> :
-        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.arrivalsAria}><table><thead><tr><th>{t.period}</th><th>{t.arrivalsT}</th><th>{t.arrivalMarkets}</th><th>{t.tradedT}</th><th>{t.tradedMarkets}</th><th>{t.unknownUnit}</th></tr></thead><tbody>
+        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.arrivalsAria}><table><thead><tr><th>{t.period}</th><th>{headed(t.arrivalsT)}</th><th>{t.arrivalMarkets}</th><th>{headed(t.tradedT)}</th><th>{t.tradedMarkets}</th><th>{t.unknownUnit}</th></tr></thead><tbody>
           {rows.map((row) => <tr key={row.bucket}><td>{row.bucket}</td><td>{num(row.arrival?.quantity_tonnes, 3)}</td><td>{row.arrival?.markets_reporting ?? "—"}</td>
             <td>{num(row.traded?.quantity_tonnes, 3)}</td><td>{row.traded?.markets_reporting ?? "—"}</td><td>{(row.arrival?.unknown_unit_records ?? 0) + (row.traded?.unknown_unit_records ?? 0)}</td></tr>)}
         </tbody></table></div>}
@@ -275,21 +282,22 @@ function WeatherSection({ district, districts, setDistrict }: { district: string
         {data.freshness.model_capture ? t.latestCapture(data.freshness.model_capture.latest ? format.timestamp(data.freshness.model_capture.latest) : "—", t.freshness[data.freshness.model_capture.status] ?? data.freshness.model_capture.status) : ""}
         {data.freshness.imports.map((item) => t.lastImported(label(item.dataset), format.timestamp(item.latest))).join("")}</p>
       {!data.history.length ? <EmptyState title={t.noWeather}>{t.noWeatherHint(district)}</EmptyState> : <>
-        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.seasonalAria}><table><thead><tr><th>{t.season}</th><th>{t.dataType}</th><th>{t.coverage}</th><th>{t.rainfall}</th><th>{t.rainyDays}</th><th>{t.humidity}</th></tr></thead><tbody>
-          {data.seasonal.map((row) => <tr key={`${row.key}-${row.data_type}`}><td>{row.label}</td><td>{typeName(t, row.data_type)}</td><td>{t.daysCoverage(row.days_with_data, row.expected_days, row.complete)}</td>
-            <td>{num(row.rainfall_total_mm)}</td><td>{row.rainy_days_2_5mm}</td><td>{num(row.mean_humidity_pct)}</td></tr>)}
+        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.seasonalAria}><table><thead><tr><th>{t.season}</th><th>{headed(t.rainfall)}</th><th>{t.rainyDays}</th><th>{headed(t.humidity)}</th><th>{t.dataType}</th><th>{t.coverage}</th></tr></thead><tbody>
+          {data.seasonal.map((row) => <tr key={`${row.key}-${row.data_type}`}><td>{row.label}</td>
+            <td>{num(row.rainfall_total_mm)}</td><td>{row.rainy_days_2_5mm}</td><td>{num(row.mean_humidity_pct)}</td>
+            <td>{typeName(t, row.data_type)}</td><td>{t.daysCoverage(row.days_with_data, row.expected_days, row.complete)}</td></tr>)}
         </tbody></table></div>
         {/* Phones fold the day-by-day table; the season summary above is the quick read. */}
         {phone ? <details className="phone-fold"><summary>{t.recentAria}</summary>
-        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recentAria}><table><thead><tr><th>{t.date}</th><th>{t.dataType}</th><th>{t.rain}</th><th>{t.max}</th><th>{t.min}</th><th>{t.humidityShort}</th></tr></thead><tbody>
-          {recent.map((row) => <tr key={`${row.day}-${row.data_type}`}><td>{format.date(row.day)}</td><td>{typeName(t, row.data_type)}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{num(row.relative_humidity_pct)}</td></tr>)}
+        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recentAria}><table><thead><tr><th>{t.date}</th><th>{headed(t.rain)}</th><th>{t.max}</th><th>{t.min}</th><th>{headed(t.humidityShort)}</th><th>{t.dataType}</th></tr></thead><tbody>
+          {recent.map((row) => <tr key={`${row.day}-${row.data_type}`}><td>{format.date(row.day)}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{num(row.relative_humidity_pct)}</td><td>{typeName(t, row.data_type)}</td></tr>)}
         </tbody></table></div></details> : <>
-        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recentAria}><table><thead><tr><th>{t.date}</th><th>{t.dataType}</th><th>{t.rain}</th><th>{t.max}</th><th>{t.min}</th><th>{t.humidityShort}</th></tr></thead><tbody>
-          {recent.map((row) => <tr key={`${row.day}-${row.data_type}`}><td>{format.date(row.day)}</td><td>{typeName(t, row.data_type)}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{num(row.relative_humidity_pct)}</td></tr>)}
+        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.recentAria}><table><thead><tr><th>{t.date}</th><th>{headed(t.rain)}</th><th>{t.max}</th><th>{t.min}</th><th>{headed(t.humidityShort)}</th><th>{t.dataType}</th></tr></thead><tbody>
+          {recent.map((row) => <tr key={`${row.day}-${row.data_type}`}><td>{format.date(row.day)}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td>{num(row.relative_humidity_pct)}</td><td>{typeName(t, row.data_type)}</td></tr>)}
         </tbody></table></div></>}</>}
       {(data.forecasts.official.length > 0 || data.forecasts.model.length > 0) && <h3>{t.forecasts}</h3>}
       {data.forecasts.official.length > 0 && <p>{t.officialDays(data.forecasts.official.length)}</p>}
-      {data.forecasts.model.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={t.modelAria}><table><thead><tr><th>{t.target}</th><th className="phone-hide">{t.type}</th><th>{t.rain}</th><th>{t.max}</th><th>{t.min}</th><th className="phone-hide">{t.issued}</th></tr></thead><tbody>
+      {data.forecasts.model.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={t.modelAria}><table><thead><tr><th>{t.target}</th><th className="phone-hide">{t.type}</th><th>{headed(t.rain)}</th><th>{t.max}</th><th>{t.min}</th><th className="phone-hide">{t.issued}</th></tr></thead><tbody>
         {data.forecasts.model.map((row) => <tr key={`${row.target_date}-${row.provider}`}><td>{format.date(row.target_date)}</td><td className="phone-hide">{t.forecastType(typeName(t, row.data_type))}</td><td>{num(row.rainfall_mm)}</td><td>{num(row.temperature_max_c)}</td><td>{num(row.temperature_min_c)}</td><td className="phone-hide">{format.timestamp(row.issued_at)}</td></tr>)}
       </tbody></table></div> : null}
       {data.warnings.length > 0 && <><h3>{t.warnings}</h3><ul>{data.warnings.map((row) => <li key={`${row.issued_at}-${row.valid_from}-${row.phenomena}`}>{t.warning(row.valid_from, row.valid_to, row.warning_level, row.phenomena, row.provider, format.timestamp(row.issued_at))}</li>)}</ul></>}

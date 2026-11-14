@@ -149,14 +149,71 @@ async function placeRates(apiUrl: string, place: MarketPlace) {
   return rows;
 }
 
+/** Months of APMC history written into a town's page for search engines. */
+const STATIC_HISTORY_MONTHS = 12;
+/** Varieties shown in that history: the ones with the most reports at the town's APMC. */
+const STATIC_HISTORY_VARIETIES = 3;
+type PlaceHistory = { varieties: string[]; months: { month: string; prices: (number | null)[] }[] };
+
+const middle = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b), half = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[half] : Math.round((sorted[half - 1] + sorted[half]) / 2);
+};
+
+/**
+ * A town's APMC prices over the last year, month by month: the median of each day's modal price for its most reported
+ * varieties. Read from the published AGMARKNET history (the daily backfill), so it only ever shows verified prices.
+ */
+async function placeHistory(apiUrl: string, place: MarketPlace): Promise<PlaceHistory | null> {
+  if (!place.apmc) return null;
+  const from = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - (STATIC_HISTORY_MONTHS - 1), 1)).toISOString().slice(0, 10);
+  const byVariety = new Map<string, Map<string, number[]>>();
+  let cursor: string | null = null;
+  for (let page = 0; page < 20; page += 1) {
+    const params = new URLSearchParams({ q: place.apmc, from, limit: "1000", include_count: "false" });
+    if (cursor) params.set("cursor", cursor);
+    const response = await fetch(`${apiUrl}/prices?${params}`, { signal: AbortSignal.timeout(20_000) });
+    if (!response.ok) throw new Error(`APMC history ${place.apmc}: HTTP ${response.status}`);
+    const body = await response.json() as { data: { market_name: string; variety_name: string; reporting_date: string; modal_price: number | null }[]; next_cursor?: string | null; has_more?: boolean };
+    for (const row of body.data) {
+      if (row.market_name !== place.apmc || row.modal_price === null || row.modal_price <= 0) continue;
+      const months = byVariety.get(row.variety_name) ?? new Map<string, number[]>();
+      const month = row.reporting_date.slice(0, 7);
+      months.set(month, [...(months.get(month) ?? []), row.modal_price]);
+      byVariety.set(row.variety_name, months);
+    }
+    if (!body.has_more || !body.next_cursor) break;
+    cursor = body.next_cursor;
+  }
+  const count = (months: Map<string, number[]>) => [...months.values()].reduce((sum, values) => sum + values.length, 0);
+  const varieties = [...byVariety].sort((a, b) => count(b[1]) - count(a[1])).slice(0, STATIC_HISTORY_VARIETIES).map(([name]) => name);
+  const months = [...new Set(varieties.flatMap((name) => [...byVariety.get(name)!.keys()]))].sort().reverse();
+  if (!varieties.length || months.length < 2) return null;
+  return { varieties, months: months.map((month) => ({ month, prices: varieties.map((name) => {
+    const values = byVariety.get(name)!.get(month);
+    return values?.length ? middle(values) : null;
+  }) })) };
+}
+
+const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "UTC" });
+
+function historyHtml(place: MarketPlace, history: PlaceHistory) {
+  const head = history.varieties.map((name) => `<th>${escapeHtml(name)}</th>`).join("");
+  const body = history.months.map((row) => `<tr><td><time datetime="${row.month}">${monthLabel(row.month)}</time></td>${row.prices.map((price) => `<td>${price === null ? "—" : rupees(price)}</td>`).join("")}</tr>`).join("");
+  return `<h2>${escapeHtml(place.kn)} ಎಪಿಎಂಸಿ: ಕಳೆದ ${STATIC_HISTORY_MONTHS} ತಿಂಗಳ ಧಾರಣೆ · ${escapeHtml(place.en)} APMC: last ${STATIC_HISTORY_MONTHS} months</h2>`
+    + `<p>ಪ್ರತಿ ತಿಂಗಳ ದೈನಂದಿನ ಮಾದರಿ ದರಗಳ ಮಧ್ಯಮ ಮೌಲ್ಯ, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ (AGMARKNET). Median of each month's daily modal prices, per quintal (AGMARKNET).</p>`
+    + `<table><thead><tr><th>ತಿಂಗಳು · Month</th>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
 /** A town's rates as plain HTML, the same rows the town page shows once it loads. */
-function placeHtml(place: MarketPlace, rows: PlaceRate[]) {
+function placeHtml(place: MarketPlace, rows: PlaceRate[], history: PlaceHistory | null = null) {
   const body = rows.map((row) => `<tr><td>${escapeHtml(row.source)}</td><td>${escapeHtml(row.name)}</td><td><time datetime="${row.date}">${day(row.date)}</time></td><td>${rupees(row.price)}</td><td>${row.minimum !== null && row.maximum !== null ? `${rupees(row.minimum)} – ${rupees(row.maximum)}` : ""}</td></tr>`).join("");
   return `<main class="static-page">`
     + `<h1>${escapeHtml(place.kn)} ಅಡಿಕೆ ಧಾರಣೆ · ${escapeHtml(place.en)} arecanut rates</h1>`
     + `<p>${escapeHtml(place.district.kn)} ಜಿಲ್ಲೆ · ${escapeHtml(place.district.en)} district. ಇತ್ತೀಚಿನ ವರದಿಯಾದ ದರಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. Latest reported rates, per quintal.</p>`
     + `<table><thead><tr><th>ಮೂಲ · Source</th><th>ತಳಿ · Variety</th><th>ದಿನಾಂಕ · Date</th><th>ದರ · Rate</th><th>ಕನಿಷ್ಠ – ಗರಿಷ್ಠ · Range</th></tr></thead><tbody>${body}</tbody></table>`
-    + `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆ; ಮೂಲಗಳನ್ನು ಒಟ್ಟುಗೂಡಿಸಿಲ್ಲ. Rates as each source publishes them; sources are never combined.</p></main>`;
+    + `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆ; ಮೂಲಗಳನ್ನು ಒಟ್ಟುಗೂಡಿಸಿಲ್ಲ. Rates as each source publishes them; sources are never combined.</p>`
+    + (history ? historyHtml(place, history) : "") + `</main>`;
 }
 
 /** Public contact address. Also in src/services/brand.tsx (footer) and index.html (structured data). */
@@ -205,7 +262,12 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
       for (const [index, place] of MARKET_PLACES.entries()) {
         let content = "";
         if (apiUrl?.startsWith("https://")) {
-          try { const rows = await placeRates(apiUrl.replace(/\/+$/, ""), place); if (rows.length) content = placeHtml(place, rows); }
+          const api = apiUrl.replace(/\/+$/, "");
+          // The year of history is extra: if it cannot be read, the page still gets its latest rates.
+          let history: PlaceHistory | null = null;
+          try { history = await placeHistory(api, place); }
+          catch (error) { console.warn(`History was not written into ${place.en}'s page: ${error instanceof Error ? error.message : error}`); }
+          try { const rows = await placeRates(api, place); if (rows.length || history) content = placeHtml(place, rows, history); }
           catch (error) { console.warn(`Rates were not written into ${place.en}'s page: ${error instanceof Error ? error.message : error}`); }
         }
         write(MARKET_PAGES[index + 1], content);

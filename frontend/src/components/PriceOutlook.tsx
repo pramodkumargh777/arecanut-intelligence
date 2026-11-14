@@ -32,7 +32,8 @@ const COPY = defineCopy({
     chart: "Recent prices and the outlook", chartHint: "Official monthly average per quintal for the last 18 months, with the likely range ahead.",
     actual: "Official price", outlook: "Outlook", range: "Likely range (80%)",
     proof: "How the range held", proofHint: (n: number) => `The same method, tested on the ${n} most recent months it had not seen.`,
-    colMonth: "Month", colEstimate: "Estimate", colActual: "Actual", colResult: "Result",
+    colMonth: "Month", colEstimate: "Estimate", colActual: "Actual", colResult: "Result", colHeld: "Range and actual",
+    rangeAria: (low: string, high: string, actual: string, inside: boolean) => `Range ${low} to ${high}; actual ${actual}, ${inside ? "inside" : "outside"} the range`,
     inside: "Inside range", outside: "Outside range", off: (amount: string) => `${amount} off`,
     compare: "See how every forecasting model compares", compareHint: "Statistical, machine-learning and AI models tested against this rule.",
     nextLabel: (month: string) => `${month} (outlook)`,
@@ -64,7 +65,8 @@ const COPY = defineCopy({
     chart: "ಇತ್ತೀಚಿನ ದರಗಳು ಮತ್ತು ಮುನ್ನೋಟ", chartHint: "ಕಳೆದ 18 ತಿಂಗಳ ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಅಧಿಕೃತ ತಿಂಗಳ ಸರಾಸರಿ ಮತ್ತು ಮುಂದಿನ ಸಾಧ್ಯ ಶ್ರೇಣಿ.",
     actual: "ಅಧಿಕೃತ ದರ", outlook: "ಮುನ್ನೋಟ", range: "ಸಾಧ್ಯ ಶ್ರೇಣಿ (80%)",
     proof: "ಶ್ರೇಣಿ ಎಷ್ಟು ಸರಿಯಾಯಿತು", proofHint: (n: number) => `ಇದೇ ವಿಧಾನವನ್ನು ಅದು ನೋಡದ ಇತ್ತೀಚಿನ ${n} ತಿಂಗಳುಗಳಲ್ಲಿ ಪರೀಕ್ಷಿಸಲಾಗಿದೆ.`,
-    colMonth: "ತಿಂಗಳು", colEstimate: "ಅಂದಾಜು", colActual: "ನಿಜವಾದ ದರ", colResult: "ಫಲಿತಾಂಶ",
+    colMonth: "ತಿಂಗಳು", colEstimate: "ಅಂದಾಜು", colActual: "ನಿಜವಾದ ದರ", colResult: "ಫಲಿತಾಂಶ", colHeld: "ಶ್ರೇಣಿ ಮತ್ತು ನಿಜವಾದ ದರ",
+    rangeAria: (low: string, high: string, actual: string, inside: boolean) => `ಶ್ರೇಣಿ ${low} ರಿಂದ ${high}; ನಿಜವಾದ ದರ ${actual}, ಶ್ರೇಣಿಯ ${inside ? "ಒಳಗೆ" : "ಹೊರಗೆ"}`,
     inside: "ಶ್ರೇಣಿಯೊಳಗೆ", outside: "ಶ್ರೇಣಿಯ ಹೊರಗೆ", off: (amount: string) => `${amount} ವ್ಯತ್ಯಾಸ`,
     compare: "ಎಲ್ಲ ಮುನ್ಸೂಚನಾ ಮಾದರಿಗಳ ಹೋಲಿಕೆ ನೋಡಿ", compareHint: "ಸಾಂಖ್ಯಿಕ, ಯಂತ್ರ ಕಲಿಕೆ ಮತ್ತು AI ಮಾದರಿಗಳನ್ನು ಈ ನಿಯಮದ ವಿರುದ್ಧ ಪರೀಕ್ಷಿಸಲಾಗಿದೆ.",
     nextLabel: (month: string) => `${month} (ಮುನ್ನೋಟ)`,
@@ -126,8 +128,12 @@ export function PriceOutlook({ variety, outlook, forecast, evaluation, prices, h
     const vol = next.band ? volatility(observed.filter((row) => row.reporting_month <= point.training_through).map((row) => row.weighted_price)) : null;
     const [lower, upper] = next.band && vol !== null
       ? [estimate * Math.exp(vol * next.band[0]), estimate * Math.exp(vol * next.band[1])] : [estimate - radius, estimate + radius];
-    return { month: point.reporting_month, estimate, actual: point.actual, miss: Math.abs(point.actual - estimate), inside: point.actual >= lower && point.actual <= upper };
+    return { month: point.reporting_month, estimate, lower, upper, actual: point.actual, miss: Math.abs(point.actual - estimate), inside: point.actual >= lower && point.actual <= upper };
   });
+  // One price scale for every row's range bar, so the bars also show how prices moved across the months.
+  const proofLow = proof.length ? Math.min(...proof.flatMap((row) => [row.lower, row.actual])) : 0;
+  const proofHigh = proof.length ? Math.max(...proof.flatMap((row) => [row.upper, row.actual])) : 1;
+  const proofAt = (value: number) => `${(((value - proofLow) / (proofHigh - proofLow || 1)) * 100).toFixed(2)}%`;
   const inside = proof.filter((row) => row.inside).length;
   const meanActual = proof.length ? proof.reduce((sum, row) => sum + row.actual, 0) / proof.length : null;
   const mae = evaluation?.holdout.selected.mae ?? null;
@@ -198,13 +204,18 @@ export function PriceOutlook({ variety, outlook, forecast, evaluation, prices, h
         <header className="fx-card-head fx-card-head-row"><div><h2 id="po-proof">{t.proof}</h2><p>{next.band ? t.proofHintNew(proof.length) : t.proofHint(proof.length)}</p></div>
           <span className="fx-chip">{t.heldValue(inside, proof.length)}</span></header>
         <div className="po-proof" role="table" aria-labelledby="po-proof">
-          <div className="po-row po-labels" role="row"><span role="columnheader">{t.colMonth}</span><span role="columnheader" className="num">{t.colEstimate}</span>
+          <div className="po-row po-labels" role="row"><span role="columnheader">{t.colMonth}</span><span role="columnheader">{t.colHeld}</span><span role="columnheader" className="num">{t.colEstimate}</span>
             <span role="columnheader" className="num">{t.colActual}</span><span role="columnheader">{t.colResult}</span></div>
           {[...proof].reverse().map((row) => <div role="row" key={row.month} className="po-row">
             <span role="cell"><strong>{month(row.month)}</strong></span>
+            <span role="cell" className="po-range" aria-label={t.rangeAria(rupees(row.lower), rupees(row.upper), rupees(row.actual), row.inside)}>
+              <span className="po-range-band" style={{ left: proofAt(row.lower), width: `calc(${proofAt(row.upper)} - ${proofAt(row.lower)})` }} />
+              <span className="po-range-estimate" style={{ left: proofAt(row.estimate) }} />
+              <span className={`po-range-actual ${row.inside ? "is-hit" : "is-miss"}`} style={{ left: proofAt(row.actual) }} />
+            </span>
             <span role="cell" className="num fx-muted"><small className="po-cell-label">{t.colEstimate} </small>{rupees(row.estimate)}</span>
             <span role="cell" className="num"><small className="po-cell-label">{t.colActual} </small><strong>{rupees(row.actual)}</strong></span>
-            <span role="cell"><span className={`fx-result ${row.inside ? "is-hit" : "is-miss"}`}>{row.inside ? t.inside : t.outside} · {t.off(rupees(row.miss))}</span></span>
+            <span role="cell"><span className={`fx-result ${row.inside ? "is-hit" : "is-miss"}`}><span aria-hidden="true">{row.inside ? "✓" : "✕"}</span> <span className="sr-only">{row.inside ? t.inside : t.outside} · </span>{t.off(rupees(row.miss))}</span></span>
           </div>)}
         </div>
       </section>}
