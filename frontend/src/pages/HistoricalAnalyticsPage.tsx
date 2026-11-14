@@ -15,6 +15,8 @@ import { ExportButton } from "../components/ExportButton";
 import { anomalyEvents, type AnomalyEvent } from "../services/anomalies";
 
 const PriceChart = lazy(() => import("../components/PriceChart").then((module) => ({ default: module.PriceChart })));
+/** A price in whole rupees for reading; the CSV export keeps the exact figure. */
+const wholeRupees = (value: number | null) => value === null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 const completed = completedMonthIST;
 function download(rows: (string | number | null)[][], name: string) {
@@ -56,6 +58,7 @@ const COPY = defineCopy({
     calendar: "Calendar history and rolling statistics", calendarHint: "Rolling windows are unavailable if any required month is missing. Prices and rolling means: INR/quintal.",
     exportHistory: "Export history CSV", tableAria: "Monthly historical analytics", tableCaption: "One row per calendar month; coverage and source attempt status retained",
     month: "Month", weighted: "Weighted price", mean3: "3-month mean", mean12: "12-month mean", yoyPercent: "YoY %", volPercent: "Volatility %", sourceFreshness: "Source / freshness",
+    sourceOnce: (fetched: string) => `Latest month first · each month's own source report is one tap away under Source · latest fetch ${fetched}`, sourceColumn: "Source",
     status: { observed: "observed", price_missing: "price missing", variety_missing: "variety missing", report_missing: "report missing" } as Record<string, string>,
     flagged: "Flagged for source review; value retained", refreshFailed: (message: string) => `Latest refresh failed: ${message}`,
     noObservation: "No observation", platformFetched: (time: string) => `Platform fetched: ${time}`, notFetched: "Not fetched for this variety",
@@ -126,6 +129,7 @@ const COPY = defineCopy({
     calendar: "ಕ್ಯಾಲೆಂಡರ್ ಇತಿಹಾಸ ಮತ್ತು ಚಲಿಸುವ ಸರಾಸರಿಗಳು", calendarHint: "ಅಗತ್ಯವಿರುವ ಯಾವುದೇ ತಿಂಗಳು ಇಲ್ಲದಿದ್ದರೆ ಚಲಿಸುವ ಸರಾಸರಿ ಲಭ್ಯವಿಲ್ಲ. ದರಗಳು ಮತ್ತು ಸರಾಸರಿಗಳು: ₹/ಕ್ವಿಂಟಾಲ್.",
     exportHistory: "ಇತಿಹಾಸ CSV ಡೌನ್‌ಲೋಡ್", tableAria: "ತಿಂಗಳ ಐತಿಹಾಸಿಕ ವಿಶ್ಲೇಷಣೆ", tableCaption: "ಪ್ರತಿ ಕ್ಯಾಲೆಂಡರ್ ತಿಂಗಳಿಗೆ ಒಂದು ಸಾಲು; ವ್ಯಾಪ್ತಿ ಮತ್ತು ಸಂಗ್ರಹದ ಸ್ಥಿತಿ ಉಳಿಸಲಾಗಿದೆ",
     month: "ತಿಂಗಳು", weighted: "ತೂಕದ ಸರಾಸರಿ ದರ", mean3: "3 ತಿಂಗಳ ಸರಾಸರಿ", mean12: "12 ತಿಂಗಳ ಸರಾಸರಿ", yoyPercent: "ವಾರ್ಷಿಕ ಬದಲಾವಣೆ %", volPercent: "ಏರಿಳಿತ %", sourceFreshness: "ಮೂಲ / ಹೊಸತನ",
+    sourceOnce: (fetched: string) => `ಇತ್ತೀಚಿನ ತಿಂಗಳು ಮೊದಲು · ಪ್ರತಿ ತಿಂಗಳ ಮೂಲ ವರದಿ "ಮೂಲ" ಕಾಲಮ್‌ನಲ್ಲಿ · ಕೊನೆಯ ಸಂಗ್ರಹ ${fetched}`, sourceColumn: "ಮೂಲ",
     status: { observed: "ದಾಖಲಾಗಿದೆ", price_missing: "ದರ ಇಲ್ಲ", variety_missing: "ತಳಿ ಇಲ್ಲ", report_missing: "ವರದಿ ಇಲ್ಲ" },
     flagged: "ಮೂಲ ಪರಿಶೀಲನೆಗೆ ಗುರುತಿಸಲಾಗಿದೆ; ಮೌಲ್ಯ ಉಳಿಸಲಾಗಿದೆ", refreshFailed: (message: string) => `ಇತ್ತೀಚಿನ ನವೀಕರಣ ವಿಫಲ: ${message}`,
     noObservation: "ದಾಖಲೆ ಇಲ್ಲ", platformFetched: (time: string) => `ತಂದ ಸಮಯ: ${time}`, notFetched: "ಈ ತಳಿಗೆ ತಂದಿಲ್ಲ",
@@ -241,11 +245,22 @@ export function HistoricalAnalyticsPage() {
         ["month", "weighted_price", "price_unit", "status", "review_flags", "review_explanations", "rolling_3", "rolling_12", "yoy_percent", "volatility_percent", "source_url", "fetched_at", "refresh_run_id"],
         ...data.points.map((row) => [row.reporting_month, row.weighted_price, row.price_unit, row.status, row.review_flags.map((flag) => flag.code).join("; "), row.review_flags.map((flag) => flag.explanation).join("; "), row.rolling_3, row.rolling_12, row.yoy_percent, row.volatility_percent, row.source_url, row.fetched_at, row.refresh_run_id]),
       ], "areca-pulse-monthly-history.csv")} /></div>
-        <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label={t.tableAria}><table className="month-history"><caption>{t.tableCaption}</caption><thead><tr><th>{t.month}</th><th>{c.status}</th><th className="numeric">{t.weighted}</th><th className="numeric">{t.mean3}</th><th className="numeric">{t.mean12}</th><th className="numeric">{t.yoyPercent}</th><th className="numeric">{t.volPercent}</th><th>{t.sourceFreshness}</th></tr></thead><tbody>
-          {data.points.map((row) => <tr key={row.reporting_month}><td>{format.month(row.reporting_month)}</td><td>{t.status[row.status] ?? row.status.replace(/_/g, " ")}{row.review_flags.length > 0 && <span className="status-flag" role="note" title={t.flagged}>{t.flaggedShort}<span className="sr-only"> — {t.flagged}</span></span>}{row.latest_attempt?.status === "failed" && <small className="quote-fetch" role="note">{t.refreshFailed(row.latest_attempt.error_message ?? "")}</small>}</td><td className="numeric">{number(row.weighted_price)}</td><td className="numeric">{number(row.rolling_3)}</td><td className="numeric">{number(row.rolling_12)}</td><td className="numeric">{number(row.yoy_percent)}</td><td className="numeric">{number(row.volatility_percent)}</td><td className="month-source">{row.source_url ? <a href={row.source_url} target="_blank" rel="noreferrer">{long ? t.longSource : "AGMARKNET CSV"}</a> : t.noObservation}
-            {/* The fetch day shows in the row; the exact time is in its tooltip and in the evidence below. */}
-            <small title={row.fetched_at ? t.platformFetched(format.timestamp(row.fetched_at)) : undefined}>{row.fetched_at ? t.fetchedOn(format.date(calendarTodayIST(new Date(row.fetched_at)))) : t.notFetched}</small>
-            {row.refresh_run_id && !long && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</td></tr>)}
+        {(() => {
+          const fetched = data.points.reduce((latest, row) => row.fetched_at && row.fetched_at > latest ? row.fetched_at : latest, "");
+          return <p className="rate-caption month-history-source">{t.sourceOnce(fetched ? format.date(calendarTodayIST(new Date(fetched))) : t.notFetched)}</p>;
+        })()}
+        <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label={t.tableAria}><table className="month-history"><caption className="sr-only">{t.tableCaption}</caption><thead><tr><th>{t.month}</th><th className="numeric">{t.weighted}</th><th className="numeric">{t.yoyPercent}</th><th className="numeric">{t.mean3}</th><th className="numeric">{t.mean12}</th><th className="numeric">{t.volPercent}</th><th>{t.sourceColumn}</th></tr></thead><tbody>
+          {/* Latest month first. A month's status shows only when it is not a normal report; the source is one link per row. */}
+          {[...data.points].reverse().map((row) => <tr key={row.reporting_month}>
+            <td>{format.month(row.reporting_month)}{row.status !== "observed" && <span className="month-status-tag">{t.status[row.status] ?? row.status.replace(/_/g, " ")}</span>}{row.review_flags.length > 0 && <span className="status-flag" role="note" title={t.flagged}>{t.flaggedShort}<span className="sr-only"> — {t.flagged}</span></span>}{row.latest_attempt?.status === "failed" && <small className="quote-fetch" role="note">{t.refreshFailed(row.latest_attempt.error_message ?? "")}</small>}</td>
+            <td className="numeric table-price">{wholeRupees(row.weighted_price)}</td>
+            <td className={`numeric${row.yoy_percent == null ? "" : row.yoy_percent > 0 ? " hold-up" : row.yoy_percent < 0 ? " hold-down" : ""}`}>{row.yoy_percent == null ? "—" : `${row.yoy_percent > 0 ? "↑" : row.yoy_percent < 0 ? "↓" : ""} ${Math.abs(row.yoy_percent).toFixed(1)}%`}</td>
+            <td className="numeric">{wholeRupees(row.rolling_3)}</td><td className="numeric">{wholeRupees(row.rolling_12)}</td>
+            <td className="numeric">{row.volatility_percent == null ? "—" : `${row.volatility_percent.toFixed(1)}%`}</td>
+            <td className="month-source">{row.source_url
+              ? <span className="month-source-line"><a href={row.source_url} target="_blank" rel="noreferrer" title={row.fetched_at ? t.platformFetched(format.timestamp(row.fetched_at)) : undefined}>{long ? t.longSource : "AGMARKNET"}</a>
+                {row.refresh_run_id && !long && <MonthlyEvidenceReview id={row.refresh_run_id} variety={variety} />}</span>
+              : t.noObservation}</td></tr>)}
         </tbody></table></div>
       </section>
       <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.seasonal}</h2><p>{t.seasonalHint(data.seasonal_years.length, data.seasonal_years.join(", ") || t.none)}</p></div></div>

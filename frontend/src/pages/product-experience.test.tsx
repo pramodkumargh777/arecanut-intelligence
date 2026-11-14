@@ -38,6 +38,7 @@ import { shareMessage } from "../services/share";
 import { marketSuggestion, matchSuggestions } from "../services/marketSuggestions";
 import { readdirSync, readFileSync } from "node:fs";
 import { fromFirstCapture, shortPeriod } from "./HistoricalAnalyticsPage";
+import { MonthlySnapshot } from "./MonthlyTrendsPage";
 import { anomalyEvents } from "../services/anomalies";
 import { MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
 import { runInNewContext } from "node:vm";
@@ -55,6 +56,7 @@ const state = vi.hoisted(() => ({
   intelligence: {} as object,
   language: "en" as "en" | "kn",
   branch: [] as object[],
+  monthly: {} as Record<string, object>,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -69,6 +71,7 @@ vi.mock("@tanstack/react-query", () => ({
     if (queryKey[0] === "market-comparison") return { data: { data: state.comparison }, isLoading: false };
     if (queryKey[0] === "cooperative") return state.cooperativePage;
     if (queryKey[0] === "intelligence") return state.intelligence;
+    if (queryKey[0] === "monthly-prices") return state.monthly[queryKey[1]] ?? { data: undefined, isLoading: false };
     // A real query is still loading until it has data, so pages never see "finished with no data" for these.
     if (queryKey[0] === "history") return { data: undefined, isLoading: true, isPending: true };
     return { data: undefined, isLoading: false };
@@ -1032,5 +1035,35 @@ describe("historical anomaly moves over several months", () => {
     const events = anomalyEvents([point("2017-02", 20000), point("2017-03", 25000), point("2017-04", 31800), point("2017-05", 32000)], 0.2);
     expect(events).toEqual([expect.objectContaining({ kind: "shift", month: "2017-03", end: "2017-04", from: 20000, to: 31800, held: true })]);
     expect((events[0] as { change: number }).change).toBeCloseTo(0.59);
+  });
+});
+
+describe("all varieties in one month", () => {
+  const row = (variety_name: string, weighted_price: number | null, reporting_month = "2026-10") =>
+    ({ variety_name, weighted_price, reporting_month, fetched_at: "2026-11-04T00:00:00Z", source_url: "https://agmarknet.example/report.csv" });
+  beforeEach(() => {
+    state.language = "en";
+    state.monthly = {
+      "": { data: { reporting_month: "2026-10", months: ["2026-10", "2026-09"], data: [row("Arecanut-Husk", 4033.78), row("Rashi", 46842), row("Chali", 34412.83), row("Factory", 16615.68)] }, isLoading: false },
+      "2026-09": { data: { reporting_month: "2026-09", months: ["2026-10", "2026-09"], data: [row("Rashi", 47503, "2026-09"), row("Chali", 37039, "2026-09")] }, isLoading: false },
+    };
+  });
+
+  it("shows one tile per variety, main grades first, with the change from the month before", () => {
+    const html = render(<MonthlySnapshot />);
+    expect(html.indexOf(">Main grades<")).toBeLessThan(html.indexOf(">Other grades and by-products<"));
+    expect(html.indexOf(">Rashi<")).toBeLessThan(html.indexOf(">Chali<"));
+    expect(html.indexOf(">Chali<")).toBeLessThan(html.indexOf(">Arecanut-Husk<"));
+    expect(html).toContain("₹46,842");
+    expect(html).toContain("↓ 1.4% <span class=\"variety-month-vs\">vs Sept</span>");
+    expect(html).toContain("No Sept report");
+    // The month and source are said once, not on every row.
+    expect(html.match(/AGMARKNET CSV/g)).toHaveLength(1);
+    expect(html).not.toContain("<table");
+  });
+
+  it("names the main grades in Kannada", () => {
+    state.language = "kn";
+    expect(render(<MonthlySnapshot />)).toContain(">ರಾಶಿ<");
   });
 });

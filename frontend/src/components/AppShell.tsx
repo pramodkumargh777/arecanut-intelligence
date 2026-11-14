@@ -284,7 +284,8 @@ export function AppShell() {
             <button type="button" className="icon-button theme-toggle" aria-label={theme === "dark" ? copy.switchLight : copy.switchDark} title={theme === "dark" ? copy.switchLight : copy.switchDark} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button>
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><Outlet /></CommodityGate></main>
+        {/* Keyed by path, so each page fades in once as it opens (.page-enter); filters and searches within a page do not replay it. */}
+        <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><div key={location.pathname} className="page-enter"><Outlet /></div></CommodityGate></main>
         <SiteFooter />
       </div>
     </div>

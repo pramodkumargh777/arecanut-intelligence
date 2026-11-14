@@ -897,6 +897,17 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .month-history thead th { white-space: normal; vertical-align: bottom; line-height: 1.35; }
 .month-history thead th.numeric { max-width: 96px; }
 .month-history th, .month-history td { padding-left: 10px; padding-right: 10px; }
+/* Wide screens: fixed, even column widths, so the figures spread across the table instead of crowding at the left
+   with the spare width piled at one end. Phones keep natural widths and scroll sideways. */
+@media (min-width: 900px) {
+  .month-history { table-layout: fixed; }
+  .month-history th:nth-child(1) { width: 12%; }
+  .month-history th:nth-child(2), .month-history th:nth-child(4), .month-history th:nth-child(5) { width: 13%; }
+  .month-history th:nth-child(3), .month-history th:nth-child(6) { width: 11%; }
+  .month-history th:nth-child(7) { width: 27%; padding-left: 32px; }
+  .month-history td:nth-child(7) { padding-left: 32px; }
+  .month-history thead th.numeric { max-width: none; }
+}
 
 /* ---- Forecast evaluation: reader-facing summary ------------------------------------------------------------
  * One column rhythm: a toolbar, the verdict, then cards that share padding, heading style and column alignment. */
@@ -1062,11 +1073,20 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .po-cell-label { display: none; }
 .po-stats { background: var(--surface); box-shadow: var(--shadow); }
 
-.po-row { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(100px, .9fr) minmax(100px, .9fr) minmax(180px, 1.4fr); align-items: center; column-gap: 16px; min-height: 46px; padding: 0 8px; border-top: 1px solid var(--line); }
+.po-row { display: grid; grid-template-columns: minmax(84px, .7fr) minmax(160px, 2.4fr) minmax(84px, .7fr) minmax(84px, .7fr) minmax(112px, .9fr); align-items: center; column-gap: 20px; min-height: 46px; padding: 0 8px; border-top: 1px solid var(--line); }
 .po-labels { min-height: 30px; border-top: 0; color: var(--subtle); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; }
 .po-labels + .po-row { border-top: 0; }
 .po-row strong { color: var(--ink); font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .po-row .fx-muted { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+/* Each month's range as a band on one shared price scale, the estimate as a tick and the actual as a dot: green
+   inside the range, red outside. */
+.po-range { position: relative; height: 18px; margin: 0 6px; }
+.po-range::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; border-radius: 2px; background: var(--surface-2); transform: translateY(-50%); }
+.po-range-band { position: absolute; top: 50%; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--brand-leaf) 32%, transparent); transform: translateY(-50%); }
+.po-range-estimate { position: absolute; top: 50%; width: 2px; height: 12px; border-radius: 1px; background: var(--muted); transform: translate(-1px, -50%); }
+.po-range-actual { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--surface); transform: translate(-50%, -50%); }
+.po-range-actual.is-hit { background: #2f8f57; }
+.po-range-actual.is-miss { background: var(--bad-ink); }
 
 .po-compare { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 16px; color: var(--ink); text-decoration: none !important; transition: border-color .15s ease; }
 .po-compare:hover { border-color: var(--brand-leaf); }
@@ -1079,11 +1099,13 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 @media (max-width: 640px) {
   .po-hero h2 { font-size: 21px; }
   .po-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .po-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; row-gap: 4px; padding: 10px 6px; }
+  /* Phones: month and actual on top, the range bar across, then the estimate and the result. */
+  .po-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; row-gap: 6px; padding: 10px 6px; }
   .po-labels { display: none; }
-  .po-row > :nth-child(2) { grid-column: 1; grid-row: 2; text-align: left; }
-  .po-row > :nth-child(3) { grid-column: 2; grid-row: 1; }
-  .po-row > :nth-child(4) { grid-column: 2; grid-row: 2; justify-self: end; }
+  .po-row > :nth-child(2) { grid-column: 1 / -1; grid-row: 2; margin: 0 4px; }
+  .po-row > :nth-child(3) { grid-column: 1; grid-row: 3; text-align: left; }
+  .po-row > :nth-child(4) { grid-column: 2; grid-row: 1; }
+  .po-row > :nth-child(5) { grid-column: 2; grid-row: 3; justify-self: end; }
   .po-cell-label { display: inline; color: var(--subtle); font-size: 11.5px; font-weight: 500; }
 }
 /* Next six months: month, range, most likely, and a chance-higher bar with its percentage. */
@@ -1523,3 +1545,51 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 
 /* A unit under its column heading, e.g. "Area" over "thousand hectares", so long units do not widen the column. */
 .th-unit { display: block; margin-top: 1px; font-size: 11.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--subtle); white-space: nowrap; }
+
+/* Motion: short, cheap (opacity and a few pixels of movement only), never delaying content, and switched off for
+   readers who ask for reduced motion. */
+@keyframes page-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes content-in { from { opacity: 0; } to { opacity: 1; } }
+/* 1. A page fades in and rises slightly as it opens. */
+.page-enter { animation: page-enter .16s ease-out; }
+/* 2. Content that replaces a loading placeholder fades in instead of jumping into place. */
+.rate-list, .glance-tiles, .table-scroll, .snapshot-grid, .hold-season, .hold-outcomes, .anomaly-list, .echarts-for-react, .fx-showcase,
+.market-breadth, .monthly-details, .chat-answer { animation: content-in .2s ease-out; }
+/* 3. Tap feedback: the thing pressed gives a little, so a tap feels answered on a phone. */
+.button-primary, .button-secondary, .icon-button, .fx-segmented button, .rate-more-toggle, .home-actions a, .assistant-topic button,
+.assistant-topic-q, .chat-icon-button, .footer-social a, .market-chips a, .glance-tile, .rate-source, .rate-foot-source, .fx-select, .chat-send {
+  transition-property: transform, background-color, border-color, color, box-shadow; transition-duration: .1s, .15s, .15s, .15s, .2s; transition-timing-function: ease-out; }
+.button-primary:active, .button-secondary:active, .icon-button:active, .fx-segmented button:active, .rate-more-toggle:active, .home-actions a:active,
+.assistant-topic button:active, .assistant-topic-q:active, .chat-icon-button:active, .footer-social a:active, .market-chips a:active,
+.glance-tile:active, .rate-source:active, .rate-foot-source:active, .chat-send:active { transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .rate-list, .glance-tiles, .table-scroll, .snapshot-grid, .hold-season, .hold-outcomes, .anomaly-list, .echarts-for-react, .fx-showcase,
+  .market-breadth, .monthly-details, .chat-answer { animation: none; }
+  .button-primary:active, .button-secondary:active, .icon-button:active, .fx-segmented button:active, .rate-more-toggle:active, .home-actions a:active,
+  .assistant-topic button:active, .assistant-topic-q:active, .chat-icon-button:active, .footer-social a:active, .market-chips a:active,
+  .glance-tile:active, .rate-source:active, .rate-foot-source:active, .chat-send:active { transform: none; }
+}
+
+/* All varieties in one month: one tile per variety (name, price, change from the month before), main grades first.
+   Replaces a table whose month and source columns repeated the same value on every row. */
+.variety-month h3 { margin: 18px 0 10px; font-size: 13px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); }
+[lang="kn"] .variety-month h3 { letter-spacing: 0; text-transform: none; font-size: 14px; }
+.variety-month-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.variety-month-tile { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.variety-month-name { font-size: 13.5px; color: var(--muted); }
+.variety-month-price { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink); }
+.variety-month-change { font-size: 12.5px; color: var(--subtle); font-variant-numeric: tabular-nums; }
+.variety-month-vs { color: var(--subtle); font-weight: 400; }
+@media (max-width: 640px) {
+  .variety-month-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .variety-month-tile { padding: 10px 12px; }
+  .variety-month-price { font-size: 17px; }
+}
+
+/* Calendar history: one line per month, latest first; the status tag appears only for an unusual month, and each
+   month's source and its check sit on one line in the last column. */
+.month-history-source { margin: 0 0 10px; }
+.month-status-tag { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 11.5px; }
+.month-source-line { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; white-space: nowrap; }
+.month-source-line details { display: inline-block; }
+.month-source-line details[open] { display: block; flex-basis: 100%; white-space: normal; margin-top: 6px; }
