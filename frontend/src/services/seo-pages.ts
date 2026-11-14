@@ -171,14 +171,26 @@ export const varietyNames = (variety: GrowerVariety) => ({
   en: /areca/i.test(variety.en) ? variety.en : `${variety.en} arecanut`,
 });
 
+/**
+ * Other names growers search a variety by (Search Console: "kempu adike rate today"). Red, boiled arecanut is
+ * "kempu adike" in Malnad, and Rashi is its main grade.
+ */
+const VARIETY_SEARCH_NAMES: Record<string, { kn: string; en: string }> = { rashi: { kn: "ಕೆಂಪು ಅಡಿಕೆ", en: "kempu adike" } };
+
 export function varietySeo(variety: GrowerVariety): SeoPage {
   const name = varietyNames(variety);
+  // Growers search "chali adike rate today", so titles use their words; names already saying areca stay as they are.
+  const adike = /areca/i.test(variety.en) ? variety.en : `${variety.en} adike`;
+  const also = VARIETY_SEARCH_NAMES[variety.key];
   const sources = (["mamcos", "tss"] as const).filter((source) => variety.labels[source]?.length);
   const where = (language: "kn" | "en") => sources.map((source) => SOURCE_PLACES[source][language]).join(language === "kn" ? " ಮತ್ತು " : " and ");
   return {
     path: varietyPath(variety.key), label: { kn: `${name.kn} ಧಾರಣೆ`, en: `${name.en} price` },
-    kn: { title: `${name.kn} ಧಾರಣೆ ಇಂದು · ${name.en} price today | ಅಡಿಕೆ ನಾಡಿ`, description: `${name.kn} ಇತ್ತೀಚಿನ ಧಾರಣೆ: ${sources.map((source) => SOURCE_MAIN_BRANCH[source]).join(", ")} ಸೇರಿ ಶಾಖೆವಾರು ದರಗಳು, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.` },
-    en: { title: `${name.en} price today: ${sources.map((source) => source.toUpperCase()).join(" and ")} rates | Areca Pulse`, description: `Latest ${name.en} rates per quintal at ${where("en")}, by branch, each with its date and source.` },
+    kn: { title: `${name.kn} ಧಾರಣೆ ಇಂದು · ${adike} rate today | ಅಡಿಕೆ ನಾಡಿ`,
+      // Growers also write ರೇಟ್ ("ಸಿಪ್ಪೆ ಅಡಿಕೆ ರೇಟ್"), so the description says both.
+      description: `${name.kn}${also ? ` (${also.kn})` : ""} ಇಂದಿನ ರೇಟ್: ${sources.map((source) => SOURCE_MAIN_BRANCH[source]).join(", ")} ಶಾಖೆವಾರು ಧಾರಣೆ, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.` },
+    en: { title: `${adike} rate today: ${name.en} price at ${sources.map((source) => source.toUpperCase()).join(" and ")} | Areca Pulse`,
+      description: `Latest ${name.en}${also ? ` (${also.en})` : ""} rates per quintal at ${where("en")}, by branch, each with its date and source.` },
   };
 }
 
@@ -197,13 +209,15 @@ function placeSources(place: MarketPlace, language: "kn" | "en") {
 
 export function marketSeo(place: MarketPlace): SeoPage {
   const join = (language: "kn" | "en") => placeSources(place, language).join(language === "kn" ? ", " : ", ");
+  // The older English spelling many still search by ("today adike rate shimoga").
+  const en = place.alias ? `${place.en} (${place.alias})` : place.en;
   return {
     path: marketPath(place.slug), label: { kn: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ`, en: `${place.en} arecanut rate` },
-    kn: { title: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ ಇಂದು · ${place.en} adike rate today | ಅಡಿಕೆ ನಾಡಿ`,
+    kn: { title: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ ಇಂದು · ${en} adike rate today | ಅಡಿಕೆ ನಾಡಿ`,
       // Under about 130 Kannada characters, so a results page shows it whole; the district is on the page itself.
-      description: `${place.kn} ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ${join("kn")} ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ಮತ್ತು ಇತರ ತಳಿಗಳು, ದಿನಾಂಕದೊಂದಿಗೆ.` },
-    en: { title: `${place.en} arecanut price today: ${join("en")} rates | Areca Pulse`,
-      description: `Latest arecanut (adike) rates in ${place.en}, ${place.district.en}: ${join("en")}. Rashi, Chali, Bette and more, per quintal, each with its date and source.` },
+      description: `${place.kn} ಇಂದಿನ ಅಡಿಕೆ ರೇಟ್: ${join("kn")} ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ಮತ್ತು ಇತರ ತಳಿಗಳು, ದಿನಾಂಕದೊಂದಿಗೆ.` },
+    en: { title: `${en} adike rate today: ${join("en")} arecanut prices | Areca Pulse`,
+      description: `Latest arecanut (adike) rates in ${en}, ${place.district.en}: ${join("en")}. Rashi, Chali, Bette and more, per quintal, each with its date and source.` },
   };
 }
 

@@ -142,7 +142,7 @@ export function OverviewPage() {
           <div className="feature-foot"><ShieldCheck size={14} /> {t.exactVariety(data.reporting_markets)}</div>
           <p>{t.benchmark(data.benchmark_reporting_date ? niceDate(data.benchmark_reporting_date) : c.unavailable)} {data.latest_reporting_date !== data.benchmark_reporting_date && t.olderPoint}</p>
         </article>
-        <article className="snapshot-card">
+        <article className="snapshot-card snapshot-row">
           <div className="card-kicker"><span>{t.reportingMarkets}</span><MapPin size={16} /></div>
           <div className="snapshot-value">{data.reporting_markets}<small>{t.markets}</small></div>
           <div className="card-hint">{t.minimumCoverage(data.market_coverage_required)}</div>

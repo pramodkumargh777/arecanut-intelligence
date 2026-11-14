@@ -83,7 +83,8 @@ export function ScoreItem({ icon, label, value, tone, detail, source, to, loadin
   const t = useCopy(COPY);
   return <article className={`score-item tone-${tone}`} aria-busy={loading || undefined}>
     <div className="score-head"><span className="score-icon" aria-hidden="true">{icon}</span><span className="score-label">{label}</span><span className={`status-pill tone-${tone}`}>{loading ? t.loading : t.tone[tone]}</span></div>
-    <strong className="score-value">{loading ? "…" : value}</strong>
+    {/* A worded value ("Baseline only") is set smaller than a figure, so it does not wrap over three lines. */}
+    <strong className={`score-value${/\d/.test(value) ? "" : " score-value-words"}`}>{loading ? "…" : value}</strong>
     <p className="score-detail">{loading ? t.reading : detail}</p>
     <div className="score-foot"><SourceLabel>{source}</SourceLabel>{to && <Link to={to} className="subtle-link">{t.details}</Link>}</div>
   </article>;

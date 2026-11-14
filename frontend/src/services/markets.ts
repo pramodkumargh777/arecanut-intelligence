@@ -13,6 +13,8 @@ export type MarketPlace = {
   branches: Partial<Record<CooperativeSource, string>>;
   /** The AGMARKNET market name exactly as /markets returns it. */
   apmc?: string;
+  /** An older English spelling people still search by (Shimoga, Mangalore), added to the page title. */
+  alias?: string;
 };
 
 const SHIVAMOGGA = { en: "Shivamogga", kn: "ಶಿವಮೊಗ್ಗ" };
@@ -22,15 +24,15 @@ const UTTARA_KANNADA = { en: "Uttara Kannada", kn: "ಉತ್ತರ ಕನ್ನ
 const DAKSHINA_KANNADA = { en: "Dakshina Kannada", kn: "ದಕ್ಷಿಣ ಕನ್ನಡ" };
 
 export const MARKET_PLACES: MarketPlace[] = [
-  { slug: "shivamogga", en: "Shivamogga", kn: "ಶಿವಮೊಗ್ಗ", district: SHIVAMOGGA, branches: { mamcos: "SHIVAMOGGA" }, apmc: "Shimoga APMC" },
+  { slug: "shivamogga", en: "Shivamogga", kn: "ಶಿವಮೊಗ್ಗ", alias: "Shimoga", district: SHIVAMOGGA, branches: { mamcos: "SHIVAMOGGA" }, apmc: "Shimoga APMC" },
   { slug: "sirsi", en: "Sirsi", kn: "ಶಿರಸಿ", district: UTTARA_KANNADA, branches: { tss: "Sirsi" }, apmc: "Sirsi APMC" },
-  { slug: "sagara", en: "Sagara", kn: "ಸಾಗರ", district: SHIVAMOGGA, branches: { mamcos: "SAGARA" }, apmc: "Sagar APMC" },
+  { slug: "sagara", en: "Sagara", kn: "ಸಾಗರ", alias: "Sagar", district: SHIVAMOGGA, branches: { mamcos: "SAGARA" }, apmc: "Sagar APMC" },
   { slug: "thirthahalli", en: "Thirthahalli", kn: "ತೀರ್ಥಹಳ್ಳಿ", district: SHIVAMOGGA, branches: { mamcos: "THIRTHAHALLI" }, apmc: "APMC THIRTHAHALLI" },
   { slug: "channagiri", en: "Channagiri", kn: "ಚನ್ನಗಿರಿ", district: DAVANAGERE, branches: { mamcos: "CHANNAGIRI", tumcos: "Channagiri" }, apmc: "Channagiri APMC" },
   { slug: "siddapur", en: "Siddapur", kn: "ಸಿದ್ದಾಪುರ", district: UTTARA_KANNADA, branches: { tss: "Siddapur" }, apmc: "Siddapur APMC" },
   { slug: "yellapur", en: "Yellapur", kn: "ಯಲ್ಲಾಪುರ", district: UTTARA_KANNADA, branches: { tss: "Yellapur" }, apmc: "Yellapur APMC" },
   { slug: "puttur", en: "Puttur", kn: "ಪುತ್ತೂರು", district: DAKSHINA_KANNADA, branches: {}, apmc: "Puttur APMC" },
-  { slug: "mangaluru", en: "Mangaluru", kn: "ಮಂಗಳೂರು", district: DAKSHINA_KANNADA, branches: {}, apmc: "Mangaluru APMC" },
+  { slug: "mangaluru", en: "Mangaluru", kn: "ಮಂಗಳೂರು", alias: "Mangalore", district: DAKSHINA_KANNADA, branches: {}, apmc: "Mangaluru APMC" },
   { slug: "bantwal", en: "Bantwal", kn: "ಬಂಟ್ವಾಳ", district: DAKSHINA_KANNADA, branches: {}, apmc: "Bantwala APMC" },
   { slug: "belthangady", en: "Belthangady", kn: "ಬೆಳ್ತಂಗಡಿ", district: DAKSHINA_KANNADA, branches: {}, apmc: "Belthangdi APMC" },
   { slug: "sullia", en: "Sullia", kn: "ಸುಳ್ಯ", district: DAKSHINA_KANNADA, branches: {}, apmc: "Sulya APMC" },

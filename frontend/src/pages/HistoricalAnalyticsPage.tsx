@@ -60,7 +60,7 @@ const COPY = defineCopy({
     month: "Month", weighted: "Weighted price", mean3: "3-month mean", mean12: "12-month mean", yoyPercent: "YoY %", volPercent: "Volatility %", sourceFreshness: "Source / freshness",
     sourceOnce: (fetched: string) => `Latest month first · each month's own source report is one tap away under Source · latest fetch ${fetched}`, sourceColumn: "Source",
     status: { observed: "observed", price_missing: "price missing", variety_missing: "variety missing", report_missing: "report missing" } as Record<string, string>,
-    flagged: "Flagged for source review; value retained", refreshFailed: (message: string) => `Latest refresh failed: ${message}`,
+    flagged: "Flagged for source review; value retained", refreshFailed: (message: string) => `Latest refresh failed: ${message}`, recheckFailed: "A later re-check of this month did not complete; the price shown is from its last successful report.",
     noObservation: "No observation", platformFetched: (time: string) => `Platform fetched: ${time}`, notFetched: "Not fetched for this variety",
     seasonal: "Descriptive seasonal pattern", seasonalHint: (count: number, years: string) => `${count} complete years: ${years}. Requires at least 3. Index 100 = each full year's average. Not a forecast.`,
     seasonalIndex: "Seasonal index", annualMean: "Annual mean", seasonalDescription: (variety: string) => `Seasonal index for ${variety}`,
@@ -131,7 +131,7 @@ const COPY = defineCopy({
     month: "ತಿಂಗಳು", weighted: "ತೂಕದ ಸರಾಸರಿ ದರ", mean3: "3 ತಿಂಗಳ ಸರಾಸರಿ", mean12: "12 ತಿಂಗಳ ಸರಾಸರಿ", yoyPercent: "ವಾರ್ಷಿಕ ಬದಲಾವಣೆ %", volPercent: "ಏರಿಳಿತ %", sourceFreshness: "ಮೂಲ / ಹೊಸತನ",
     sourceOnce: (fetched: string) => `ಇತ್ತೀಚಿನ ತಿಂಗಳು ಮೊದಲು · ಪ್ರತಿ ತಿಂಗಳ ಮೂಲ ವರದಿ "ಮೂಲ" ಕಾಲಮ್‌ನಲ್ಲಿ · ಕೊನೆಯ ಸಂಗ್ರಹ ${fetched}`, sourceColumn: "ಮೂಲ",
     status: { observed: "ದಾಖಲಾಗಿದೆ", price_missing: "ದರ ಇಲ್ಲ", variety_missing: "ತಳಿ ಇಲ್ಲ", report_missing: "ವರದಿ ಇಲ್ಲ" },
-    flagged: "ಮೂಲ ಪರಿಶೀಲನೆಗೆ ಗುರುತಿಸಲಾಗಿದೆ; ಮೌಲ್ಯ ಉಳಿಸಲಾಗಿದೆ", refreshFailed: (message: string) => `ಇತ್ತೀಚಿನ ನವೀಕರಣ ವಿಫಲ: ${message}`,
+    flagged: "ಮೂಲ ಪರಿಶೀಲನೆಗೆ ಗುರುತಿಸಲಾಗಿದೆ; ಮೌಲ್ಯ ಉಳಿಸಲಾಗಿದೆ", refreshFailed: (message: string) => `ಇತ್ತೀಚಿನ ನವೀಕರಣ ವಿಫಲ: ${message}`, recheckFailed: "ಈ ತಿಂಗಳ ಮರುಪರಿಶೀಲನೆ ಪೂರ್ಣಗೊಂಡಿಲ್ಲ; ತೋರಿಸಿದ ದರ ಕೊನೆಯ ಯಶಸ್ವಿ ವರದಿಯದು.",
     noObservation: "ದಾಖಲೆ ಇಲ್ಲ", platformFetched: (time: string) => `ತಂದ ಸಮಯ: ${time}`, notFetched: "ಈ ತಳಿಗೆ ತಂದಿಲ್ಲ",
     seasonal: "ಋತುಮಾನದ ಮಾದರಿ", seasonalHint: (count: number, years: string) => `${count} ಪೂರ್ಣ ವರ್ಷಗಳು: ${years}. ಕನಿಷ್ಠ 3 ಬೇಕು. ಸೂಚ್ಯಂಕ 100 = ಆ ವರ್ಷದ ಸರಾಸರಿ. ಮುನ್ಸೂಚನೆ ಅಲ್ಲ.`,
     seasonalIndex: "ಋತುಮಾನ ಸೂಚ್ಯಂಕ", annualMean: "ವಾರ್ಷಿಕ ಸರಾಸರಿ", seasonalDescription: (variety: string) => `${variety} ಋತುಮಾನ ಸೂಚ್ಯಂಕ`,
@@ -252,7 +252,7 @@ export function HistoricalAnalyticsPage() {
         <div className="table-scroll table-tall" tabIndex={0} role="region" aria-label={t.tableAria}><table className="month-history"><caption className="sr-only">{t.tableCaption}</caption><thead><tr><th>{t.month}</th><th className="numeric">{t.weighted}</th><th className="numeric">{t.yoyPercent}</th><th className="numeric">{t.mean3}</th><th className="numeric">{t.mean12}</th><th className="numeric">{t.volPercent}</th><th>{t.sourceColumn}</th></tr></thead><tbody>
           {/* Latest month first. A month's status shows only when it is not a normal report; the source is one link per row. */}
           {[...data.points].reverse().map((row) => <tr key={row.reporting_month}>
-            <td>{format.month(row.reporting_month)}{row.status !== "observed" && <span className="month-status-tag">{t.status[row.status] ?? row.status.replace(/_/g, " ")}</span>}{row.review_flags.length > 0 && <span className="status-flag" role="note" title={t.flagged}>{t.flaggedShort}<span className="sr-only"> — {t.flagged}</span></span>}{row.latest_attempt?.status === "failed" && <small className="quote-fetch" role="note">{t.refreshFailed(row.latest_attempt.error_message ?? "")}</small>}</td>
+            <td>{format.month(row.reporting_month)}{row.status !== "observed" && <span className="month-status-tag">{t.status[row.status] ?? row.status.replace(/_/g, " ")}</span>}{row.review_flags.length > 0 && <span className="status-flag" role="note" title={t.flagged}>{t.flaggedShort}<span className="sr-only"> — {t.flagged}</span></span>}{row.latest_attempt?.status === "failed" && <span className="month-recheck" role="note" title={`${t.recheckFailed} (${row.latest_attempt.error_message ?? ""})`}>!<span className="sr-only"> — {t.recheckFailed}</span></span>}</td>
             <td className="numeric table-price">{wholeRupees(row.weighted_price)}</td>
             <td className={`numeric${row.yoy_percent == null ? "" : row.yoy_percent > 0 ? " hold-up" : row.yoy_percent < 0 ? " hold-down" : ""}`}>{row.yoy_percent == null ? "—" : `${row.yoy_percent > 0 ? "↑" : row.yoy_percent < 0 ? "↓" : ""} ${Math.abs(row.yoy_percent).toFixed(1)}%`}</td>
             <td className="numeric">{wholeRupees(row.rolling_3)}</td><td className="numeric">{wholeRupees(row.rolling_12)}</td>

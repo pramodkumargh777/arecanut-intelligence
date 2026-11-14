@@ -15,3 +15,17 @@ export const TSS_VARIETIES = [
   "KOKA", "LA KOKA", "CH.KEMP", "ARAGERE", "MURI", "KOLE", "CHURU",
   "FRESH RED ARECANUT", "FRESH GREEN ARECANUT", "FRESH SIPPE ARECA", "FRESH KOLE RAW", "GREEN RAW ARECA", "ARECANUT",
 ] as const;
+
+/**
+ * The Kannada name TSS publishes for each grade (`iname_kn` in its rate table), copied exactly, including its own
+ * abbreviations. Grades only TSS reports use these names on the site; a test keeps the catalogue in step.
+ */
+export const TSS_KANNADA: Record<(typeof TSS_VARIETIES)[number], string> = {
+  "RASHI": "ರಾಶಿ", "NEW RASHI": "ಹೊಸ ರಾಶಿ", "API": "ಆಪಿ", "BT RASHI": "ರಾಶಿ - ||", "SANNA RASHI": "ಸಣ್ಣ ರಾಶಿ",
+  "CHALI": "ಚಾಲಿ", "NEW CHALI": "ಹೊಸ ಚಾಲಿ", "11-CHALI": "ಚಾಲಿ-||", "DNK CHALI": "ಡಂಕ ಚಾಲಿ", "SIPPE CHALI": "ಸಿಪ್ಪೆ ಚಾಲಿ",
+  "BETTE": "ಬೆಟ್ಟೆ", "GOT BETTE": "ಗೋ ಬೆಟ್ಟೆ", "KE.BETTE": "ಕೆ.ಬೆಟ್ಟೆ",
+  "B.G.": "ಬಿಳೆಗೋಟು", "K.G.": "ಕೆಂ.ಗೋ.", "KARAGOTU": "ಕಾರಗೋಟು", "SIPPE GOTU": "ಸಿಪ್ಪೆ ಗೋಟು", "LA B GOT": "ಲ ಬಿಗೊ",
+  "KOKA": "ಕೋಕಾ", "LA KOKA": "ಲ ಕೋಕಾ", "CH.KEMP": "ಚಾಲಿ ಕೆಂಪು", "ARAGERE": "ಅರಗೆರೆ", "MURI": "ಮುರಿ", "KOLE": "ಕೊಳೆ", "CHURU": "ಚೂರು",
+  "FRESH RED ARECANUT": "ಗೋಟು ಅಡಿಕೆ", "FRESH GREEN ARECANUT": "ಹಸಿರು ಅಡಿಕೆ", "FRESH SIPPE ARECA": "ಹಸಿ ಅಡಿಕೆ(ಸಿಪ್ಪೆ ಅಡಿಕೆ)",
+  "FRESH KOLE RAW": "ಹಸಿ ಕೊಳೆ", "GREEN RAW ARECA": "ಹಸಿರು ಹಸಿ ಅಡಿಕೆ", "ARECANUT": "ಅಡಿಕೆ",
+};

@@ -1,3 +1,4 @@
+import { calendarTodayIST } from "../../../shared/dates";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -158,9 +159,9 @@ export function IntelligencePage() {
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : data && <>
       {staleWeather && <div role="alert" className="data-disclosure">{t.staleWeather}</div>}
       <section className="snapshot-grid snapshot-grid-even">
-        <article className="snapshot-card"><div className="card-kicker">{t.selected}</div><div className="snapshot-value">{filtered.length}</div><p>{t.captures(new Set(filtered.map((row) => row.capture_id)).size)}</p></article>
-        <article className="snapshot-card"><div className="card-kicker"><span className="label-full">{t.latestFetch}</span><span className="label-short" aria-hidden="true">{t.latestFetchShort}</span></div><div className="snapshot-value snapshot-date">{latest ? format.timestamp(latest) : c.never}</div><p>{t.notPeriod}</p></article>
-        <article className="snapshot-card"><div className="card-kicker">{t.sourceCoverage}</div><div className="snapshot-value">{domain === "weather" ? t.sirsi : domain === "production" ? geography || t.indiaWide : t.india}</div><p>{t.coverageHint[coverageKey]}</p></article>
+        <article className="snapshot-card snapshot-row"><div className="card-kicker">{t.selected}</div><div className="snapshot-value">{filtered.length}</div><p>{t.captures(new Set(filtered.map((row) => row.capture_id)).size)}</p></article>
+        <article className="snapshot-card snapshot-row"><div className="card-kicker"><span className="label-full">{t.latestFetch}</span><span className="label-short" aria-hidden="true">{t.latestFetchShort}</span></div><div className="snapshot-value snapshot-date">{latest ? <><span className="label-full">{format.timestamp(latest)}</span><span className="label-short" aria-hidden="true">{format.date(calendarTodayIST(new Date(latest)))}</span></> : c.never}</div><p>{t.notPeriod}</p></article>
+        <article className="snapshot-card snapshot-row"><div className="card-kicker">{t.sourceCoverage}</div><div className="snapshot-value">{domain === "weather" ? t.sirsi : domain === "production" ? geography || t.indiaWide : t.india}</div><p>{t.coverageHint[coverageKey]}</p></article>
       </section>
       {(periods.length > 0 || places.length > 0) && <section className="filter-bar">
         <label className="filter-control"><span>{t.reportingYear}</span><select value={period} onChange={(event) => setPeriod(event.target.value)}><option value="">{t.allYears}</option>{periods.map((value) => <option key={value}>{value}</option>)}</select></label>
