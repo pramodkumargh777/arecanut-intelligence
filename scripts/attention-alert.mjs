@@ -5,6 +5,7 @@
  * what a person must fix, and prints nothing when all is well:
  *   - a cooperative source whose collection has not succeeded for COLLECTION_STALE_HOURS (site down or changed layout),
  *   - AGMARKNET ingestion that has not completed for INGESTION_STALE_HOURS,
+ *   - the official monthly report refresh not succeeding for MONTHLY_STALE_HOURS (one failed day retries by itself),
  *   - a burst of held rates from one source (HELD_BURST in two days), which means a format or unit change, not odd lots.
  * Reads production D1 through wrangler. Read only.
  *
@@ -18,11 +19,13 @@ import { pathToFileURL } from "node:url";
 export const COLLECTION_STALE_HOURS = 36;
 export const INGESTION_STALE_HOURS = 48;
 export const HELD_BURST = 30;
+export const MONTHLY_STALE_HOURS = 72;
 const SOURCES = { mamcos: "MAMCOS", tss: "TSS", tumcos: "TUMCOS" };
 
 const QUERIES = {
   collections: "SELECT source_key, MAX(started_at) AS last_success FROM cooperative_fetches WHERE status='succeeded' GROUP BY source_key",
   ingestion: "SELECT MAX(completed_at) AS last_completed FROM ingestion_jobs WHERE status='completed'",
+  monthly: "SELECT MAX(started_at) AS last_success FROM monthly_refresh_runs WHERE status='succeeded'",
   held: `SELECT source_key, COUNT(*) AS n, MIN(hold_reason) AS example FROM cooperative_quotes
     WHERE status='pending' AND hold_reason IS NOT NULL AND reporting_date >= date('now','-2 day') GROUP BY source_key`,
 };
@@ -43,6 +46,10 @@ export function problems(state, now = new Date()) {
   const ingested = state.ingestion[0]?.last_completed ?? null;
   if (hoursSince(ingested, now) > INGESTION_STALE_HOURS) {
     found.push(`**AGMARKNET ingestion has not completed since ${when(ingested)}.** Check the "AGMARKNET ingestion" workflow runs and the data.gov.in key.`);
+  }
+  const monthly = state.monthly?.[0]?.last_success ?? null;
+  if (state.monthly && hoursSince(monthly, now) > MONTHLY_STALE_HOURS) {
+    found.push(`**The official monthly report has not refreshed since ${when(monthly)}.** AGMARKNET's monthly report page may have changed. Prices already shown stay as they are.`);
   }
   for (const row of state.held) {
     if (row.n >= HELD_BURST) {

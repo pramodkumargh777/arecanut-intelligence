@@ -825,8 +825,12 @@ describe("town pages", () => {
 
   it("gives each town its own title naming only the sources it has", () => {
     const sirsi = MARKET_PLACES.find((place) => place.slug === "sirsi")!;
-    expect(marketSeo(sirsi).en.title).toBe("Sirsi arecanut price today: TSS, APMC rates | Areca Pulse");
-    expect(seoPage("/market/puttur")?.en.title).toBe("Puttur arecanut price today: APMC rates | Areca Pulse");
+    expect(marketSeo(sirsi).en.title).toBe("Sirsi adike rate today: TSS, APMC arecanut prices | Areca Pulse");
+    expect(seoPage("/market/puttur")?.en.title).toBe("Puttur adike rate today: APMC arecanut prices | Areca Pulse");
+    // Older spellings people search by ("today adike rate shimoga") are in the title.
+    expect(seoPage("/market/shivamogga")?.kn.title).toContain("Shivamogga (Shimoga) adike rate today");
+    expect(seoPage("/variety/chali")?.kn.title).toContain("Chali adike rate today");
+    expect(seoPage("/variety/rashi")?.kn.description).toContain("ಕೆಂಪು ಅಡಿಕೆ");
     expect(seoPage("/market")?.path).toBe("/market");
     expect(new Set(MARKET_PLACES.map((place) => place.slug)).size).toBe(MARKET_PLACES.length);
   });
@@ -1065,5 +1069,15 @@ describe("all varieties in one month", () => {
   it("names the main grades in Kannada", () => {
     state.language = "kn";
     expect(render(<MonthlySnapshot />)).toContain(">ರಾಶಿ<");
+  });
+});
+
+describe("TSS grade names", () => {
+  it("uses the Kannada name TSS publishes for every grade only TSS reports", async () => {
+    const { TSS_KANNADA } = await import("../../../shared/tss-varieties");
+    const tssOnly = VARIETIES.filter((variety) => variety.labels.tss?.length === 1 && Object.keys(variety.labels).length === 1);
+    expect(tssOnly.length).toBeGreaterThan(15);
+    for (const variety of tssOnly) expect(variety.kn, variety.key).toBe(TSS_KANNADA[variety.labels.tss![0] as keyof typeof TSS_KANNADA]);
+    expect(VARIETIES.find((variety) => variety.key === "fresh-sippe")?.kn).toBe("ಹಸಿ ಅಡಿಕೆ(ಸಿಪ್ಪೆ ಅಡಿಕೆ)");
   });
 });

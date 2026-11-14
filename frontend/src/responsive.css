@@ -223,10 +223,10 @@
   .home-actions span { display: none; }
 }
 
-/* ---- Phones: type ----------------------------------------------------------------------------------------------
- * Kannada gets one bundled variable font instead of whatever each phone ships, so it looks the same on every phone
- * and the in-between weights (450, 550, 650) render as designed. The face is only referenced inside the phone query,
- * so desktops never download it, and its unicode-range keeps English pages from downloading it either.
+/* ---- Type: one Kannada font everywhere --------------------------------------------------------------------------
+ * Kannada gets one bundled variable font instead of whatever each device ships, so it looks the same on phones, Macs
+ * and Windows (whose Nirmala UI is wider and taller, and wrapped labels and cards that fit elsewhere), and the
+ * in-between weights (450, 550, 650) render as designed. Its unicode-range keeps English pages from downloading it.
  */
 @font-face {
   font-family: "Areca Kannada";
@@ -236,9 +236,7 @@
   font-display: swap;
   unicode-range: U+0C80-0CF3, U+200C-200D, U+25CC;
 }
-@media (max-width: 640px) {
-  :root { font-family: "Inter Variable", Inter, "Areca Kannada", "Noto Sans Kannada", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-}
+:root { font-family: "Inter Variable", Inter, "Areca Kannada", "Noto Sans Kannada", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 
 /* One type scale on phones: 12.5 (labels) · 13.5 (secondary) · 15 (body) · 17 (card titles) · 19 (sections) · 24 (page
  * titles), plus the price figures. Nothing is smaller than 12.5px, because Kannada is hard to read below that on a phone. */
@@ -572,4 +570,17 @@
   /* The word "Variety" is read out but not shown; the chosen name and chevron say enough at a glance. */
   .page-heading-picker .fx-select > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .page-heading-picker .fx-select { padding-left: 4px; }
+}
+/* Phones: a stat with a short value (a count, a place, a fetch time) is one full-width row, label left and value
+   right, instead of a half-width card stretched to match a taller neighbour. The headline price card also takes the
+   full width, so the two cards that remain (highest and lowest) pair up evenly. */
+@media (max-width: 640px) {
+  .snapshot-grid > .featured-card { grid-column: 1 / -1; }
+  /* .snapshot-card in the selectors outweighs the older "last odd card" rule, so every row looks the same. */
+  .snapshot-grid > .snapshot-card.snapshot-row { grid-column: 1 / -1; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding-block: 12px; }
+  .snapshot-grid > .snapshot-card.snapshot-row .card-kicker { flex: 1 1 auto; min-width: 0; margin: 0; }
+  .snapshot-grid > .snapshot-card.snapshot-row .snapshot-value { flex: none; margin: 0; font-size: 20px; line-height: 1.3; text-align: right; white-space: nowrap; }
+  /* The fetch time shows its date only (the exact time stays for screen readers and on wider screens). */
+  .snapshot-grid > .snapshot-card.snapshot-row .snapshot-value.snapshot-date { font-size: 15px; }
+  .snapshot-grid > .snapshot-row > :not(.card-kicker):not(.snapshot-value) { flex-basis: 100%; }
 }
