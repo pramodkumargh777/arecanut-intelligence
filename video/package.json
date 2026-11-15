@@ -1,0 +1,46 @@
+{
+  "name": "video",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Areca Pulse videos rendered from code with Remotion (daily rates shorts for YouTube, Instagram and WhatsApp).",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "VOICE=off bash scripts/daily.sh",
+    "typecheck": "tsc --noEmit",
+    "gif": "npm run data && remotion render src/index.ts Promo out/areca-pulse-promo.gif --codec=gif --every-nth-frame=3 --scale=0.5",
+    "render:intro": "remotion render src/index.ts BrandIntro out/brand-intro.mp4 --codec h264 --crf 18",
+    "still:intro": "remotion still src/index.ts BrandIntro out/brand-intro-cover.png --frame 160",
+    "data": "node src/fetch-data.ts",
+    "render:snapshot": "remotion render src/index.ts DailyRates out/daily-rates-kn.mp4 --codec h264 --crf 18 --props=./snapshot-props.json && remotion render src/index.ts DailyRates out/daily-rates-en.mp4 --codec h264 --crf 18 --props=./snapshot-props-en.json",
+    "fetch-rates": "node scripts/fetch-rates.mjs",
+    "daily": "bash scripts/daily.sh",
+    "schedule": "bash scripts/schedule-mac.sh",
+    "story": "bash scripts/story.sh",
+    "story:schedule": "bash scripts/schedule-story-mac.sh",
+    "snapshot:update": "UPDATE_SNAPSHOT=1 node scripts/fetch-rates.mjs",
+    "voice:check": "python3 -m venv voice/.venv && voice/.venv/bin/pip install -q -r voice/requirements.txt && voice/.venv/bin/python voice/tts.py --check",
+    "publish:daily": "bash scripts/publish-daily.sh",
+    "publish:check": "node scripts/publish/run.mjs --check",
+    "publish:dry-run": "node scripts/publish/run.mjs --dry-run",
+    "publish:setup-youtube": "node scripts/publish/setup-youtube.mjs",
+    "publish:setup-meta": "node scripts/publish/setup-meta.mjs",
+    "promo": "bash scripts/promo.sh",
+    "promo:30": "bash scripts/promo.sh 30",
+    "promo:15": "bash scripts/promo.sh 15",
+    "promo:music": "python3 scripts/make-music.py",
+    "encourage": "remotion render src/index.ts Encourage out/keep-going.mp4 --codec h264 --crf 18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^18.3.31",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.543",
+    "@remotion/google-fonts": "4.0.543",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.543"
+  }
+}

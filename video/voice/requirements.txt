@@ -1,0 +1,5 @@
+# Voice-over: edge-tts (open-source client for Microsoft online neural voices) + mutagen (clip length).
+edge-tts
+mutagen
+# composes the promo music to the voice timeline
+numpy
