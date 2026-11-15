@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "data-platform"))
 from connectors.agmarknet import history  # noqa: E402
 from connectors.agmarknet.daily import ConnectorConfig, SchemaMismatchError, SourceAccessError  # noqa: E402
 from connectors.agmarknet.history import (  # noqa: E402
-    HISTORY_RESOURCE_ID, backfill_history, fetch_history_day, prepare_history,
+    HISTORY_RESOURCE_ID, MAX_BATCH_SIZE, backfill_history, fetch_history_day, prepare_history,
 )
 
 KEY = "test-key-should-never-appear"
@@ -207,7 +207,7 @@ class BackfillTests(unittest.TestCase):
 
     def test_refuses_batches_above_the_d1_safe_size(self):
         with self.assertRaises(ValueError):
-            backfill_history(config(), date(2026, 10, 15), date(2026, 10, 16), batch_size=6, opener=self.opener,
+            backfill_history(config(), date(2026, 10, 15), date(2026, 10, 16), batch_size=MAX_BATCH_SIZE + 1, opener=self.opener,
                              sleep=lambda _: None, today=TODAY)
 
 

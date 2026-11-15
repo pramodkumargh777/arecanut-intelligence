@@ -20,10 +20,11 @@ import { logOperationalError } from "./archive";
 export const AGMARKNET_HISTORY_SOURCE = "agmarknet_history";
 export const AGMARKNET_HISTORY_REVIEWER = "auto-validation-history-v1";
 /**
- * Seven statements per record plus six per request (three more if it fails) keeps one request at 44 D1 queries or
- * fewer, inside the 50-query limit of Workers Free.
+ * Seven statements per record plus six per request (three more if it fails): 50 records is at most 359 D1 queries,
+ * inside Workers Paid's 1,000 queries per request (Workers Free allows only 50, i.e. 5 records). The existing-record
+ * check binds one parameter per record, and D1 allows 100 per query, so this must also stay at or below 100.
  */
-export const HISTORY_IMPORT_MAX_RECORDS = 5;
+export const HISTORY_IMPORT_MAX_RECORDS = 50;
 
 const historyRecord = z.object({
   id: z.string().regex(/^[a-f0-9]{64}$/),

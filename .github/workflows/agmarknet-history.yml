@@ -3,10 +3,12 @@ name: AGMARKNET history
 # Add-on to agmarknet-ingestion.yml (which is unchanged). Fully scheduled; nothing needs starting by hand.
 # Each run, after data.gov.in's overnight refresh (about 05:00 IST):
 # 1. fills any of the last 14 days the current-daily runs missed (dates the daily feed holds are skipped);
-# 2. backfills older history, newest month first, until 2021-01-01 is reached, then does nothing more.
-#    Each run stores at most AGMARKNET_HISTORY_DAILY_RECORDS records (default 4,000). Measured cost: 17.4 D1 rows
-#    written per record, so 4,000 records is about 70,000 of D1 Free's 100,000 writes per day, leaving the rest for
-#    the daily import and cooperative collection. On Workers Paid, set the variable to e.g. 100000 to finish in a day.
+# 2. backfills older history, newest month first, until 2014-01-01 (the start of the source) is reached, then does
+#    nothing more. Each run stores at most AGMARKNET_HISTORY_DAILY_RECORDS records (default 300,000) across at most
+#    150 months, sent 50 per request: about 1.5 minutes a month, so the whole backfill fits one run (~3.5 hours); a run
+#    cut short keeps every finished month and the next run continues. Sized for Workers Paid (50 million D1 writes a
+#    month included; 17.4 rows written per record, so ~230,000 records is about 4 million). On Workers Free, set the
+#    variable to 4000 and the batch size back to 5.
 on:
   schedule:
     - cron: "30 1 * * *" # 07:00 IST
@@ -45,8 +47,8 @@ jobs:
         if: steps.credentials.outputs.configured == 'true'
         run: |
           python data-platform/connectors/agmarknet/run_history.py --env-file /dev/null \
-            --report-dir "$RUNNER_TEMP/agmarknet-history" --recent-days 14 --backfill-from 2021-01-01 \
-            --backfill-months 12 --backfill-max-records "${AGMARKNET_HISTORY_DAILY_RECORDS:-4000}"
+            --report-dir "$RUNNER_TEMP/agmarknet-history" --recent-days 14 --backfill-from 2014-01-01 \
+            --backfill-months 150 --backfill-max-records "${AGMARKNET_HISTORY_DAILY_RECORDS:-300000}"
         env:
           AGMARKNET_HISTORY_RESOURCE_ID: ${{ vars.AGMARKNET_HISTORY_RESOURCE_ID }}
           AGMARKNET_API_BASE_URL: ${{ vars.AGMARKNET_API_BASE_URL }}

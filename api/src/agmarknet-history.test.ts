@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyMigrations, LocalDatabase } from "./test-support/local-d1";
 import { app, type Env } from "./index";
-import { AGMARKNET_HISTORY_REVIEWER } from "./agmarknet-history";
+import { AGMARKNET_HISTORY_REVIEWER, HISTORY_IMPORT_MAX_RECORDS } from "./agmarknet-history";
 
 let db: LocalDatabase;
 let env: Env["Bindings"];
@@ -116,8 +116,17 @@ describe("AGMARKNET history import", () => {
 
   it("rejects bad tokens and requests larger than the D1-safe batch", async () => {
     expect((await post("/admin/agmarknet-history/import", { records: [record()], idempotency_key: "test:key-one" }, "wrong")).status).toBe(401);
-    const many = Array.from({ length: 6 }, (_, index) => record({ id: hex(`r${index}`), source_record_id: `r${index}` }));
+    const many = Array.from({ length: HISTORY_IMPORT_MAX_RECORDS + 1 }, (_, index) => record({ id: hex(`r${index}`), source_record_id: `r${index}` }));
     expect((await importHistory(many)).status).toBe(400);
+  });
+
+  it("stores a full batch in one request", async () => {
+    const full = Array.from({ length: HISTORY_IMPORT_MAX_RECORDS }, (_, index) =>
+      record({ id: hex(`full${index}`), source_record_id: `full${index}`, market: `Market ${index}` }));
+    const response = await importHistory(full);
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ inserted_count: HISTORY_IMPORT_MAX_RECORDS });
+    expect(rows()).toHaveLength(HISTORY_IMPORT_MAX_RECORDS);
   });
 
   it("lists the history source in the data-source status", async () => {

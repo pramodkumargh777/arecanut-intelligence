@@ -4,8 +4,9 @@ Examples (from the repository root):
   .venv/bin/python data-platform/connectors/agmarknet/run_history.py --start 2021-01-01 --end 2021-12-31 --dry-run
   .venv/bin/python data-platform/connectors/agmarknet/run_history.py --start 2021-01-01 --end 2021-12-31
   .venv/bin/python data-platform/connectors/agmarknet/run_history.py --recent-days 10   # scheduled gap fill
-  # Scheduled: gap fill, then the next 12 months back from the oldest stored date until 2021-01-01 is reached.
-  .venv/bin/python data-platform/connectors/agmarknet/run_history.py --recent-days 14 --backfill-from 2021-01-01
+  # Scheduled: gap fill, then up to 150 months back from the oldest stored date until 2014-01-01 is reached.
+  .venv/bin/python data-platform/connectors/agmarknet/run_history.py --recent-days 14 --backfill-from 2014-01-01 \
+      --backfill-months 150 --backfill-max-records 300000
 """
 from __future__ import annotations
 
@@ -41,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="Fetch and validate, write reports, persist nothing.")
     parser.add_argument("--env-file", type=Path, default=ROOT / ".env")
     parser.add_argument("--report-dir", type=Path, help="Defaults to data/processed/agmarknet-history/<UTC timestamp>.")
-    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Records per import request (max 5).")
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Records per import request (max 50).")
     parser.add_argument("--max-retries", type=int)
     parser.add_argument("--timeout-seconds", type=float)
     parser.add_argument("--page-delay-seconds", type=float, help="Pause between requests to data.gov.in (default 0.5).")

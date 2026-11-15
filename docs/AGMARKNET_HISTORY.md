@@ -42,7 +42,9 @@ Values for the same market and date match the current-daily resource (checked: K
   verified at import, and its approval is written to `observation_reviews` under the reviewer
   `auto-validation-history-v1`. Flagged records wait in Data quality like any other. Set it to `"false"` to send every
   history record to the review queue instead. Records already imported keep their status if the setting changes.
-- **D1 free tier.** One request carries at most 5 records (8 statements each, 46 queries per request at most).
+- **Request size.** One request carries at most 50 records (7 statements each plus 6 per request, 359 queries at most),
+  inside Workers Paid's 1,000 D1 queries per request and D1's 100 bound parameters per query. On Workers Free (50
+  queries per request) the limit would have to go back to 5.
 
 ## Market names
 
@@ -97,14 +99,14 @@ count. `LEGACY_DISTRICTS` and `LEGACY_MARKETS` in `history.py` map every old nam
 nightly refresh:
 
 1. `--recent-days 14` fills any recent date the daily runs missed.
-2. `--backfill-from 2021-01-01 --backfill-max-records 4000` reads the oldest stored history date
+2. `--backfill-from 2014-01-01 --backfill-months 150 --backfill-max-records 300000` reads the oldest stored history date
    (`GET /admin/agmarknet-history/coverage`, INGESTION_TOKEN) and fills older months, newest first, until the day's
-   record budget is used. Once it is within a week of 2021-01-01 it does nothing more.
+   record budget is used. Once it is within a week of 2014-01-01 (where the source starts) it does nothing more.
    - **Budget.** Measured with Cloudflare's local D1 engine (June 2023, 1,004 records): 17.4 D1 rows written per
-     record, including the summary-cache rebuild. 4,000 records is about 70,000 of D1 Free's 100,000 writes per day,
-     leaving the rest for the daily import and cooperative collection. About 63,500 records date from 2021, so the
-     backfill takes about 16 days. Change the budget with the repository variable `AGMARKNET_HISTORY_DAILY_RECORDS`;
-     on Workers Paid (50 million writes a month included), 100000 finishes it in one run.
+     record, including the summary-cache rebuild. On Workers Paid (50 million writes a month included) the remaining
+     ~230,000 records back to 2014 are about 4 million writes; a month takes about 1.5 minutes (35 s to fetch, 26
+     requests to store), so the whole backfill fits one run. On Workers Free, set the repository variable
+     `AGMARKNET_HISTORY_DAILY_RECORDS` to 4000 (about 70,000 of the free 100,000 writes a day).
    - **No gaps.** A month is all or nothing: one with a failed date stores nothing and is retried whole the next day,
      and a month that does not fit the day's budget waits whole. Within a month, the newest dates are stored first, and
      each run restarts at the oldest stored date, so an interrupted import is completed the next day.
@@ -124,11 +126,12 @@ observation counts, coverage and recent runs.
 - The unit is the same operator-confirmed `Rs./Quintal` as the daily connector, not a publisher declaration.
 - The reference index still groups by exact variety, not grade (see the daily connector's limitations).
 
-## 2014 onward for forecasting: kept as files, not in D1
+## 2014 onward
 
-The scheduled backfill above stops at 2021, because storing every daily row in D1 costs about 17 rows written per
-record (2014–2020 would take about seven weeks of the free write budget). Forecasting and Sell or wait only need one
-value per variety and month, so the longer history takes a cheaper route:
+On Workers Paid the scheduled backfill stores everything back to 2014 in D1 (it used to stop at 2021 to fit D1
+Free's write budget). Older names map onto current markets: checked on samples from Nov 2014, Nov 2017 and Feb 2020,
+every market lands on one already stored except Bangalore and Sringeri, which have no current counterpart (see Market
+names). Forecasting's monthly archive below still works as before and does not need D1:
 
 ```sh
 cd data-platform
