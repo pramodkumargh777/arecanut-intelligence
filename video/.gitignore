@@ -1,0 +1,6 @@
+out/
+public/promo-data.json
+public/voice/
+.daily.env
+# Music is composed by scripts/make-music.py on every run (promo.wav too, when missing): never committed.
+public/music/*.wav

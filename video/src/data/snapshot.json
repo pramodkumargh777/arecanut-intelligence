@@ -1,0 +1,493 @@
+{
+ "fetchedAt": "2026-11-15T02:36:08.741Z",
+ "coop": [
+  {
+   "source": "mamcos",
+   "variety": "RASHI EDI",
+   "latest": [
+    {
+     "branch": "JAYAPURA",
+     "date": "2026-11-14",
+     "avg": 47805,
+     "min": 38699,
+     "max": 48399,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-07",
+     "prevAvg": 47810
+    },
+    {
+     "branch": "KOPPA",
+     "date": "2026-11-14",
+     "avg": 47511,
+     "min": 44199,
+     "max": 48449,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-07",
+     "prevAvg": 47899
+    },
+    {
+     "branch": "SRINGERI",
+     "date": "2026-11-14",
+     "avg": 46891,
+     "min": 42009,
+     "max": 48249,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-07",
+     "prevAvg": 47467
+    },
+    {
+     "branch": "THIRTHAHALLI",
+     "date": "2026-11-14",
+     "avg": 47049,
+     "min": 36599,
+     "max": 49039,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-07",
+     "prevAvg": 47709
+    },
+    {
+     "branch": "BHADRAVATHI",
+     "date": "2026-11-13",
+     "avg": 45311,
+     "min": 35699,
+     "max": 48199,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-06",
+     "prevAvg": 45463
+    },
+    {
+     "branch": "CHANNAGIRI",
+     "date": "2026-11-13",
+     "avg": 45263,
+     "min": 40099,
+     "max": 48201,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-11",
+     "prevAvg": 43911
+    },
+    {
+     "branch": "Hosanagara",
+     "date": "2026-11-13",
+     "avg": 47117,
+     "min": 42609,
+     "max": 48419,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-06",
+     "prevAvg": 47626
+    },
+    {
+     "branch": "SHIVAMOGGA",
+     "date": "2026-11-13",
+     "avg": 45189,
+     "min": 38009,
+     "max": 48209,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-11",
+     "prevAvg": 46419
+    },
+    {
+     "branch": "SAGARA",
+     "date": "2026-11-12",
+     "avg": 46074,
+     "min": 43999,
+     "max": 47999,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-02",
+     "prevAvg": 46448
+    },
+    {
+     "branch": "Tarikere",
+     "date": "2026-11-12",
+     "avg": 43767,
+     "min": 38199,
+     "max": 47811,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-05",
+     "prevAvg": 44823
+    },
+    {
+     "branch": "SHIKARIPURA",
+     "date": "2026-11-11",
+     "avg": 46209,
+     "min": 44009,
+     "max": 47599,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-03",
+     "prevAvg": 46511
+    },
+    {
+     "branch": "SORABA",
+     "date": "2026-11-11",
+     "avg": 39080,
+     "min": 20313,
+     "max": 47509,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-03",
+     "prevAvg": 44151
+    }
+   ],
+   "histBranch": "THIRTHAHALLI",
+   "hist": [
+    [
+     "2026-10-31",
+     48369
+    ],
+    [
+     "2026-11-07",
+     47709
+    ],
+    [
+     "2026-11-14",
+     47049
+    ]
+   ]
+  },
+  {
+   "source": "tss",
+   "variety": "RASHI",
+   "latest": [
+    {
+     "branch": "Sirsi",
+     "date": "2026-11-14",
+     "avg": 44248,
+     "min": 42650,
+     "max": 46550,
+     "unit": "assumed",
+     "prevDate": "2026-11-13",
+     "prevAvg": 45468
+    },
+    {
+     "branch": "Yellapur",
+     "date": "2026-11-13",
+     "avg": 46080,
+     "min": 41000,
+     "max": 50109,
+     "unit": "assumed",
+     "prevDate": "2026-11-12",
+     "prevAvg": 46735
+    },
+    {
+     "branch": "Siddapur",
+     "date": "2026-11-06",
+     "avg": 45333,
+     "min": 43099,
+     "max": 46499,
+     "unit": "assumed",
+     "prevDate": "2026-11-05",
+     "prevAvg": 45661
+    }
+   ],
+   "histBranch": "Sirsi",
+   "hist": [
+    [
+     "2026-10-21",
+     45292
+    ],
+    [
+     "2026-10-22",
+     45603
+    ],
+    [
+     "2026-10-23",
+     45406
+    ],
+    [
+     "2026-10-24",
+     45171
+    ],
+    [
+     "2026-10-26",
+     45915
+    ],
+    [
+     "2026-10-27",
+     46038
+    ],
+    [
+     "2026-10-28",
+     45888
+    ],
+    [
+     "2026-10-29",
+     46029
+    ],
+    [
+     "2026-10-30",
+     45735
+    ],
+    [
+     "2026-10-31",
+     45091
+    ],
+    [
+     "2026-11-02",
+     45763
+    ],
+    [
+     "2026-11-03",
+     46055
+    ],
+    [
+     "2026-11-04",
+     45844
+    ],
+    [
+     "2026-11-05",
+     46038
+    ],
+    [
+     "2026-11-06",
+     44845
+    ],
+    [
+     "2026-11-11",
+     45024
+    ],
+    [
+     "2026-11-12",
+     44745
+    ],
+    [
+     "2026-11-13",
+     45468
+    ],
+    [
+     "2026-11-14",
+     44248
+    ]
+   ]
+  },
+  {
+   "source": "mamcos",
+   "variety": "CHALI",
+   "latest": [
+    {
+     "branch": "SAGARA",
+     "date": "2026-11-12",
+     "avg": 38061,
+     "min": 35699,
+     "max": 39699,
+     "unit": "source_confirmed",
+     "prevDate": "2026-11-02",
+     "prevAvg": 38412
+    }
+   ],
+   "histBranch": "SAGARA",
+   "hist": []
+  },
+  {
+   "source": "tss",
+   "variety": "CHALI",
+   "latest": [
+    {
+     "branch": "Sirsi",
+     "date": "2026-11-14",
+     "avg": 43172,
+     "min": 40458,
+     "max": 45599,
+     "unit": "assumed",
+     "prevDate": "2026-11-13",
+     "prevAvg": 41725
+    },
+    {
+     "branch": "Yellapur",
+     "date": "2026-11-13",
+     "avg": 43503,
+     "min": 40009,
+     "max": 46170,
+     "unit": "assumed",
+     "prevDate": "2026-11-12",
+     "prevAvg": 43622
+    },
+    {
+     "branch": "Siddapur",
+     "date": "2026-11-06",
+     "avg": 39835,
+     "min": 33699,
+     "max": 43889,
+     "unit": "assumed",
+     "prevDate": "2026-11-04",
+     "prevAvg": 40917
+    }
+   ],
+   "histBranch": "Sirsi",
+   "hist": []
+  },
+  {
+   "source": "tumcos",
+   "variety": "areca",
+   "latest": [
+    {
+     "branch": "Channagiri",
+     "date": "2026-11-13",
+     "avg": 47085,
+     "min": 34000,
+     "max": 48191,
+     "unit": "assumed",
+     "prevDate": "2026-11-11",
+     "prevAvg": 47692
+    }
+   ],
+   "histBranch": "Channagiri",
+   "hist": [
+    [
+     "2026-09-21",
+     45445
+    ],
+    [
+     "2026-09-23",
+     45348
+    ],
+    [
+     "2026-09-25",
+     45644
+    ],
+    [
+     "2026-09-28",
+     46334
+    ],
+    [
+     "2026-09-30",
+     46761
+    ],
+    [
+     "2026-10-05",
+     46218
+    ],
+    [
+     "2026-10-07",
+     46424
+    ],
+    [
+     "2026-10-09",
+     46714
+    ],
+    [
+     "2026-10-12",
+     47502
+    ],
+    [
+     "2026-10-14",
+     47665
+    ],
+    [
+     "2026-10-16",
+     48478
+    ],
+    [
+     "2026-10-19",
+     48301
+    ],
+    [
+     "2026-10-23",
+     48471
+    ],
+    [
+     "2026-10-26",
+     48621
+    ],
+    [
+     "2026-10-28",
+     48963
+    ],
+    [
+     "2026-10-30",
+     48259
+    ],
+    [
+     "2026-11-02",
+     48591
+    ],
+    [
+     "2026-11-04",
+     48170
+    ],
+    [
+     "2026-11-06",
+     47535
+    ],
+    [
+     "2026-11-09",
+     47031
+    ],
+    [
+     "2026-11-11",
+     47692
+    ],
+    [
+     "2026-11-13",
+     47085
+    ]
+   ]
+  }
+ ],
+ "live": false,
+ "apmc": [
+  {
+   "market": "Siddapur APMC",
+   "district": "Uttara Kannada",
+   "date": "2026-11-13",
+   "variety": "Cqca",
+   "grade": "Large",
+   "modal": 29889,
+   "min": 22919,
+   "max": 32889,
+   "source": "AGMARKNET / data.gov.in"
+  },
+  {
+   "market": "Siddapur APMC",
+   "district": "Uttara Kannada",
+   "date": "2026-11-13",
+   "variety": "Kempugotu",
+   "grade": "Large",
+   "modal": 32089,
+   "min": 31600,
+   "max": 32089,
+   "source": "AGMARKNET / data.gov.in"
+  },
+  {
+   "market": "Siddapur APMC",
+   "district": "Uttara Kannada",
+   "date": "2026-11-13",
+   "variety": "Bilegotu",
+   "grade": "Large",
+   "modal": 27899,
+   "min": 24799,
+   "max": 29219,
+   "source": "AGMARKNET / data.gov.in"
+  },
+  {
+   "market": "Siddapur APMC",
+   "district": "Uttara Kannada",
+   "date": "2026-11-13",
+   "variety": "Chali",
+   "grade": "Large",
+   "modal": 41699,
+   "min": 36500,
+   "max": 42699,
+   "source": "AGMARKNET / data.gov.in"
+  },
+  {
+   "market": "Siddapur APMC",
+   "district": "Uttara Kannada",
+   "date": "2026-11-13",
+   "variety": "Tattibettee",
+   "grade": "Large",
+   "modal": 39299,
+   "min": 34399,
+   "max": 45509,
+   "source": "AGMARKNET / data.gov.in"
+  },
+  {
+   "market": "Siddapur APMC",
+   "district": "Uttara Kannada",
+   "date": "2026-11-13",
+   "variety": "Rashi",
+   "grade": "Large",
+   "modal": 45989,
+   "min": 43899,
+   "max": 46809,
+   "source": "AGMARKNET / data.gov.in"
+  }
+ ]
+}

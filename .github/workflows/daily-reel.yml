@@ -1,0 +1,65 @@
+# Daily rates Reels (Kannada + English) with AI voice-over, made on GitHub's free runners.
+# Runs at 09:40 IST after the morning data collection, or on demand: Actions tab → "Daily rates Reel" → Run workflow.
+# No secrets needed. Optional: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID to receive the videos and captions on your phone.
+name: Daily rates Reel
+
+on:
+  schedule:
+    - cron: "10 4 * * *" # 09:40 IST
+  workflow_dispatch:
+    inputs:
+      voice:
+        description: "Voice-over (on/off)"
+        default: "on"
+
+concurrency:
+  group: daily-reel
+  cancel-in-progress: false
+
+jobs:
+  reel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VOICE: ${{ github.event.inputs.voice || 'on' }}
+      HAS_TELEGRAM: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Node packages
+        run: npm ci
+
+      - name: Make the Reels
+        run: bash video/scripts/daily.sh
+
+      - name: Keep the Reels for 7 days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-reel-${{ github.run_number }}
+          path: video/out/daily/*/
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Send to Telegram
+        if: success() && env.HAS_TELEGRAM == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          for f in video/out/daily/*/*.mp4; do
+            cap="${f%.mp4}-caption.txt"
+            curl -sS -F chat_id="$TELEGRAM_CHAT_ID" -F video=@"$f" -F supports_streaming=true \
+              "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendVideo" >/dev/null
+            [ -f "$cap" ] && curl -sS -F chat_id="$TELEGRAM_CHAT_ID" -F document=@"$cap" \
+              "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument" >/dev/null
+          done
