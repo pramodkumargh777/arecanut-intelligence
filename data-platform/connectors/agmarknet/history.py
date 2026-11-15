@@ -38,9 +38,10 @@ from ingestion.idempotency import batch_idempotency_key
 
 HISTORY_RESOURCE_ID = "35985678-0d79-46b4-9ed6-6f13308a1d24"
 HISTORY_SOURCE_KEY = "agmarknet_history"
-# Must stay at or below HISTORY_IMPORT_MAX_RECORDS in api/src/agmarknet-history.ts (D1 50-query limit on Workers Free).
-DEFAULT_BATCH_SIZE = 5
-MAX_BATCH_SIZE = 5
+# Must stay at or below HISTORY_IMPORT_MAX_RECORDS in api/src/agmarknet-history.ts (D1 query limit per request:
+# 1,000 on Workers Paid, so 50 records; Workers Free allows 50 queries, which is 5 records).
+DEFAULT_BATCH_SIZE = 50
+MAX_BATCH_SIZE = 50
 # The current-daily connector owns recent dates; history only fills dates at least this many days old (IST).
 DEFAULT_LAG_DAYS = 2
 HISTORY_FIELDS = {
