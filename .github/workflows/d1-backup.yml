@@ -1,0 +1,88 @@
+name: Weekly database backup
+
+# Every Monday at 03:00 IST, exports the production D1 database (npm run db:backup -- --remote), proves the dump
+# restores cleanly (npm run db:restore-check), compresses it and stores it in the R2 bucket ani-db-backups:
+#   weekly/<date>.sql.gz   kept 60 days by a bucket lifecycle rule (about 8 copies)
+#   monthly/<date>.sql.gz  the first backup of each month, kept 3 years
+# Each dump has its manifest (<date>.manifest.json) beside it. Nothing to do by hand: a failed backup opens one issue
+# labelled "backup-failed" (GitHub emails it to you) and the next successful backup closes it.
+# One-time setup and restore steps: docs/DATA_RETENTION_AND_BACKUP.md, "Weekly online backup".
+on:
+  schedule:
+    - cron: "30 21 * * 0" # Sunday 21:30 UTC = Monday 03:00 IST, off-peak (the export briefly blocks writes)
+  workflow_dispatch: # optional "back up now"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: d1-backup
+  cancel-in-progress: false
+
+env:
+  BUCKET: ${{ vars.D1_BACKUP_BUCKET || 'ani-db-backups' }}
+  DATABASE: ani-market-data
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Export the production database
+        run: npm run db:backup -- --remote --database "$DATABASE" --output-dir "$RUNNER_TEMP/backup"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Check the backup restores cleanly
+        run: |
+          manifest=$(ls "$RUNNER_TEMP"/backup/*.manifest.json)
+          npm run -s db:restore-check -- "$manifest" | tee "$RUNNER_TEMP/restore-check.json"
+      - name: Compress and upload to R2
+        working-directory: api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          dump=$(ls "$RUNNER_TEMP"/backup/*.sql)
+          manifest=$(ls "$RUNNER_TEMP"/backup/*.manifest.json)
+          gzip -9 "$dump"
+          bytes=$(stat -c %s "$dump.gz")
+          # wrangler uploads one object of at most 300 MB; today's dump is about 35 MB compressed.
+          if [ "$bytes" -gt 300000000 ]; then echo "::error::Compressed dump is $bytes bytes, over the 300 MB upload limit."; exit 1; fi
+          day=$(date -u +%F)
+          # The manifest names the dump as stored, so a downloaded, gunzipped copy restore-checks without renaming.
+          jq --arg f "$DATABASE-$day.sql" '.dump_file = $f' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+          prefixes="weekly"
+          if [ "$(date -u +%d)" -le 07 ]; then prefixes="weekly monthly"; fi
+          for prefix in $prefixes; do
+            key="$prefix/$DATABASE-$day"
+            npx wrangler r2 object put "$BUCKET/$key.sql.gz" --remote --file "$dump.gz" --content-type application/gzip
+            npx wrangler r2 object put "$BUCKET/$key.manifest.json" --remote --file "$manifest" --content-type application/json
+            echo "Stored r2://$BUCKET/$key.sql.gz" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo "Compressed size: $((bytes / 1000000)) MB. Restore check: $(jq -r '"\(.tables) tables, \(.rows) rows"' "$RUNNER_TEMP/restore-check.json")." >> "$GITHUB_STEP_SUMMARY"
+      - name: Open or close the backup alert
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED: ${{ job.status != 'success' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          label=backup-failed
+          gh label create "$label" --color D93F0B --description "The weekly database backup failed" --force
+          open=$(gh issue list --label "$label" --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ "$FAILED" = "true" ]; then
+            body="The weekly database backup did not finish: $RUN_URL. Open the run to see which step failed, fix it, then use \"Run workflow\" on Weekly database backup. This issue closes itself after the next successful backup."
+            if [ -z "$open" ]; then gh issue create --title "Weekly database backup failed" --label "$label" --body "$body"
+            else gh issue comment "$open" --body "$body"; fi
+          elif [ -n "$open" ]; then
+            gh issue close "$open" --comment "Backed up successfully: $RUN_URL"
+          fi

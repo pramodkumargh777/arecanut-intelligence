@@ -52,6 +52,58 @@ Remote export constraints:
   SHA-256, so back up the bucket separately (for example with `rclone` or `wrangler r2 object get`)
   if R2 is enabled.
 
+### Weekly online backup (R2)
+
+`.github/workflows/d1-backup.yml` runs every Monday at 03:00 IST. It exports production with
+`db:backup -- --remote`, runs `db:restore-check` on the dump, gzips it and uploads the dump and its manifest
+to the R2 bucket `ani-db-backups` (override with the repository variable `D1_BACKUP_BUCKET`):
+
+| Prefix | Written | Kept |
+|---|---|---|
+| `weekly/ani-market-data-<date>.sql.gz` | every run | 60 days (about 8 copies) |
+| `monthly/ani-market-data-<date>.sql.gz` | first run of each month | 3 years |
+
+Lifecycle rules on the bucket do the deleting, so the workflow never deletes anything. A failed run opens
+one issue labelled `backup-failed`; the next successful run closes it.
+
+Measured on 2026-11-16, with history back to 2014: a 295 MB dump that compresses to 34 MB. The export
+took 1.5 minutes and the restore check passed in 4 seconds (68 tables, 383,085 rows). At about 35 MB per
+copy, the bucket holds well under 2 GB, inside R2's free 10 GB.
+
+The restore check reads the whole dump into one string. Node caps a string at about 512 MB, so once the
+uncompressed dump nears that size, change the check to replay the dump in chunks.
+
+One-time setup:
+
+1. In the Cloudflare dashboard, open **R2 Object Storage** and enable it. The free tier needs a card on
+   file.
+2. Under **My Profile → API Tokens**, edit the token stored in the GitHub secret `CLOUDFLARE_API_TOKEN`
+   and add **Account → Workers R2 Storage → Edit**. The token already has D1 access.
+3. Create the bucket and its lifecycle rules:
+
+   ```sh
+   cd api
+   npx wrangler r2 bucket create ani-db-backups
+   npx wrangler r2 bucket lifecycle add ani-db-backups weekly-60d weekly/ --expire-days 60 -y
+   npx wrangler r2 bucket lifecycle add ani-db-backups monthly-3y monthly/ --expire-days 1095 -y
+   ```
+
+4. In GitHub, open **Actions → Weekly database backup → Run workflow** once, and check that the run
+   summary lists the stored object.
+
+To restore from R2, download a copy and continue with "Restore from a logical export" below:
+
+```sh
+cd api
+mkdir -p ../backups
+npx wrangler r2 object get ani-db-backups/weekly/ani-market-data-<date>.sql.gz --remote --file ../backups/ani-market-data-<date>.sql.gz
+npx wrangler r2 object get ani-db-backups/weekly/ani-market-data-<date>.manifest.json --remote --file ../backups/ani-market-data-<date>.manifest.json
+gunzip ../backups/ani-market-data-<date>.sql.gz
+```
+
+The stored manifest names the unzipped file, so `npm run db:restore-check -- backups/ani-market-data-<date>.manifest.json`
+works on it directly.
+
 ### Verify a backup before relying on it
 
 ```sh
