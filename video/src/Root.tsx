@@ -1,6 +1,8 @@
 import { Composition } from "remotion";
 import "./brand";
 import { BrandIntro, BRAND_INTRO_FRAMES } from "./BrandIntro";
+import { Carousel, CAROUSEL_H, CAROUSEL_W } from "./Carousel";
+import { NEW_GARDEN } from "./data/carousels/newGarden";
 import { Encourage, ENCOURAGE_FRAMES } from "./Encourage";
 import { PromoReel, PROMO_REEL_FRAMES, promoFrames, type PromoReelProps } from "./PromoReel";
 import { DailyStory, type DailyStoryProps } from "./DailyStory";
@@ -48,6 +50,8 @@ export const RemotionRoot = () => (
       defaultProps={{ data: snapshot as RatesData, lang: "en" } as PromoReelProps}
       calculateMetadata={({ props }) => ({ durationInFrames: promoFrames(props) })} />
     <Composition id="Encourage" component={Encourage} durationInFrames={ENCOURAGE_FRAMES} fps={30} width={1080} height={1920} />
+    {/* Instagram carousel: one slide per frame (render with scripts/carousel.sh). */}
+    <Composition id="CarouselNewGarden" component={Carousel} durationInFrames={NEW_GARDEN.slides.length} fps={30} width={CAROUSEL_W} height={CAROUSEL_H} />
     <Composition id="BrandIntro" component={BrandIntro} durationInFrames={BRAND_INTRO_FRAMES} fps={30} width={1080} height={1920} />
   </>
 );

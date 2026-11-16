@@ -17,8 +17,11 @@ const PLACE_ALIASES: Record<string, string[]> = {
 /** The place a market or branch is named after: its first word, e.g. "Sirsi" for "Sirsi APMC". */
 const placeKey = (name: string) => name.trim().split(/\s+/)[0]?.toUpperCase() ?? "";
 
+/** "SHIVAMOGGA" as "Shivamogga": some sources publish names in capitals, others not, and they sit side by side. */
+const titleCase = (name: string) => name === name.toUpperCase() ? name.toLowerCase().replace(/(^|[\s(-])\p{L}/gu, (start) => start.toUpperCase()) : name;
+
 export function placeName(name: string, language: Language) {
-  return language === "kn" ? PLACE_NAMES_KN[name.toUpperCase()] ?? name : name;
+  return language === "kn" ? PLACE_NAMES_KN[name.toUpperCase()] ?? name : titleCase(name);
 }
 
 /** Every text a reader might type to find this place: the source's own name, its Kannada name and common spellings. */
