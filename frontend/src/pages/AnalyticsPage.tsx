@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { CalendarDays, ShieldCheck } from "lucide-react";
 import { api } from "../services/api";
@@ -11,11 +11,15 @@ import { SourceSlot } from "../components/SourceSlot";
 import { crossSectionSpread, quoteSpread } from "../services/insights";
 import { defineCopy, useCopy, useFormat } from "../services/language";
 
+/** The daily AGMARKNET history starts on this date (backfilled from data.gov.in). */
+const DAILY_HISTORY_FROM = "2014-01-01";
+const SINCE_START = "all";
+
 const COPY = defineCopy({
   en: {
     title: "Price analytics", intro: "Daily Karnataka reference index from verified, comparable market observations only.",
     reportedVariety: "Reported variety", loadingVarieties: "Loading varieties…", selectVariety: "Select variety", noVarieties: "No verified varieties",
-    period: "Analysis period", periods: { "30": "Last 30 days", "90": "Last 90 days", "180": "Last 6 months", "365": "Last year", "1095": "Last 3 years", "1825": "Last 5 years" } as Record<string, string>,
+    period: "Analysis period", periods: { "30": "Last 30 days", "90": "Last 90 days", "180": "Last 6 months", "365": "Last year", "1095": "Last 3 years", "1825": "Last 5 years", "3650": "Last 10 years", [SINCE_START]: "Since 2014" } as Record<string, string>,
     summary: "Historical summary in INR per quintal", observations: "Daily index observations", average: "Period average · INR/qtl", high: "Period high · INR/qtl",
     low: "Period low · INR/qtl", dispersion: "Price dispersion (σ) · INR/qtl", basedOn: "Based on available verified reports",
     indexTitle: "Karnataka reference index", indexHint: (variety: string) => `Median modal price for ${variety || "the selected variety"} across markets · INR / quintal`,
@@ -33,7 +37,7 @@ const COPY = defineCopy({
   kn: {
     title: "ದರ ವಿಶ್ಲೇಷಣೆ", intro: "ಪರಿಶೀಲಿಸಿದ, ಹೋಲಿಸಬಹುದಾದ ಮಾರುಕಟ್ಟೆ ದಾಖಲೆಗಳಿಂದ ಮಾತ್ರ ತಯಾರಿಸಿದ ಕರ್ನಾಟಕದ ದೈನಂದಿನ ಮಾನದಂಡ ಸೂಚ್ಯಂಕ.",
     reportedVariety: "ವರದಿಯಾದ ತಳಿ", loadingVarieties: "ತಳಿಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ…", selectVariety: "ತಳಿ ಆಯ್ಕೆಮಾಡಿ", noVarieties: "ಪರಿಶೀಲಿಸಿದ ತಳಿಗಳಿಲ್ಲ",
-    period: "ವಿಶ್ಲೇಷಣೆಯ ಅವಧಿ", periods: { "30": "ಕಳೆದ 30 ದಿನ", "90": "ಕಳೆದ 90 ದಿನ", "180": "ಕಳೆದ 6 ತಿಂಗಳು", "365": "ಕಳೆದ ವರ್ಷ", "1095": "ಕಳೆದ 3 ವರ್ಷ", "1825": "ಕಳೆದ 5 ವರ್ಷ" },
+    period: "ವಿಶ್ಲೇಷಣೆಯ ಅವಧಿ", periods: { "30": "ಕಳೆದ 30 ದಿನ", "90": "ಕಳೆದ 90 ದಿನ", "180": "ಕಳೆದ 6 ತಿಂಗಳು", "365": "ಕಳೆದ ವರ್ಷ", "1095": "ಕಳೆದ 3 ವರ್ಷ", "1825": "ಕಳೆದ 5 ವರ್ಷ", "3650": "ಕಳೆದ 10 ವರ್ಷ", [SINCE_START]: "2014ರಿಂದ" },
     summary: "ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ರೂಪಾಯಿಗಳಲ್ಲಿ ಹಿಂದಿನ ದತ್ತಾಂಶದ ಸಾರಾಂಶ", observations: "ದೈನಂದಿನ ಸೂಚ್ಯಂಕ ದಾಖಲೆಗಳು", average: "ಅವಧಿಯ ಸರಾಸರಿ · ₹/ಕ್ವಿಂ", high: "ಅವಧಿಯ ಗರಿಷ್ಠ · ₹/ಕ್ವಿಂ",
     low: "ಅವಧಿಯ ಕನಿಷ್ಠ · ₹/ಕ್ವಿಂ", dispersion: "ದರದ ಏರಿಳಿತ (σ) · ₹/ಕ್ವಿಂ", basedOn: "ಲಭ್ಯವಿರುವ ಪರಿಶೀಲಿತ ವರದಿಗಳ ಆಧಾರದಲ್ಲಿ",
     indexTitle: "ಕರ್ನಾಟಕ ಮಾನದಂಡ ಸೂಚ್ಯಂಕ", indexHint: (variety: string) => `ಮಾರುಕಟ್ಟೆಗಳಾದ್ಯಂತ ${variety || "ಆಯ್ದ ತಳಿ"} ಮಾದರಿ ದರದ ಮಧ್ಯಮ · ₹ / ಕ್ವಿಂಟಾಲ್`,
@@ -65,10 +69,13 @@ export function AnalyticsPage() {
   }, [variety, varieties.data]);
   const from = new Date();
   from.setDate(from.getDate() - Number(period));
+  const fromDate = period === SINCE_START ? DAILY_HISTORY_FROM : from.toISOString().slice(0, 10);
   const index = useQuery({
     queryKey: ["reference-index", period, commodity, variety],
-    queryFn: () => api.referenceIndex({ commodity, from: from.toISOString().slice(0, 10), variety }),
+    queryFn: () => api.referenceIndex({ commodity, from: fromDate, variety }),
     enabled: Boolean(variety),
+    // The chart stays on screen (dimmed) while a new period or variety loads, then glides to the new line.
+    placeholderData: keepPreviousData,
   });
   const points = index.data?.data ?? [];
   const avg = points.length ? points.reduce((sum, point) => sum + point.median_modal_price, 0) / points.length : null;
@@ -116,7 +123,7 @@ export function AnalyticsPage() {
         {loading ? <LoadingState label={t.loadingIndex} />
           : varieties.error ? <ErrorState error={varieties.error} onRetry={() => void varieties.refetch()} />
           : index.error ? <ErrorState error={index.error} onRetry={() => void index.refetch()} />
-          : points.length ? <Suspense fallback={<LoadingState label={t.loadingChart} />}><PriceChart points={points} /></Suspense>
+          : points.length ? <div className={`chart-frame${index.isPlaceholderData ? " is-updating" : ""}`} aria-busy={index.isPlaceholderData}><Suspense fallback={<LoadingState label={t.loadingChart} />}><PriceChart points={points} /></Suspense></div>
           : <EmptyState title={variety ? t.notEnough : t.noVarietiesAvailable}>{t.requires(index.data?.minimum_market_coverage ?? 3)}</EmptyState>}
       </section>
       <section className="panel chart-panel">

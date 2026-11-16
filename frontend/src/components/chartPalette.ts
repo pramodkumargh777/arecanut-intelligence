@@ -12,7 +12,29 @@ export const INK: Record<900 | 800 | 700 | 600 | 500 | 400 | 300 | 200 | 100 | "
 
 /** Brand forest green for the primary series; supporting series stay grey so colour still means "the main line". */
 export const BRAND = "#0b3d2e";
-export const BRAND_AREA = ["rgba(11,61,46,.14)", "rgba(11,61,46,0)"] as const;
+/** The fill under a single price line: strongest just under the line, fading out well before the axis. */
+export const BRAND_AREA = ["rgba(11,61,46,.20)", "rgba(11,61,46,.06)", "rgba(11,61,46,0)"] as const;
+
+/** "#rrggbb" at an opacity, for glows and fills drawn from a series colour. */
+export function withAlpha(hex: string, alpha: number) {
+  const value = Number.parseInt(hex.replace("#", ""), 16);
+  return `rgba(${(value >> 16) & 255},${(value >> 8) & 255},${value & 255},${alpha})`;
+}
+
+/**
+ * Depth without distortion: a soft glow under the price line and a three-stop fill (see BRAND_AREA). Values stay exactly
+ * where they are; nothing is tilted or extruded.
+ */
+export function lineGlow(color: string, dark: boolean, dense = false) {
+  // A long, jagged series (years of daily prices) would blur into a smear under a full glow, so it gets a faint one.
+  if (dense) return { shadowColor: withAlpha(color, dark ? 0.3 : 0.18), shadowBlur: 5, shadowOffsetY: 1 };
+  return { shadowColor: withAlpha(color, dark ? 0.55 : 0.35), shadowBlur: dark ? 12 : 10, shadowOffsetY: 3 };
+}
+
+/** Stops for an echarts LinearGradient(0, 0, 0, 1, …) under a line. */
+export function areaStops(area: readonly string[]) {
+  return [{ offset: 0, color: area[0] }, { offset: 0.55, color: area[1] }, { offset: 1, color: area[2] }];
+}
 
 export const CHART_FONT = '"Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
@@ -32,23 +54,42 @@ export const GRID_LINE = { lineStyle: { color: INK[100], width: 1, type: "solid"
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
 /** Source labels reach this HTML, so every value is escaped. */
-export function tooltipHtml(title: string, rows: { label?: string; value: string; marker?: string }[], note?: string, ink = INK) {
-  const body = rows.map((row) => `<div style="display:flex;justify-content:space-between;gap:20px;margin-top:4px">
+export function tooltipHtml(title: string, rows: { label?: string; value: string; marker?: string; strong?: boolean }[], note?: string, ink = INK) {
+  // Sized to its content (no minimum width), so a one-price card stays small. A "strong" row is the reading itself
+  // (the price on this date): large, under a quieter date. Labelled rows follow, then an optional one-line note.
+  const headline = rows.some((row) => row.strong);
+  const body = rows.map((row) => row.strong
+    ? `<div style="margin-top:1px;color:${ink[900]};font-size:16px;line-height:1.25;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${escapeHtml(row.value)}${row.label ? `<span style="margin-left:3px;color:${ink[500]};font-size:11px;font-weight:500">${escapeHtml(row.label)}</span>` : ""}</div>`
+    : `<div style="display:flex;justify-content:space-between;gap:14px;margin-top:3px;line-height:1.35">
     <span style="color:${ink[500]}">${row.marker ?? ""}${row.label ? escapeHtml(row.label) : ""}</span>
-    <span style="color:${ink[900]};font-weight:600;font-variant-numeric:tabular-nums">${escapeHtml(row.value)}</span></div>`).join("");
-  return `<div style="min-width:150px;max-width:280px;white-space:normal">
-    <div style="color:${ink[900]};font-weight:600">${escapeHtml(title)}</div>${body}
-    ${note ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid ${ink[200]};color:${ink[500]};font-size:11px;line-height:1.45">${escapeHtml(note)}</div>` : ""}</div>`;
+    <span style="color:${ink[900]};font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">${escapeHtml(row.value)}</span></div>`).join("");
+  return `<div style="max-width:232px;white-space:normal;line-height:1.35">
+    <div style="color:${headline ? ink[500] : ink[900]};font-weight:600${headline ? ";font-size:11px" : ""}">${escapeHtml(title)}</div>${body}
+    ${note ? `<div style="margin-top:3px;color:${ink[500]};font-size:11px;line-height:1.4">${escapeHtml(note)}</div>` : ""}</div>`;
+}
+
+/**
+ * Where the readout card sits: beside the pointer, on the side with more room, so it never covers the hovered point or
+ * the stretch of line just read. On phone-width charts it also rises above the finger (below it when there is no room),
+ * rather than to the top edge, where it would cover a legend.
+ */
+export function tooltipPosition(point: number[], _params: unknown, _dom: unknown, _rect: unknown, size: { contentSize: number[]; viewSize: number[] }) {
+  const [x, y] = point, [cardWidth, cardHeight] = size.contentSize, [width, height] = size.viewSize;
+  const gap = 12;
+  const left = x > width / 2 ? x - cardWidth - gap : x + gap;
+  const top = width >= 480 ? y - cardHeight / 2 : y - cardHeight - 20 >= 4 ? y - cardHeight - 20 : y + 20;
+  return [Math.max(4, Math.min(left, width - cardWidth - 4)), Math.max(4, Math.min(top, height - cardHeight - 4))];
 }
 
 export const TOOLTIP = {
   confine: true,
+  position: tooltipPosition,
   backgroundColor: INK.surface,
   borderColor: INK[200],
   borderWidth: 1,
-  padding: [10, 12],
+  padding: [7, 10],
   textStyle: { color: INK[900], fontSize: 12, fontFamily: CHART_FONT },
-  extraCssText: "border-radius:8px;box-shadow:0 8px 24px rgba(24,24,27,.10);",
+  extraCssText: "border-radius:9px;box-shadow:0 8px 24px rgba(24,24,27,.14),0 1px 3px rgba(24,24,27,.08);",
 };
 
 /** A vertical hairline follows the pointer on line charts. */
@@ -62,16 +103,19 @@ export function chartPalette(theme: Theme) {
   } : INK;
   const brand = dark ? "#b6d59d" : BRAND;
   return {
-    INK: ink, BRAND: brand, BRAND_AREA: dark ? ["rgba(182,213,157,.16)", "rgba(182,213,157,0)"] : BRAND_AREA,
+    DARK: dark, INK: ink, BRAND: brand, BRAND_AREA: dark ? ["rgba(182,213,157,.24)", "rgba(182,213,157,.07)", "rgba(182,213,157,0)"] as const : BRAND_AREA,
     SERIES_COLORS: dark ? [brand, "#c8d3c7", "#90ad9f", "#d1bb94"] : SERIES_COLORS,
     AXIS_LABEL: { ...AXIS_LABEL, color: ink[500] },
     AXIS_LINE: { lineStyle: { color: ink[300], width: 1 } },
     GRID_LINE: { lineStyle: { color: ink[100], width: 1, type: "solid" as const } },
-    TOOLTIP: { ...TOOLTIP, backgroundColor: ink.surface, borderColor: ink[200], textStyle: { ...TOOLTIP.textStyle, color: ink[900] } },
+    TOOLTIP: { ...TOOLTIP, backgroundColor: ink.surface, borderColor: ink[200], textStyle: { ...TOOLTIP.textStyle, color: ink[900] },
+      ...(dark ? { extraCssText: "border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.45);" } : {}) },
+    /** The hovered point: a filled dot ringed in the surface colour, with the same glow as the line. */
+    hoverDot: (color: string) => ({ itemStyle: { color, borderColor: ink.surface, borderWidth: 1.5, ...lineGlow(color, dark) } }),
+    tooltipHtml: (title: string, rows: { label?: string; value: string; marker?: string; strong?: boolean }[], note?: string) => tooltipHtml(title, rows, note, ink),
     CROSSHAIR: { ...CROSSHAIR, lineStyle: { ...CROSSHAIR.lineStyle, color: ink[400] } },
     shade: dark ? "rgba(200,220,200,.08)" : "rgba(24,24,27,.04)",
     regionShade: dark ? "rgba(200,220,200,.08)" : "rgba(24,24,27,.045)",
-    tooltipHtml: (title: string, rows: { label?: string; value: string; marker?: string }[], note?: string) => tooltipHtml(title, rows, note, ink),
     orderedRamp: (count: number) => {
       if (!dark) return orderedRamp(count);
       const ramp = ["#718b7a", "#88a594", "#a0b7a5", "#b8cdbb", "#d0e0ce", ink[900]];
@@ -92,13 +136,10 @@ export function monthAxisInterval(categories: string[]): "auto" | ((index: numbe
 }
 
 /**
- * Chart motion: lines draw in left to right and bars grow once, in 0.6s, on first view; later updates (a new variety
- * or range) settle in 0.3s. Readers who ask their device to reduce motion get static charts. Tooltips and hover
- * never animate.
- */
-/**
- * A chart draws in once, when it first appears; later updates (the 60-second refresh, a new variety) are instant, so a
- * chart never replays its entrance while someone is reading it.
+ * Chart motion: lines draw in left to right and bars grow once, in 0.6s, when a chart first appears. After that a chart
+ * never replays its entrance: a chart that updates in place (PriceChart, merged by series id) glides to its new shape in
+ * 0.45s when the period or variety changes, and an unchanged refresh does not move. Readers who ask their device to
+ * reduce motion get static charts.
  */
 export function useChartMotion() {
   const drawn = useRef(false);
@@ -108,14 +149,18 @@ export function useChartMotion() {
     const timer = window.setTimeout(() => { drawn.current = true; }, ENTRANCE_MS + 200);
     return () => window.clearTimeout(timer);
   }, []);
-  return drawn.current ? { animation: false } : chartMotion();
+  if (!drawn.current) return chartMotion();
+  return reducedMotion() ? { animation: false } : {
+    animation: true, animationDuration: 0, animationDurationUpdate: 450, animationEasingUpdate: "cubicInOut" as const, animationThreshold: 5000,
+  };
 }
+
+const reducedMotion = () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 
 const ENTRANCE_MS = 600;
 
 export function chartMotion() {
-  const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  return reduced ? { animation: false } : {
+  return reducedMotion() ? { animation: false } : {
     animation: true, animationDuration: ENTRANCE_MS, animationEasing: "cubicOut" as const,
     animationDurationUpdate: 300, animationEasingUpdate: "cubicOut" as const, animationThreshold: 4000,
   };

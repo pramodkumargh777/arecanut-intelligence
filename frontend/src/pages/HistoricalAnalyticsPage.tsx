@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
 import { isLongBasis, LONG_HISTORY_FROM, MONTHLY_REPORT_FROM } from "../services/intelligence";
 import { toCsv } from "../services/csv";
@@ -29,7 +30,7 @@ const COPY = defineCopy({
     months: MONTH_NAMES_EN,
     title: "Monthly trends", intro: "Karnataka monthly average price for each variety (AGMARKNET). A missing month means no report, not zero.",
     fromMonth: "From month", throughMonth: "Through month", monthlyVariety: "Exact monthly variety",
-    series: "Price series", seriesReport: "Monthly report (from 2021)", seriesLong: "Long history from daily prices (from 2014)",
+    series: "Price series", seriesReport: "Monthly report (from 2021)", seriesLong: "Long history (from 2014)",
     longNote: (gap: string, same: string, months: number) => `Median of Karnataka APMCs' daily modal prices (AGMARKNET daily, data.gov.in), at least 2 markets a month. Not the arrival-weighted monthly report: over ${months} months where both exist, it was typically ${gap}% away and moved the same way in ${same}% of months.`,
     longUnavailable: "This variety stays on the monthly report: its daily-price series does not follow the report closely enough to stand in for it.",
     observedTitleLong: (variety: string) => `${variety} · Monthly APMC median prices`, longSource: "AGMARKNET daily",
@@ -93,7 +94,7 @@ const COPY = defineCopy({
     months: MONTH_NAMES_KN,
     title: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", intro: "ಪ್ರತಿ ತಳಿಯ ಕರ್ನಾಟಕ ತಿಂಗಳ ಸರಾಸರಿ ದರ (AGMARKNET). ಖಾಲಿ ತಿಂಗಳು ಎಂದರೆ ವರದಿ ಇಲ್ಲ, ಸೊನ್ನೆಯಲ್ಲ.",
     fromMonth: "ಇಂದ (ತಿಂಗಳು)", throughMonth: "ವರೆಗೆ (ತಿಂಗಳು)", monthlyVariety: "ನಿಖರ ತಿಂಗಳ ತಳಿ",
-    series: "ದರದ ಸರಣಿ", seriesReport: "ತಿಂಗಳ ವರದಿ (2021ರಿಂದ)", seriesLong: "ದೈನಂದಿನ ದರಗಳಿಂದ ದೀರ್ಘ ಇತಿಹಾಸ (2014ರಿಂದ)",
+    series: "ದರದ ಸರಣಿ", seriesReport: "ತಿಂಗಳ ವರದಿ (2021ರಿಂದ)", seriesLong: "ದೀರ್ಘ ಇತಿಹಾಸ (2014ರಿಂದ)",
     longNote: (gap: string, same: string, months: number) => `ಕರ್ನಾಟಕದ ಎಪಿಎಂಸಿಗಳ ದೈನಂದಿನ ಮಾದರಿ ದರದ ಮಧ್ಯಮ ಮೌಲ್ಯ (AGMARKNET ದೈನಂದಿನ, data.gov.in), ತಿಂಗಳಿಗೆ ಕನಿಷ್ಠ 2 ಮಾರುಕಟ್ಟೆಗಳು. ಇದು ಆವಕ ಆಧಾರಿತ ತಿಂಗಳ ವರದಿ ಅಲ್ಲ: ಎರಡೂ ಇರುವ ${months} ತಿಂಗಳಲ್ಲಿ ಸಾಮಾನ್ಯವಾಗಿ ${gap}% ಅಂತರ ಇತ್ತು, ${same}% ತಿಂಗಳಲ್ಲಿ ಒಂದೇ ದಿಕ್ಕಿನಲ್ಲಿ ಚಲಿಸಿತು.`,
     longUnavailable: "ಈ ತಳಿ ತಿಂಗಳ ವರದಿಯಲ್ಲೇ ಉಳಿಯುತ್ತದೆ: ಇದರ ದೈನಂದಿನ ದರ ಸರಣಿ ವರದಿಗೆ ಸಾಕಷ್ಟು ಹತ್ತಿರವಿಲ್ಲ.",
     observedTitleLong: (variety: string) => `${variety} · ತಿಂಗಳ ಎಪಿಎಂಸಿ ಮಧ್ಯಮ ದರಗಳು`, longSource: "AGMARKNET ದೈನಂದಿನ",
@@ -168,15 +169,23 @@ export function HistoricalAnalyticsPage() {
   const t = useCopy(COPY);
   const c = useCopy(COMMON);
   const format = useFormat();
-  const [from, setFrom] = useState(MONTHLY_REPORT_FROM), [to, setTo] = useState(completed), [variety, setVariety] = useState("Rashi");
-  const [series, setSeries] = useState<"report" | "long">("report");
+  // ?series=long (the home page's "Prices since 2014" link) opens on the 2014+ series.
+  const [params] = useSearchParams();
+  const startLong = params.get("series") === "long";
+  const [from, setFrom] = useState(startLong ? LONG_HISTORY_FROM : MONTHLY_REPORT_FROM), [to, setTo] = useState(completed), [variety, setVariety] = useState("Rashi");
+  const [series, setSeries] = useState<"report" | "long">(startLong ? "long" : "report");
   const valid = from >= LONG_HISTORY_FROM && from <= to && to <= completed();
-  const query = useQuery({ queryKey: ["history", from, to, variety, series], queryFn: () => api.monthlyHistory(from, to, variety, series === "long" ? "long" : undefined), enabled: valid, refetchInterval: 60_000 });
+  const query = useQuery({ queryKey: ["history", from, to, variety, series], queryFn: () => api.monthlyHistory(from, to, variety, series === "long" ? "long" : undefined), enabled: valid, refetchInterval: 60_000,
+    // The page keeps showing the previous answer (chart dimmed) while a new range, variety or series loads.
+    placeholderData: keepPreviousData });
   const data = query.data;
   const long = isLongBasis(data);
-  // The pickers start where the series on screen starts, so a range cannot be half empty. A variety that stays on the
-  // monthly report starts in 2021 even when the long history is asked for.
-  const earliest = series === "long" && (long || !data) ? LONG_HISTORY_FROM : MONTHLY_REPORT_FROM;
+  // Range rules read only the answer to the current question, never the previous one still on screen.
+  const settled = query.isPlaceholderData ? undefined : data;
+  // A range never starts before the series on screen, so it cannot be half empty. A variety that stays on the monthly
+  // report starts in 2021 even when the long history is asked for.
+  const reportOnly = series === "long" && settled !== undefined && !isLongBasis(settled);
+  const earliest = series === "long" && !reportOnly ? LONG_HISTORY_FROM : MONTHLY_REPORT_FROM;
   useEffect(() => {
     if (from < earliest) setFrom(earliest);
     if (to < earliest) setTo(earliest);
@@ -184,6 +193,13 @@ export function HistoricalAnalyticsPage() {
   const choose = (value: "report" | "long") => {
     setSeries(value);
     if (value === "long" && from > LONG_HISTORY_FROM) setFrom(LONG_HISTORY_FROM);
+  };
+  // The year pickers offer every year from 2014. A month before the report starts (2021) switches to the long series,
+  // which is the only one that has it; varieties without a long series keep pickers from 2021.
+  const pickerMin = reportOnly ? MONTHLY_REPORT_FROM : LONG_HISTORY_FROM;
+  const pick = (set: (value: string) => void) => (value: string) => {
+    set(value);
+    if (value < MONTHLY_REPORT_FROM && series === "report") setSeries("long");
   };
   const latest = data?.points.filter((point) => point.weighted_price !== null).at(-1);
   const changes = data?.versions.filter((row, index, versions) => {
@@ -198,8 +214,8 @@ export function HistoricalAnalyticsPage() {
   return <div className="page-stack">
     <section className="page-heading"><div><h1>{t.title}</h1><p className="page-intro">{t.intro}</p></div></section>
     <section className="filter-bar">
-      <MonthYearPicker label={t.fromMonth} min={earliest} max={completed()} value={from} onChange={setFrom} />
-      <MonthYearPicker label={t.throughMonth} min={earliest} max={completed()} value={to} onChange={setTo} />
+      <MonthYearPicker label={t.fromMonth} min={pickerMin} max={completed()} value={from} onChange={pick(setFrom)} />
+      <MonthYearPicker label={t.throughMonth} min={pickerMin} max={completed()} value={to} onChange={pick(setTo)} />
       <label className="filter-control"><span>{t.monthlyVariety}</span><select value={variety} onChange={(event) => setVariety(event.target.value)}>{[...new Set([variety, ...(data?.varieties ?? [])])].map((value) => <option key={value} lang="en">{value}</option>)}</select></label>
       <label className="filter-control"><span>{t.series}</span><select value={series} onChange={(event) => choose(event.target.value as "report" | "long")}>
         <option value="report">{t.seriesReport}</option><option value="long">{t.seriesLong}</option></select></label>
@@ -215,7 +231,7 @@ export function HistoricalAnalyticsPage() {
         {long && data.long_history && <p>{t.longNote(String(data.long_history.median_abs_gap_pct ?? "—"), String(data.long_history.same_direction_pct ?? "—"), data.long_history.compared_months)}</p>}
         {series === "long" && !long && <p>{t.longUnavailable}</p>}</div></div>
         {!data.observed_months ? <EmptyState title={t.noObserved}>{t.noObservedHint}</EmptyState>
-          : <Suspense fallback={<LoadingState />}><PriceChart label={t.chartLabel(variety)} quotePoints={data.points.flatMap((row) => row.weighted_price === null ? [] : [{ reporting_date: `${row.reporting_month}-01`, average_price: row.weighted_price }])} calendarInterval="monthly" range={{ from: `${from}-01`, to: `${to}-01` }} /></Suspense>}
+          : <div className={`chart-frame${query.isPlaceholderData ? " is-updating" : ""}`} aria-busy={query.isPlaceholderData}><Suspense fallback={<LoadingState />}><PriceChart label={t.chartLabel(data.variety)} quotePoints={data.points.flatMap((row) => row.weighted_price === null ? [] : [{ reporting_date: `${row.reporting_month}-01`, average_price: row.weighted_price }])} calendarInterval="monthly" range={{ from: `${data.from}-01`, to: `${data.to}-01` }} /></Suspense></div>}
       </section>
       <section className="panel"><div className="panel-heading"><div><h2>{t.anomaly}</h2><p>{events.length ? t.anomalySummary(count("blip"), count("shift"), count("data")) : t.noFlags}</p></div></div>
         <div className="anomaly-list">

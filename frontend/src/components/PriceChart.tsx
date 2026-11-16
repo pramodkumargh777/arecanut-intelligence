@@ -9,7 +9,7 @@ import type { ReferencePoint } from "../types";
 import { buildChartData, connectShortGaps, missingPeriods } from "../services/chart";
 import { calendarDateToTime, DAY_MS } from "../../../shared/dates";
 import { defineCopy, formatDate, formatMonth, useCopy, useLanguage } from "../services/language";
-import { CHART_FONT, chartMotion, useChartMotion, useChartPalette } from "./chartPalette";
+import { areaStops, CHART_FONT, chartMotion, lineGlow, useChartMotion, useChartPalette } from "./chartPalette";
 import { eventsBetween } from "../services/market-events";
 
 echarts.use([LineChart, ScatterChart, GridComponent, TooltipComponent, AriaComponent, MarkLineComponent, CanvasRenderer]);
@@ -65,7 +65,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
   // On phones the latest price is already the first figure above the chart, so the line drops its end label and the
   // plot takes the width that label reserved.
   const phone = usePhone();
-  const { AXIS_LABEL, AXIS_LINE, BRAND, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
+  const { AXIS_LABEL, AXIS_LINE, BRAND, BRAND_AREA, CROSSHAIR, DARK, GRID_LINE, INK, TOOLTIP, hoverDot, tooltipHtml } = useChartPalette();
   const { language } = useLanguage();
   const label = givenLabel ?? t.defaultLabel;
   const chart = buildChartData(quotePoints
@@ -109,6 +109,8 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
     return formatDate(iso, language).replace(/ \d{4}$/, "");
   };
   const markers = ordered.length <= 60;
+  // More points than the plot has room to separate: the line is drawn finer, with a fainter glow.
+  const dense = ordered.length > 500;
   // A monthly point stands for its whole month, so an event in the last plotted month still belongs on the chart.
   const events = showEvents && first && latest ? eventsBetween(first.reporting_date, monthly ? `${latest.reporting_date.slice(0, 7)}-31` : latest.reporting_date) : [];
   // Events closer than a few percent of the span would print their numbers on top of each other, so the first of a close
@@ -138,7 +140,10 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
     textStyle: { fontFamily: CHART_FONT },
     grid: { top: events.length ? 26 : 16, right: phone ? 12 : 64, bottom: 4, left: 4, containLabel: true },
     tooltip: {
-      ...TOOLTIP, trigger: "axis", axisPointer: CROSSHAIR,
+      ...TOOLTIP, trigger: "axis",
+      // A vertical hairline at the hovered date; the exact price is in the card. (A horizontal guide would follow the
+      // pointer, not the price, so it could point at a value that was never reported.)
+      axisPointer: CROSSHAIR,
       formatter: (params: { data: [number, number | null] }[]) => {
         const data = params[0]?.data;
         if (!data) return "";
@@ -146,16 +151,18 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
         if (value === null) return tooltipHtml(observationLabel(time), [], t.noReport);
         const observation = ordered.find((point) => calendarDateToTime(point.reporting_date) === time);
         const names = branchesOn.get(time) ?? [];
-        return tooltipHtml(observationLabel(time), [
-          { value: `${rupees(value)} ${t.qtl}` },
-          ...(!monthly && observation ? [{ label: byBranch ? t.branches : t.markets, value: String(observation.constituents) }] : []),
-        ], names.length ? names.join(", ") : unitNote ? `${t.perQuintal}${unitNote}` : undefined);
+        // One compact line under the price: how many places reported, then (for branch averages) which ones.
+        const count = !monthly && observation ? place(observation.constituents) : "";
+        const detail = [count, names.join(", ")].filter(Boolean).join(" · ") || (unitNote ? `${t.perQuintal}${unitNote}` : undefined);
+        return tooltipHtml(observationLabel(time), [{ value: rupees(value), label: t.qtl, strong: true }], detail);
       },
     },
     xAxis: {
+      id: "time",
       type: "time",
-      min: chart.from ? calendarDateToTime(chart.from) : undefined,
-      max: chart.to ? calendarDateToTime(chart.to) : undefined,
+      // null rather than undefined: the chart updates in place, and an omitted bound would keep the previous range's.
+      min: chart.from ? calendarDateToTime(chart.from) : null,
+      max: chart.to ? calendarDateToTime(chart.to) : null,
       minInterval: monthly ? 28 * DAY_MS : DAY_MS,
       axisLine: AXIS_LINE,
       axisTick: { show: false },
@@ -164,6 +171,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
       splitNumber: 5,
     },
     yAxis: {
+      id: "price",
       type: "value",
       scale: true,
       axisLine: { show: false },
@@ -172,28 +180,33 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
       splitLine: GRID_LINE,
       splitNumber: 4,
     },
+    // Stable ids let a new period or variety update these series in place (see replaceMerge below) instead of redrawing.
     series: [{
+      id: "price",
       type: "line",
       name: label,
       smooth: 0.35,
       smoothMonotone: "x",
       connectNulls: false,
       symbol: "circle",
-      symbolSize: markers ? 7 : 8,
+      // Off-marker charts show only the hovered point, so it is drawn larger to read as a lit dot.
+      symbolSize: markers ? 7 : 11,
       showSymbol: markers,
       data: line,
       itemStyle: { color: BRAND, borderColor: INK.surface, borderWidth: 1.5 },
-      lineStyle: { color: BRAND, width: 2, cap: "round", join: "round" },
-      areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: BRAND_AREA[0] }, { offset: 1, color: BRAND_AREA[1] }]) },
-      emphasis: { scale: false },
+      lineStyle: { color: BRAND, width: dense ? 1.75 : 2.25, cap: "round", join: "round", ...lineGlow(BRAND, DARK, dense) },
+      areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, areaStops(BRAND_AREA)) },
+      // With markers off, echarts draws only the hovered point's symbol: a ringed, glowing dot.
+      emphasis: { scale: markers ? 1.5 : false, focus: "none", ...hoverDot(BRAND), lineStyle: { width: 2.25 } },
       endLabel: { show: !phone, color: BRAND, fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, distance: 6, formatter: ({ value }: { value: [number, number] }) => rupees(value[1]) },
-      ...(events.length ? { markLine: {
+      // Always present (empty when there are no events), so an in-place update clears the previous range's markers.
+      markLine: {
         silent: true, symbol: "none", animation: false,
         lineStyle: { color: INK[400], type: "dashed", width: 1 },
         label: { position: "end", distance: 2, color: INK.surface, backgroundColor: INK[600], borderRadius: 9, width: 18, height: 18, lineHeight: 18, align: "center", padding: 0, fontSize: 10.5, fontWeight: 700, fontFamily: CHART_FONT },
         data: eventMarks,
-      } } : {}),
-    }, ...(isolated.length ? [{ type: "scatter", name: t.isolated, data: isolated, symbolSize: 7, itemStyle: { color: BRAND }, silent: true, tooltip: { show: false } }] : [])],
+      },
+    }, ...(isolated.length ? [{ id: "isolated", type: "scatter", name: t.isolated, data: isolated, symbolSize: 7, itemStyle: { color: BRAND }, silent: true, tooltip: { show: false } }] : [])],
   };
   return <div className="price-chart">
     {showStats && latest && <dl className="chart-stats">
@@ -203,7 +216,7 @@ export function PriceChart({ points = [], averagePoints, quotePoints, unitNote =
       <div><dt>{t.low}</dt><dd>{rupees(low)}</dd><small>{lowPoint && dateText(lowPoint.reporting_date)}</small></div>
       <div><dt>{t.average}</dt><dd>{rupees(mean)}</dd><small>{t.reports(chart.observations)}</small></div>
     </dl>}
-    <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: 300, width: "100%" }} />
+    <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} replaceMerge={["series"]} lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height: 300, width: "100%" }} />
     {events.length > 0 && <ol className="chart-events" aria-label={t.eventsAria}>
       {events.map((event, index) => <li key={event.date}><span className="chart-event-number" aria-hidden="true">{index + 1}</span>
         <span><time dateTime={event.date}>{formatDate(event.date, language)}</time>{event.kind === "in-force" ? ` · ${t.inForce}` : ""} · {event[language]} <a href={event.source.url} target="_blank" rel="noreferrer" title={event.source.name}>{t.source}</a></span></li>)}
