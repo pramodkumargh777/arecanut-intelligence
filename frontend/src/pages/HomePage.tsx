@@ -42,6 +42,8 @@ const COPY = defineCopy({
     sellOrHoldHint: "ಹಿಂದಿನ ವರ್ಷಗಳಲ್ಲಿ ಏನಾಯಿತು ನೋಡಿ",
     ask: "ಪ್ರಶ್ನೆ ಕೇಳಿ",
     askHint: "ದರ, ರೋಗ, ಹವಾಮಾನದ ಬಗ್ಗೆ",
+    longHistory: "2014ರಿಂದ ಧಾರಣೆ",
+    longHistoryHint: "ಪ್ರತಿ ತಿಂಗಳ ದರ, 50ಕ್ಕೂ ಹೆಚ್ಚು ಮಾರುಕಟ್ಟೆಗಳಿಂದ",
     highest: "ಈ ದಿನದ ಹೆಚ್ಚಿನ ದರ",
     source: "ಮೂಲ",
     noRows: "ಈ ತಳಿಗೆ ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
@@ -113,6 +115,8 @@ const COPY = defineCopy({
     sellOrHoldHint: "See what happened in past years",
     ask: "Ask a question",
     askHint: "About rates, disease or weather",
+    longHistory: "Prices since 2014",
+    longHistoryHint: "Every month, from 50+ markets",
     highest: "Highest that day",
     source: "Source",
     noRows: "No published rate for this variety.",
@@ -558,6 +562,7 @@ export function HomePage() {
     <div className="home-section-heading"><h2 id="home-tools-heading">{copy.otherTools}</h2></div>
     <nav className="home-actions" aria-label={copy.otherTools}>
       <Link to="/sell-or-hold"><strong>{copy.sellOrHold}</strong><span>{copy.sellOrHoldHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
+      <Link to="/monthly-trends?series=long"><strong>{copy.longHistory}</strong><span>{copy.longHistoryHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
       <Link to="/assistant"><strong>{copy.ask}</strong><span>{copy.askHint}</span><ArrowRight size={18} aria-hidden="true" /></Link>
     </nav>
     </section>

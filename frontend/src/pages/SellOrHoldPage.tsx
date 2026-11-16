@@ -207,7 +207,7 @@ export function SellOrHoldPage() {
     </section>
 
     {query.isLoading ? <LoadingState label={copy.loading} /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !history?.years.length ? <p className="rate-empty">{copy.noData}</p> : <>
-      {context ? <section className="hold-season hold-insight" aria-label={copy.insightTitle}>
+      {context ? <div className="hold-insight-frame"><section className="hold-season hold-insight" aria-label={copy.insightTitle}>
         {context.band === "below" ? <TrendingDown size={18} aria-hidden="true" /> : context.band === "above" ? <TrendingUp size={18} aria-hidden="true" /> : <Minus size={18} aria-hidden="true" />}
         <div><div className="hold-insight-body">
           <strong>{copy.headline(varietyName, context.band, percent(context.vs_year_average))}</strong>
@@ -222,7 +222,7 @@ export function SellOrHoldPage() {
               : context.typical_move !== null && <li>{copy.noSeasonMove(varietyName, percent(context.typical_move))}</li>}
           </ul>
         </div></div>
-      </section> : season && <p className="hold-season"><CalendarRange size={18} aria-hidden="true" /><span>{season.high && season.low
+      </section></div> : season && <p className="hold-season"><CalendarRange size={18} aria-hidden="true" /><span>{season.high && season.low
         ? copy.season(season.first_year, varietyName, monthPair(season.high), monthPair(season.low), season.spread_percent, season.consistent_years, season.years)
         : copy.noSeason(season.first_year, varietyName)}</span></p>}
       <section className="rate-card hold-outcomes" aria-labelledby="hold-summary">

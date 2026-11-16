@@ -5,7 +5,7 @@ import * as echarts from "echarts/core";
 import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import { AriaComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-import { CHART_FONT, chartMotion, useChartMotion, monthAxisInterval, SERIES_COLORS, useChartPalette } from "./chartPalette";
+import { areaStops, CHART_FONT, chartMotion, lineGlow, useChartMotion, monthAxisInterval, SERIES_COLORS, useChartPalette, withAlpha } from "./chartPalette";
 import { defineCopy, useCopy } from "../services/language";
 
 const CHART = defineCopy({
@@ -38,7 +38,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
   const t = useCopy(CHART);
   const onChartReady = useResponsiveChart();
   const motion = useChartMotion();
-  const { AXIS_LABEL, AXIS_LINE, BRAND_AREA, CROSSHAIR, GRID_LINE, INK, SERIES_COLORS, TOOLTIP, tooltipHtml, regionShade } = useChartPalette();
+  const { AXIS_LABEL, AXIS_LINE, BRAND_AREA, CROSSHAIR, DARK, GRID_LINE, INK, SERIES_COLORS, TOOLTIP, hoverDot, tooltipHtml, regionShade } = useChartPalette();
   const phone = usePhone();
   const ISOLATED = t.isolated;
   const format = (value: number | null | undefined) => value == null ? t.notReported : valueFormat === "inr" ? inr(value) : valueFormat === "percent" ? `${value.toFixed(1)}%` : value.toFixed(1);
@@ -78,10 +78,12 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
         const markers = item.markers ?? (single && categories.length <= 36);
         return {
           name: item.name, type: "line", data: item.values, connectNulls: false, smooth: 0.35, smoothMonotone: "x", color,
-          showSymbol: markers, symbol: "circle", symbolSize: markers ? 6 : 7,
-          itemStyle: { color, borderColor: INK.surface, borderWidth: 1.5 }, emphasis: { scale: false },
-          lineStyle: { color, width: item.width ?? (index === 0 ? 2 : 1.5), type: item.dotted ? "dotted" : item.dashed ? "dashed" : "solid", cap: "round", join: "round" },
-          ...(single ? { areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: BRAND_AREA[0] }, { offset: 1, color: BRAND_AREA[1] }]) } } : {}),
+          showSymbol: markers, symbol: "circle", symbolSize: markers ? 6 : 10,
+          // The hovered point lights up as a ringed dot; the main solid line carries the soft glow.
+          itemStyle: { color, borderColor: INK.surface, borderWidth: 1.5 }, emphasis: { scale: markers ? 1.5 : false, focus: "none", ...hoverDot(color) },
+          lineStyle: { color, width: item.width ?? (index === 0 ? 2.25 : 1.5), type: item.dotted ? "dotted" : item.dashed ? "dashed" : "solid", cap: "round", join: "round",
+            ...(index === 0 && !item.dashed && !item.dotted ? lineGlow(color, DARK) : {}) },
+          ...(single ? { areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, areaStops(BRAND_AREA)) } } : {}),
           ...(showEnd ? { endLabel: { show: true, color: INK[900], fontSize: 11, fontWeight: 600, fontFamily: CHART_FONT, distance: 6, formatter: ({ value }: { value: number }) => format(value) } } : {}),
           ...(index === 0 && regions.length ? { markArea: { silent: true, itemStyle: { color: regionShade }, label: { color: INK[500], fontSize: 11, position: "insideTop", distance: 6, fontFamily: CHART_FONT }, data: regions.map((region) => [{ xAxis: region.from, name: region.label }, { xAxis: region.to }]) } } : {}),
           ...(index === 0 && (referenceLine || whiskers.length) ? { markLine: { silent: true, symbol: "none", animation: false, data: [
@@ -195,7 +197,7 @@ export function TrackRecordChart({ periods, actual, median, lower, upper, baseli
   const onChartReady = useResponsiveChart();
   const motion = useChartMotion();
   const phone = usePhone();
-  const { AXIS_LABEL, AXIS_LINE, BRAND, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
+  const { AXIS_LABEL, AXIS_LINE, BRAND, CROSSHAIR, DARK, GRID_LINE, INK, TOOLTIP, hoverDot, tooltipHtml } = useChartPalette();
   const categories = periods.map(labels.month);
   const option = {
     ...base(description, INK),
@@ -208,7 +210,7 @@ export function TrackRecordChart({ periods, actual, median, lower, upper, baseli
         const i = items[0]?.dataIndex ?? 0;
         const miss = median[i] - actual[i];
         return tooltipHtml(categories[i], [
-          { label: labels.actual, value: inr(actual[i]) },
+          { label: labels.actual, value: inr(actual[i]), strong: true },
           { label: labels.forecast, value: `${inr(median[i])} (${miss >= 0 ? "+" : "−"}${inr(Math.abs(miss)).slice(1)})` },
           { label: labels.band, value: `${inr(lower[i])} – ${inr(upper[i])}` },
           { label: labels.baseline, value: inr(baseline[i]) },
@@ -223,8 +225,9 @@ export function TrackRecordChart({ periods, actual, median, lower, upper, baseli
         lineStyle: { opacity: 0 }, areaStyle: { color: BRAND, opacity: 0.14 }, silent: true },
       { name: labels.baseline, type: "line", data: baseline, symbol: "none", color: INK[400], lineStyle: { color: INK[400], width: 1, type: "dotted" } },
       { name: labels.forecast, type: "line", data: median, symbol: "none", smooth: 0.3, smoothMonotone: "x", color: BRAND, lineStyle: { color: BRAND, width: 2, type: "dashed" } },
-      { name: labels.actual, type: "line", data: actual, symbol: "circle", symbolSize: 5, showSymbol: periods.length <= 40, smooth: 0.3, smoothMonotone: "x",
-        color: INK[900], itemStyle: { color: INK[900], borderColor: INK.surface, borderWidth: 1 }, lineStyle: { color: INK[900], width: 2 } },
+      { name: labels.actual, type: "line", data: actual, symbol: "circle", symbolSize: periods.length <= 40 ? 5 : 10, showSymbol: periods.length <= 40, smooth: 0.3, smoothMonotone: "x",
+        color: INK[900], itemStyle: { color: INK[900], borderColor: INK.surface, borderWidth: 1 }, emphasis: { scale: periods.length <= 40 ? 1.6 : false, focus: "none", ...hoverDot(INK[900]) },
+        lineStyle: { color: INK[900], width: 2.25, ...lineGlow(INK[900], DARK) } },
     ],
   };
   return <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;
@@ -241,7 +244,7 @@ export function OutlookChart({ periods, prices, next, labels, description, heigh
   const onChartReady = useResponsiveChart();
   const motion = useChartMotion();
   const phone = usePhone();
-  const { AXIS_LABEL, AXIS_LINE, BRAND, CROSSHAIR, GRID_LINE, INK, TOOLTIP, tooltipHtml } = useChartPalette();
+  const { AXIS_LABEL, AXIS_LINE, BRAND, CROSSHAIR, DARK, GRID_LINE, INK, TOOLTIP, hoverDot, tooltipHtml } = useChartPalette();
   const categories = [...periods.map(labels.month), ...next.map((item) => item.label)];
   const n = periods.length, last = prices[n - 1];
   const gap = Array(n - 1).fill(null);
@@ -257,19 +260,24 @@ export function OutlookChart({ periods, prices, next, labels, description, heigh
         const i = items[0]?.dataIndex ?? 0;
         const ahead = next[i - n];
         return ahead
-          ? tooltipHtml(ahead.label, [{ label: labels.outlook, value: inr(ahead.point) }, { label: labels.range, value: `${inr(ahead.lower)} – ${inr(ahead.upper)}` },
-            ...(ahead.chance ? [{ value: ahead.chance }] : [])])
-          : tooltipHtml(categories[i], [{ label: labels.actual, value: inr(prices[i]) }]);
+          // The estimate is the headline, its likely range under it; a past month shows its official price.
+          ? tooltipHtml(ahead.label, [{ label: labels.outlook, value: inr(ahead.point), strong: true }, { label: labels.range, value: `${inr(ahead.lower)} – ${inr(ahead.upper)}` }], ahead.chance)
+          : tooltipHtml(categories[i], [{ label: labels.actual, value: inr(prices[i]), strong: true }]);
       },
     },
     xAxis: { type: "category", data: categories, boundaryGap: false, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, hideOverlap: true, interval: monthAxisInterval(periods) }, axisLine: AXIS_LINE },
     yAxis: { type: "value", scale: true, splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: axisInr }, splitLine: GRID_LINE },
     series: [
       { name: "fan-floor", type: "line", data: [...gap, last, ...next.map((item) => item.lower)], stack: "fan", symbol: "none", lineStyle: { opacity: 0 }, silent: true, tooltip: { show: false } },
-      { name: labels.range, type: "line", data: [...gap, 0, ...next.map((item) => item.upper - item.lower)], stack: "fan", symbol: "none", smooth: 0.3, color: BRAND, lineStyle: { opacity: 0 }, areaStyle: { color: BRAND, opacity: 0.18 }, silent: true },
+      // The likely range fades outward from the estimate line, so the fan reads as uncertainty rather than a solid block.
+      { name: labels.range, type: "line", data: [...gap, 0, ...next.map((item) => item.upper - item.lower)], stack: "fan", symbol: "none", smooth: 0.3, color: BRAND, lineStyle: { opacity: 0 },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: withAlpha(BRAND, 0.1) }, { offset: 0.5, color: withAlpha(BRAND, 0.26) }, { offset: 1, color: withAlpha(BRAND, 0.1) }]) }, silent: true },
       { name: labels.outlook, type: "line", data: [...gap, last, ...next.map((item) => item.point)], color: BRAND, symbol: "circle", symbolSize: 7, showSymbol: true,
-        itemStyle: { color: BRAND, borderColor: INK.surface, borderWidth: 2 }, lineStyle: { color: BRAND, width: 2, type: "dashed" } },
-      { name: labels.actual, type: "line", data: [...prices, ...next.map(() => null)], symbol: "none", smooth: 0.3, smoothMonotone: "x", color: INK[900], lineStyle: { color: INK[900], width: 2.25 } },
+        itemStyle: { color: BRAND, borderColor: INK.surface, borderWidth: 2 }, emphasis: { scale: 1.5, focus: "none", ...hoverDot(BRAND) },
+        lineStyle: { color: BRAND, width: 2, type: "dashed", ...lineGlow(BRAND, DARK) } },
+      { name: labels.actual, type: "line", data: [...prices, ...next.map(() => null)], symbol: "circle", symbolSize: 10, showSymbol: false, smooth: 0.3, smoothMonotone: "x", color: INK[900],
+        emphasis: { scale: false, focus: "none", ...hoverDot(INK[900]) }, lineStyle: { color: INK[900], width: 2.25, ...lineGlow(INK[900], DARK) },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: withAlpha(INK[900], DARK ? 0.12 : 0.08) }, { offset: 1, color: withAlpha(INK[900], 0) }]) } },
     ],
   };
   return <ReactEChartsCore echarts={echarts} option={{ ...option, ...motion }} notMerge lazyUpdate onChartReady={onChartReady} autoResize={false} style={{ height, width: "100%" }} opts={{ renderer: "canvas" }} />;

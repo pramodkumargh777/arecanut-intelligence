@@ -60,6 +60,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@tanstack/react-query", () => ({
+  keepPreviousData: (previous: unknown) => previous,
   useMutation: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, data: undefined, error: null }),
   useQueryClient: () => ({ invalidateQueries: vi.fn(), removeQueries: vi.fn() }),
   // Market search suggestions load only after a search box is focused, which a static render never does.
