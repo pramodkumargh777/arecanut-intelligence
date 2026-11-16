@@ -8,7 +8,7 @@ import { crossSectionSpread, DATE_PRESETS, describe, histogram, presetRange, ran
 import { LazyBarChart, LazyRangeChart } from "../components/LazyCharts";
 import { SourceLabel } from "../components/Scorecard";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
-import type { CooperativeCommodity, CooperativeData, CooperativeQuote, CooperativeSource } from "../services/cooperative";
+import { ASSUMED_UNIT_SOURCES, TENDER_SOURCES, type CooperativeCommodity, type CooperativeData, type CooperativeQuote, type CooperativeSource } from "../services/cooperative";
 import { calendarTodayIST } from "../../../shared/dates";
 import { capabilityStatus, DEFAULT_COMMODITY, marketFeeds, type MarketFeed } from "../../../shared/commodities";
 import { commodityName, useCommodity } from "../services/commodity";
@@ -27,7 +27,7 @@ const PriceChart = lazy(() => import("../components/PriceChart").then((module) =
 const PAGE_SIZE = 25;
 const QUOTE_SORT_KEYS = ["branch", "reporting_date", "minimum_price", "average_price", "maximum_price"] as const;
 const DEFAULT_QUOTE_SORT = { key: "reporting_date", direction: "desc" } as const;
-const feedCapability = { mamcos: "cooperative_mamcos", tss: "cooperative_tss", tumcos: "cooperative_tumcos", official: "daily_prices" } as const;
+const feedCapability = { mamcos: "cooperative_mamcos", tss: "cooperative_tss", tms: "cooperative_tms", tumcos: "cooperative_tumcos", official: "daily_prices" } as const;
 type Mode = "/overview" | "/prices" | "/analytics" | "/compare";
 
 const COPY = defineCopy({
@@ -39,11 +39,11 @@ const COPY = defineCopy({
       "/compare": { title: () => "Market comparison", description: "Compare cooperative branches for the same variety and date. Branches are not APMC market mappings." },
     } as Record<Mode, { title: (commodity: string) => string; description: string }>,
     marketFallback: "Market",
-    feeds: { mamcos: "MAMCOS · Cooperative branch averages", tss: "TSS · Tender averages", tumcos: "TUMCOS · Channagiri averages", official: "AGMARKNET · Official modal prices" } as Record<MarketFeed, string>,
+    feeds: { mamcos: "MAMCOS · Cooperative branch averages", tss: "TSS · Tender averages", tms: "TMS Sirsi · Tender averages", tumcos: "TUMCOS · Channagiri averages", official: "AGMARKNET · Official modal prices" } as Record<MarketFeed, string>,
     sourceBar: "Market data source", selectSource: "Select a supported source", unpublished: "unpublished",
     unsupported: (name: string, options: string) => `Unsupported market-data source for ${name}. Select one of: ${options}.`,
     selectedCommodity: "the selected commodity",
-    meta: (source: string, assumed: boolean) => `${source} branch averages · ₹/quintal${assumed ? " (unit assumed)" : ""} · not APMC modal prices`,
+    meta: (source: string, assumed: boolean, tender: boolean) => `${source} ${tender ? "tender" : "branch"} averages · ₹/quintal${assumed ? " (unit assumed)" : ""} · not APMC modal prices`,
     exactReportedVariety: "Exact reported variety", noVarieties: "No published varieties",
     loadingQuotes: "Loading cooperative quotations", emptyTitle: "No reviewed cooperative quotations in this selection",
     awaiting: (count: number) => `${count} quotation${count === 1 ? " is" : "s are"} waiting for reviewer approval in Data quality.`,
@@ -98,7 +98,9 @@ const COPY = defineCopy({
     quotations: "Cooperative quotations", tableCaption: (source: string, unit: string, assumed: boolean) => `${source} published quotations · ${unit}${assumed ? " — operator assumption" : ""} · Average is not modal price`,
     normalRate: "Normal rate", sourceFetched: "Source / fetched at", platformFetched: (time: string) => `Platform fetched: ${time}`,
     rangeIncomplete: "Range incomplete", rangeOk: "Min ≤ avg ≤ max", rangeInconsistent: "Range inconsistent", unitConfirmed: "Unit confirmed", unitAssumed: "Unit assumed",
-    methodology: (source: CooperativeSource, coverage: number) => source === "tumcos"
+    methodology: (source: CooperativeSource, coverage: number) => source === "tms"
+      ? "TMS Sirsi general tender rates: the average is the plain mean of the day's tender lot rates, and the minimum and maximum are the lowest and highest lot. The portal states \"Rates in ₹/quintal\". Each variety keeps its exact TMS label. Not APMC modal prices and not merged with TSS, MAMCOS, TUMCOS or AGMARKNET."
+      : source === "tumcos"
       ? "TUMCOS (Channagiri) publishes low, average and high values per date without a variety. Its page labels values \"kg\"; they are treated as INR/quintal by operator decision because their size is only plausible per quintal. Source records are kept unchanged. They are not APMC modal prices and are not merged with MAMCOS, TSS or AGMARKNET."
       : source === "tss"
       ? `TSS reported averages (avgrate), with normal rates (norrate) kept separately. TSS publishes no unit; INR/quintal is an operator assumption. The benchmark is the median across locations for one exact variety and date, with at least ${coverage} locations. Only the arecanut grades on the TSS list are included, each under its exact TSS label.`
@@ -131,11 +133,11 @@ const COPY = defineCopy({
       "/compare": { title: () => "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ", description: "ಒಂದೇ ತಳಿ ಮತ್ತು ದಿನಾಂಕಕ್ಕೆ ಸಹಕಾರಿ ಶಾಖೆಗಳನ್ನು ಹೋಲಿಸಿ. ಶಾಖೆಗಳು ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳಲ್ಲ." },
     },
     marketFallback: "ಮಾರುಕಟ್ಟೆ",
-    feeds: { mamcos: "MAMCOS · ಸಹಕಾರಿ ಶಾಖೆ ಸರಾಸರಿಗಳು", tss: "TSS · ಟೆಂಡರ್ ಸರಾಸರಿಗಳು", tumcos: "TUMCOS · ಚನ್ನಗಿರಿ ಸರಾಸರಿಗಳು", official: "AGMARKNET · ಅಧಿಕೃತ ಮಾದರಿ ದರಗಳು" },
+    feeds: { mamcos: "MAMCOS · ಸಹಕಾರಿ ಶಾಖೆ ಸರಾಸರಿಗಳು", tss: "TSS · ಟೆಂಡರ್ ಸರಾಸರಿಗಳು", tms: "TMS ಶಿರಸಿ · ಟೆಂಡರ್ ಸರಾಸರಿಗಳು", tumcos: "TUMCOS · ಚನ್ನಗಿರಿ ಸರಾಸರಿಗಳು", official: "AGMARKNET · ಅಧಿಕೃತ ಮಾದರಿ ದರಗಳು" },
     sourceBar: "ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶದ ಮೂಲ", selectSource: "ಬೆಂಬಲಿತ ಮೂಲವನ್ನು ಆಯ್ಕೆಮಾಡಿ", unpublished: "ಪ್ರಕಟವಾಗಿಲ್ಲ",
     unsupported: (name: string, options: string) => `${name} ಗೆ ಈ ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶ ಮೂಲ ಬೆಂಬಲಿತವಲ್ಲ. ಇವುಗಳಲ್ಲಿ ಒಂದನ್ನು ಆಯ್ಕೆಮಾಡಿ: ${options}.`,
     selectedCommodity: "ಆಯ್ದ ಬೆಳೆ",
-    meta: (source: string, assumed: boolean) => `${source} ಶಾಖೆ ಸರಾಸರಿಗಳು · ₹/ಕ್ವಿಂಟಾಲ್${assumed ? " (ಘಟಕ ಊಹಿಸಲಾಗಿದೆ)" : ""} · ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ`,
+    meta: (source: string, assumed: boolean, tender: boolean) => `${source} ${tender ? "ಟೆಂಡರ್" : "ಶಾಖೆ"} ಸರಾಸರಿಗಳು · ₹/ಕ್ವಿಂಟಾಲ್${assumed ? " (ಘಟಕ ಊಹಿಸಲಾಗಿದೆ)" : ""} · ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ`,
     exactReportedVariety: "ವರದಿಯಾದ ನಿಖರ ತಳಿ", noVarieties: "ಪ್ರಕಟಿತ ತಳಿಗಳಿಲ್ಲ",
     loadingQuotes: "ಸಹಕಾರಿ ದರಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ", emptyTitle: "ಈ ಆಯ್ಕೆಯಲ್ಲಿ ಪರಿಶೀಲಿಸಿದ ಸಹಕಾರಿ ದರಗಳಿಲ್ಲ",
     awaiting: (count: number) => `${count} ದರ ವರದಿಗಳು ದತ್ತಾಂಶ ಗುಣಮಟ್ಟ ಪುಟದಲ್ಲಿ ಪರಿಶೀಲಕರ ಅನುಮೋದನೆಗೆ ಕಾಯುತ್ತಿವೆ.`,
@@ -190,7 +192,9 @@ const COPY = defineCopy({
     quotations: "ಸಹಕಾರಿ ದರ ವರದಿಗಳು", tableCaption: (source: string, unit: string, assumed: boolean) => `${source} ಪ್ರಕಟಿತ ದರಗಳು · ${unit}${assumed ? " — ಘಟಕ ಊಹಿಸಲಾಗಿದೆ" : ""} · ಸರಾಸರಿ ದರ ಮಾದರಿ ದರವಲ್ಲ`,
     normalRate: "ಸಾಮಾನ್ಯ ದರ", sourceFetched: "ಮೂಲ / ತಂದ ಸಮಯ", platformFetched: (time: string) => `ತಂದ ಸಮಯ: ${time}`,
     rangeIncomplete: "ಶ್ರೇಣಿ ಅಪೂರ್ಣ", rangeOk: "ಕನಿಷ್ಠ ≤ ಸರಾಸರಿ ≤ ಗರಿಷ್ಠ", rangeInconsistent: "ಶ್ರೇಣಿ ಹೊಂದುತ್ತಿಲ್ಲ", unitConfirmed: "ಘಟಕ ದೃಢಪಟ್ಟಿದೆ", unitAssumed: "ಘಟಕ ಊಹಿಸಲಾಗಿದೆ",
-    methodology: (source: CooperativeSource, coverage: number) => source === "tumcos"
+    methodology: (source: CooperativeSource, coverage: number) => source === "tms"
+      ? "TMS ಶಿರಸಿ ಸಾಮಾನ್ಯ ಟೆಂಡರ್ ದರಗಳು: ಸರಾಸರಿಯು ಆ ದಿನದ ಟೆಂಡರ್ ಲಾಟ್ ದರಗಳ ಸರಳ ಸರಾಸರಿ; ಕನಿಷ್ಠ ಮತ್ತು ಗರಿಷ್ಠವು ಅತಿ ಕಡಿಮೆ ಮತ್ತು ಅತಿ ಹೆಚ್ಚಿನ ಲಾಟ್ ದರ. ಪೋರ್ಟಲ್ \"₹/ಕ್ವಿಂಟಾಲ್\" ಎಂದು ತಿಳಿಸುತ್ತದೆ. ಪ್ರತಿ ತಳಿಯನ್ನು ಅದರ ನಿಖರ TMS ಹೆಸರಿನಲ್ಲಿ ಇಡಲಾಗಿದೆ. ಇವು ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ ಮತ್ತು TSS, MAMCOS, TUMCOS ಅಥವಾ AGMARKNET ಜೊತೆ ಬೆರೆಸುವುದಿಲ್ಲ."
+      : source === "tumcos"
       ? "TUMCOS (ಚನ್ನಗಿರಿ) ಪ್ರತಿ ದಿನಾಂಕಕ್ಕೆ ತಳಿ ತಿಳಿಸದೆ ಕನಿಷ್ಠ, ಸರಾಸರಿ ಮತ್ತು ಗರಿಷ್ಠ ದರ ಪ್ರಕಟಿಸುತ್ತದೆ. ಅದರ ಪುಟದಲ್ಲಿ \"kg\" ಎಂದಿದೆ; ದರಗಳ ಗಾತ್ರ ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ಮಾತ್ರ ಹೊಂದುವುದರಿಂದ ನಿರ್ವಾಹಕರ ನಿರ್ಧಾರದಂತೆ ₹/ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ. ಮೂಲ ದಾಖಲೆಗಳನ್ನು ಬದಲಿಸುವುದಿಲ್ಲ. ಇವು ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ ಮತ್ತು MAMCOS, TSS ಅಥವಾ AGMARKNET ಜೊತೆ ಬೆರೆಸುವುದಿಲ್ಲ."
       : source === "tss"
       ? `TSS ವರದಿಯಾದ ಸರಾಸರಿ ದರಗಳು (avgrate); ಸಾಮಾನ್ಯ ದರಗಳನ್ನು (norrate) ಪ್ರತ್ಯೇಕವಾಗಿ ಇಡಲಾಗಿದೆ. TSS ಘಟಕವನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ; ₹/ಕ್ವಿಂಟಾಲ್ ನಿರ್ವಾಹಕರ ಊಹೆ. ಮಾನದಂಡ ದರವು ಒಂದು ನಿಖರ ತಳಿ ಮತ್ತು ದಿನಾಂಕಕ್ಕೆ ಕನಿಷ್ಠ ${coverage} ಸ್ಥಳಗಳ ಮಧ್ಯಮ. TSS ಪಟ್ಟಿಯಲ್ಲಿರುವ ಅಡಿಕೆ ದರ್ಜೆಗಳನ್ನು ಮಾತ್ರ, ಅವುಗಳ ನಿಖರ TSS ಹೆಸರಿನಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ.`
@@ -240,7 +244,7 @@ export function MarketDataPage({ official }: { official: ReactNode }) {
   </label>;
   return <SourceControl.Provider value={sourceSelect}>
     {!supported ? <div className="page-stack"><div className="heading-controls"><SourceSlot /></div><ErrorState error={new Error(t.unsupported(name, feeds.map((value) => t.feeds[value].split(" · ")[0]).join(", ")))} /></div>
-      : feed === "official" ? official : <CooperativeMarketPage key={`${location.pathname}:${feed}:${commodity?.code}`} source={feed === "tss" || feed === "tumcos" ? feed : "mamcos"} />}
+      : feed === "official" ? official : <CooperativeMarketPage key={`${location.pathname}:${feed}:${commodity?.code}`} source={feed as CooperativeSource} />}
     {/* Price trends carry the one supply signal published for arecanut: yearly imports. */}
     {supported && location.pathname === "/analytics" && code === DEFAULT_COMMODITY && <div className="page-stack page-stack-follow"><ImportsPanel /></div>}
   </SourceControl.Provider>;
@@ -309,7 +313,7 @@ function CooperativeAbout({ source, data, coverage, awaitingReview, hasRows }: {
   const c = useCopy(COMMON);
   const format = useFormat();
   const sourceName = source.toUpperCase();
-  const assumedUnit = source !== "mamcos";
+  const assumedUnit = ASSUMED_UNIT_SOURCES.includes(source);
   const benchmark = data?.series.at(-1);
   const lastFetch = data?.last_fetch ? `${fetchStatusText(c, data.last_fetch.status)} · ${format.timestamp(data.last_fetch.started_at)}` : c.never;
   return <AboutData>
@@ -343,7 +347,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   const dateText = (value: string | null | undefined) => format.date(value);
   const cash = (value: number | null | undefined) => money(value, c.notReported);
   const sourceName = source.toUpperCase();
-  const assumedUnit = source !== "mamcos";
+  const assumedUnit = ASSUMED_UNIT_SOURCES.includes(source);
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const { code, commodity: commodityDef } = useCommodity();
@@ -433,7 +437,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   }
   return <div className="page-stack">
     <section className="page-heading"><div><h1>{mode.title(commodityDef ? commodityName(code, commodityDef, language) : t.marketFallback)}</h1><p className="page-intro">{mode.description}</p>
-      <p className="page-meta">{t.meta(sourceName, assumedUnit)}</p></div>
+      <p className="page-meta">{t.meta(sourceName, assumedUnit, TENDER_SOURCES.includes(source))}</p></div>
       <div className="heading-controls"><SourceSlot />
       <label className="filter-control"><span>{t.exactReportedVariety}</span><select value={data?.variety ?? ""} disabled={!data?.varieties.length} onChange={(event) => {
         update({ variety: event.target.value, date: null });

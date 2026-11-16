@@ -4,8 +4,9 @@ export type VarietyGroup = "rashi" | "chali" | "bette" | "other" | "fresh";
 
 /**
  * A grower's name for a variety and the exact label each cooperative publishes it under. Labels are matched exactly,
- * never fuzzily, and stay visible on every row so a reader can check the mapping. Each label must also be on the
- * importer's allowlist (TSS_VARIETIES in api/src/tss.ts) to be captured.
+ * never fuzzily, and stay visible on every row so a reader can check the mapping. A TSS label must also be on the
+ * importer's allowlist (TSS_VARIETIES in api/src/tss.ts) to be captured. TMS labels were matched to TSS grades by name and
+ * checked against same-week Sirsi prices; TMS grades with no clear counterpart (SIPPE CHALI, HASI ADIKE) are left out.
  */
 export type GrowerVariety = {
   key: string; en: string; kn: string; group: VarietyGroup;
@@ -22,38 +23,38 @@ const FRESH_NOTE = { en: "Fresh, undried nuts. Priced per quintal of fresh weigh
 
 export const VARIETIES: GrowerVariety[] = [
   // Everyday
-  { key: "rashi", en: "Rashi", kn: "ರಾಶಿ", group: "rashi", everyday: true, tumcos: true, labels: { mamcos: ["RASHI EDI"], tss: ["RASHI"] } },
-  { key: "chali", en: "Chali", kn: "ಚಾಲಿ", group: "chali", everyday: true, tumcos: true, labels: { mamcos: ["CHALI"], tss: ["CHALI"] } },
-  { key: "sippe-gotu", en: "Sippe gotu", kn: "ಸಿಪ್ಪೆಗೋಟು", group: "bette", everyday: true, labels: { mamcos: ["SIPPE GOTU"], tss: ["SIPPE GOTU"] } },
+  { key: "rashi", en: "Rashi", kn: "ರಾಶಿ", group: "rashi", everyday: true, tumcos: true, labels: { mamcos: ["RASHI EDI"], tss: ["RASHI"], tms: ["RASHI"] } },
+  { key: "chali", en: "Chali", kn: "ಚಾಲಿ", group: "chali", everyday: true, tumcos: true, labels: { mamcos: ["CHALI"], tss: ["CHALI"], tms: ["CHALI"] } },
+  { key: "sippe-gotu", en: "Sippe gotu", kn: "ಸಿಪ್ಪೆಗೋಟು", group: "bette", everyday: true, labels: { mamcos: ["SIPPE GOTU"], tss: ["SIPPE GOTU"], tms: ["SIPPE GOT"] } },
   // Rashi types
-  { key: "new-rashi", en: "New Rashi", kn: "ಹೊಸ ರಾಶಿ", group: "rashi", tumcos: true, labels: { mamcos: ["NEW RASHIEDI", "NEWRASHIEDI"], tss: ["NEW RASHI"] } },
-  { key: "api", en: "Api", kn: "ಆಪಿ", group: "rashi", labels: { tss: ["API"] } },
+  { key: "new-rashi", en: "New Rashi", kn: "ಹೊಸ ರಾಶಿ", group: "rashi", tumcos: true, labels: { mamcos: ["NEW RASHIEDI", "NEWRASHIEDI"], tss: ["NEW RASHI"], tms: ["HO RASHI"] } },
+  { key: "api", en: "Api", kn: "ಆಪಿ", group: "rashi", labels: { tss: ["API"], tms: ["API"] } },
   { key: "bt-rashi", en: "Bt rashi", kn: "ರಾಶಿ - ||", group: "rashi", labels: { tss: ["BT RASHI"] } },
   { key: "sanna-rashi", en: "Sanna rashi", kn: "ಸಣ್ಣ ರಾಶಿ", group: "rashi", labels: { tss: ["SANNA RASHI"] } },
   // Chali types
-  { key: "new-chali", en: "New chali", kn: "ಹೊಸ ಚಾಲಿ", group: "chali", labels: { tss: ["NEW CHALI"] } },
-  { key: "second-chali", en: "Second chali", kn: "ಚಾಲಿ-||", group: "chali", labels: { tss: ["11-CHALI"] } },
-  { key: "dnk-chali", en: "Dnk chali", kn: "ಡಂಕ ಚಾಲಿ", group: "chali", labels: { tss: ["DNK CHALI"] } },
+  { key: "new-chali", en: "New chali", kn: "ಹೊಸ ಚಾಲಿ", group: "chali", labels: { tss: ["NEW CHALI"], tms: ["HO.CHALI"] } },
+  { key: "second-chali", en: "Second chali", kn: "ಚಾಲಿ-||", group: "chali", labels: { tss: ["11-CHALI"], tms: ["CH - II"] } },
+  { key: "dnk-chali", en: "Dnk chali", kn: "ಡಂಕ ಚಾಲಿ", group: "chali", labels: { tss: ["DNK CHALI"], tms: ["DANK CHALI"] } },
   { key: "sippe-chali", en: "Sippe chali", kn: "ಸಿಪ್ಪೆ ಚಾಲಿ", group: "chali", labels: { tss: ["SIPPE CHALI"] } },
   // Bette and gotu
-  { key: "bette", en: "Bette", kn: "ಬೆಟ್ಟೆ", group: "bette", tumcos: true, labels: { mamcos: ["BETTE"], tss: ["BETTE"] } },
+  { key: "bette", en: "Bette", kn: "ಬೆಟ್ಟೆ", group: "bette", tumcos: true, labels: { mamcos: ["BETTE"], tss: ["BETTE"], tms: ["BETTE"] } },
   { key: "got-bette", en: "Got bette", kn: "ಗೋ ಬೆಟ್ಟೆ", group: "bette", labels: { tss: ["GOT BETTE"] } },
-  { key: "ke-bette", en: "Ke bette", kn: "ಕೆ.ಬೆಟ್ಟೆ", group: "bette", labels: { tss: ["KE.BETTE"] } },
-  { key: "bile-gotu", en: "Bile gotu", kn: "ಬಿಳೆಗೋಟು", group: "bette", labels: { tss: ["B.G."] } },
-  { key: "kempu-gotu", en: "Kempu gotu", kn: "ಕೆಂ.ಗೋ.", group: "bette", labels: { tss: ["K.G."] } },
+  { key: "ke-bette", en: "Ke bette", kn: "ಕೆ.ಬೆಟ್ಟೆ", group: "bette", labels: { tss: ["KE.BETTE"], tms: ["KETBETTE"] } },
+  { key: "bile-gotu", en: "Bile gotu", kn: "ಬಿಳೆಗೋಟು", group: "bette", labels: { tss: ["B.G."], tms: ["BILE GOTU"] } },
+  { key: "kempu-gotu", en: "Kempu gotu", kn: "ಕೆಂ.ಗೋ.", group: "bette", labels: { tss: ["K.G."], tms: ["K.G."] } },
   { key: "kere-gotu", en: "Karagotu", kn: "ಕಾರಗೋಟು", group: "bette", labels: { tss: ["KARAGOTU"] } },
-  { key: "laddu-bilegotu", en: "Laddu bilegotu", kn: "ಲ ಬಿಗೊ", group: "bette", labels: { tss: ["LA B GOT"] } },
+  { key: "laddu-bilegotu", en: "Laddu bilegotu", kn: "ಲ ಬಿಗೊ", group: "bette", labels: { tss: ["LA B GOT"], tms: ["LAD B.G."] } },
   // Other grades
   { key: "gorabalu", en: "Gorabalu", kn: "ಗೊರಬಲು", group: "other", tumcos: true, labels: { mamcos: ["GORABALU"] } },
-  { key: "koka", en: "Koka", kn: "ಕೋಕಾ", group: "other", labels: { tss: ["KOKA"] } },
-  { key: "laddu-koka", en: "Laddu koka", kn: "ಲ ಕೋಕಾ", group: "other", labels: { tss: ["LA KOKA"] } },
-  { key: "ch-kempu", en: "Chali kempu", kn: "ಚಾಲಿ ಕೆಂಪು", group: "other", labels: { tss: ["CH.KEMP"] } },
-  { key: "arigere", en: "Aragere", kn: "ಅರಗೆರೆ", group: "other", labels: { tss: ["ARAGERE"] } },
-  { key: "muri", en: "Muri", kn: "ಮುರಿ", group: "other", labels: { tss: ["MURI"] } },
-  { key: "kole", en: "Kole", kn: "ಕೊಳೆ", group: "other", labels: { tss: ["KOLE"] } },
-  { key: "churu", en: "Churu", kn: "ಚೂರು", group: "other", labels: { tss: ["CHURU"] } },
+  { key: "koka", en: "Koka", kn: "ಕೋಕಾ", group: "other", labels: { tss: ["KOKA"], tms: ["KOKA"] } },
+  { key: "laddu-koka", en: "Laddu koka", kn: "ಲ ಕೋಕಾ", group: "other", labels: { tss: ["LA KOKA"], tms: ["LADD KOKA"] } },
+  { key: "ch-kempu", en: "Chali kempu", kn: "ಚಾಲಿ ಕೆಂಪು", group: "other", labels: { tss: ["CH.KEMP"], tms: ["CHALI KEMPU"] } },
+  { key: "arigere", en: "Aragere", kn: "ಅರಗೆರೆ", group: "other", labels: { tss: ["ARAGERE"], tms: ["ARGERE"] } },
+  { key: "muri", en: "Muri", kn: "ಮುರಿ", group: "other", labels: { tss: ["MURI"], tms: ["MURI"] } },
+  { key: "kole", en: "Kole", kn: "ಕೊಳೆ", group: "other", labels: { tss: ["KOLE"], tms: ["KOLE"] } },
+  { key: "churu", en: "Churu", kn: "ಚೂರು", group: "other", labels: { tss: ["CHURU"], tms: ["CHOORU"] } },
   // Fresh, undried nut. Each is its own TSS lot, never merged with another fresh grade or a dried one.
-  { key: "fresh-red", en: "Fresh red arecanut", kn: "ಗೋಟು ಅಡಿಕೆ", group: "fresh", labels: { tss: ["FRESH RED ARECANUT"] }, note: FRESH_NOTE },
+  { key: "fresh-red", en: "Fresh red arecanut", kn: "ಗೋಟು ಅಡಿಕೆ", group: "fresh", labels: { tss: ["FRESH RED ARECANUT"], tms: ["GOTU ADIKE"] }, note: FRESH_NOTE },
   { key: "fresh-green", en: "Fresh green arecanut", kn: "ಹಸಿರು ಅಡಿಕೆ", group: "fresh", labels: { tss: ["FRESH GREEN ARECANUT"] }, note: FRESH_NOTE },
   { key: "green-raw", en: "Green raw areca", kn: "ಹಸಿರು ಹಸಿ ಅಡಿಕೆ", group: "fresh", labels: { tss: ["GREEN RAW ARECA"] }, note: FRESH_NOTE },
   { key: "fresh-sippe", en: "Fresh sippe areca", kn: "ಹಸಿ ಅಡಿಕೆ(ಸಿಪ್ಪೆ ಅಡಿಕೆ)", group: "fresh", labels: { tss: ["FRESH SIPPE ARECA"] }, note: FRESH_NOTE },

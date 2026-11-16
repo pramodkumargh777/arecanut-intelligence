@@ -246,7 +246,7 @@ historyRoutes.get("/history/monthly/snapshots/:id", async (c) => {
 
 historyRoutes.get("/history/aggregates", async (c) => {
   const validDay = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
-  const input = z.object({ source: z.enum(["mamcos", "tss", "tumcos"]), variety: z.string().trim().min(1).max(160), branch: z.string().trim().min(1).max(160),
+  const input = z.object({ source: z.enum(["mamcos", "tss", "tumcos", "tms"]), variety: z.string().trim().min(1).max(160), branch: z.string().trim().min(1).max(160),
     from: z.string().refine(validDay), to: z.string().refine(validDay), interval: z.enum(["weekly", "monthly"]) }).safeParse(c.req.query());
   if (!input.success || input.data.from > input.data.to || Date.parse(input.data.to) - Date.parse(input.data.from) > 366 * 86_400_000
     || input.data.to > calendarTodayIST()) return c.json({ error: "Select source, exact variety, branch, interval and a valid date range up to 366 days through today (IST)." }, 400);

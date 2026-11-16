@@ -1,6 +1,6 @@
 import type { CommodityCatalog } from "../../../shared/commodities";
 import type { Market, Overview, PriceObservation, QualityRecord, ReferencePoint, SourceStatus } from "../types";
-import type { CooperativeCommodity, CooperativeData, CooperativeQuote, CooperativeSource, CooperativeSourceStatus, CsvImportRequest, CsvImportSummary, PermissionStatus, RefreshSummary, ReplaySummary, ReviewResult, TssBackfillSummary, TumcosRefreshSummary } from "./cooperative";
+import type { CooperativeCommodity, CooperativeData, CooperativeQuote, CooperativeSource, CooperativeSourceStatus, CsvImportRequest, CsvImportSummary, PermissionStatus, RefreshSummary, ReplaySummary, ReviewResult, TssBackfillSummary, TumcosRefreshSummary, TmsRefreshSummary, TmsBackfillSummary } from "./cooperative";
 import type { MonthlyHistory, MonthlyEvidence, Aggregates, CalculationInputs, Calculation, DecisionPrices } from "./intelligence";
 import type { ArrivalPriceComparison, DistrictProduction, SupplyAdvisories, SupplyArrivals, SupplyProduction, SupplyWeather, RiskRule } from "./supply";
 import type { ForecastingOverview, ForecastingPerformance, ModelEvaluation, Page, StoredPrediction } from "./forecasting";
@@ -106,6 +106,12 @@ export const api = {
   }),
   refreshTumcos: (token: string, scope: "recent" | "full_history") => request<TumcosRefreshSummary>("/admin/cooperative/tumcos/refresh", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ scope }),
+  }),
+  refreshTms: (token: string, date?: string) => request<TmsRefreshSummary>("/admin/cooperative/tms/refresh", {
+    method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(date ? { date } : {}),
+  }),
+  backfillTms: (token: string, start: string, end: string) => request<TmsBackfillSummary>("/admin/cooperative/tms/backfill", {
+    method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ start, end }),
   }),
   importCooperativeCsv: (token: string, input: CsvImportRequest) => request<CsvImportSummary>("/admin/cooperative/import", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(input),

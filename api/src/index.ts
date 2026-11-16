@@ -9,6 +9,7 @@ import { configuredAttempts } from "./cooperative-fetch";
 import { readCooperativeSource, recordBlockedFetch, schedulingDecision } from "./cooperative-sources";
 import { refreshTss } from "./tss";
 import { refreshTumcos, TUMCOS_URL } from "./tumcos";
+import { refreshTms, TMS_PORTAL_URL } from "./tms";
 import { calendarDateToTime, calendarTodayIST, DAY_MS } from "../../shared/dates";
 import { historyRoutes, monthRange } from "./history";
 import { decisionRoutes } from "./decisions";
@@ -40,6 +41,7 @@ export type Env = {
     MAMCOS_SCHEDULE_ENABLED?: string;
     TSS_SCHEDULE_ENABLED?: string;
     TUMCOS_SCHEDULE_ENABLED?: string;
+    TMS_SCHEDULE_ENABLED?: string;
     /** "true" publishes scheduled quotations that pass every check; the rest wait in the review queue. */
     COOPERATIVE_AUTO_PUBLISH?: string;
     COOPERATIVE_FETCH_ATTEMPTS?: string;
@@ -770,6 +772,9 @@ export default {
       { key: "tss" as const, flag: env.TSS_SCHEDULE_ENABLED, url: "https://webapi.tssindia.in/getrateshomepage",
         run: () => refreshTss(env.DB, tssDate, { mode: "scheduled", attempts }) },
       { key: "tumcos" as const, flag: env.TUMCOS_SCHEDULE_ENABLED, url: TUMCOS_URL, run: () => refreshTumcos(env.DB, { mode: "scheduled", scope: "recent", attempts }) },
+      // TMS answers with the latest tender day on or before the date asked, so today covers both runs: the morning
+      // run records yesterday's tender and the evening run today's.
+      { key: "tms" as const, flag: env.TMS_SCHEDULE_ENABLED, url: TMS_PORTAL_URL, run: () => refreshTms(env.DB, today, { mode: "scheduled", attempts }) },
     ];
     for (const source of cooperative) {
       if (source.flag !== "true") continue;

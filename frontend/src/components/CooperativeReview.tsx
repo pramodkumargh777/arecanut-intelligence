@@ -33,11 +33,14 @@ const COPY = defineCopy({
       `${dryRun ? "Dry run (nothing stored)" : "CSV import"}: ${received} rows; ${pending} pending review; ${invalid} invalid${dryRun ? "" : `; ${inserted} stored; ${duplicates} already present`}.${rejected}`,
     replayDone: (source: string, of: string, parsed: number, inserted: number, duplicates: number, invalid: number) => `Replayed ${source} snapshot ${of}: ${parsed} parsed; ${inserted} new; ${duplicates} unchanged; ${invalid} invalid.`,
     published: "Verified and published.", recorded: "Review recorded.",
-    title: "Cooperative source review", intro: "MAMCOS, TSS and TUMCOS averages are separate from official modal prices and from each other. Invalid records cannot be approved. Approved records are published in INR/quintal.",
+    title: "Cooperative source review", intro: "MAMCOS, TSS, TMS Sirsi and TUMCOS averages are separate from official modal prices and from each other. Invalid records cannot be approved. Approved records are published in INR/quintal.",
     token: "Cooperative reviewer token", unlock: "Unlock cooperative review", fetchingMamcos: "Fetching MAMCOS...", fetchMamcos: "Fetch latest MAMCOS snapshot", lock: "Lock cooperative review",
     tssDate: "TSS reporting date (IST)", lotsOption: "Add tender lot/bag/weight totals (personal data is discarded)", fetchingTss: "Fetching TSS...", fetchTss: "Fetch TSS reporting date",
     backfillStart: "TSS backfill start", backfillEnd: "TSS backfill end (max 5 days)", backfilling: "Backfilling TSS...", backfill: "Backfill TSS dates",
     tumcosScope: "TUMCOS scope", recent: "Recent records (latest 45 days)", full: "Full published history (backfill)", fetchingTumcos: "Fetching TUMCOS...", fetchTumcos: "Fetch TUMCOS arecanut and black pepper",
+    tmsStart: "TMS Sirsi from", tmsEnd: "TMS Sirsi to (max 31 days)", fetchingTms: "Fetching TMS Sirsi...", fetchTms: "Fetch latest TMS Sirsi tender day", backfillTmsLabel: "Backfill TMS Sirsi dates",
+    tmsDone: (date: string, received: number, inserted: number, invalid: number, mismatches: string) => `TMS Sirsi tender day ${date}: ${received} varieties; ${inserted} new; ${invalid} invalid.${mismatches ? ` Lots disagree with the published rates for ${mismatches}; those wait for review.` : ""}`,
+    tmsBackfillDone: (succeeded: number, dates: number, failures: string) => `TMS Sirsi backfill: ${succeeded} of ${dates} dates fetched.${failures}`,
     csvTitle: "Authorized manual CSV import", csvSource: "Source", authorizedBy: "Authorized by", permissionReference: "Permission reference", csvFile: "CSV file (max 500 rows)", csvContent: "CSV content",
     attest: "I attest these rows are copied unaltered from the source under the recorded permission", dryRun: "Dry run (validate only)",
     importing: "Importing...", validate: "Validate CSV", import: "Import CSV for review",
@@ -72,11 +75,14 @@ const COPY = defineCopy({
       `${dryRun ? "ಪರೀಕ್ಷಾ ಓಟ (ಏನೂ ಉಳಿಸಿಲ್ಲ)" : "CSV ಆಮದು"}: ${received} ಸಾಲುಗಳು; ${pending} ಪರಿಶೀಲನೆಗೆ ಬಾಕಿ; ${invalid} ಅಮಾನ್ಯ${dryRun ? "" : `; ${inserted} ಉಳಿಸಲಾಗಿದೆ; ${duplicates} ಈಗಾಗಲೇ ಇದೆ`}.${rejected}`,
     replayDone: (source: string, of: string, parsed: number, inserted: number, duplicates: number, invalid: number) => `${source} ಸಂಗ್ರಹ ${of} ಮರು-ಓದಲಾಗಿದೆ: ${parsed} ಓದಲಾಗಿದೆ; ${inserted} ಹೊಸದು; ${duplicates} ಬದಲಾಗಿಲ್ಲ; ${invalid} ಅಮಾನ್ಯ.`,
     published: "ದೃಢೀಕರಿಸಿ ಪ್ರಕಟಿಸಲಾಗಿದೆ.", recorded: "ಪರಿಶೀಲನೆ ದಾಖಲಾಗಿದೆ.",
-    title: "ಸಹಕಾರಿ ಮೂಲಗಳ ಪರಿಶೀಲನೆ", intro: "MAMCOS, TSS ಮತ್ತು TUMCOS ಸರಾಸರಿಗಳು ಅಧಿಕೃತ ಮಾದರಿ ದರಗಳಿಂದ ಮತ್ತು ಪರಸ್ಪರ ಪ್ರತ್ಯೇಕ. ಅಮಾನ್ಯ ದಾಖಲೆಗಳನ್ನು ಅನುಮೋದಿಸಲಾಗದು. ಅನುಮೋದಿತ ದಾಖಲೆಗಳು ₹/ಕ್ವಿಂಟಾಲ್‌ನಲ್ಲಿ ಪ್ರಕಟವಾಗುತ್ತವೆ.",
+    title: "ಸಹಕಾರಿ ಮೂಲಗಳ ಪರಿಶೀಲನೆ", intro: "MAMCOS, TSS, TMS ಶಿರಸಿ ಮತ್ತು TUMCOS ಸರಾಸರಿಗಳು ಅಧಿಕೃತ ಮಾದರಿ ದರಗಳಿಂದ ಮತ್ತು ಪರಸ್ಪರ ಪ್ರತ್ಯೇಕ. ಅಮಾನ್ಯ ದಾಖಲೆಗಳನ್ನು ಅನುಮೋದಿಸಲಾಗದು. ಅನುಮೋದಿತ ದಾಖಲೆಗಳು ₹/ಕ್ವಿಂಟಾಲ್‌ನಲ್ಲಿ ಪ್ರಕಟವಾಗುತ್ತವೆ.",
     token: "ಸಹಕಾರಿ ಪರಿಶೀಲಕರ ಟೋಕನ್", unlock: "ಸಹಕಾರಿ ಪರಿಶೀಲನೆ ತೆರೆಯಿರಿ", fetchingMamcos: "MAMCOS ತರಲಾಗುತ್ತಿದೆ...", fetchMamcos: "ಇತ್ತೀಚಿನ MAMCOS ಸಂಗ್ರಹ ತನ್ನಿ", lock: "ಸಹಕಾರಿ ಪರಿಶೀಲನೆ ಮುಚ್ಚಿ",
     tssDate: "TSS ವರದಿ ದಿನಾಂಕ (IST)", lotsOption: "ಟೆಂಡರ್ ಲಾಟ್/ಚೀಲ/ತೂಕದ ಒಟ್ಟುಗಳನ್ನು ಸೇರಿಸಿ (ವೈಯಕ್ತಿಕ ಮಾಹಿತಿ ಬಿಡಲಾಗುತ್ತದೆ)", fetchingTss: "TSS ತರಲಾಗುತ್ತಿದೆ...", fetchTss: "TSS ವರದಿ ದಿನಾಂಕ ತನ್ನಿ",
     backfillStart: "TSS ಹಿಂದಿನ ಸಂಗ್ರಹ ಆರಂಭ", backfillEnd: "TSS ಹಿಂದಿನ ಸಂಗ್ರಹ ಅಂತ್ಯ (ಗರಿಷ್ಠ 5 ದಿನ)", backfilling: "TSS ಹಿಂದಿನ ದತ್ತಾಂಶ ತರಲಾಗುತ್ತಿದೆ...", backfill: "TSS ದಿನಾಂಕಗಳನ್ನು ತನ್ನಿ",
     tumcosScope: "TUMCOS ವ್ಯಾಪ್ತಿ", recent: "ಇತ್ತೀಚಿನ ದಾಖಲೆಗಳು (ಕಳೆದ 45 ದಿನ)", full: "ಸಂಪೂರ್ಣ ಪ್ರಕಟಿತ ಇತಿಹಾಸ", fetchingTumcos: "TUMCOS ತರಲಾಗುತ್ತಿದೆ...", fetchTumcos: "TUMCOS ಅಡಿಕೆ ಮತ್ತು ಕರಿಮೆಣಸು ತನ್ನಿ",
+    tmsStart: "TMS ಶಿರಸಿ ಇಂದ", tmsEnd: "TMS ಶಿರಸಿ ವರೆಗೆ (ಗರಿಷ್ಠ 31 ದಿನ)", fetchingTms: "TMS ಶಿರಸಿ ತರಲಾಗುತ್ತಿದೆ...", fetchTms: "TMS ಶಿರಸಿ ಇತ್ತೀಚಿನ ಟೆಂಡರ್ ದಿನ ತನ್ನಿ", backfillTmsLabel: "TMS ಶಿರಸಿ ಹಿಂದಿನ ದಿನಗಳನ್ನು ತನ್ನಿ",
+    tmsDone: (date: string, received: number, inserted: number, invalid: number, mismatches: string) => `TMS ಶಿರಸಿ ಟೆಂಡರ್ ದಿನ ${date}: ${received} ತಳಿಗಳು; ${inserted} ಹೊಸದು; ${invalid} ಅಮಾನ್ಯ.${mismatches ? ` ${mismatches} ಗೆ ಲಾಟ್‌ಗಳು ಪ್ರಕಟಿತ ದರಕ್ಕೆ ಹೊಂದುತ್ತಿಲ್ಲ; ಅವು ಪರಿಶೀಲನೆಗೆ ಕಾಯುತ್ತವೆ.` : ""}`,
+    tmsBackfillDone: (succeeded: number, dates: number, failures: string) => `TMS ಶಿರಸಿ ಹಿಂದಿನ ದಿನಗಳು: ${dates} ರಲ್ಲಿ ${succeeded} ದಿನ ತರಲಾಗಿದೆ.${failures}`,
     csvTitle: "ಅಧಿಕೃತ CSV ಆಮದು", csvSource: "ಮೂಲ", authorizedBy: "ಅನುಮತಿ ನೀಡಿದವರು", permissionReference: "ಅನುಮತಿ ಉಲ್ಲೇಖ", csvFile: "CSV ಕಡತ (ಗರಿಷ್ಠ 500 ಸಾಲು)", csvContent: "CSV ವಿಷಯ",
     attest: "ಈ ಸಾಲುಗಳನ್ನು ದಾಖಲಾದ ಅನುಮತಿಯಡಿ ಮೂಲದಿಂದ ಬದಲಿಸದೆ ನಕಲಿಸಲಾಗಿದೆ ಎಂದು ದೃಢೀಕರಿಸುತ್ತೇನೆ", dryRun: "ಪರೀಕ್ಷಾ ಓಟ (ಪರಿಶೀಲನೆ ಮಾತ್ರ)",
     importing: "ಆಮದು ಮಾಡಲಾಗುತ್ತಿದೆ...", validate: "CSV ಪರಿಶೀಲಿಸಿ", import: "ಪರಿಶೀಲನೆಗೆ CSV ಆಮದು ಮಾಡಿ",
@@ -119,6 +125,8 @@ export function CooperativeReview() {
   const [backfillStart, setBackfillStart] = useState(today);
   const [backfillEnd, setBackfillEnd] = useState(today);
   const [tumcosScope, setTumcosScope] = useState<"recent" | "full_history">("recent");
+  const [tmsStart, setTmsStart] = useState(today);
+  const [tmsEnd, setTmsEnd] = useState(today);
   const [csvSource, setCsvSource] = useState<CooperativeSource>("mamcos");
   const [csvText, setCsvText] = useState("");
   const [authorizedBy, setAuthorizedBy] = useState("");
@@ -142,6 +150,10 @@ export function CooperativeReview() {
     onSuccess: async (r) => done(t.backfillDone(r.succeeded, r.dates, r.results.filter((x) => x.status === "failed").map((x) => ` ${x.date}: ${typeof x.detail === "string" ? x.detail : t.failed}.`).join("")))() });
   const tumcos = useMutation({ mutationFn: () => api.refreshTumcos(token, tumcosScope), onError: invalidate,
     onSuccess: async (r) => done(t.tumcosDone(r.received_count, r.in_scope_count, r.commodities.arecanut, r.commodities.black_pepper, r.inserted_count, r.invalid_count, r.unit_conflict_count, r.latest_record_date ?? t.none, r.page_last_updated ?? t.absent, Boolean(r.stale_page_metadata), r.table_check.matched, r.table_check.rows))() });
+  const tmsRefresh = useMutation({ mutationFn: () => api.refreshTms(token), onError: invalidate,
+    onSuccess: async (r) => done(t.tmsDone(r.effective_date ?? t.none, r.received_count, r.inserted_count, r.invalid_count, r.lot_aggregate_mismatches.join(", ")))() });
+  const tmsBackfill = useMutation({ mutationFn: () => api.backfillTms(token, tmsStart, tmsEnd), onError: invalidate,
+    onSuccess: async (r) => done(t.tmsBackfillDone(r.succeeded, r.dates, r.results.filter((x) => x.status === "failed").map((x) => ` ${x.date}: ${typeof x.detail === "string" ? x.detail : t.failed}.`).join("")))() });
   const csvImport = useMutation({
     mutationFn: () => api.importCooperativeCsv(token, { source: csvSource, csv: csvText, authorized_by: authorizedBy, permission_reference: permissionReference, attestation: true, dry_run: dryRun }),
     onError: invalidate,
@@ -154,7 +166,7 @@ export function CooperativeReview() {
     onError: invalidate,
     onSuccess: async (r) => done(r.note ?? (r.published ? t.published : t.recorded))(),
   });
-  const mutations = [refresh, tssRefresh, tssBackfill, tumcos, csvImport, replay, review];
+  const mutations = [refresh, tssRefresh, tssBackfill, tumcos, tmsRefresh, tmsBackfill, csvImport, replay, review];
   const busy = mutations.some((m) => m.isPending);
   function lock() {
     access.lock(); setFeedback(""); setAttested(false); setCsvText("");
@@ -185,6 +197,12 @@ export function CooperativeReview() {
             <option value="recent">{t.recent}</option><option value="full_history">{t.full}</option></select></label>
           <button className="button-secondary" disabled={busy}>{tumcos.isPending ? t.fetchingTumcos : t.fetchTumcos}</button>
         </form>
+        <div className="monthly-refresh"><button className="button-secondary" disabled={busy} onClick={() => { setFeedback(""); tmsRefresh.mutate(); }}>{tmsRefresh.isPending ? t.fetchingTms : t.fetchTms}</button></div>
+        <form className="monthly-refresh" onSubmit={submit(() => tmsBackfill.mutate())}>
+          <label className="filter-control"><span>{t.tmsStart}</span><input type="date" required max={today} value={tmsStart} onChange={(event) => setTmsStart(event.target.value)} disabled={busy} /></label>
+          <label className="filter-control"><span>{t.tmsEnd}</span><input type="date" required max={today} value={tmsEnd} onChange={(event) => setTmsEnd(event.target.value)} disabled={busy} /></label>
+          <button className="button-secondary" disabled={busy || tmsStart > tmsEnd}>{tmsBackfill.isPending ? t.fetchingTms : t.backfillTmsLabel}</button>
+        </form>
         <details className="review-evidence"><summary>{t.csvTitle}</summary>
           <form className="monthly-refresh" onSubmit={submit(() => csvImport.mutate())}>
             <label className="filter-control"><span>{t.csvSource}</span><select value={csvSource} onChange={(event) => setCsvSource(event.target.value as CooperativeSource)} disabled={busy}><option value="mamcos">MAMCOS</option><option value="tss">TSS</option><option value="tumcos">TUMCOS</option></select></label>
@@ -205,7 +223,7 @@ export function CooperativeReview() {
           </form>
           <p>{t.replayNote}</p>
         </details>
-        <label className="filter-control"><span>{t.queueSource}</span><select value={queueSource} onChange={(event) => { setQueueSource(event.target.value as CooperativeSource | ""); setQueueOffset(0); }}><option value="">{t.allSources}</option><option value="mamcos">MAMCOS</option><option value="tss">TSS</option><option value="tumcos">TUMCOS</option></select></label>
+        <label className="filter-control"><span>{t.queueSource}</span><select value={queueSource} onChange={(event) => { setQueueSource(event.target.value as CooperativeSource | ""); setQueueOffset(0); }}><option value="">{t.allSources}</option><option value="mamcos">MAMCOS</option><option value="tss">TSS</option><option value="tms">TMS Sirsi</option><option value="tumcos">TUMCOS</option></select></label>
         {queue.isLoading ? <LoadingState label={t.loadingQueue} /> : queue.error ? <ErrorState error={queue.error} onRetry={() => void queue.refetch()} /> : !queue.data?.data.length ? <EmptyState title={t.queueClear} /> : queue.data.data.map((row) => <QueueRow key={row.id} row={row} busy={busy} onReview={(action) => review.mutate({ id: row.id, action })} />)}
         {queue.data && <QueuePager offset={queueOffset} limit={QUEUE_PAGE_SIZE} total={queue.data.total} busy={queue.isFetching || busy} label={t.records} onChange={setQueueOffset} />}
       </>}

@@ -11,8 +11,12 @@ export type CooperativeQuote = {
   source_record_id?: string | null; source_published_at?: string | null; review_flags?: string | null; ingest_mode?: string | null;
   fetch_id?: string;
 };
-export type CooperativeSource = "mamcos" | "tss" | "tumcos";
+export type CooperativeSource = "mamcos" | "tss" | "tumcos" | "tms";
 export type CooperativeCommodity = "arecanut" | "black_pepper";
+/** Sources whose INR/quintal is an operator assumption (api/src/cooperative-units.ts). MAMCOS and TMS state their unit. */
+export const ASSUMED_UNIT_SOURCES: readonly CooperativeSource[] = ["tss", "tumcos"];
+/** Sources that publish tender averages (the mean of a day's tender lots) rather than branch averages. */
+export const TENDER_SOURCES: readonly CooperativeSource[] = ["tss", "tms"];
 export type PermissionStatus = "not_requested" | "requested" | "granted" | "denied";
 export type CooperativeData = {
   source: CooperativeSource; commodity: CooperativeCommodity;
@@ -33,6 +37,10 @@ export type CooperativeData = {
 };
 
 export type RefreshSummary = { fetch_id?: string; received_count: number; inserted_count: number; invalid_count: number; excluded_count?: number; attempts?: number };
+export type TmsRefreshSummary = RefreshSummary & {
+  requested_date: string; effective_date: string | null; duplicate_count: number; lot_aggregate_mismatches: string[];
+};
+export type TmsBackfillSummary = { dates: number; succeeded: number; results: { date: string; status: "succeeded" | "failed"; detail: TmsRefreshSummary | string }[] };
 export type TumcosRefreshSummary = RefreshSummary & {
   in_scope_count: number; duplicate_count: number; unit_conflict_count: number;
   commodities: Record<CooperativeCommodity, number>; latest_record_date: string | null; page_last_updated: string | null;

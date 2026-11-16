@@ -8,6 +8,7 @@ import {
 import { sha256Hex } from "./cooperative-fetch";
 import { parseTss, TSS_LOCATIONS, validTssDate, type TssLotAggregate } from "./tss";
 import { parseTumcos, tumcosNotes } from "./tumcos";
+import { parseTms } from "./tms";
 import { operatorAssumesUnit, PER_KG_PLAUSIBILITY_LIMIT } from "./cooperative-units";
 
 export const CSV_MAX_ROWS = 500;
@@ -180,9 +181,15 @@ export async function replayCooperativeSnapshot(db: D1Database, fetchId: string,
     const aggregates = stored.notes ? (JSON.parse(stored.notes) as { tender_aggregates?: Record<string, TssLotAggregate> }).tender_aggregates : undefined;
     const parsed = await parseTss(JSON.parse(stored.raw_snapshot), location, date, fetchedAt, aggregates ? new Map(Object.entries(aggregates)) : undefined);
     quotes = parsed.quotes; received = parsed.received_count; excluded = parsed.excluded_count; notes = stored.notes;
-  } else {
+  } else if (stored.source_key === "tms") {
+    if (!stored.requested_date) throw new Error("Stored TMS fetch is missing its requested date.");
+    const parsed = await parseTms(JSON.parse(stored.raw_snapshot), stored.requested_date, fetchedAt);
+    quotes = parsed.quotes; received = parsed.received_count; excluded = parsed.excluded_count; notes = stored.notes;
+  } else if (stored.source_key === "tumcos") {
     const parsed = await parseTumcos(stored.raw_snapshot, fetchedAt, options.scope ?? "recent");
     quotes = parsed.quotes; received = parsed.received_count; excluded = parsed.excluded_count; notes = tumcosNotes(parsed);
+  } else {
+    throw new Error(`Snapshot replay is not supported for source ${stored.source_key}.`);
   }
   const replayId = await startCooperativeFetch(db, stored.source_key, stored.source_url, { mode: "snapshot_replay", replayOf: stored.id, requestedDate: stored.requested_date });
   try {

@@ -146,7 +146,7 @@ Deployment success has not been claimed or tested in a Cloudflare account.
 |---|---|
 | System design, storage and query bounds | [ARCHITECTURE.md](docs/ARCHITECTURE.md) ([visual map](docs/architecture/index.html)) |
 | Importing CSV and AGMARKNET data | [DATA_IMPORT.md](docs/DATA_IMPORT.md), [AGMARKNET_DAILY_CONNECTOR.md](docs/AGMARKNET_DAILY_CONNECTOR.md) |
-| MAMCOS, TSS and TUMCOS cooperative feeds | [COOPERATIVE_SOURCES.md](docs/COOPERATIVE_SOURCES.md) |
+| MAMCOS, TSS, TMS Sirsi and TUMCOS cooperative feeds | [COOPERATIVE_SOURCES.md](docs/COOPERATIVE_SOURCES.md) |
 | Commodities, varieties and grades | [COMMODITY_MODEL.md](docs/COMMODITY_MODEL.md) |
 | Monthly trends, history, calculators, source intelligence | [ANALYTICS_AND_TOOLS.md](docs/ANALYTICS_AND_TOOLS.md) |
 | Supply, weather and crop risk | [SUPPLY_AND_RISK.md](docs/SUPPLY_AND_RISK.md) |

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../services/api";
+import type { CooperativeSource } from "../services/cooperative";
 import { useCommodity } from "../services/commodity";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { IntelligenceScorecard, SourceLabel, StatusBadge } from "../components/Scorecard";
@@ -22,7 +23,7 @@ const newId = () => globalThis.crypto?.randomUUID?.() ?? `p-${Date.now().toStrin
 
 const COPY = defineCopy({
   en: {
-    feeds: { official: "AGMARKNET · official APMC modal", mamcos: "MAMCOS · cooperative average", tss: "TSS · tender average", tumcos: "TUMCOS · cooperative average" } as Record<MarketFeed, string>,
+    feeds: { official: "AGMARKNET · official APMC modal", mamcos: "MAMCOS · cooperative average", tss: "TSS · tender average", tms: "TMS Sirsi · tender average", tumcos: "TUMCOS · cooperative average" } as Record<MarketFeed, string>,
     roles: {
       grower: { label: "Grower / farmer group", description: "Latest cooperative quotes near you, data freshness and decision-tool shortcuts." },
       trader: { label: "Trader / buyer", description: "Same-date market ranges, spreads and recent quotes across sources." },
@@ -56,7 +57,7 @@ const COPY = defineCopy({
     outcomes: "Prospective outcomes matched", revoked: "Revoked model events", openEvaluation: "Open full evaluation",
   },
   kn: {
-    feeds: { official: "AGMARKNET · ಅಧಿಕೃತ ಎಪಿಎಂಸಿ ಮಾದರಿ ದರ", mamcos: "MAMCOS · ಸಹಕಾರಿ ಸರಾಸರಿ", tss: "TSS · ಟೆಂಡರ್ ಸರಾಸರಿ", tumcos: "TUMCOS · ಸಹಕಾರಿ ಸರಾಸರಿ" },
+    feeds: { official: "AGMARKNET · ಅಧಿಕೃತ ಎಪಿಎಂಸಿ ಮಾದರಿ ದರ", mamcos: "MAMCOS · ಸಹಕಾರಿ ಸರಾಸರಿ", tss: "TSS · ಟೆಂಡರ್ ಸರಾಸರಿ", tms: "TMS ಶಿರಸಿ · ಟೆಂಡರ್ ಸರಾಸರಿ", tumcos: "TUMCOS · ಸಹಕಾರಿ ಸರಾಸರಿ" },
     roles: {
       grower: { label: "ಬೆಳೆಗಾರ / ರೈತ ಗುಂಪು", description: "ಹತ್ತಿರದ ಸಹಕಾರಿ ಸಂಘಗಳ ಇತ್ತೀಚಿನ ದರ, ದತ್ತಾಂಶ ಹೊಸತನ ಮತ್ತು ಲೆಕ್ಕಾಚಾರ ಸಾಧನಗಳ ಕೊಂಡಿಗಳು." },
       trader: { label: "ವ್ಯಾಪಾರಿ / ಖರೀದಿದಾರ", description: "ಅದೇ ದಿನಾಂಕದ ಮಾರುಕಟ್ಟೆ ಶ್ರೇಣಿ, ಅಂತರ ಮತ್ತು ಎಲ್ಲಾ ಮೂಲಗಳ ಇತ್ತೀಚಿನ ದರಗಳು." },
@@ -186,7 +187,7 @@ function VarietyControl({ profile, enabled, onChange }: { profile: WorkspaceProf
   const varieties = useQuery({
     queryKey: ["workspace-varieties", profile.commodity, profile.feed], enabled,
     queryFn: async () => official ? api.varieties(profile.commodity)
-      : Array.from(new Set((await api.cooperativePrices(profile.feed as "mamcos" | "tss" | "tumcos", undefined, profile.commodity as "arecanut" | "black_pepper", {})).data.map((row) => row.variety))).sort(),
+      : Array.from(new Set((await api.cooperativePrices(profile.feed as CooperativeSource, undefined, profile.commodity as "arecanut" | "black_pepper", {})).data.map((row) => row.variety))).sort(),
   });
   return <label className="filter-control"><span>{c.variety}</span><select value={profile.variety} disabled={!enabled || varieties.isLoading} onChange={(event) => onChange(event.target.value)}>
     <option value="">{official ? t.firstVariety : c.allVarieties}</option>
@@ -204,7 +205,7 @@ function LatestQuotes({ profile }: { profile: WorkspaceProfile }) {
     queryKey: ["workspace-quotes", profile.commodity, profile.feed, profile.variety, range],
     queryFn: async () => official
       ? (await api.prices({ commodity: profile.commodity, variety: profile.variety || undefined, from: range.from, to: range.to, limit: "10" })).data.map((row) => ({ key: row.id, place: row.market_name, date: row.reporting_date, variety: row.variety_name, min: row.minimum_price, central: row.modal_price, max: row.maximum_price }))
-      : (await api.cooperativePrices(profile.feed as "mamcos" | "tss" | "tumcos", profile.variety || undefined, profile.commodity as "arecanut" | "black_pepper", range)).data
+      : (await api.cooperativePrices(profile.feed as CooperativeSource, profile.variety || undefined, profile.commodity as "arecanut" | "black_pepper", range)).data
         .slice().sort((a, b) => b.reporting_date.localeCompare(a.reporting_date)).slice(0, 10)
         .map((row) => ({ key: row.id, place: row.branch, date: row.reporting_date, variety: row.variety, min: row.minimum_price, central: row.average_price, max: row.maximum_price })),
   });

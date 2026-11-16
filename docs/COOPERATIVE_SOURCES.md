@@ -1,4 +1,4 @@
-# Cooperative market-rate sources: MAMCOS, TSS and TUMCOS
+# Cooperative market-rate sources: MAMCOS, TSS, TMS Sirsi and TUMCOS
 
 Status snapshot: 2026-11-04 (IST). This document records what the connectors
 actually do and what has been verified against the live sources. Statements
@@ -7,9 +7,9 @@ legal advice.
 
 ## 1. Separation rules
 
-These rules apply to all three sources:
+These rules apply to every cooperative source:
 
-- Every quotation is stored in `cooperative_quotes`. Its `source_key` is `mamcos`, `tss` or `tumcos`, and its `commodity` is `arecanut` or `black_pepper`.
+- Every quotation is stored in `cooperative_quotes`. Its `source_key` is `mamcos`, `tss`, `tms` or `tumcos`, and its `commodity` is `arecanut` or `black_pepper`.
 - Values are the source's **reported averages**. They are never relabelled as APMC modal prices.
 - Values are never merged with each other, with the AGMARKNET daily feed or with the monthly feed.
 - Every benchmark covers exactly one source, commodity and variety. `cooperativeSeries` throws on mixed commodities.
@@ -17,6 +17,7 @@ These rules apply to all three sources:
 - A quotation can become `verified` (published) only if `price_unit='INR/quintal'` and `unit_status` is `source_confirmed` or `assumed`. Database triggers enforce this.
 - **Operator decision (2026-11-05, migration 0020):** TSS and TUMCOS prices are treated as INR/quintal and published after review. They stay labelled `assumed`, because neither source confirms that unit, and the source's own label and raw record are retained.
 - A TUMCOS value under 1,000 could genuinely be per kg, so it stays `price_unit='unconfirmed'`. If a reviewer approves such a record it becomes `accepted_unit_unconfirmed` and remains unpublished.
+- TMS Sirsi states its unit itself ("Rates in ₹/quintal" on its portal), so its rows are `source_confirmed`. TMS and TSS carry the tender-average price basis; a trigger enforces it (migration 0025).
 - Missing dates are never filled. Invalid rows are retained with reasons and cannot be approved.
 
 ## 2. Source facts and recorded compliance state
@@ -31,6 +32,7 @@ Robots and terms were checked on 2026-11-04. Every source is seeded as follows:
 |---|---|---|---|---|---|
 | MAMCOS (`https://mamcos.info/areca-market-rates`) | Public HTML page | robots.txt disallows only `/admin` and `/api/`. No terms or data-reuse licence found; footer says "All rights reserved". | The page declares "All market rates are in ₹ per Quintal". The parser fails closed if this declaration is missing. | Exact source names | Reviewed rows can be verified. UI label: **Permission not confirmed**. |
 | TSS (`https://web.tssindia.in/`, via the public `webapi.tssindia.in` endpoints used by that page) | Public JSON used by the public site | robots.txt files contain only Cloudflare content-signal definitions, with no rules. No terms found. | **No unit anywhere**. INR/quintal is an assumption (`unit_status='assumed'`, enforced by trigger). | Exact labels `RASHI`, `BETTE`, `CHALI`, `MURI`, `KOLE`, `ARECANUT`. Other items are archived but excluded. | Kept in the review queue. Approval gives `accepted_unit_unconfirmed`, so nothing is published. |
+| TMS Sirsi (`https://members.tmssirsi.com/`, via the public `/api/onprem/api/market-rates/bundle` endpoint that page uses) | Public JSON used by the public member-portal page, no login | robots.txt contains only Cloudflare content-signal definitions, with no rules. Terms of Use (2026-08-25) cover the members' app; no data-reuse licence for the public rates. Checked 2026-11-16. | The page states "Rates in ₹/quintal". Every refresh checks it first and stores nothing if it is missing. | Exact TMS labels (`RASHI`, `CHALI`, `CH - II`, `HO RASHI`, `GOTU ADIKE`, …). All items seen are arecanut grades; pepper, coconut and similar items would be excluded. | Seeded `not_requested` like the others (migration 0025). Scheduled runs are blocked until a grant is recorded; manual refreshes and auto-publishing work. |
 | TUMCOS (`https://www.tumcos.com/market-rates.php?lang=en`) | Public HTML page with embedded JSON | robots.txt returns HTTP 404. Footer says "All rights reserved". Disclaimer: "Rates are indicative and may vary." | Every record declares `unit: "kg"`, but values are about 22,000–70,000, which is only plausible per quintal. Stored as `unit_status='source_conflict'`, `price_unit='unconfirmed'`, with the source label preserved. | **Not reported.** The source's commodity name is stored with `variety_reported=0` and the flag `variety_not_reported`. | Kept in the review queue. Approval gives `accepted_unit_unconfirmed`, so nothing is published. |
 
 TUMCOS covers **Channagiri** only, for arecanut and black pepper. Its page
@@ -51,7 +53,7 @@ No grant has been recorded for any source.
 
 The Worker cron (`30 3 * * *`, 09:00 IST) runs a source only when all three of these hold:
 
-1. Its flag is `"true"`: `MAMCOS_SCHEDULE_ENABLED`, `TSS_SCHEDULE_ENABLED` or `TUMCOS_SCHEDULE_ENABLED`.
+1. Its flag is `"true"`: `MAMCOS_SCHEDULE_ENABLED`, `TSS_SCHEDULE_ENABLED`, `TMS_SCHEDULE_ENABLED` or `TUMCOS_SCHEDULE_ENABLED`.
 2. The registry records `permission_status='granted'`.
 3. The registry records `scheduled_collection_allowed=1`.
 
@@ -63,6 +65,7 @@ If the flag is on but permission is missing, the run is recorded as a `blocked` 
 |---|---|
 | MAMCOS | Branch, reporting date, exact variety, min, max, reported (cooperative) average, source URL, fetch timestamp, raw row. |
 | TSS | Location/session, tender date (must equal the requested date), exact variety, min, max, `avgrate` (reported average) and `norrate` (normal rate, kept separate). Optionally (`include_lots`): lot count, bag count, reported weight (unit unconfirmed) and session codes, aggregated from the public tender endpoint. |
+| TMS Sirsi | Tender day (the latest on or before the requested date), exact item label and item code (as source record ID), minimum, maximum and average. Lot count, bag count and quantity (unit not stated) are totalled from the same day's lots, which carry no seller or buyer identity. |
 | TUMCOS | Commodity, market (location), reported name, reporting date, low, average, high, source record ID, source `created_at` (as publication timestamp), source unit label. |
 
 **TSS privacy:**
@@ -87,6 +90,7 @@ If the flag is on but permission is missing, the run is recorded as a `blocked` 
 - **Historical backfill:**
   - TSS: `POST /admin/cooperative/tss/backfill` takes a date range of up to 5 reporting dates per request. Attempts per date use `COOPERATIVE_FETCH_ATTEMPTS`, defaulting to 2.
   - TUMCOS: `scope=full_history` archives every record embedded in the page (1,313 rows on 2026-11-04).
+  - TMS Sirsi: `POST /admin/cooperative/tms/backfill` takes up to 31 dates per request. A date without a tender returns the previous tender day, which is stored once.
   - MAMCOS publishes only its current table, so it has no historical backfill.
   - No source is treated as a complete archive.
 - **Snapshot replay:** `POST /admin/cooperative/replay/:fetchId` re-parses a stored snapshot without re-fetching the source.
@@ -99,7 +103,7 @@ If the flag is on but permission is missing, the run is recorded as a `blocked` 
 ## 6. Endpoints
 
 Public:
-- `GET /api/v1/cooperative/prices?source=mamcos|tss|tumcos&commodity=arecanut|black_pepper&variety=`
+- `GET /api/v1/cooperative/prices?source=mamcos|tss|tms|tumcos&commodity=arecanut|black_pepper&variety=`
   - `black_pepper` is accepted only for `tumcos`.
   - The response includes `publication` (published flag, blocked reason, latest archived reporting date) and `permission`.
 
@@ -109,6 +113,8 @@ Admin (`Authorization: Bearer <ADMIN_TOKEN>`):
 - `POST /admin/cooperative/tss/refresh` with `{date, include_lots?}`
 - `POST /admin/cooperative/tss/backfill` with `{start, end}`
 - `POST /admin/cooperative/tumcos/refresh` with `{scope: "recent" | "full_history"}`
+- `POST /admin/cooperative/tms/refresh` with optional `{date}` (default today, IST)
+- `POST /admin/cooperative/tms/backfill` with `{start, end}`
 - `POST /admin/cooperative/import`
 - `POST /admin/cooperative/replay/:fetchId`
 - `POST /admin/cooperative/:id/review` with `{action}`
@@ -132,6 +138,24 @@ Admin (`Authorization: Bearer <ADMIN_TOKEN>`):
 - All three sources show as available, with "Permission not confirmed".
 - Freshness: MAMCOS, TSS and TUMCOS arecanut are fresh (2026-11-04). TUMCOS black pepper is stale (latest record 2026-10-26, 9 days old).
 
+## 7a. TMS Sirsi (added 2026-11-16)
+
+TMS (Sirsi Taluka Agricultural Produce Co-operative Marketing Society) runs daily general tenders in Sirsi. It is a
+separate cooperative from TSS (Totagars), also in Sirsi; the two are never merged.
+
+- **What the numbers are.** On 2026-11-13 the published average equalled the plain mean of the day's lot rates for
+  every variety, and the minimum and maximum were the lowest and highest lot. A quantity-weighted mean ran 2–7% higher
+  (larger lots fetch better prices); the published figure is stored as TMS reports it. Each refresh compares the
+  published figures with the lots again and flags `lot_aggregate_mismatch` (held for review) if they disagree.
+- **Coverage.** About 30–40 arecanut grades on a tender day; Saturdays can carry only fresh-nut tenders. Lot history is
+  available by date back to at least 2025; the portal's per-grade history (`/api/market-history?item=&range=all`) goes
+  back to 2013 with daily bags, which is not imported.
+- **Schedule.** Both daily runs request today's date. TMS answers with the latest tender day on or before it, so the
+  morning run records the previous tender and the evening run that day's.
+- **Grower varieties.** `frontend/src/services/varieties.ts` maps 21 TMS labels to grower names, each checked against
+  same-week TSS Sirsi prices. `SIPPE CHALI`, `SIPPE CHALI ||`, `HASI ADIKE` and `KOLE ADIKE` have no clear TSS
+  counterpart and are left unmapped; they still appear under TMS in Explore prices.
+
 ## 8. Outstanding
 
 - Request and record written permission from each operator before enabling scheduled collection or redistribution.
@@ -141,7 +165,7 @@ Admin (`Authorization: Bearer <ADMIN_TOKEN>`):
 
 ## Operating the cooperative feeds
 
-### Cooperative branch prices (MAMCOS, TSS and TUMCOS)
+### Cooperative branch prices (MAMCOS, TSS, TMS Sirsi and TUMCOS)
 
 > **Current policy (2026-11-04):** see
 > [docs/COOPERATIVE_SOURCES.md](COOPERATIVE_SOURCES.md).
@@ -149,7 +173,7 @@ Admin (`Authorization: Bearer <ADMIN_TOKEN>`):
 > - **Operator decision (2026-11-05, migration 0020):** TSS (no published unit) and TUMCOS (labels "kg" but shows per-quintal values) are treated as INR/quintal and published after review, in every module. They stay labelled as an operator assumption, not a source confirmation. TUMCOS values under 1,000 stay unconfirmed because they could genuinely be per kg.
 > - Older text below about TSS benchmark exclusion and non-publication is history.
 > - TUMCOS (`?feed=tumcos`) adds Channagiri arecanut and black pepper. Black pepper never enters arecanut benchmarks, calculators or aggregates.
-> - Scheduled collection needs both `<SOURCE>_SCHEDULE_ENABLED=true` (`MAMCOS`, `TSS` or `TUMCOS`) **and** a permission grant recorded in Data quality → Cooperative source intelligence.
+> - Scheduled collection needs both `<SOURCE>_SCHEDULE_ENABLED=true` (`MAMCOS`, `TSS`, `TMS` or `TUMCOS`) **and** a permission grant recorded in Data quality → Cooperative source intelligence.
 > - **Collection runs twice a day (2026-11-06):** 09:00 IST closes out the previous day's TSS date and does all other refreshes; 20:00 IST collects that day's cooperative rates only.
 > - **Auto-publishing (2026-11-06):** with `COOPERATIVE_AUTO_PUBLISH=true`, scheduled quotations from the last 30 days publish without a person if they pass validation, have a publishable unit, carry no unaccepted review flag, do not conflict with a verified price, and sit within 20% of that variety's recent median. A variety with fewer than 3 quotes in the last 30 days (a newly seen grade) has no median yet, so it publishes on the other checks alone (since 2026-11-11). Everything else stays in the review queue. Each approval is recorded in `cooperative_reviews` under the reviewer `auto-validation-v1`. Manual refreshes still go through review. Rules: `api/src/cooperative-auto-publish.ts`.
 > - **No routine manual review (2026-11-13):**

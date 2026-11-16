@@ -25,7 +25,7 @@ const DAKSHINA_KANNADA = { en: "Dakshina Kannada", kn: "ದಕ್ಷಿಣ ಕ�
 
 export const MARKET_PLACES: MarketPlace[] = [
   { slug: "shivamogga", en: "Shivamogga", kn: "ಶಿವಮೊಗ್ಗ", alias: "Shimoga", district: SHIVAMOGGA, branches: { mamcos: "SHIVAMOGGA" }, apmc: "Shimoga APMC" },
-  { slug: "sirsi", en: "Sirsi", kn: "ಶಿರಸಿ", district: UTTARA_KANNADA, branches: { tss: "Sirsi" }, apmc: "Sirsi APMC" },
+  { slug: "sirsi", en: "Sirsi", kn: "ಶಿರಸಿ", district: UTTARA_KANNADA, branches: { tss: "Sirsi", tms: "Sirsi" }, apmc: "Sirsi APMC" },
   { slug: "sagara", en: "Sagara", kn: "ಸಾಗರ", alias: "Sagar", district: SHIVAMOGGA, branches: { mamcos: "SAGARA" }, apmc: "Sagar APMC" },
   { slug: "thirthahalli", en: "Thirthahalli", kn: "ತೀರ್ಥಹಳ್ಳಿ", district: SHIVAMOGGA, branches: { mamcos: "THIRTHAHALLI" }, apmc: "APMC THIRTHAHALLI" },
   { slug: "channagiri", en: "Channagiri", kn: "ಚನ್ನಗಿರಿ", district: DAVANAGERE, branches: { mamcos: "CHANNAGIRI", tumcos: "Channagiri" }, apmc: "Channagiri APMC" },
@@ -54,9 +54,9 @@ export const marketFromPath = (path: string) => path.startsWith(`${MARKETS_PATH}
 export const marketBySlug = (slug: string | undefined) => MARKET_PLACES.find((place) => place.slug === slug);
 
 /** Cooperatives in the order the page shows them. */
-export const COOPERATIVE_ORDER: CooperativeSource[] = ["mamcos", "tss", "tumcos"];
+export const COOPERATIVE_ORDER: CooperativeSource[] = ["mamcos", "tss", "tms", "tumcos"];
 export const COOPERATIVE_NAMES: Record<CooperativeSource, { en: string; kn: string }> = {
-  mamcos: { en: "MAMCOS", kn: "ಮ್ಯಾಮ್ಕೋಸ್" }, tss: { en: "TSS", kn: "ಟಿಎಸ್‌ಎಸ್" }, tumcos: { en: "TUMCOS", kn: "ಟಮ್ಕೋಸ್" },
+  mamcos: { en: "MAMCOS", kn: "ಮ್ಯಾಮ್ಕೋಸ್" }, tss: { en: "TSS", kn: "ಟಿಎಸ್‌ಎಸ್" }, tms: { en: "TMS", kn: "ಟಿಎಂಎಸ್" }, tumcos: { en: "TUMCOS", kn: "ಟಮ್ಕೋಸ್" },
 };
 
 /** The grower's name for a source label, through the variety catalogue; labels outside it keep the source's spelling. */

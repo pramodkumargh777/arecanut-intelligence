@@ -20,7 +20,7 @@ export const COLLECTION_STALE_HOURS = 36;
 export const INGESTION_STALE_HOURS = 48;
 export const HELD_BURST = 30;
 export const MONTHLY_STALE_HOURS = 72;
-const SOURCES = { mamcos: "MAMCOS", tss: "TSS", tumcos: "TUMCOS" };
+const SOURCES = { mamcos: "MAMCOS", tss: "TSS", tumcos: "TUMCOS", tms: "TMS Sirsi" };
 
 const QUERIES = {
   collections: "SELECT source_key, MAX(started_at) AS last_success FROM cooperative_fetches WHERE status='succeeded' GROUP BY source_key",

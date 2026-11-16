@@ -13,7 +13,7 @@ const COPY = defineCopy({
   kn: { branch: "ಶಾಖೆ", count: (n: number) => `${n} ಸಲಹೆಗಳು, ಆಯ್ಕೆಗೆ ಬಾಣದ ಗುರುತಿನ ಕೀಲಿಗಳನ್ನು ಬಳಸಿ` },
 });
 
-const FEED_LABEL: Record<MarketFeed, string> = { official: "APMC", mamcos: "MAMCOS", tss: "TSS", tumcos: "TUMCOS" };
+const FEED_LABEL: Record<MarketFeed, string> = { official: "APMC", mamcos: "MAMCOS", tss: "TSS", tms: "TMS", tumcos: "TUMCOS" };
 
 /**
  * Markets and branches that have published data, loaded once the reader first focuses a search box and then filtered in

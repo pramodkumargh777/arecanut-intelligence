@@ -1,0 +1,461 @@
+{
+ "requestedDate": "2026-11-13",
+ "effectiveDate": "2026-11-13",
+ "priorDate": "2026-11-12",
+ "rates": [
+  {
+   "code": 1,
+   "item": "RASHI",
+   "minimum": 37399,
+   "maximum": 47320,
+   "average": 44928.4
+  },
+  {
+   "code": 2,
+   "item": "BETTE",
+   "minimum": 29699,
+   "maximum": 44116,
+   "average": 38422
+  },
+  {
+   "code": 7,
+   "item": "CHALI",
+   "minimum": 32099,
+   "maximum": 45899,
+   "average": 41819.26315789474
+  },
+  {
+   "code": 10,
+   "item": "KOKA",
+   "minimum": 13699,
+   "maximum": 28099,
+   "average": 22605.166666666668
+  },
+  {
+   "code": 121,
+   "item": "GOTU ADIKE",
+   "minimum": 5840,
+   "maximum": 5840,
+   "average": 5840
+  }
+ ],
+ "priorRates": [
+  {
+   "code": 1,
+   "item": "RASHI",
+   "minimum": 44599,
+   "maximum": 46809,
+   "average": 45797.57142857143
+  }
+ ],
+ "lots": [
+  {
+   "lotno": 1,
+   "item": "RASHI",
+   "bags": 3,
+   "rate": 46499,
+   "quantity": 230.5,
+   "subNo": null
+  },
+  {
+   "lotno": 41,
+   "item": "RASHI",
+   "bags": 1,
+   "rate": 45720,
+   "quantity": 68,
+   "subNo": null
+  },
+  {
+   "lotno": 67,
+   "item": "RASHI",
+   "bags": 2,
+   "rate": 45989,
+   "quantity": 104,
+   "subNo": null
+  },
+  {
+   "lotno": 68,
+   "item": "RASHI",
+   "bags": 3,
+   "rate": 45120,
+   "quantity": 192,
+   "subNo": null
+  },
+  {
+   "lotno": 71,
+   "item": "RASHI",
+   "bags": 1,
+   "rate": 44920,
+   "quantity": 33.5,
+   "subNo": null
+  },
+  {
+   "lotno": 90,
+   "item": "RASHI",
+   "bags": 1,
+   "rate": 44599,
+   "quantity": 90.8,
+   "subNo": null
+  },
+  {
+   "lotno": 92,
+   "item": "RASHI",
+   "bags": 1,
+   "rate": 37399,
+   "quantity": 7,
+   "subNo": null
+  },
+  {
+   "lotno": 97,
+   "item": "RASHI",
+   "bags": 1,
+   "rate": 45389,
+   "quantity": 38.3,
+   "subNo": null
+  },
+  {
+   "lotno": 121,
+   "item": "RASHI",
+   "bags": 2,
+   "rate": 47320,
+   "quantity": 127.8,
+   "subNo": null
+  },
+  {
+   "lotno": 123,
+   "item": "RASHI",
+   "bags": 5,
+   "rate": 46329,
+   "quantity": 296.8,
+   "subNo": null
+  },
+  {
+   "lotno": 37,
+   "item": "BETTE",
+   "bags": 2,
+   "rate": 29699,
+   "quantity": 110,
+   "subNo": null
+  },
+  {
+   "lotno": 40,
+   "item": "BETTE",
+   "bags": 2,
+   "rate": 38969,
+   "quantity": 138.5,
+   "subNo": null
+  },
+  {
+   "lotno": 42,
+   "item": "BETTE",
+   "bags": 2,
+   "rate": 41309,
+   "quantity": 125.5,
+   "subNo": null
+  },
+  {
+   "lotno": 91,
+   "item": "BETTE",
+   "bags": 1,
+   "rate": 33699,
+   "quantity": 12,
+   "subNo": null
+  },
+  {
+   "lotno": 94,
+   "item": "BETTE",
+   "bags": 1,
+   "rate": 37699,
+   "quantity": 11.5,
+   "subNo": null
+  },
+  {
+   "lotno": 104,
+   "item": "BETTE",
+   "bags": 4,
+   "rate": 41409,
+   "quantity": 226.7,
+   "subNo": null
+  },
+  {
+   "lotno": 120,
+   "item": "BETTE",
+   "bags": 2,
+   "rate": 38699,
+   "quantity": 60.7,
+   "subNo": null
+  },
+  {
+   "lotno": 124,
+   "item": "BETTE",
+   "bags": 4,
+   "rate": 40199,
+   "quantity": 254.5,
+   "subNo": null
+  },
+  {
+   "lotno": 149,
+   "item": "BETTE",
+   "bags": 4,
+   "rate": 44116,
+   "quantity": 190,
+   "subNo": null
+  },
+  {
+   "lotno": 16,
+   "item": "CHALI",
+   "bags": 2,
+   "rate": 45899,
+   "quantity": 82,
+   "subNo": null
+  },
+  {
+   "lotno": 43,
+   "item": "CHALI",
+   "bags": 7,
+   "rate": 43156,
+   "quantity": 457.5,
+   "subNo": null
+  },
+  {
+   "lotno": 44,
+   "item": "CHALI",
+   "bags": 12,
+   "rate": 40501,
+   "quantity": 608,
+   "subNo": null
+  },
+  {
+   "lotno": 45,
+   "item": "CHALI",
+   "bags": 18,
+   "rate": 41599,
+   "quantity": 987.5,
+   "subNo": null
+  },
+  {
+   "lotno": 50,
+   "item": "CHALI",
+   "bags": 5,
+   "rate": 40399,
+   "quantity": 191.5,
+   "subNo": null
+  },
+  {
+   "lotno": 51,
+   "item": "CHALI",
+   "bags": 1,
+   "rate": 32099,
+   "quantity": 3,
+   "subNo": null
+  },
+  {
+   "lotno": 69,
+   "item": "CHALI",
+   "bags": 11,
+   "rate": 42299,
+   "quantity": 680,
+   "subNo": null
+  },
+  {
+   "lotno": 76,
+   "item": "CHALI",
+   "bags": 1,
+   "rate": 38418,
+   "quantity": 29,
+   "subNo": null
+  },
+  {
+   "lotno": 77,
+   "item": "CHALI",
+   "bags": 8,
+   "rate": 45099,
+   "quantity": 637.5,
+   "subNo": null
+  },
+  {
+   "lotno": 84,
+   "item": "CHALI",
+   "bags": 3,
+   "rate": 45199,
+   "quantity": 151.5,
+   "subNo": null
+  },
+  {
+   "lotno": 89,
+   "item": "CHALI",
+   "bags": 3,
+   "rate": 42599,
+   "quantity": 151.5,
+   "subNo": null
+  },
+  {
+   "lotno": 93,
+   "item": "CHALI",
+   "bags": 1,
+   "rate": 37398,
+   "quantity": 25.5,
+   "subNo": null
+  },
+  {
+   "lotno": 98,
+   "item": "CHALI",
+   "bags": 2,
+   "rate": 40599,
+   "quantity": 99.5,
+   "subNo": null
+  },
+  {
+   "lotno": 103,
+   "item": "CHALI",
+   "bags": 7,
+   "rate": 42141,
+   "quantity": 426.5,
+   "subNo": null
+  },
+  {
+   "lotno": 116,
+   "item": "CHALI",
+   "bags": 8,
+   "rate": 42499,
+   "quantity": 449.7,
+   "subNo": null
+  },
+  {
+   "lotno": 122,
+   "item": "CHALI",
+   "bags": 4,
+   "rate": 42139,
+   "quantity": 250.7,
+   "subNo": null
+  },
+  {
+   "lotno": 155,
+   "item": "CHALI",
+   "bags": 4,
+   "rate": 44011,
+   "quantity": 199,
+   "subNo": null
+  },
+  {
+   "lotno": 159,
+   "item": "CHALI",
+   "bags": 31,
+   "rate": 44511,
+   "quantity": 2042.5,
+   "subNo": null
+  },
+  {
+   "lotno": 164,
+   "item": "CHALI",
+   "bags": 11,
+   "rate": 44001,
+   "quantity": 770,
+   "subNo": null
+  },
+  {
+   "lotno": 3,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 24899,
+   "quantity": 1.5,
+   "subNo": null
+  },
+  {
+   "lotno": 13,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 24811,
+   "quantity": 14.5,
+   "subNo": null
+  },
+  {
+   "lotno": 29,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 18618,
+   "quantity": 2,
+   "subNo": null
+  },
+  {
+   "lotno": 31,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 14699,
+   "quantity": 3.5,
+   "subNo": null
+  },
+  {
+   "lotno": 61,
+   "item": "KOKA",
+   "bags": 2,
+   "rate": 23611,
+   "quantity": 35.7,
+   "subNo": null
+  },
+  {
+   "lotno": 85,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 26311,
+   "quantity": 14.3,
+   "subNo": null
+  },
+  {
+   "lotno": 106,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 24699,
+   "quantity": 13.5,
+   "subNo": null
+  },
+  {
+   "lotno": 112,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 13699,
+   "quantity": 3.5,
+   "subNo": null
+  },
+  {
+   "lotno": 128,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 23699,
+   "quantity": 1.5,
+   "subNo": null
+  },
+  {
+   "lotno": 137,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 24899,
+   "quantity": 19,
+   "subNo": null
+  },
+  {
+   "lotno": 150,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 28099,
+   "quantity": 4.5,
+   "subNo": null
+  },
+  {
+   "lotno": 161,
+   "item": "KOKA",
+   "bags": 1,
+   "rate": 23218,
+   "quantity": 5,
+   "subNo": null
+  },
+  {
+   "lotno": 8,
+   "item": "GOTU ADIKE",
+   "bags": 1,
+   "rate": 5840,
+   "quantity": 100,
+   "subNo": null
+  }
+ ]
+}

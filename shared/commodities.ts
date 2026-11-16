@@ -13,13 +13,13 @@ export type PriceBasis = typeof PRICE_BASES[number];
 
 export const CAPABILITIES = [
   "daily_prices", "analytics", "market_comparison", "monthly_history", "forecast",
-  "cooperative_mamcos", "cooperative_tss", "cooperative_tumcos",
+  "cooperative_mamcos", "cooperative_tss", "cooperative_tumcos", "cooperative_tms",
   "production", "trade", "weather", "quality", "calculators", "intelligence",
 ] as const;
 export type Capability = typeof CAPABILITIES[number];
 export type CapabilityStatus = "available" | "unpublished" | "not_integrated";
 
-export type MarketFeed = "official" | "mamcos" | "tss" | "tumcos";
+export type MarketFeed = "official" | "mamcos" | "tss" | "tms" | "tumcos";
 
 export interface UnitDef { code: string; label: string; dimension: "mass" | "count"; base_unit: string; factor_to_base: number }
 export interface UnitAlias { source_label: string; unit_code: string; currency: string; mapping_status: "verified" | "unverified" }
@@ -66,6 +66,7 @@ export function priceBasisForSource(sourceKey: string): PriceBasis {
     case "agmarknet_history":
       return "APMC_MODAL";
     case "tss":
+    case "tms":
       return "COOPERATIVE_TENDER_AVERAGE";
     case "mamcos":
     case "tumcos":
@@ -134,7 +135,7 @@ export function unitLabel(catalog: CommodityCatalog, commodity: CommodityDef | u
 /** Market-data feeds the commodity can show. Unpublished feeds are listed so archived review rows remain discoverable. */
 export function marketFeeds(commodity: CommodityDef | undefined): MarketFeed[] {
   const feeds: MarketFeed[] = [];
-  for (const [feed, capability] of [["mamcos", "cooperative_mamcos"], ["tss", "cooperative_tss"], ["tumcos", "cooperative_tumcos"], ["official", "daily_prices"]] as const) {
+  for (const [feed, capability] of [["mamcos", "cooperative_mamcos"], ["tss", "cooperative_tss"], ["tms", "cooperative_tms"], ["tumcos", "cooperative_tumcos"], ["official", "daily_prices"]] as const) {
     if (capabilityStatus(commodity, capability) !== "not_integrated") feeds.push(feed);
   }
   return feeds;
