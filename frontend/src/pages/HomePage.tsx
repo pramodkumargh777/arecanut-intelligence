@@ -82,10 +82,11 @@ const COPY = defineCopy({
     vs: (when: string) => `${when} ವರದಿಗೆ ಹೋಲಿಸಿ`,
     showAll: (count: number) => `ಎಲ್ಲಾ ${count} ಶಾಖೆಗಳನ್ನು ತೋರಿಸಿ`,
     showFewer: "ಕಡಿಮೆ ತೋರಿಸಿ",
+    onlyBranch: "ಈ ತಳಿಗೆ ವರದಿ ಮಾಡಿದ ಏಕೈಕ ಶಾಖೆ",
     unitFoot: (assumed: boolean) => `ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ಸರಾಸರಿ · ಕನಿಷ್ಠ – ಗರಿಷ್ಠ${assumed ? " · ಘಟಕ ಊಹಿಸಲಾಗಿದೆ" : ""}`,
     rowKey: "ಸರಾಸರಿ · ಕನಿಷ್ಠ–ಗರಿಷ್ಠ /ಕ್ವಿಂ",
     assumedNote: (source: string) => `${source} ಘಟಕ ತಿಳಿಸುವುದಿಲ್ಲ; ದರಗಳನ್ನು ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ.`,
-    tumcosSub: "ಚನ್ನಗಿರಿ · ತಳಿ ತಿಳಿಸಿಲ್ಲ · ಘಟಕ ಊಹಿಸಲಾಗಿದೆ", tumcosLabel: "ತಳಿ ತಿಳಿಸಿಲ್ಲ",
+    tumcosSub: "ಚನ್ನಗಿರಿ · ತಳಿ ತಿಳಿಸಿಲ್ಲ", tumcosLabel: "ತಳಿ ತಿಳಿಸಿಲ್ಲ",
     officialSub: "AGMARKNET · ಮಾದರಿ ದರ · ಎಲ್ಲಾ ತಳಿಗಳು",
     explore: "ಎಲ್ಲಾ ದರಗಳು",
     about: "ಈ ದರಗಳ ಬಗ್ಗೆ",
@@ -155,10 +156,11 @@ const COPY = defineCopy({
     vs: (when: string) => `compared with the ${when} report`,
     showAll: (count: number) => `Show all ${count} branches`,
     showFewer: "Show fewer",
+    onlyBranch: "The only branch reporting this variety",
     unitFoot: (assumed: boolean) => `average per quintal · minimum – maximum${assumed ? " · unit assumed" : ""}`,
     rowKey: "avg · min–max / qtl",
     assumedNote: (source: string) => `${source} does not state its unit; rates are treated as per quintal.`,
-    tumcosSub: "Channagiri · variety not stated · unit assumed", tumcosLabel: "variety not stated",
+    tumcosSub: "Channagiri · variety not stated", tumcosLabel: "variety not stated",
     officialSub: "AGMARKNET · modal price, ₹/quintal · all varieties",
     explore: "All rates",
     about: "About these rates",
@@ -250,14 +252,14 @@ function RateRow({ row, today, language, highest, showLabel, change, reveal, sou
 }
 
 /**
- * Rows per card before the toggle. Three keeps MAMCOS level with TSS, which has three branches, and stops one source
- * pushing the others off the screen.
+ * Rows per card before the toggle: one, the branch most readers look for, so every cooperative's card is the same height
+ * and sits level with the others. The rest are one tap away under "Show all".
  */
-const VISIBLE_ROWS = 3;
+const VISIBLE_ROWS = 1;
 /** The one APMC market shown on the home page; every other market is a link away. */
 const HOME_APMC = { name: "Siddapur", district: "Uttara Kannada" };
-/** Branches most readers look for. The collapsed card shows these first and tops up from the rest if one did not report. */
-const FEATURED_BRANCHES: Partial<Record<CooperativeSource, string[]>> = { mamcos: ["SHIVAMOGGA", "SAGARA", "THIRTHAHALLI"] };
+/** The branch each card shows when collapsed. If it did not report this variety, the card shows its first row instead. */
+const FEATURED_BRANCHES: Partial<Record<CooperativeSource, string[]>> = { mamcos: ["SHIVAMOGGA"], tss: ["SIRSI"], tms: ["SIRSI"] };
 
 function collapsedRows(rows: CooperativeQuote[], featured: string[] = []) {
   const picked = rows.filter((row) => featured.includes(row.branch.toUpperCase()));
@@ -371,7 +373,8 @@ export function HomePage() {
   const allDates = [...SOURCES.flatMap((source) => rowsFor(source.key)), ...tumcos].map((row) => row.reporting_date).sort();
   const newest = allDates.at(-1);
   const newestAge = newest ? ageDays(newest, today) : null;
-  const moreToggle = (key: string, total: number) => total > VISIBLE_ROWS && <button type="button" className="rate-more-toggle" aria-expanded={cards[key] === "open"}
+  // A card with nothing more to show says so in the toggle's place, so every card's rows and footer stay level.
+  const moreToggle = (key: string, total: number) => total === 1 ? <p className="rate-more-note">{copy.onlyBranch}</p> : total > VISIBLE_ROWS && <button type="button" className="rate-more-toggle" aria-expanded={cards[key] === "open"}
     onClick={() => toggle(key)}>
     {cards[key] === "open" ? copy.showFewer : copy.showAll(total)}<ChevronDown size={16} aria-hidden="true" /></button>;
   // One line per cooperative from its latest report. Sources stay separate because each works out its average differently.
@@ -495,7 +498,8 @@ export function HomePage() {
             {sourceQueries.some((query) => query.isError) && <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => sourceQueries.filter((query) => query.isError).forEach((query) => void query.refetch())} />}
             {!rows.length && !sourceQueries.some((query) => query.isError) && <p className="rate-empty">{copy.noRows}</p>}
             {rows.length > 0 && <>
-            {latest && breadth.median_percent !== null && <div className="market-breadth" aria-label={copy.marketOn(dateText(latest, language))}>
+            {/* Up/down counts need two or more branches; with one, its own row already shows the change. */}
+            {latest && breadth.median_percent !== null && sameDay.length > 1 && <div className="market-breadth" aria-label={copy.marketOn(dateText(latest, language))}>
               <span className="hold-up"><ArrowUp size={14} aria-hidden="true" /><b>{breadth.up}</b> {copy.up}</span>
               <span className="hold-down"><ArrowDown size={14} aria-hidden="true" /><b>{breadth.down}</b> {copy.down}</span>
               {breadth.flat > 0 && <span><Minus size={14} aria-hidden="true" /><b>{breadth.flat}</b> {copy.flat}</span>}

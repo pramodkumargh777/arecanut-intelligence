@@ -29,7 +29,8 @@
     "promo:30": "bash scripts/promo.sh 30",
     "promo:15": "bash scripts/promo.sh 15",
     "promo:music": "python3 scripts/make-music.py",
-    "encourage": "remotion render src/index.ts Encourage out/keep-going.mp4 --codec h264 --crf 18"
+    "encourage": "remotion render src/index.ts Encourage out/keep-going.mp4 --codec h264 --crf 18",
+    "carousel": "bash scripts/carousel.sh"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

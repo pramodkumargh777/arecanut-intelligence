@@ -1,28 +1,16 @@
-@media (min-width: 1700px) {
-  .page-content { padding: 40px; }
-}
+/*
+ * Layout by screen width. styles.css holds the base (desktop) styles and the media queries that belong to a single
+ * component; this file holds the page-wide breakpoints, in cascade order:
+ *
+ *   max-width 1200 · 1180 · 1100 · 960 (menu becomes a drawer) · 900 · 700   narrowing desktop and tablet
+ *   min-width 641 (tablet and up) · 961 (desktop) · 1700 (wide)                 wider screens only
+ *   max-width 640                                                                phones (usePhone.ts uses the same query)
+ *   max-width 560 · 459 · 380                                                    narrow phones, after the phone rules
+ *
+ * Within a width range the later rule wins, so narrow-phone tweaks follow the phone block they refine.
+ */
 
-/* Desktop only: the collapsed menu keeps its icons, and every name stays available to screen readers and on hover. */
-@media (min-width: 961px) {
-  .sidebar, .main-column { transition: width .2s ease, margin-left .2s ease, padding .2s ease; }
-  .app-shell-collapsed .sidebar { width: 64px; padding: 0 8px; overflow-x: hidden; }
-  .app-shell-collapsed .main-column { margin-left: 64px; }
-  .app-shell-collapsed .brand { justify-content: center; padding: 8px 0; }
-  /* The lockup normally sizes from its container; collapsed, it must size from the icon instead. */
-  .app-shell-collapsed .brand-lockup { flex: none; container-type: normal; }
-  .app-shell-collapsed .brand-collapsed-icon { width: 36px; height: auto; }
-  .app-shell-collapsed .brand-lockup > :not(.brand-collapsed-icon) { display: none; }
-  .app-shell-collapsed .brand-collapsed-icon { display: block; }
-  .app-shell-collapsed .nav-link, .app-shell-collapsed .nav-advanced summary { justify-content: center; padding-left: 0; padding-right: 0; }
-  .app-shell-collapsed .nav-link { min-height: 38px; }
-  .app-shell-collapsed .nav-link > span[lang], .app-shell-collapsed .nav-advanced summary > span {
-    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
-  }
-  .app-shell-collapsed .nav-badge, .app-shell-collapsed .nav-group, .app-shell-collapsed .sidebar-caption { display: none; }
-  .app-shell-collapsed .nav-advanced summary { display: flex; list-style: none; }
-  .app-shell-collapsed .nav-advanced summary::-webkit-details-marker { display: none; }
-  .app-shell-collapsed .nav-advanced-icon { display: block; }
-}
+/* ---- Narrowing desktop and tablet ---------------------------------------------------------------------------- */
 
 @media (max-width: 1200px) {
   .sidebar { width: 216px; }
@@ -43,16 +31,24 @@
   .comparison-row { grid-template-columns: 26px minmax(160px, 1fr) minmax(60px, .7fr) 110px; gap: 12px; }
 }
 
+@media (max-width: 1180px) {
+  .scorecard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1100px) {
+  .chart-grid, .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .content-grid { grid-template-columns: 1fr; }
+}
+
+/* The menu becomes a drawer opened from the top bar. */
 @media (max-width: 960px) {
   .rate-card ul.hold-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .hold-summary > li:nth-last-child(2) { grid-column: auto / span 2; }
   .hold-summary > li:last-child { grid-column: 2 / span 2; }
-  .sidebar { width: 260px; transform: translateX(-100%); visibility: hidden; overflow-y: auto; }
   /* Slides in; on close, visibility waits for the slide to finish so the drawer leaves the tab order only then. */
-  .sidebar { transition: transform .2s ease, visibility 0s linear .2s; }
+  .sidebar { width: 260px; transform: translateX(-100%); visibility: hidden; overflow-y: auto; transition: transform .2s ease, visibility 0s linear .2s; }
   .sidebar-open { transform: none; visibility: visible; transition: transform .2s ease, visibility 0s; }
-  .mobile-scrim { animation: fade-in .2s ease; }
-  .mobile-scrim { display: block; position: fixed; inset: 0; background: rgba(24, 24, 27, .4); border: 0; z-index: 29; }
+  .mobile-scrim { animation: fade-in .2s ease; display: block; position: fixed; inset: 0; background: rgba(24, 24, 27, .4); border: 0; z-index: 29; }
   .mobile-close { display: grid; margin-left: auto; }
   .sidebar-collapse { display: none; }
   .main-column { margin-left: 0; }
@@ -60,6 +56,10 @@
   .topbar-brand { display: flex; }
   .topbar-brand-name { display: inline; }
   .region-pill { display: none; }
+}
+
+@media (max-width: 900px) {
+  .chart-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 700px) {
@@ -70,7 +70,6 @@
   .calculator-grid { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
   .calculator-grid > * { min-width: 0; max-width: 100%; }
   .calculator-grid textarea { width: 100%; min-width: 0; }
-  .example-chip { max-width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; text-align: left; }
   .heading-controls { width: 100%; justify-content: stretch; }
   .heading-controls > *, .source-control { flex: 1 1 100%; width: 100%; }
   .page-content { padding: 24px 18px; }
@@ -95,377 +94,31 @@
   .topbar .language-toggle button { min-height: 0; padding-inline: 11px; }
 }
 
-/* Too narrow for the wordmark beside the menu, language and theme controls: the palm mark alone stands for the brand. */
-@media (max-width: 459px) {
-  .topbar-brand-name { display: none; }
-  .topbar-tools { order: 3; }
-  .page-heading { gap: 16px; }
-  .page-heading > div:first-child { flex-basis: 100%; }
-  .updated-chip { width: 100%; }
-  .snapshot-card { padding: 14px 16px; min-height: 0; }
-  .content-grid { grid-template-columns: 1fr; }
-  .panel { padding: 16px; }
-  .pulse-empty { padding-block: 20px; }
-  .filter-bar { padding: 14px; gap: 12px; }
-  .filter-bar .filter-control { flex: 1 1 100%; max-width: none; }
-  .advanced-filter-fields .filter-control { flex: 1 1 100%; max-width: none; }
-  .filter-bar > span { padding-top: 0; }
-  .filter-control input, .filter-control select, .variety-select select, .period-select select, .token-form input, .month-year select { font-size: 16px; height: 44px; }
-  .period-select { height: 44px; }
-  .variety-select { min-width: 0; width: 100%; }
-  .variety-select select { max-width: none; }
-  .analytics-filters, .compare-heading-tools { width: 100%; }
-  .analytics-filters .variety-select, .compare-heading-tools .variety-select { flex: 1; }
-  .analytics-filters .period-select { flex: 1; }
-  .period-select select { width: 100%; }
-  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .metric-card { padding: 16px; }
-  .metric-card:last-child { grid-column: 1 / -1; }
-  .methodology-note, .quality-banner { padding: 14px; gap: 10px; }
-  .quality-details { grid-template-columns: 1fr; gap: 20px; }
-  .comparison-row { grid-template-columns: 24px minmax(0, 1fr) 100px; gap: 10px; }
-  .comparison-bar-track { display: none; }
-  .comparison-market span { font-size: 11px; }
-  .comparison-price { font-size: 17px; }
-  .comparison-market strong { overflow-wrap: anywhere; }
-  .review-row { flex-direction: column; align-items: stretch; }
-  .review-actions button { flex: 1; }
-  .token-form { padding-top: 26px; gap: 14px; }
-  .token-form input, .token-form .button-primary { grid-column: 1 / -1; width: 100%; }
-  .site-footer-inner { width: calc(100% - 32px); padding: 24px 0 22px; }
-  /* Phones: the panel stacks, its button full width and easy to reach with a thumb. */
-  .footer-report { grid-template-columns: auto minmax(0, 1fr); gap: 14px; padding: 18px; }
-  .footer-report-badge { width: 40px; height: 40px; }
-  .footer-report-text h2 { font-size: 15.5px; }
-  .footer-report-actions { grid-column: 1 / -1; }
-  .footer-report-actions > a { flex: 1 1 0; justify-content: center; }
-  .footer-contact a { min-height: 36px; }
-  .footer-social a { width: 40px; height: 40px; }
-  .footer-grid { grid-template-columns: 1fr 1fr; gap: 26px 20px; padding: 28px 0 24px; }
-  .footer-column:last-child { grid-column: 1 / -1; }
-  .footer-sources { grid-template-columns: 1fr 1fr; gap: 12px 20px !important; }
-  .footer-bottom { justify-content: flex-start; }
-  .button-primary, .button-secondary, .icon-button, .sort-button, .approve-button, .reject-button { min-height: 44px; }
-  .table-scroll { margin-inline: 0; max-width: 100%; padding-inline: 0; }
-  .table-scroll-hint { display: block; margin: 8px 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-  .rate-row { flex-direction: column; align-items: stretch; gap: 8px; }
-  .rate-price { justify-items: start; text-align: left; }
-  .rate-sub { justify-content: flex-start; }
-  .rate-card-head > div { min-width: 0; }
-  th:first-child, td:first-child { max-width: 150px; white-space: normal; min-width: 110px; }
-  caption { padding-left: 12px; }
-  .empty-state { min-height: 220px; padding-inline: 0; }
-}
+/* ---- Tablet and up ------------------------------------------------------------------------------------------- */
 
-@media (max-width: 380px) {
-  .page-content { padding-inline: 14px; }
-  .analytics-filters { align-items: stretch; flex-direction: column; }
-  .comparison-row { grid-template-columns: 20px minmax(0, 1fr) 86px; gap: 8px; }
-  .comparison-price { font-size: 15px; }
-  .breadcrumb { gap: 7px; }
-}
-
-@media (max-width: 1180px) {
-  .scorecard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 1100px) {
-  .chart-grid, .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .content-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 900px) {
-  .chart-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 560px) {
-  .scorecard-grid { grid-template-columns: 1fr; }
-  .fact-list > div { grid-template-columns: 1fr; gap: 2px; }
-  th .sort-button { min-height: 32px; }
-}
-
-@media (max-width: 640px) {
-  /* Phones: a compact top bar, so the rates start higher on the screen. */
-  .topbar { padding: 8px 16px; gap: 8px; }
-  .topbar .icon-button { width: 36px; min-height: 36px; }
-  .topbar .icon-button svg { width: 18px; height: 18px; }
-  .topbar .language-toggle { height: 36px; }
-  .topbar .language-toggle button { padding-inline: 9px; font-size: 12.5px; }
-  .topbar-preferences { gap: 8px; }
-  .topbar-brand-mark { width: 30px; height: 24px; }
-  .topbar .market-tools-toggle { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
-  .page-content { padding: 18px 16px 24px; }
-  .page-stack.home { gap: 16px; }
-  .home-hero { gap: 10px; }
-  .home-hero h1 { margin-bottom: 4px; }
-  .home-hero p { font-size: 13.5px; line-height: 1.5; }
-  /* The report date stays on one line; on the narrowest phones the label gives way, never the date. */
-  .home-hero > * { min-width: 0; max-width: 100%; }
-  .home-date-pill { max-width: 100%; padding: 6px 9px; gap: 5px; font-size: 12px !important; white-space: nowrap; overflow: hidden; }
-  /* Clipping for the ellipsis also clips vertically, and Kannada conjuncts (ನ್ನೆ in ನಿನ್ನೆ) reach well below the
-     baseline, so the line is given room for them: a taller line box, and a little padding inside the clip. */
-  .home-date-pill { line-height: 1.8; }
-  .home-date-pill > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 2px; }
-  /* The import figure sits under its heading, left-aligned, rather than floating at the right edge. */
-  .imports-figure { justify-items: start; text-align: left; }
-  /* One dropdown beside its label instead of the picture pills, which would take two rows. */
-  .home-variety { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; }
-  .variety-cards { display: none; }
-  .variety-phone { display: block; }
-  .home-price-section .home-section-heading { display: grid; gap: 3px; }
-  .rate-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .rate-card-foot a, .rate-share { min-height: 44px; }
-  .rate-list, .skeleton-rows { padding-left: 14px; padding-right: 14px; }
-  .glance-head, .glance-tile { padding-left: 16px; padding-right: 16px; }
-  .glance-range { font-size: 24px; }
-  .rate-card-head, .market-breadth, .rate-card-foot { padding-left: 14px; padding-right: 14px; }
-  .rate-row-top::before { left: -14px; }
-  .home-actions { grid-template-columns: 1fr 1fr; }
-  .home-actions a { padding: 12px; column-gap: 6px; }
-  .home-actions strong { font-size: 15px; line-height: 1.35; }
-  .home-actions span { display: none; }
-}
-
-/* ---- Type: one Kannada font everywhere --------------------------------------------------------------------------
- * Kannada gets one bundled variable font instead of whatever each device ships, so it looks the same on phones, Macs
- * and Windows (whose Nirmala UI is wider and taller, and wrapped labels and cards that fit elsewhere), and the
- * in-between weights (450, 550, 650) render as designed. Its unicode-range keeps English pages from downloading it.
- */
-@font-face {
-  font-family: "Areca Kannada";
-  src: url("@fontsource-variable/noto-sans-kannada/files/noto-sans-kannada-kannada-wght-normal.woff2") format("woff2-variations");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0C80-0CF3, U+200C-200D, U+25CC;
-}
-:root { font-family: "Inter Variable", Inter, "Areca Kannada", "Noto Sans Kannada", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-
-/* One type scale on phones: 12.5 (labels) · 13.5 (secondary) · 15 (body) · 17 (card titles) · 19 (sections) · 24 (page
- * titles), plus the price figures. Nothing is smaller than 12.5px, because Kannada is hard to read below that on a phone. */
-@media (max-width: 640px) {
-  :root { --text-page-title: 24px; --text-section-title: 19px; --text-subheading: 17px; --text-key-number: 24px; }
-  body { font-size: 15px; }
-
-  /* Labels, chips, table headers and small print. */
-  .about-data > summary::after, .card-kicker, .method-chip, .pulse-badge, .nav-badge, .source-label-key, .source-tag, .status-pill, small,
-  .chart-stats dt, .footer-column h2, .metric-card > span, .metric-strip span, .rate-label, .rate-top-mark, td details > summary,
-  .chart-meta, .commodity-select, .comparison-count, .comparison-market span, .feature-foot, .filter-control, .variety-select, .filter-label,
-  .footer-disclaimer, .footer-sources small, .glance-source, .market-suggestion-detail, .nav-group, .price-chart-caption, .pulse-rule, .rank,
-  .review-evidence pre, .review-meta, .review-prices, .score-head, .sidebar-caption small, .single-observation span, .snapshot-value small,
-  .source-label, .source-status-card strong span, .updated-chip, .workspace-sections legend, caption, th, .breadcrumb { font-size: 12.5px; }
-  .footer-logo-descriptor { font-size: 11px; }
-
-  /* Secondary text: dates, notes, card footers and links. */
-  .card-hint, .market-name, .change-line, .chart-data summary, .data-disclosure, .filter-bar > span, .footer-bottom, .glance-branches,
-  .glance-date, .glance-head p, .glance-trend, .pagination, .panel-heading p, .panel-note, .rate-card-basis, .rate-card-sub, .rate-meta,
-  .rate-source, .rate-sub, .review-details > strong span, .score-detail, .scorecard-heading p, .section-heading p, .single-observation div p,
-  .snapshot-card > p, .source-status-card, .source-status-limitations, .subtle-link, .inline-action, .panel-bottom-link, .token-copy span,
-  .about-data, .advanced-filters summary, .chart-empty p, .check-list li, .check-option, .empty-state > div, .fact-list > div, .filter-context,
-  .footer-made, .forecast-estimate span, .glance-range small, .home-price-section .home-section-heading p, .home-variety-label, .market-breadth,
-  .methodology-note p, .quality-banner p, .module-navigation a, .page-meta, .pulse-empty p, .quality-details p, .rate-card-foot, .rate-more-toggle,
-  .review-message, .review-prices b, .single-observation > p, .source-status-card strong, .state-card, .table-empty, .comparison-market strong,
-  .footer-report-text p, .home-sections, .methodology-note strong, .quality-banner strong, .monthly-details, .quality-details strong,
-  .rate-caption, .review-details > strong, .token-copy strong, .rate-share, td, .home table { font-size: 13.5px; }
-
-  /* Body text and names. */
-  .chart-empty strong, .empty-state strong, .footer-column a, .footer-sources li, .footer-tagline, .footer-whatsapp strong, .footer-email strong, .footer-contact a,
-  .home .filter-control span, .home-actions span, .home-heading .home-latest, .home-heading p, .home-hero p, .home-note, .home-section-heading p,
-  .market-suggestion-name, .page-heading p, .sidebar-caption p, .hold-summary dl > div, .glance-head h2, .pulse-empty strong, .rate-place strong { font-size: 15px; }
-
-  /* Card titles. */
-  .hold-summary h3, .home-actions strong, .footer-report-text h2, .rate-card-head h3 { font-size: 17px; }
-  .home-actions strong { line-height: 1.4; }
-
-  /* Figures. */
-  .chart-stats dd, .hold-summary .hold-key-value, .snapshot-date, .metric-strip strong, .snapshot-grid-even .snapshot-value { font-size: 22px; }
-  .metric-card strong, .single-observation strong, .comparison-count strong, .score-value { font-size: 24px; }
-
-  /* Every text box at 16px, so iPhones do not zoom in when one is tapped. */
-  input, select, textarea, .filter-control input, .filter-control select, .filter-control textarea, .search-field input, .period-select select { font-size: 16px; }
-
-  /* Kannada: no tracking (it pulls letters apart or squeezes conjuncts) and taller lines for vowel signs above and below. */
-  :lang(kn) { letter-spacing: 0 !important; }
-  :lang(kn) :is(h1, h2, h3, .snapshot-value) { line-height: 1.4; }
-
-  /* Menu: full-size rows that are easy to tap. */
-  .nav-link { min-height: 44px; padding: 8px 10px; font-size: 15px; gap: 12px; }
-  .nav-advanced summary { min-height: 44px; font-size: 15px; }
-
-  /* Small links get enough height to tap. */
-  .home-sections a { display: inline-flex; align-items: center; min-height: 36px; }
-  .footer-column ul { gap: 2px; }
-  .footer-column a { display: inline-flex; align-items: center; min-height: 36px; }
-  .glance-source { padding-block: 5px; }
-}
-
-/* Phones: less repetition. Dates, units, variety labels and source warnings always stay; only text said elsewhere goes. */
-@media (max-width: 640px) {
-  /* Home: the title, date pill and glance tiles carry what these notes repeat. */
-  .home-hero > div > p, .glance-head p, .home-sections, .home-section-heading p, .rate-card-latest, .home .market-breadth, .rate-label-source { display: none; }
-  .topbar-home .breadcrumb { display: none; }
-  /* Footer: the menu already lists every page. */
-  .footer-column { display: none; }
-  .footer-grid { grid-template-columns: 1fr; padding: 24px 0 20px; }
-  /* Prices: every row passed the same checks from the same source, so those columns go; a failed check shows under the market. */
-  .page-intro, .col-quality, .col-source { display: none; }
-  /* Explanatory captions and footnotes: the heading and the numbers say enough on a small screen. Dates, units and
-     source basis lines (.page-meta) are not marked, so they stay. */
-  .phone-hide, .snapshot-card > p, .page-heading > div:first-child > p:not(.page-meta), .panel-heading p, .price-chart-caption { display: none; }
-  /* Long status pills (often Kannada) wrap inside their card instead of running past its edge. */
-  .status-pill { max-width: 100%; white-space: normal; line-height: 1.45; padding: 3px 9px; border-radius: 12px; }
-  /* A panel title and its one filter; the filter's label stays for screen readers only. */
-  /* A short title keeps the filter beside it; a long one pushes the filter onto its own full-width row. */
-  .panel-heading:has(> .filter-control) { flex-wrap: wrap; align-items: center; }
-  .panel-heading:has(> .filter-control) > div { flex: 0 1 auto; min-width: 0; }
-  .panel-heading:has(> .filter-control) h2 { overflow-wrap: normal; }
-  .panel-heading > .filter-control { flex: 1 1 150px; min-width: 150px; }
-  .panel-heading > .filter-control > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  /* Stat cards two to a row: each holds one short figure, so a full row each wasted most of the screen. An odd last card
-     takes the whole row. */
-  .snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .snapshot-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
-  .snapshot-grid > :last-child:nth-child(odd) .snapshot-value { margin-top: 0; }
-  /* A panel's title and its one action (such as an export) share a row. The title never gets less than 10em, so a long
-     Kannada title wraps by word instead of letter; if the action cannot fit beside that, it drops to its own row. */
-  .panel-heading:has(> .button-secondary) { flex-wrap: wrap; align-items: center; }
-  .panel-heading:has(> .button-secondary) > div { flex: 1 1 10em; min-width: 0; }
-  .panel-heading:has(> .button-secondary) h2 { overflow-wrap: normal; }
-  .panel-heading > .button-secondary { flex: none; min-height: 40px; height: auto; padding: 6px 12px; font-size: 13.5px; }
-  /* CSV downloads shrink to an icon and "CSV"; the full label stays for screen readers and as a tooltip. */
-  .export-label { display: none; }
-  .export-short { display: inline; }
-  .phone-only { display: block; }
-  /* Long dates and times in stat cards at body size, so a card is not three lines taller than its neighbour. */
-  .snapshot-card .snapshot-value.snapshot-date { font-size: 15px; line-height: 1.35; }
-  /* Section tabs on one row, sharing the width equally; a very narrow screen scrolls them sideways instead of wrapping. */
-  .module-navigation { flex-wrap: nowrap; width: 100%; overflow-x: auto; scrollbar-width: none; }
-  .module-navigation::-webkit-scrollbar { display: none; }
-  .module-navigation a { flex: 1 0 auto; padding: 6px 8px; text-align: center; white-space: nowrap; text-decoration: none; }
-  /* Weather dates stay on one line; the table scrolls sideways instead. */
-  caption.weather-caption ~ tbody td:first-child { max-width: none; white-space: nowrap; }
-  /* Chart figures three to a row: five figures take two rows instead of three. */
-  .chart-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
-  .chart-stats dd { font-size: 18px; }
-  /* Source tables: a row names its publisher and archived copy on one line. The fetch time is in the stat card above,
-     and the period or publication date has its own column. */
-  .evidence-column { min-width: 0; white-space: nowrap; }
-  .evidence-column .quote-fetch { display: none; }
-  /* A release title gets a readable width instead of a word per line; the table scrolls sideways for the rest. */
-  td.bulletin-title { min-width: 230px; max-width: none; }
-  /* Short summary figures under a chart: the label and its value share one line. */
-  .fact-list.compact > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-  .fact-list.compact dd { text-align: right; white-space: nowrap; }
-  /* The weather caption is a note above the table, so it wraps to the screen instead of running off with the table. */
-  caption.weather-caption { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .snapshot-card { padding: 12px 14px; }
-  .snapshot-card .snapshot-value, .snapshot-grid-even .snapshot-value { font-size: 19px; margin-top: 6px; }
-  .row-warnings { display: flex; margin-top: 4px; }
-  /* Sell or wait: folded cost inputs and year table. */
-}
-
-/* Phones: the two filter actions sit side by side as a matched pair. */
-@media (max-width: 640px) {
-  .filter-bar > .button-secondary, .filter-bar > .advanced-filters { flex: 1 1 calc(50% - 6px); min-width: 0; }
-  .filter-bar > .advanced-filters[open] { flex-basis: 100%; }
-  .filter-bar > .button-secondary, .filter-bar > .advanced-filters > summary { justify-content: center; width: 100%; height: 44px; min-height: 44px; padding: 0 12px;
-    font-size: 13.5px; font-weight: 600; border-radius: var(--radius-sm); text-align: center; }
-}
-
-/* ---- Phones: home page ------------------------------------------------------------------------------------------
- * A calmer, denser layout: a plain status line under the title, a price board with one rhythm per tile, and branch
- * rows that read left to right (place and date on the left, price on the right) instead of four stacked lines.
- */
-@media (max-width: 640px) {
-  .home-hero { gap: 6px; }
-  .home-hero h1 { margin: 0; }
-  .home-date-pill { padding: 0; border: 0; background: none; box-shadow: none; }
-
-  .home-variety { padding: 4px 0 2px; }
-
-  /* Price board. */
-  .glance { border-radius: 16px; }
-  .glance-head { flex-wrap: nowrap; align-items: center; padding: 8px 8px 8px 16px; background: none; }
-  .glance-share { display: inline-flex; margin-left: auto; }
-  .glance-share .rate-share { min-height: 40px; margin: 0; padding: 0 8px; }
-  .glance-head h2 { font-size: 13.5px; font-weight: 600; color: var(--muted); }
-  /* Each tile is three tight lines: source and date, the range, then unit and branches with the trend at the right.
-     The trend drops under them only when the row is too narrow, as with a long Kannada label. */
-  .glance-tile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 16px 14px; }
-  .glance-tile-top, .glance-range { flex: 1 1 100%; }
-  .glance-source { padding: 2px 8px; padding-block: 2px; font-size: 11px; letter-spacing: .05em; }
-  .glance-date { font-size: 12.5px; }
-  .glance-range { flex-wrap: nowrap; gap: 0 8px; font-size: 24px; white-space: nowrap; }
-  .glance-range small, .glance-branches { display: none; }
-  .glance-sub { display: block; flex: 1 1 auto; margin: 0; font-size: 13px; color: var(--muted); }
-  .glance-tile-foot { flex: 0 0 auto; margin-left: auto; }
-  .glance-trend { padding: 3px 9px; font-size: 12px; }
-
-  /* Branch rows: two columns. */
-  .rate-card { border-radius: 16px; }
-  .rate-row { flex-direction: row; align-items: flex-start; gap: 12px; padding-block: 14px; }
-  .rate-place { flex: 1 1 auto; min-width: 0; }
-  .rate-place strong { font-size: 15.5px; }
-  /* Date on one line; age and variety label on the next, each kept whole. */
-  .rate-meta { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 3px; white-space: nowrap; }
-  .rate-date { display: contents; }
-  .rate-age::before { content: none; }
-  .rate-date-old .rate-age { color: inherit; }
-  /* Shortcuts below the rates, one per row. */
-  .home-actions { grid-template-columns: 1fr; gap: 10px; }
-  .home-actions a { padding: 14px 16px; }
-  .rate-price { flex: none; display: grid; justify-items: end; gap: 3px; text-align: right; }
-  .rate-price > strong { font-size: 20px; line-height: 1.2; }
-  .rate-sub { display: grid; justify-items: end; gap: 2px; }
-  .rate-row-top::before { left: -14px; }
-  .rate-card-head h3 { font-size: 17px; }
-  /* Cooperative cards drop their header: each row names the source, the price key sits under the range and the source
-     link moves to the footer. The heading stays for screen readers and as the target of the summary's links. */
-  .rate-card-coop { position: relative; }
-  .rate-card-coop .rate-card-head { position: absolute; top: 0; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
-  .rate-card-coop .rate-row:first-child { border-top: 0; }
-  .rate-source-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; background: var(--brand-tint); color: var(--brand); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; line-height: 1.5; }
-  .rate-key { display: block; color: var(--subtle); font-size: 11.5px; line-height: 1.35; white-space: nowrap; }
-  .rate-card-note { display: block; margin: 0; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.45; }
-  .rate-foot-source { display: inline-flex; color: var(--muted) !important; font-weight: 500 !important; }
-  /* TUMCOS's own line already says per quintal and unit assumed. */
-  #rates-tumcos ~ .rate-card-basis { display: none; }
-}
-
-/* Desktop: page intros and panel notes use the full content width, so most read as one line instead of wrapping early. */
-@media (min-width: 961px) {
-  .page-heading p, .home-heading p, .home-hero p, .panel-heading p, .section-heading p, .methodology-note p, .quality-banner p { max-width: none; }
-}
-
-/* ---- Desktop and tablet: home page ------------------------------------------------------------------------------
- * The same parts, packed tighter: the variety label sits beside its pills, the price board and card headers lose spare
- * padding, and a card's basis and report date share one line. Nothing is hidden here; phones have their own rules.
- */
 @media (min-width: 641px) {
+  /* Home: the same parts as on phones, packed tighter. The variety label sits beside its pills, the price board and
+     card headers lose spare padding, and a card's basis and report date share one line. Nothing is hidden here. */
   .page-stack.home { gap: 12px; }
   .home-hero { align-items: center; padding-bottom: 0; }
   .home-hero h1 { margin-bottom: 2px; }
   .home-variety { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; }
-
-  .glance-head { padding: 10px 20px; }
-  .glance-tile { gap: 10px; padding: 14px 20px 16px; }
-
   .home-price-section { gap: 10px; }
   .rate-card-head { align-items: center; padding: 11px 18px 10px; }
   .rate-card-head > div { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0; }
   .rate-card-head h3 { flex: 1 1 100%; }
   .rate-card-head .rate-card-basis, .rate-card-head .rate-card-sub { margin-top: 2px; }
-  .rate-card-head .rate-card-basis + .rate-card-sub::before { content: "·"; margin: 0 8px; color: var(--subtle); }
+  /* The "·" sits in the gap after the basis line. When the report date wraps to a line of its own, its dot falls
+     outside the left edge and is clipped, instead of starting the line. */
+  .rate-card-head > div { overflow-x: clip; }
+  .rate-card-head .rate-card-basis { margin-right: 18px; }
+  .rate-card-head .rate-card-basis + .rate-card-sub::before { content: "·"; display: inline-block; width: 18px; margin-left: -18px; text-align: center; color: var(--subtle); }
   .rate-row { padding-block: 10px; }
-  .rate-more-toggle { padding-block: 7px; }
+  .rate-more-toggle, .rate-more-note { padding-block: 7px; }
   .rate-card-foot { padding-block: 2px; }
-  .rate-card-foot a { min-height: 36px; }
 
-  .home-actions a { padding: 11px 16px; }
-}
-
-/* ---- Desktop and tablet: market intelligence --------------------------------------------------------------------
- * Same parts, packed tighter: the section tabs and "About this data" share a row, stat figures fit on one line and the
- * filter bar and source column lose spare height. Phones keep their own rules above.
- */
-@media (min-width: 641px) {
+  /* Market intelligence: the section tabs and "About this data" share a row, stat figures fit on one line, and the
+     filter bar and source column lose spare height. */
   .intelligence-page { gap: 12px; }
   .intelligence-page .page-heading h1 { margin-bottom: 2px; }
   .intelligence-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
@@ -481,42 +134,300 @@
   .intelligence-page .evidence-column .quote-fetch { display: inline; }
   .intelligence-page .evidence-column .evidence-fetched::before { content: ""; display: block; }
   .intelligence-page .evidence-column .evidence-fetched + .quote-fetch::before { content: " · "; }
+
+  /* Price outlook: the variety picker gets its own line under the heading (phones keep it beside the title). */
+  .page-heading-picker > .fx-toolbar { flex-basis: 100%; }
 }
 
-/* Phones: market intelligence filters, the two dropdowns side by side with the reset button under them. */
-@media (max-width: 640px) {
-  .intelligence-page .filter-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
-  .intelligence-page .filter-bar > .filter-control { min-width: 0; }
-  .intelligence-page .filter-bar select { min-width: 0; width: 100%; text-overflow: ellipsis; }
-  .intelligence-page .filter-bar > button { grid-column: 1 / -1; min-height: 40px; }
+/* Desktop only: the collapsed menu keeps its icons, and every name stays available to screen readers and on hover. */
+@media (min-width: 961px) {
+  .sidebar, .main-column { transition: width .2s ease, margin-left .2s ease, padding .2s ease; }
+  .app-shell-collapsed .sidebar { width: 64px; padding: 0 8px; overflow-x: hidden; }
+  .app-shell-collapsed .main-column { margin-left: 64px; }
+  .app-shell-collapsed .brand { justify-content: center; padding: 8px 0; }
+  /* The lockup normally sizes from its container; collapsed, it must size from the icon instead. */
+  .app-shell-collapsed .brand-lockup { flex: none; container-type: normal; }
+  .app-shell-collapsed .brand-collapsed-icon { width: 36px; height: auto; display: block; }
+  .app-shell-collapsed .brand-lockup > :not(.brand-collapsed-icon) { display: none; }
+  .app-shell-collapsed .nav-link, .app-shell-collapsed .nav-advanced summary { justify-content: center; padding-left: 0; padding-right: 0; }
+  .app-shell-collapsed .nav-link { min-height: 38px; }
+  .app-shell-collapsed .nav-link > span[lang], .app-shell-collapsed .nav-advanced summary > span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .app-shell-collapsed .nav-badge, .app-shell-collapsed .nav-group, .app-shell-collapsed .sidebar-caption { display: none; }
+  .app-shell-collapsed .nav-advanced summary { display: flex; list-style: none; }
+  .app-shell-collapsed .nav-advanced summary::-webkit-details-marker { display: none; }
+  .app-shell-collapsed .nav-advanced-icon { display: block; }
+  /* Page intros and panel notes use the full content width, so most read as one line instead of wrapping early. */
+  .page-heading p, .home-heading p, .home-hero p, .panel-heading p, .section-heading p, .methodology-note p, .quality-banner p { max-width: none; }
 }
 
-/* Phones: the growth table's year and three figures fit the screen without sideways scrolling. */
+@media (min-width: 1700px) {
+  .page-content { padding: 40px; }
+}
+
+/* ---- Phones -------------------------------------------------------------------------------------------------- */
+
 @media (max-width: 640px) {
+  /* Type: one scale on phones. 12.5 (labels) · 13.5 (secondary) · 15 (body) · 17 (card titles) · 19 (sections) · 24
+     (page titles), plus the price figures. Nothing is smaller than 12.5px, because Kannada is hard to read below that
+     on a phone. Components that need another size set it in their own section below. */
+  :root { --text-page-title: 24px; --text-section-title: 19px; --text-subheading: 17px; --text-key-number: 24px; }
+  body { font-size: 15px; }
+
+  /* Labels, chips, table headers and small print. */
+  .about-data > summary::after, .card-kicker, .method-chip, .pulse-badge, .nav-badge, .source-label-key, .source-tag, .status-pill, small,
+  .chart-stats dt, .metric-card > span, .metric-strip span, .rate-label, .rate-top-mark, td details > summary,
+  .chart-meta, .commodity-select, .comparison-count, .comparison-market span, .feature-foot, .filter-control, .variety-select,
+  .market-suggestion-detail, .nav-group, .price-chart-caption, .pulse-rule, .rank,
+  .review-evidence pre, .review-meta, .review-prices, .score-head, .sidebar-caption small, .single-observation span, .snapshot-value small,
+  .source-label, .source-status-card strong span, .updated-chip, .workspace-sections legend, caption, th, .breadcrumb { font-size: 12.5px; }
+  .footer-logo-descriptor { font-size: 11px; }
+
+  /* Secondary text: dates, notes, card footers and links. */
+  .card-hint, .market-name, .change-line, .chart-data summary, .data-disclosure, .filter-bar > span, .glance-branches,
+  .glance-head p, .pagination, .panel-heading p, .panel-note, .rate-card-basis, .rate-card-sub, .rate-meta,
+  .rate-source, .rate-sub, .review-details > strong span, .score-detail, .scorecard-heading p, .section-heading p, .single-observation div p,
+  .snapshot-card > p, .source-status-card, .source-status-limitations, .subtle-link, .inline-action, .panel-bottom-link, .token-copy span,
+  .about-data, .advanced-filters summary, .chart-empty p, .check-list li, .check-option, .empty-state > div, .fact-list > div, .filter-context,
+  .footer-made, .forecast-estimate span, .glance-range small, .home-price-section .home-section-heading p, .home-variety-label, .market-breadth,
+  .methodology-note p, .quality-banner p, .module-navigation a, .page-meta, .pulse-empty p, .quality-details p, .rate-card-foot, .rate-more-toggle,
+  .review-message, .review-prices b, .single-observation > p, .source-status-card strong, .state-card, .table-empty, .comparison-market strong,
+  .footer-report-text p, .home-sections, .methodology-note strong, .quality-banner strong, .monthly-details, .quality-details strong,
+  .rate-caption, .review-details > strong, .token-copy strong, .rate-share, td, .home table { font-size: 13.5px; }
+
+  /* Body text and names. */
+  .chart-empty strong, .empty-state strong, .footer-tagline, .footer-whatsapp strong, .footer-email strong, .footer-contact a,
+  .home .filter-control span, .home-actions span, .home-heading p, .home-note, .home-section-heading p,
+  .market-suggestion-name, .page-heading p, .sidebar-caption p, .hold-summary dl > div, .pulse-empty strong { font-size: 15px; }
+
+  /* Card titles. */
+  .hold-summary h3, .home-actions strong, .footer-report-text h2 { font-size: 17px; }
+
+  /* Figures. */
+  .snapshot-date, .metric-strip strong { font-size: 22px; }
+  .metric-card strong, .single-observation strong, .comparison-count strong, .score-value { font-size: 24px; }
+
+  /* Every text box at 16px, so iPhones do not zoom in when one is tapped. */
+  input, select, textarea, .filter-control input, .filter-control select, .filter-control textarea, .search-field input, .period-select select { font-size: 16px; }
+
+  /* Kannada: no tracking (it pulls letters apart or squeezes conjuncts) and taller lines for vowel signs above and below.
+     !important because letter-spacing is set on dozens of components, and none of it suits Kannada on a phone. */
+  :lang(kn) { letter-spacing: 0 !important; }
+  :lang(kn) :is(h1, h2, h3, .snapshot-value) { line-height: 1.4; }
+
+  /* Top bar: compact, so the rates start higher on the screen. */
+  .topbar { padding: 8px 16px; gap: 8px; }
+  .topbar .icon-button { width: 36px; min-height: 36px; }
+  .topbar .icon-button svg { width: 18px; height: 18px; }
+  .topbar .language-toggle { height: 36px; }
+  .topbar .language-toggle button { padding-inline: 9px; font-size: 12.5px; }
+  .topbar-preferences { gap: 8px; }
+  .topbar-brand-mark { width: 30px; height: 24px; }
+  .topbar .market-tools-toggle { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
+  .topbar-home .breadcrumb { display: none; }
+  .page-content { padding: 18px 16px 24px; }
+
+  /* Menu: full-size rows that are easy to tap. */
+  .nav-link { min-height: 44px; padding: 8px 10px; font-size: 15px; gap: 12px; }
+  .nav-advanced summary { min-height: 44px; font-size: 15px; }
+
+  /* Less repetition: dates, units, variety labels and source warnings always stay; only text said elsewhere goes.
+     Explanatory captions go too: the heading and the numbers say enough on a small screen. Source basis lines
+     (.page-meta) are not marked, so they stay. */
+  .page-intro, .phone-hide, .snapshot-card > p, .page-heading > div:first-child > p:not(.page-meta), .panel-heading p, .price-chart-caption { display: none; }
+  /* Prices: every row passed the same checks from the same source, so those columns go; a failed check shows under the market. */
+  .col-quality, .col-source { display: none; }
+  .row-warnings { display: flex; margin-top: 4px; }
+  .phone-only { display: block; }
+  /* A label with a shorter phone version (.label-short, styles.css): the full one is hidden visually only, so screen
+     readers still read it. */
+  .label-full { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .label-short { display: inline; }
+  /* Long status pills (often Kannada) wrap inside their card instead of running past its edge. */
+  .status-pill { max-width: 100%; white-space: normal; line-height: 1.45; padding: 3px 9px; border-radius: 12px; }
+
+  /* Panel headings. A title and its one filter: a short title keeps the filter beside it, a long one pushes the filter
+     onto its own full-width row; the filter's label stays for screen readers only. */
+  .panel-heading:has(> .filter-control) { flex-wrap: wrap; align-items: center; }
+  .panel-heading:has(> .filter-control) > div { flex: 0 1 auto; min-width: 0; }
+  .panel-heading:has(> .filter-control) h2 { overflow-wrap: normal; }
+  .panel-heading > .filter-control { flex: 1 1 150px; min-width: 150px; }
+  .panel-heading > .filter-control > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* A title and its one action (such as an export) share a row. The title never gets less than 10em, so a long Kannada
+     title wraps by word instead of letter; if the action cannot fit beside that, it drops to its own row. */
+  .panel-heading:has(> .button-secondary) { flex-wrap: wrap; align-items: center; }
+  .panel-heading:has(> .button-secondary) > div { flex: 1 1 10em; min-width: 0; }
+  .panel-heading:has(> .button-secondary) h2 { overflow-wrap: normal; }
+  .panel-heading > .button-secondary { flex: none; min-height: 40px; height: auto; padding: 6px 12px; font-size: 13.5px; }
+  /* CSV downloads shrink to an icon and "CSV"; the full label stays for screen readers and as a tooltip. */
+  .export-label { display: none; }
+  .export-short { display: inline; }
+
+  /* Filter bars: the two actions sit side by side as a matched pair. */
+  .filter-bar > .button-secondary, .filter-bar > .advanced-filters { flex: 1 1 calc(50% - 6px); min-width: 0; }
+  .filter-bar > .advanced-filters[open] { flex-basis: 100%; }
+  .filter-bar > .button-secondary, .filter-bar > .advanced-filters > summary { justify-content: center; width: 100%; height: 44px; min-height: 44px; padding: 0 12px;
+    font-size: 13.5px; font-weight: 600; border-radius: var(--radius-sm); text-align: center; }
+
+  /* Stat cards two to a row: each holds one short figure, so a full row each wasted most of the screen. An odd last card
+     takes the whole row, as does the headline price card, so the two that remain (highest and lowest) pair up. */
+  .snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .snapshot-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+  .snapshot-grid > :last-child:nth-child(odd) .snapshot-value { margin-top: 0; }
+  .snapshot-card { padding: 12px 14px; }
+  .snapshot-card .snapshot-value, .snapshot-grid-even .snapshot-value { font-size: 19px; margin-top: 6px; }
+  /* Long dates and times in stat cards at body size, so a card is not three lines taller than its neighbour. */
+  .snapshot-card .snapshot-value.snapshot-date { font-size: 15px; line-height: 1.35; }
+  .snapshot-grid > .featured-card { grid-column: 1 / -1; }
+  /* A stat with a short value (a count, a place, a fetch time) is one full-width row, label left and value right,
+     instead of a half-width card stretched to match a taller neighbour. It must stay after the "last odd card" rule
+     above, which has the same specificity. */
+  .snapshot-grid > .snapshot-card.snapshot-row { grid-column: 1 / -1; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding-block: 12px; }
+  .snapshot-grid > .snapshot-card.snapshot-row .card-kicker { flex: 1 1 auto; min-width: 0; margin: 0; }
+  .snapshot-grid > .snapshot-card.snapshot-row .snapshot-value { flex: none; margin: 0; font-size: 20px; line-height: 1.3; text-align: right; white-space: nowrap; }
+  /* The fetch time shows its date only (the exact time stays for screen readers and on wider screens). */
+  .snapshot-grid > .snapshot-card.snapshot-row .snapshot-value.snapshot-date { font-size: 15px; }
+  .snapshot-grid > .snapshot-row > :not(.card-kicker):not(.snapshot-value) { flex-basis: 100%; }
+
+  /* Charts: figures three to a row (five take two rows instead of three); a short summary's label and value share a line. */
+  .chart-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+  .chart-stats dd { font-size: 18px; }
+  .fact-list.compact > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .fact-list.compact dd { text-align: right; white-space: nowrap; }
+
+  /* Section tabs on one row, sharing the width equally; a very narrow screen scrolls them sideways instead of wrapping. */
+  .module-navigation { flex-wrap: nowrap; width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .module-navigation::-webkit-scrollbar { display: none; }
+  .module-navigation a { flex: 1 0 auto; padding: 6px 8px; text-align: center; white-space: nowrap; text-decoration: none; }
+
+  /* Tables. */
+  /* Source tables: a row names its publisher and archived copy on one line. The fetch time is in the stat card above,
+     and the period or publication date has its own column. */
+  .evidence-column { min-width: 0; white-space: nowrap; }
+  .evidence-column .quote-fetch { display: none; }
+  /* A release title gets a readable width instead of a word per line; the table scrolls sideways for the rest.
+     "tr >" outranks the narrow-phone first-column rule below. */
+  tr > td.bulletin-title { min-width: 230px; max-width: none; }
+  /* Weather: the caption is a note for screen readers, and dates stay on one line while the table scrolls sideways. */
+  caption.weather-caption { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  caption.weather-caption ~ tbody td:first-child { max-width: none; white-space: nowrap; }
+  /* Growth: the year and three figures fit the screen without sideways scrolling. */
   .growth-table { min-width: 0; width: 100%; }
   .growth-table th, .growth-table td { padding-inline: 5px; font-size: 13px; }
   .growth-table th:first-child, .growth-table td:first-child { min-width: 0; padding-left: 8px; }
   .growth-table th[scope="row"] { padding-right: 4px; }
   .growth-table tfoot th[scope="row"] { white-space: normal; max-width: 96px; line-height: 1.35; }
-}
+  /* Daily aggregates: the short period ("2–8 Nov") stays on one line. */
+  .aggregate-table td:first-child, .aggregate-table tr > th { white-space: nowrap; }
+  /* Branch coverage: branch and price side by side, the reporting date under the price ("Latest date" when current).
+     The separate date and status columns, which say the same thing, step aside. */
+  .coverage-table { table-layout: auto; width: 100%; min-width: 0; }
+  .coverage-table th:nth-child(2), .coverage-table td:nth-child(2), .coverage-table th:nth-child(4), .coverage-table td:nth-child(4) { display: none; }
+  .coverage-table th:nth-child(1), .coverage-table th:nth-child(3) { width: auto; }
+  .coverage-date-sub { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 400; color: var(--muted); }
 
-/* A label with a shorter phone version: the full words where they fit, the short ones on phones. Screen readers
-   always read the full label (the short copy is aria-hidden), so on phones the full one is only hidden visually. */
-.label-short { display: none; }
-@media (max-width: 640px) {
-  .label-full { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-  .label-short { display: inline; }
-}
+  /* Market intelligence filters: the two dropdowns side by side with the reset button under them. */
+  .intelligence-page .filter-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
+  .intelligence-page .filter-bar > .filter-control { min-width: 0; }
+  .intelligence-page .filter-bar select { min-width: 0; width: 100%; text-overflow: ellipsis; }
+  .intelligence-page .filter-bar > button { grid-column: 1 / -1; min-height: 40px; }
 
-/* Sell or wait chart on phones: the shaded zone explains itself beside the cost line, so its legend item goes. */
-@media (max-width: 640px) {
-  .hold-key-zone-item { display: none !important; }
-}
+  /* Price outlook: the variety picker shares the title's row. The word "Variety" is read out but not shown; the chosen
+     name and chevron say enough at a glance. Compounded with .page-heading so it outranks the narrow-phone
+     .page-heading rules below. */
+  .page-heading.page-heading-picker { flex-wrap: nowrap; align-items: center; gap: 12px; }
+  .page-heading.page-heading-picker > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .page-heading-picker h1 { margin: 0; }
+  .page-heading-picker > .fx-toolbar { flex: none; display: block; }
+  .page-heading-picker .fx-select > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .page-heading-picker .fx-select { padding-left: 4px; }
 
-/* Phone footer: one compact block. The WhatsApp button carries its own icon, so the badge goes, and it is the card's
-   only button, full width: growers report on WhatsApp, and the email address is spelled out under the brand.
-   The social icons share the logo's row. */
-@media (max-width: 640px) {
+  /* Sell or wait chart: the shaded zone explains itself beside the cost line, so its legend item goes. */
+  .hold-chart-legend .hold-key-zone-item { display: none; }
+
+  /* Home. A calmer, denser layout: a plain status line under the title, a price board with one rhythm per tile, and
+     branch rows that read left to right (place and date on the left, price on the right). The title, date line and
+     glance tiles carry what the hidden notes repeat. */
+  .page-stack.home { gap: 16px; }
+  .home-hero > div > p, .glance-head p, .home-sections, .home-section-heading p, .rate-card-latest, .home .market-breadth, .rate-label-source { display: none; }
+  .home-hero { gap: 6px; }
+  .home-hero h1 { margin: 0; }
+  /* The report date stays on one line; on the narrowest phones the label gives way, never the date. */
+  .home-hero > * { min-width: 0; max-width: 100%; }
+  /* Clipping for the ellipsis also clips vertically, and Kannada conjuncts (ನ್ನೆ in ನಿನ್ನೆ) reach well below the
+     baseline, so the line is given room for them: a taller line box, and a little padding inside the clip. */
+  .home-hero .home-date-pill { max-width: 100%; padding: 0; border: 0; background: none; box-shadow: none; gap: 5px; font-size: 12px; white-space: nowrap; overflow: hidden; line-height: 1.8; }
+  .home-date-pill > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 2px; }
+  /* The import figure sits under its heading, left-aligned, rather than floating at the right edge. */
+  .imports-figure { justify-items: start; text-align: left; }
+  /* One dropdown beside its label instead of the picture pills, which would take two rows. */
+  .home-variety { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; padding: 4px 0 2px; }
+  .variety-cards { display: none; }
+  .variety-phone { display: block; }
+  .home-price-section .home-section-heading { display: grid; gap: 3px; }
+
+  /* Price board: each tile is three tight lines (source and date, the range, then unit and branches with the trend at
+     the right). The trend drops under them only when the row is too narrow, as with a long Kannada label. */
+  .glance { border-radius: 16px; }
+  .glance-head { flex-wrap: nowrap; align-items: center; padding: 8px 8px 8px 16px; background: none; }
+  .glance-share { display: inline-flex; margin-left: auto; }
+  .glance-share .rate-share { min-height: 40px; margin: 0; padding: 0 8px; }
+  .glance-head h2 { font-size: 13.5px; font-weight: 600; color: var(--muted); }
+  .glance-tile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 16px 14px; }
+  .glance-tile-top, .glance-range { flex: 1 1 100%; }
+  .glance-source { padding: 2px 8px; font-size: 11px; letter-spacing: .05em; }
+  .glance-date { font-size: 12.5px; }
+  .glance-range { flex-wrap: nowrap; gap: 0 8px; font-size: 24px; white-space: nowrap; }
+  .glance-range small, .glance-branches { display: none; }
+  .glance-sub { display: block; flex: 1 1 auto; margin: 0; font-size: 13px; color: var(--muted); }
+  .glance-tile-foot { flex: 0 0 auto; margin-left: auto; }
+  .glance-trend { padding: 3px 9px; font-size: 12px; }
+
+  /* Rate cards: branch rows in two columns. */
+  .rate-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .rate-card { border-radius: 16px; }
+  .rate-list, .skeleton-rows { padding-left: 14px; padding-right: 14px; }
+  .rate-card-head, .market-breadth, .rate-card-foot { padding-left: 14px; padding-right: 14px; }
+  .rate-row { flex-direction: row; align-items: flex-start; gap: 12px; padding-block: 14px; }
+  .rate-row-top::before { left: -14px; }
+  .rate-place { flex: 1 1 auto; min-width: 0; }
+  .rate-place strong { font-size: 15.5px; }
+  /* Date on one line; age and variety label on the next, each kept whole. */
+  .rate-meta { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 3px; white-space: nowrap; overflow-x: clip; }
+  .rate-date { display: contents; }
+  /* The dot sits in the gap before the age, and is clipped when the age wraps to a line of its own (styles.css). */
+  .rate-age::before { content: "·"; display: inline-block; width: 14px; margin-left: -14px; text-align: center; }
+  .rate-date-old .rate-age { color: inherit; }
+  .rate-price { flex: none; display: grid; justify-items: end; gap: 3px; text-align: right; }
+  .rate-price > strong { font-size: 20px; line-height: 1.2; }
+  .rate-sub { display: grid; justify-items: end; gap: 2px; }
+  .rate-card-head h3 { font-size: 17px; }
+  .rate-card-foot a, .rate-share { min-height: 44px; }
+  /* Cards stack on phones, so there is no row to keep level. */
+  .rate-more-note { display: none; }
+  /* Cooperative cards drop their header: each row names the source, the price key sits under the range and the source
+     link moves to the footer. The heading stays for screen readers and as the target of the summary's links. */
+  .rate-card-coop { position: relative; }
+  .rate-card-coop .rate-card-head { position: absolute; top: 0; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  .rate-card-coop .rate-row:first-child { border-top: 0; }
+  .rate-source-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; background: var(--brand-tint); color: var(--brand); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; line-height: 1.5; }
+  .rate-key { display: block; color: var(--subtle); font-size: 11.5px; line-height: 1.35; white-space: nowrap; }
+  .rate-card-note { display: block; margin: 0; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+  .rate-card-foot .rate-foot-source { display: inline-flex; color: var(--muted); font-weight: 500; }
+  /* TUMCOS's own line already says per quintal and unit assumed. */
+  #rates-tumcos ~ .rate-card-basis { display: none; }
+
+  /* Shortcuts below the rates, one per row. */
+  .home-actions { grid-template-columns: 1fr; gap: 10px; }
+  .home-actions a { padding: 14px 16px; column-gap: 6px; }
+  .home-actions strong { line-height: 1.4; }
+  .home-actions span { display: none; }
+  .home-sections a { display: inline-flex; align-items: center; min-height: 36px; }
+
+  /* Footer: one compact block. The menu already lists every page, so the link columns go. The WhatsApp button carries
+     its own icon, so the badge goes, and it is the card's only button, full width: growers report on WhatsApp, and the
+     email address is spelled out under the brand. The social icons share the logo's row. */
   .site-footer { margin-top: 24px; }
   .site-footer-inner { padding: 18px 0 18px; }
   .footer-report { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px; border-radius: 14px; }
@@ -524,6 +435,7 @@
   .footer-report-text p { margin-top: 2px; }
   .footer-report-actions > .footer-whatsapp { flex: 1 1 auto; min-height: 46px; justify-content: center; }
   .footer-report-actions > .footer-email { display: none; }
+  .footer-column { display: none; }
   .footer-grid { display: block; padding: 20px 0 16px; }
   .footer-brand { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
   .footer-brand > * { grid-column: 1 / -1; }
@@ -540,47 +452,66 @@
   .footer-rights, .footer-domain { display: none; }
   .footer-bottom-meta { gap: 6px; }
 }
-/* Narrow phones (320–380px): four social icons do not fit beside the logo, so they take their own row under the contact lines. */
+
+/* ---- Narrow phones (after the phone rules they refine) -------------------------------------------------------- */
+
+@media (max-width: 560px) {
+  .scorecard-grid { grid-template-columns: 1fr; }
+  .fact-list > div { grid-template-columns: 1fr; gap: 2px; }
+  th .sort-button { min-height: 32px; }
+}
+
+@media (max-width: 459px) {
+  /* Too narrow for the wordmark beside the menu, language and theme controls: the palm mark alone stands for the brand. */
+  .topbar-brand-name { display: none; }
+  .topbar-tools { order: 3; }
+  .page-heading { gap: 16px; }
+  .page-heading > div:first-child { flex-basis: 100%; }
+  .updated-chip { width: 100%; }
+  .snapshot-card { min-height: 0; }
+  .panel { padding: 16px; }
+  .pulse-empty { padding-block: 20px; }
+  .filter-bar { padding: 14px; gap: 12px; }
+  .filter-bar .filter-control, .advanced-filter-fields .filter-control { flex: 1 1 100%; max-width: none; }
+  .filter-bar > span { padding-top: 0; }
+  .filter-control input, .filter-control select, .variety-select select, .period-select select, .token-form input, .month-year select, .period-select { height: 44px; }
+  .variety-select select, .token-form input, .month-year select { font-size: 16px; }
+  .variety-select { min-width: 0; width: 100%; }
+  .variety-select select { max-width: none; }
+  .analytics-filters, .compare-heading-tools { width: 100%; }
+  .analytics-filters .variety-select, .compare-heading-tools .variety-select, .analytics-filters .period-select { flex: 1; }
+  .period-select select { width: 100%; }
+  .metric-grid { gap: 10px; }
+  .metric-card { padding: 16px; }
+  .metric-card:last-child { grid-column: 1 / -1; }
+  .methodology-note, .quality-banner { padding: 14px; gap: 10px; }
+  .quality-details { grid-template-columns: 1fr; gap: 20px; }
+  .comparison-row { grid-template-columns: 24px minmax(0, 1fr) 100px; gap: 10px; }
+  .comparison-price { font-size: 17px; }
+  .comparison-market strong { overflow-wrap: anywhere; }
+  .review-row { flex-direction: column; align-items: stretch; }
+  .review-actions button { flex: 1; }
+  .token-form { padding-top: 26px; gap: 14px; }
+  .token-form input, .token-form .button-primary { grid-column: 1 / -1; width: 100%; }
+  .site-footer-inner { width: calc(100% - 32px); }
+  .footer-report-actions { grid-column: 1 / -1; }
+  .footer-contact a { min-height: 36px; }
+  .button-primary, .button-secondary, .icon-button, .sort-button, .approve-button, .reject-button { min-height: 44px; }
+  .table-scroll { margin-inline: 0; max-width: 100%; padding-inline: 0; }
+  .table-scroll-hint { display: block; margin: 8px 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .rate-sub { justify-content: flex-start; }
+  .rate-card-head > div { min-width: 0; }
+  /* Phone table rules for particular first columns (bulletin titles, aggregate periods) outrank this one. */
+  th:first-child, td:first-child { max-width: 150px; white-space: normal; min-width: 110px; }
+  caption { padding-left: 12px; }
+  .empty-state { min-height: 220px; padding-inline: 0; }
+}
+
 @media (max-width: 380px) {
+  .analytics-filters { align-items: stretch; flex-direction: column; }
+  .comparison-row { grid-template-columns: 20px minmax(0, 1fr) 86px; gap: 8px; }
+  .comparison-price { font-size: 15px; }
+  .breadcrumb { gap: 7px; }
+  /* Four social icons do not fit beside the logo, so they take their own row under the contact lines. */
   .footer-brand > .footer-social { grid-column: 1 / -1; grid-row: auto; margin-top: 12px; }
-}
-/* Daily aggregates on phones: the short period ("2–8 Nov") stays on one line. */
-@media (max-width: 640px) {
-  .aggregate-table td:first-child, .aggregate-table th { white-space: nowrap; }
-}
-/* Branch coverage on phones: branch and price side by side, the reporting date under the price ("Latest date" when
-   current). The separate date and status columns, which say the same thing, step aside. */
-.coverage-date-sub { display: none; }
-@media (max-width: 640px) {
-  .coverage-table { table-layout: auto; width: 100%; min-width: 0; }
-  .coverage-table th:nth-child(2), .coverage-table td:nth-child(2), .coverage-table th:nth-child(4), .coverage-table td:nth-child(4) { display: none; }
-  .coverage-table th:nth-child(1), .coverage-table th:nth-child(3) { width: auto; }
-  .coverage-date-sub { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 400; color: var(--muted); }
-}
-/* Monthly price outlook: on phones the variety picker shares the title's row instead of taking a row of its own;
-   wider screens keep it on its own line under the heading, as before. */
-@media (min-width: 641px) {
-  .page-heading-picker > .fx-toolbar { flex-basis: 100%; }
-}
-@media (max-width: 640px) {
-  .page-heading-picker { flex-wrap: nowrap; align-items: center; gap: 12px; }
-  .page-heading-picker > div:first-child { flex: 1 1 auto; min-width: 0; }
-  .page-heading-picker h1 { margin: 0; }
-  .page-heading-picker > .fx-toolbar { flex: none; display: block; }
-  /* The word "Variety" is read out but not shown; the chosen name and chevron say enough at a glance. */
-  .page-heading-picker .fx-select > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .page-heading-picker .fx-select { padding-left: 4px; }
-}
-/* Phones: a stat with a short value (a count, a place, a fetch time) is one full-width row, label left and value
-   right, instead of a half-width card stretched to match a taller neighbour. The headline price card also takes the
-   full width, so the two cards that remain (highest and lowest) pair up evenly. */
-@media (max-width: 640px) {
-  .snapshot-grid > .featured-card { grid-column: 1 / -1; }
-  /* .snapshot-card in the selectors outweighs the older "last odd card" rule, so every row looks the same. */
-  .snapshot-grid > .snapshot-card.snapshot-row { grid-column: 1 / -1; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding-block: 12px; }
-  .snapshot-grid > .snapshot-card.snapshot-row .card-kicker { flex: 1 1 auto; min-width: 0; margin: 0; }
-  .snapshot-grid > .snapshot-card.snapshot-row .snapshot-value { flex: none; margin: 0; font-size: 20px; line-height: 1.3; text-align: right; white-space: nowrap; }
-  /* The fetch time shows its date only (the exact time stays for screen readers and on wider screens). */
-  .snapshot-grid > .snapshot-card.snapshot-row .snapshot-value.snapshot-date { font-size: 15px; }
-  .snapshot-grid > .snapshot-row > :not(.card-kicker):not(.snapshot-value) { flex-basis: 100%; }
 }

@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---- Type: one Kannada font everywhere --------------------------------------------------------------------------
+ * Kannada gets one bundled variable font instead of whatever each device ships, so it looks the same on phones, Macs
+ * and Windows (whose Nirmala UI is wider and taller, and wrapped labels and cards that fit elsewhere), and the
+ * in-between weights (450, 550, 650) render as designed. Its unicode-range keeps English pages from downloading it.
+ */
+@font-face {
+  font-family: "Areca Kannada";
+  src: url("@fontsource-variable/noto-sans-kannada/files/noto-sans-kannada-kannada-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0C80-0CF3, U+200C-200D, U+25CC;
+}
+
 /*
  * Areca Pulse brand palette (docs/BRAND.md), merged into the app's existing tokens.
  * Brand greens mark identity, primary actions and selected states; data surfaces stay neutral.
@@ -42,7 +56,7 @@
   --text-section-title: 20px;
   --text-subheading: 16px;
   --text-key-number: 30px;
-  font-family: "Inter Variable", Inter, "Areca Kannada", "Noto Sans Kannada", "Nirmala UI", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Inter Variable", Inter, "Areca Kannada", "Noto Sans Kannada", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-feature-settings: "cv11", "ss03";
   color: var(--ink);
   background: var(--bg);
@@ -77,15 +91,17 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 15%);
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
 body { margin: 0; min-width: 0; background: var(--bg); }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .45; }
 select:disabled { cursor: not-allowed; color: var(--muted); background: var(--surface-2); }
 a { color: inherit; text-decoration: none; }
-main a:not([class]) { text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
-main a:not([class]):hover { text-decoration-color: var(--ink); }
+/* Plain links in page content are underlined. :where() keeps this at element specificity, so any component rule
+   (".rate-card-foot a") restyles its links without !important. */
+main a:where(:not([class])) { text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+main a:where(:not([class])):hover { text-decoration-color: var(--ink); }
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 input, select { min-width: 0; }
@@ -113,7 +129,7 @@ small { font-size: 11px; color: var(--muted); }
 /* The dark mark is the left end of the dark logo, so it needs a fixed box to crop to. */
 .brand-icon.topbar-brand-mark-dark { width: min(44px, 23cqi); height: auto; aspect-ratio: 44 / 34; }
 .brand-descriptor { font-size: min(9px, 4.7cqi); font-weight: 600; line-height: 1.2; letter-spacing: .1em; text-transform: uppercase; color: var(--brand-descriptor); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topbar-brand { display: none; flex: none; align-items: center; gap: 7px; padding: 2px; border-radius: var(--radius-sm); text-decoration: none !important; }
+.topbar-brand { display: none; flex: none; align-items: center; gap: 7px; padding: 2px; border-radius: var(--radius-sm); }
 .topbar-brand-mark { display: block; width: 34px; height: 27px; }
 /* The dark logo is the full lockup; cover-fit and left alignment keep only its palm mark. */
 .topbar-brand-mark-dark { object-fit: cover; object-position: left center; }
@@ -175,7 +191,7 @@ small { font-size: 11px; color: var(--muted); }
 .footer-report-badge { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: #1f8f4e; color: #fff; box-shadow: 0 6px 18px -8px rgb(31 143 78 / 70%); }
 .footer-report-text h2 { font-size: 17px; font-weight: 650; line-height: 1.35; letter-spacing: -.01em; color: var(--ink); }
 .footer-report-text p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
-.footer-whatsapp { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px 0 16px; border-radius: 12px; background: #1f8f4e; color: #fff !important; text-decoration: none !important;
+.footer-whatsapp { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px 0 16px; border-radius: 12px; background: #1f8f4e; color: #fff;
   box-shadow: 0 1px 0 rgb(255 255 255 / 18%) inset, 0 8px 20px -10px rgb(31 143 78 / 80%); transition: background-color .15s ease, transform .1s ease; }
 .footer-whatsapp:hover { background: #1a7d44; }
 .footer-whatsapp:active { transform: scale(.98); }
@@ -184,27 +200,27 @@ small { font-size: 11px; color: var(--muted); }
 .footer-report-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 /* The quiet partner to the WhatsApp button: same size, outlined, so one action leads. */
 .footer-email { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px 0 16px; border: 1px solid var(--line); border-radius: 12px;
-  background: var(--surface); color: var(--ink) !important; text-decoration: none !important; transition: border-color .15s ease, color .15s ease, transform .1s ease; }
-.footer-email:hover { border-color: var(--brand); color: var(--brand) !important; }
+  background: var(--surface); color: var(--ink); transition: border-color .15s ease, color .15s ease, transform .1s ease; }
+.footer-email:hover { border-color: var(--brand); color: var(--brand); }
 .footer-email:active { transform: scale(.98); }
 .footer-email:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .footer-email strong { font-size: 14px; font-weight: 650; white-space: nowrap; }
 /* Contact lines under the brand, in the manner of a company footer: icon, then the address itself. */
 .footer-contact { display: grid; gap: 8px; margin: 18px 0 0; font-style: normal; }
-.footer-contact a { display: inline-flex; align-items: center; gap: 9px; width: fit-content; font-size: 13.5px; color: var(--ink-2); text-decoration: none !important; transition: color .12s ease; }
+.footer-contact a { display: inline-flex; align-items: center; gap: 9px; width: fit-content; font-size: 13.5px; color: var(--ink-2); transition: color .12s ease; }
 .footer-contact a:hover { color: var(--brand); }
 .footer-contact svg { flex: none; color: var(--subtle); transition: color .12s ease; }
 /* Social links: a row of small square icon buttons under the contact lines, in the manner of a company footer. */
 .footer-social { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
 .footer-social a { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted);
-  text-decoration: none !important; transition: color .12s ease, border-color .12s ease, background-color .12s ease; }
+  transition: color .12s ease, border-color .12s ease, background-color .12s ease; }
 .footer-social a:active { color: var(--brand); border-color: var(--brand); }
 @media (hover: hover) { .footer-social a:hover { color: var(--brand); border-color: var(--brand); background: var(--brand-tint); } }
 .footer-social a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .footer-contact a:hover svg { color: var(--brand); }
 .footer-bottom-meta { display: inline-flex; flex-wrap: wrap; gap: 8px; }
 .footer-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 32px; padding: 36px 0 30px; border-bottom: 1px solid var(--line); }
-.footer-logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none !important; }
+.footer-logo { display: inline-flex; align-items: center; gap: 10px; }
 .footer-logo-mark { display: block; width: 44px; height: 34px; }
 .footer-logo-mark-dark { object-fit: cover; object-position: left center; }
 .footer-logo > span { display: grid; gap: 2px; }
@@ -218,7 +234,7 @@ small { font-size: 11px; color: var(--muted); }
 .footer-made { max-width: 300px; margin: 6px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
 .footer-column h2 { font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--subtle); }
 .footer-column ul { display: grid; gap: 11px; margin: 14px 0 0; padding: 0; list-style: none; }
-.footer-column a { font-size: 14px; color: var(--ink-2); text-decoration: none !important; transition: color .12s ease; }
+.footer-column a { font-size: 14px; color: var(--ink-2); transition: color .12s ease; }
 .footer-column a:hover { color: var(--brand); }
 .footer-sources li { display: grid; gap: 1px; font-size: 14px; color: var(--ink-2); }
 .footer-sources small { font-size: 12px; color: var(--muted); }
@@ -299,8 +315,7 @@ details > summary { cursor: pointer; font-size: 13px; font-weight: 500; color: v
 details > summary:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* Phones: a folded table opens from one full-width row. */
 .phone-fold { margin: 12px 0 0; border-top: 1px solid var(--line); }
-.phone-fold > summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; }
-.phone-fold > summary { list-style: none; }
+.phone-fold > summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; list-style: none; }
 .phone-fold > summary::-webkit-details-marker { display: none; }
 .phone-fold > summary::after { content: ""; width: 8px; height: 8px; margin: 0 4px 4px auto; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s ease; }
 .phone-fold[open] > summary::after { transform: rotate(-135deg); margin-bottom: -4px; }
@@ -374,12 +389,12 @@ details[open] > summary { margin-bottom: 8px; }
 .imports-top { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
 .imports-top span { color: var(--muted); }
 .imports-source { margin: 6px 0 0; font-size: 12.5px; }
-.imports-source a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.imports-source a { color: var(--muted); text-decoration-line: underline; text-underline-offset: 3px; }
 /* Policy and tax events under a price chart, numbered to match the markers on it. */
 .chart-events { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
 .chart-events li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: start; }
 .chart-events time { font-weight: 600; color: var(--ink); }
-.chart-events a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.chart-events a { color: var(--muted); text-decoration-line: underline; text-underline-offset: 3px; white-space: nowrap; }
 .chart-event-number { display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: var(--ink-2); color: var(--surface); font-size: 10.5px; font-weight: 700; }
 .chart-stats { display: flex; flex-wrap: wrap; gap: 12px 36px; margin: 0 0 14px; padding-bottom: 14px; border-bottom: 1px solid var(--surface-2); }
 .chart-stats > div { min-width: 0; }
@@ -417,8 +432,7 @@ td { padding: 8px 12px; border-bottom: 1px solid var(--surface-2); color: var(--
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover, tbody tr:hover td:first-child { background: var(--bg); }
 th:first-child, td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
-th:first-child { background: var(--surface-2); }
-th:first-child { z-index: 3; }
+th:first-child { background: var(--surface-2); z-index: 3; }
 td small { display: block; margin-top: 2px; white-space: normal; }
 td:first-child small { white-space: nowrap; }
 td details { margin-top: 2px; }
@@ -466,7 +480,6 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 .advanced-filter-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding-top: 8px; }
 .advanced-filter-fields .filter-control { flex: 1 1 170px; max-width: 280px; }
 .panel .filter-bar { margin-bottom: 14px; padding: 0; border: 0; box-shadow: none; }
-.filter-label { display: flex; align-items: center; gap: 7px; flex-basis: 100%; color: var(--muted); font-size: 12px; font-weight: 500; }
 .filter-control, .variety-select { display: grid; gap: 5px; min-width: 0; color: var(--muted); font-size: 12px; font-weight: 500; }
 .filter-control input, .filter-control select, .filter-control textarea, .variety-select select, .token-form input { width: 100%; height: 34px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 9px; font-size: 13px; font-weight: 400; transition: border-color .12s ease; }
 .filter-control textarea { height: auto; padding: 9px; line-height: 1.5; resize: vertical; }
@@ -494,8 +507,6 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 .comparison-market { min-width: 0; }
 .comparison-market strong { display: block; font-size: 13.5px; font-weight: 550; }
 .comparison-market span { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); line-height: 1.5; }
-.comparison-bar-track { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
-.comparison-bar-track span { display: block; height: 100%; background: var(--ink); }
 .comparison-price { text-align: right; font-size: 16px; letter-spacing: -.015em; font-weight: 600; font-variant-numeric: tabular-nums; }
 .comparison-price small { display: block; font-weight: 400; letter-spacing: 0; margin-top: 2px; }
 .quality-heading-icon { color: var(--subtle); }
@@ -537,18 +548,15 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 /* Forms and modules */
 .monthly-refresh { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 12px 0; }
 .monthly-refresh .filter-control { flex: 1 1 180px; min-width: 0; }
-.calculator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px 16px; }
-.calculator-grid .filter-control { min-width: 0; }
-.calculator-grid .filter-control span { white-space: normal; line-height: 1.45; }
 /* Labels of different lengths wrap to different heights; every field sits on the row's bottom edge, so the input
    boxes line up whatever their labels do. */
-.calculator-grid { align-items: end; }
-.calculator-grid .filter-control { display: flex; flex-direction: column; justify-content: flex-end; }
+.calculator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px 16px; align-items: end; }
+.calculator-grid .filter-control { min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.calculator-grid .filter-control span { white-space: normal; line-height: 1.45; }
 .calculator-wide { grid-column: 1 / -1; }
 .app-error { max-width: 640px; margin: 12vh auto; }
 .app-error h1 { margin: 0; font-size: 20px; }
 .app-error p { color: var(--muted); line-height: 1.6; }
-.example-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .module-navigation { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; width: fit-content; max-width: 100%; background: var(--surface-2); border-radius: 9px; }
 .module-navigation a { padding: 5px 12px; border-radius: var(--radius-sm); color: var(--muted); font-size: 13px; font-weight: 500; text-decoration: none; }
 .module-navigation a:hover { color: var(--ink); }
@@ -568,7 +576,7 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 .export-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .table-note { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.scorecard { display: grid; gap: 10px; }
+.scorecard { display: grid; gap: 10px; container-type: inline-size; }
 .scorecard-heading h2 { margin: 0; font-size: var(--text-section-title); font-weight: 600; line-height: 1.4; letter-spacing: -.012em; color: var(--ink); }
 .scorecard-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
 .scorecard-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -581,7 +589,6 @@ td details > summary { font-size: 11.5px; font-weight: 400; color: var(--muted);
 .score-value-words { font-size: 17px; line-height: 1.35; }
 /* Four cards in a row only where each has room; otherwise two by two, so one long card does not stretch three
    short ones into tall boxes (as on a Windows laptop at 125% scaling). Sized by the content area, not the window. */
-.scorecard { container-type: inline-size; }
 @container (max-width: 1100px) { .scorecard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (max-width: 560px) { .scorecard-grid { grid-template-columns: minmax(0, 1fr); } }
 .score-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--surface-2); }
@@ -635,8 +642,6 @@ th.numeric .sort-button span { order: -1; }
 .home { font-size: 15px; }
 .home-heading h1 { font-size: var(--text-page-title); font-weight: 650; line-height: 1.3; letter-spacing: -.02em; margin: 0 0 8px; color: var(--ink); }
 .home-heading p { max-width: 680px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
-.home-heading .home-latest { margin-top: 8px; font-size: 14px; color: var(--muted); }
-.home-heading .home-latest strong { color: var(--ink); font-weight: 600; }
 /* Variety picker: a compact pill per everyday variety with a small cut-out photo of the dried nut, then "More varieties". */
 .variety-cards { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .variety-card { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px 0 8px; border: 1px solid var(--line-strong); border-radius: 999px;
@@ -671,7 +676,7 @@ th.numeric .sort-button span { order: -1; }
 /* Price cards share the width instead of one narrow centred column. */
 .home-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 /* Titles sit at the top of each card, so cards in one row line up when a title wraps (tablet width); the arrow stays centred. */
-.home-actions a { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr; column-gap: 12px; align-items: start; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; }
+.home-actions a { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr; column-gap: 12px; align-items: start; padding: 11px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; }
 .home-actions a:hover { border-color: var(--ink); }
 .home-actions strong { font-size: 16.5px; font-weight: 600; }
 .home-actions span { grid-column: 1; font-size: 14px; color: var(--muted); line-height: 1.45; }
@@ -694,31 +699,18 @@ th.numeric .sort-button span { order: -1; }
 .home .filter-control select, .home .filter-control input { min-height: 44px; font-size: 16px; }
 /* Five horizons: three across, then a centered pair on wide screens. */
 .rate-card ul.hold-summary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px 24px; }
-.hold-summary > li { grid-column: span 2; }
+.hold-summary > li { grid-column: span 2; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
 .hold-summary > li:nth-last-child(2) { grid-column: 2 / span 2; }
 .hold-summary > li:last-child { grid-column: 4 / span 2; }
-.hold-summary > li { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
 .hold-summary h3 { margin: 0 0 8px; font-size: 16.5px; font-weight: 650; color: var(--ink); text-align: center; }
 .hold-summary dl { margin: 0; display: grid; gap: 6px; }
 .hold-summary dl > div { display: flex; justify-content: space-between; gap: 16px; font-size: 14.5px; }
-.hold-summary dt { color: var(--muted); }
+.hold-summary dt { color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
 .hold-summary dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
-.hold-summary dt { min-width: 0; overflow-wrap: anywhere; }
-.hold-summary .hold-key-value { flex-shrink: 0; font-size: 18px; font-weight: 650; }
 .hold-up { color: #166534; }
 .hold-down { color: var(--bad-ink); }
 .home table { font-size: 14px; }
 
-main .home-actions a { text-decoration: none; }
-
-/* Assistant */
-.prose-block { line-height: 1.65; overflow-wrap: anywhere; }
-.calculator-grid.calculator-grid-flush { padding: 0; }
-.example-list { line-height: 1.65; margin-top: 20px; }
-.example-chip { margin: 4px 6px 0 0; }
-.pre-wrap { white-space: pre-wrap; }
-td.cell-wrap { white-space: normal; }
-.excerpt { margin: 0 0 12px; padding-left: 12px; border-left: 3px solid var(--line-strong); white-space: pre-wrap; }
 
 /* Collapsed methodology and provenance */
 .about-data { color: var(--muted); font-size: 13px; line-height: 1.6; }
@@ -735,14 +727,15 @@ td.cell-wrap { white-space: normal; }
 .home-hero { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding-bottom: 4px; }
 .home-hero h1 { font-size: var(--text-page-title); font-weight: 650; line-height: 1.3; letter-spacing: -.025em; margin: 0 0 8px; color: var(--ink); }
 .home-hero p { max-width: 660px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
-.home-date-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted) !important; font-size: 13px !important; }
+/* Scoped to .home-hero so it outranks ".home-hero p" without !important. */
+.home-hero .home-date-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 13px; }
 .home-date-pill strong { color: var(--ink); font-weight: 600; }
 .home-date-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--subtle); }
 .home-date-pill-old .home-date-dot { background: #d97706; box-shadow: 0 0 0 3px var(--warn-bg); }
 .home-variety { display: grid; gap: 9px; }
 .home-variety-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .home-sections { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13.5px; }
-.home-sections a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 4px; padding: 2px 0; }
+.home-sections a { color: var(--ink-2); text-decoration-line: underline; text-underline-offset: 3px; padding: 2px 0; }
 @media (min-width: 1024px) { .home-sections { display: none; } }
 .home-note-callout { padding: 10px 14px; border-left: 3px solid var(--brand-leaf); background: var(--brand-tint); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--ink-2); }
 
@@ -750,19 +743,44 @@ td.cell-wrap { white-space: normal; }
 .home-price-section .home-section-heading { align-items: baseline; gap: 4px 16px; }
 .home-price-section .home-section-heading h2 { font-size: var(--text-section-title); letter-spacing: -.01em; }
 .home-price-section .home-section-heading p { font-size: 13px; line-height: 1.5; }
-.rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); align-items: start; gap: 16px; }
+/* Price cards: one column, then two, then three across when there are exactly three cards (the cooperatives on the
+   home page). Sized by the section's own width, so the menu's state and a Windows scrollbar are already counted. In two
+   columns an odd last card spans both, so it never sits beside an empty half. */
+.home-price-section, .market-page { container: rate-cards / inline-size; }
+.rate-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; }
 .rate-grid-even { align-items: stretch; }
+@container rate-cards (min-width: 640px) {
+  .rate-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rate-grid > .rate-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@container rate-cards (min-width: 960px) {
+  /* Three across. Collapsed cards (.rate-grid-even) stretch to one height so they sit level; an expanded card leaves
+     the others at their own height. */
+  .rate-grid:has(> .rate-card:nth-child(3)):not(:has(> .rate-card:nth-child(4))) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rate-grid:has(> .rate-card:nth-child(3)):not(:has(> .rate-card:nth-child(4))) > .rate-card:last-child { grid-column: auto; }
+}
 /* At-a-glance strip: one stat tile per cooperative, above the full cards. */
 .glance { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
-.glance-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.glance-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
 .glance-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
 .glance-head p { margin: 0; font-size: 12.5px; color: var(--muted); }
 .glance-share { display: none; }
-.glance-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); margin: 0; padding: 0; list-style: none; }
+/* One tile per cooperative: one column, then two (an odd last tile spans both, never beside an empty half), then three
+   across. Sized by the board's own width. */
+.glance { container: glance / inline-size; }
+.glance-tiles { display: grid; grid-template-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; }
+@container glance (min-width: 600px) {
+  .glance-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .glance-tiles > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@container glance (min-width: 900px) {
+  .glance-tiles:has(> :nth-child(3)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .glance-tiles:has(> :nth-child(3)) > :last-child { grid-column: auto; }
+}
 /* Dividers drawn on the left and top edges, so they fall between tiles whether the row wraps or not; the outer ones are clipped. */
-.glance-tile { display: grid; align-content: start; gap: 12px; min-width: 0; padding: 18px 20px 20px; box-shadow: -1px 0 0 var(--line), 0 -1px 0 var(--line); }
+.glance-tile { display: grid; align-content: start; gap: 10px; min-width: 0; padding: 14px 20px 16px; box-shadow: -1px 0 0 var(--line), 0 -1px 0 var(--line); }
 .glance-tile-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
-.glance-source { padding: 3px 10px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-decoration: none !important; }
+.glance-source { padding: 3px 10px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
 .glance-source:hover { box-shadow: inset 0 0 0 1px var(--brand-leaf); }
 .glance-date { color: var(--muted); font-size: 12.5px; }
 .glance-date-old { color: var(--warn-ink, var(--muted)); }
@@ -776,12 +794,12 @@ td.cell-wrap { white-space: normal; }
 .glance-trend.hold-down { color: var(--bad-ink); }
 .glance-trend.hold-up, .glance-trend.hold-down { background: color-mix(in srgb, currentColor 13%, transparent); }
 .glance-branches { color: var(--muted); font-size: 12.5px; }
-.rate-grid > .rate-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.rate-grid > .rate-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; container: rate-card / inline-size; }
 .rate-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px 14px; border-bottom: 1px solid var(--line); }
 .rate-card-head h3 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: var(--brand); scroll-margin-top: 90px; }
 .rate-card-basis, .rate-card-sub { display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .rate-card-basis { color: var(--ink-2); }
-.rate-source { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12.5px; color: var(--muted); text-decoration: none !important; }
+.rate-source { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12.5px; color: var(--muted); }
 .rate-source:hover { color: var(--brand); border-color: var(--brand-leaf); }
 .rate-grid .rate-empty, .rate-grid .state-card { margin: 0; padding: 18px; }
 
@@ -816,12 +834,39 @@ td.cell-wrap { white-space: normal; }
 .rate-change { display: inline-flex; align-items: center; gap: 2px; font-weight: 600; color: var(--muted); }
 .rate-change.hold-up { color: #166534; }
 .rate-change.hold-down { color: var(--bad-ink); }
+/* A narrow card (three across, or a phone) reads each branch in two columns: place, date and variety on the left; price,
+   change and range stacked on the right, each kept whole instead of breaking mid-figure. After the rules it adjusts. */
+@container rate-card (max-width: 459px) {
+  /* The header is the name and its price basis. The report date and branch count are on the glance board above, the
+     up/down counts are its trend, and the source link moves to the footer, as on phones. */
+  .rate-card-head .rate-source, .rate-card-latest, .market-breadth { display: none; }
+  .rate-card-foot .rate-foot-source { display: inline-flex; color: var(--muted); font-weight: 500; }
+  .rate-row { align-items: flex-start; }
+  .rate-meta { margin-top: 1px; }
+  .rate-date { display: contents; }
+  .rate-age, .rate-range { white-space: nowrap; }
+  .rate-date-old .rate-age { color: inherit; }
+  .rate-price { flex: none; }
+  .rate-sub { display: grid; justify-items: end; gap: 2px; }
+}
+/* Date and age: "2 Nov 2026 · 14 days ago" on one line. The dot sits in the gap before the age; if the age wraps to a
+   line of its own, the dot falls outside the left edge and is clipped instead of starting the line. */
+@container rate-card (max-width: 459px) {
+  .rate-meta { column-gap: 14px; overflow-x: clip; }
+  /* The variety label always takes its own line, so every row has the same shape whatever the label's length. */
+  .rate-meta > .rate-label { flex-basis: 100%; }
+  .rate-age::before { content: "·"; display: inline-block; width: 14px; margin-left: -14px; text-align: center; }
+}
 .rate-more-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 9px; border: 0; border-top: 1px solid var(--surface-2); background: none; color: var(--brand); font-size: 13px; font-weight: 600; cursor: pointer; }
+/* A card that cannot expand shows a quiet note in the toggle's place. Toggle or note sits at the bottom of the card, so
+   cards stretched to one height keep their rows at the top and their toggles and footers level. */
+.rate-more-note { margin: 0; padding: 9px 18px; border-top: 1px solid var(--surface-2); color: var(--subtle); font-size: 13px; text-align: center; }
+.rate-grid > .rate-card > .rate-more-toggle, .rate-grid > .rate-card > .rate-more-note { margin-top: auto; }
+.rate-grid > .rate-card > :is(.rate-more-toggle, .rate-more-note) + .rate-card-foot { margin-top: 0; }
 .rate-more-toggle:hover { background: var(--brand-tint); }
-a.rate-more-toggle { text-decoration: none; }
 .rate-more-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .rate-card-foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: auto; padding: 4px 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
-.rate-card-foot a { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; color: var(--brand); font-weight: 600; text-decoration: none !important; }
+.rate-card-foot a { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; color: var(--brand); font-weight: 600; text-decoration: none; }
 
 :root[data-theme="dark"] .topbar { background: rgb(11 21 17 / 92%); }
 :root[data-theme="dark"] .nav-link.active { background: var(--brand-tint); }
@@ -840,16 +885,15 @@ a.rate-more-toggle { text-decoration: none; }
 :root[data-theme="dark"] .market-breadth .hold-up,
 :root[data-theme="dark"] .rate-change.hold-up,
 :root[data-theme="dark"] .glance-trend.hold-up { color: #a9d2a4; }
-.rate-card-foot a:hover { text-decoration: underline !important; }
+.rate-card-foot a:hover { text-decoration: underline; }
 /* Phone-only parts of a cooperative card (see responsive.css): the source beside each branch, the price key, the footer source. */
 .rate-source-tag, .rate-key, .rate-foot-source, .rate-card-note { display: none; }
-.rate-share { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; margin-right: auto; padding: 0 2px; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.rate-share { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; margin-right: auto; padding: 0 2px; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; transition: transform .1s ease, background-color .12s ease, border-color .12s ease; }
 .rate-share:hover { text-decoration: underline; }
 .rate-share:disabled { cursor: progress; opacity: .7; }
 .rate-share-done svg { animation: pop-in .15s ease-out; }
 
 /* Motion is small and functional: each animation tells the reader something happened. All of it stops under reduced motion. */
-.rate-share { transition: transform .1s ease, background-color .12s ease, border-color .12s ease; }
 .rate-share:active { transform: scale(.96); }
 /* Matches CHANGE_FLASH_MS in useChangeFlash.ts. */
 .rate-row-updated { border-radius: 6px; animation: rate-updated 1.2s ease-out; }
@@ -884,6 +928,7 @@ a.rate-more-toggle { text-decoration: none; }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes pop-in { from { transform: scale(.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
+  /* !important: a reader's request for no motion outranks every animation, including later ones in responsive.css. */
   .rate-row-updated, .rate-row-in, .rate-row-out, .skeleton-bar, .rate-share-done svg, .mobile-scrim, .about-data[open] > .about-data-body, .market-suggestions,
   .hold-costs[open] > .hold-costs-body, .hold-fold[open] > summary ~ *, .fx-technical[open] > summary ~ *, .phone-fold[open] > summary ~ * { animation: none !important; }
   /* Without the fade, the changed row is still marked, just without movement. */
@@ -977,7 +1022,6 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .fx-split { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
 /* The horizon card matches the leaderboard's height, its three rows spread evenly down it. */
 .fx-horizons { display: flex; flex-direction: column; }
-.fx-horizons ul { flex: 1; align-content: space-evenly; }
 
 /* Leaderboard: one grid shared by the labels row and every model row, so columns line up exactly. */
 .fx-board-row { display: grid; grid-template-columns: 22px minmax(140px, 1.3fr) minmax(120px, 1fr) 88px 84px; align-items: center; column-gap: 14px; min-height: 48px; padding: 0 8px; border-top: 1px solid var(--line); }
@@ -1009,7 +1053,7 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .fx-key + .fx-key, .fx-legend .fx-key-top { margin-left: 8px; }
 .fx-key-base, .fx-hbar-base { background: var(--line-strong); }
 .fx-key-top, .fx-hbar-top { background: var(--brand-leaf); }
-.fx-horizons ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.fx-horizons ul { flex: 1; align-content: space-evenly; display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .fx-horizons li { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; }
 .fx-horizons li.is-current { background: var(--surface-2); }
 .fx-h { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; }
@@ -1049,8 +1093,7 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   /* A lone variety picker sizes to its choice instead of stretching across the screen with empty space after it. */
   .fx-toolbar > .fx-select:only-child { width: auto; max-width: 100%; justify-self: start; }
   .fx-toolbar > .fx-select:only-child select { flex: 0 1 auto; min-width: 96px; field-sizing: content; }
-  .fx-segmented { height: auto; }
-  .fx-segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .fx-segmented { height: auto; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
   .fx-segmented button { padding: 0 6px; font-size: 13px; }
   .fx-hero { padding: 16px var(--fx-pad) 16px calc(var(--fx-pad) + 4px); border-radius: 16px; }
   .fx-hero h2 { font-size: 19px; }
@@ -1110,7 +1153,7 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .po-range-actual.is-hit { background: #2f8f57; }
 .po-range-actual.is-miss { background: var(--bad-ink); }
 
-.po-compare { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 16px; color: var(--ink); text-decoration: none !important; transition: border-color .15s ease; }
+.po-compare { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 16px; color: var(--ink); transition: border-color .15s ease; }
 .po-compare:hover { border-color: var(--brand-leaf); }
 .po-compare > span { display: grid; gap: 2px; }
 .po-compare strong { font-size: 15px; font-weight: 650; }
@@ -1195,22 +1238,21 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .hold-chart-grid { position: absolute; inset: 0 0 auto 0; height: 240px; pointer-events: none; }
 .hold-chart-grid i { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); }
 .hold-chart-grid i.is-zero { background: var(--line-strong); }
-.hold-chart-col { display: grid; grid-template-rows: 240px auto; min-width: 0; border-left: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); }
+.hold-chart-col { display: grid; grid-template-rows: 240px auto; min-width: 0; border-left: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); container-type: inline-size; }
 .hold-chart-col:first-child { border-left: 0; }
 .hold-chart-plot { position: relative; }
-.hold-chart-need { position: absolute; left: 10%; right: 10%; height: 0; border-top: 2px solid #d99a2b; }
+.hold-chart-need { position: absolute; height: 0; border-top: 2px solid #d99a2b; }
 .hold-chart-need-text { color: #b7791f; font-size: 12px; font-weight: 650; }
 :root[data-theme="dark"] .hold-chart-need-text { color: #f2c46d; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hold-chart-need-text { color: #f2c46d; } }
 .hold-chart-dot { position: absolute; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--surface); border: 2px solid var(--subtle); cursor: help; }
-.hold-chart-dot.is-paid { background: var(--brand-leaf); border-color: var(--brand-leaf); }
+.hold-chart-dot.is-paid { background: var(--brand-leaf); border-color: var(--brand-leaf); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-leaf) 25%, transparent); }
 .hold-chart-label { display: grid; justify-items: center; gap: 2px; padding: 10px 4px 0; text-align: center; }
 .hold-chart-label strong { color: var(--ink); font-size: 13.5px; font-weight: 650; }
-.hold-chart-label small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.hold-chart-label small { color: var(--muted); font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums; }
 /* With room to spare, the period heads the column and its two figures share one line beneath it, so the labels stop
    stacking into a tall three-line block. Decided by the column's own width (a sidebar or Kannada changes what fits), so
    narrow columns keep the stack. */
-.hold-chart-col { container-type: inline-size; }
 @container (min-width: 200px) {
   .hold-chart-label { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 3px 0; padding-top: 12px; }
   .hold-chart-label strong { flex-basis: 100%; }
@@ -1223,7 +1265,6 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   .hold-chart-axis, .hold-chart-grid { height: 220px; }
   .hold-chart-col { grid-template-rows: 220px auto; }
   .hold-chart-dot { width: 12px; height: 12px; }
-  .hold-chart-need { left: 4%; right: 4%; }
   .hold-chart-need-text { font-size: 11px; }
   .hold-chart-label strong { font-size: 12.5px; }
   .hold-chart-label small { font-size: 11px; }
@@ -1257,14 +1298,12 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
   background: linear-gradient(to top, color-mix(in srgb, var(--brand-leaf) 11%, transparent), transparent 85%); }
 .hold-chart-need { z-index: 1; left: 6%; right: 6%; border-top-width: 2px; border-radius: 2px; }
 .hold-chart-dot { z-index: 2; transition: transform .12s ease, box-shadow .12s ease; outline: none; }
-.hold-chart-dot.is-paid { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-leaf) 25%, transparent); }
 .hold-chart-dot:hover, .hold-chart-dot:focus-visible { z-index: 3; transform: translate(-50%, -50%) scale(1.35); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 18%, transparent); }
 .hold-chart-dot::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%) scale(.74); transform-origin: bottom center;
   padding: 6px 10px; border-radius: 8px; background: var(--ink); color: var(--surface); font-size: 12px; font-weight: 600; white-space: nowrap;
   opacity: 0; pointer-events: none; transition: opacity .12s ease; box-shadow: 0 6px 18px rgb(0 0 0 / 25%); }
 .hold-chart-dot.tip-left::after { left: auto; right: -6px; transform: scale(.74); transform-origin: bottom right; }
 .hold-chart-dot:hover::after, .hold-chart-dot:focus-visible::after { opacity: 1; }
-.hold-chart-label small { font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) {
   .hold-chart-legend { gap: 4px 12px; font-size: 11.5px; }
   .hold-chart-zone, .hold-chart-need { left: 3%; right: 3%; }
@@ -1308,7 +1347,8 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 @media (prefers-reduced-motion: reduce) { .home-date-pill.is-fresh .home-date-dot { animation: none; } }
 
 /* Town pages (/market, /market/:slug): the home page's rate cards, one per source, plus links to nearby towns. */
-.market-kicker { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px !important; font-size: 12.5px !important; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle) !important; }
+/* Scoped to .home-heading so it outranks ".home-heading p" without !important. */
+.home-heading .market-kicker { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); }
 .market-card-title { margin: 0; font-size: 16px; font-weight: 650; color: var(--ink); }
 .market-variety-link { color: inherit; text-decoration: none; }
 .market-variety-link:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
@@ -1379,7 +1419,7 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .chat-text p { margin: 0; }
 .chat-text[lang="kn"], .chat-answer[lang="kn"] .chat-text { line-height: 1.85; }
 .chat-cite { display: inline-grid; place-items: center; min-width: 22px; height: 18px; margin: 0 2px; padding: 0 5px; border-radius: 6px; background: var(--surface-2);
-  border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 650; line-height: 1; text-decoration: none !important; vertical-align: 2px; }
+  border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 650; line-height: 1; vertical-align: 2px; }
 a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 .chat-cite-static { flex: none; }
 .chat-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; padding: 8px 12px; border-left: 3px solid var(--brand-leaf);
@@ -1579,17 +1619,17 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 .market-breadth, .monthly-details, .chat-answer { animation: content-in .2s ease-out; }
 /* 3. Tap feedback: the thing pressed gives a little, so a tap feels answered on a phone. */
 .button-primary, .button-secondary, .icon-button, .fx-segmented button, .rate-more-toggle, .home-actions a, .assistant-topic button,
-.assistant-topic-q, .chat-icon-button, .footer-social a, .market-chips a, .glance-tile, .rate-source, .rate-foot-source, .fx-select, .chat-send {
+.assistant-topic-q, .chat-icon-button, .footer-social a, .market-chips a, .glance-tile, .rate-source, .rate-foot-source, .fx-select {
   transition-property: transform, background-color, border-color, color, box-shadow; transition-duration: .1s, .15s, .15s, .15s, .2s; transition-timing-function: ease-out; }
 .button-primary:active, .button-secondary:active, .icon-button:active, .fx-segmented button:active, .rate-more-toggle:active, .home-actions a:active,
 .assistant-topic button:active, .assistant-topic-q:active, .chat-icon-button:active, .footer-social a:active, .market-chips a:active,
-.glance-tile:active, .rate-source:active, .rate-foot-source:active, .chat-send:active { transform: scale(.98); }
+.glance-tile:active, .rate-source:active, .rate-foot-source:active { transform: scale(.98); }
 @media (prefers-reduced-motion: reduce) {
   .page-enter, .rate-list, .glance-tiles, .table-scroll, .snapshot-grid, .hold-season, .hold-outcomes, .anomaly-list, .echarts-for-react, .fx-showcase,
   .market-breadth, .monthly-details, .chat-answer { animation: none; }
   .button-primary:active, .button-secondary:active, .icon-button:active, .fx-segmented button:active, .rate-more-toggle:active, .home-actions a:active,
   .assistant-topic button:active, .assistant-topic-q:active, .chat-icon-button:active, .footer-social a:active, .market-chips a:active,
-  .glance-tile:active, .rate-source:active, .rate-foot-source:active, .chat-send:active { transform: none; }
+  .glance-tile:active, .rate-source:active, .rate-foot-source:active { transform: none; }
 }
 
 /* All varieties in one month: one tile per variety (name, price, change from the month before), main grades first.
@@ -1640,9 +1680,14 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 .month-recheck { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 6px; border-radius: 50%; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); font-size: 11px; font-weight: 700; line-height: 1; cursor: help; vertical-align: 1px; }
 
 /* Windows shows thick, always-on scrollbars (macOS hides them until scrolling), which crowd the sidebar and every
-   scrolling table. Thin, theme-coloured ones keep the layout the same on both. */
-* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+   scrolling table. Thin, theme-coloured ones keep the layout the same on both: scrollbar-width and scrollbar-color on
+   the * rule at the top, and these for WebKit. */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background-color: var(--subtle); }
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+
+/* Labels with a shorter phone version, and the phone-only date under a coverage price: hidden until responsive.css
+   shows them on phones. */
+.label-short { display: none; }
+.coverage-date-sub { display: none; }

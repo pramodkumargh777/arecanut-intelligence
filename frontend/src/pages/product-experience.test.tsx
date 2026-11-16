@@ -661,18 +661,17 @@ describe("market experience", () => {
     expect(card).toContain("See rates from more APMC markets");
   });
 
-  it("shows three branches per card, the featured MAMCOS ones first, with a toggle for the rest", () => {
+  it("shows one branch per card, the featured one first, with a toggle for the rest", () => {
     const branches = ["Koppa", "Sagara", "Birur", "Shivamogga", "Soraba", "Tarikere", "Thirthahalli", "Jayapura"];
     state.cooperative = [
       ready({ latest_by_branch: branches.map((branch, index) => ({ ...cooperativeQuote("mamcos", branch, "RASHI EDI"), id: `m${index}`, average_price: 48000 - index })), data: [] }),
       ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] }),
     ];
     const html = render(<HomePage />);
-    expect((html.match(/class="rate-row/g) ?? []).length).toBe(3 + 1);
+    expect((html.match(/class="rate-row/g) ?? []).length).toBe(1 + 1);
     const card = html.slice(html.indexOf('id="rates-mamcos"'), html.indexOf("rate-more-toggle"));
-    expect(card).toContain("Sagara");
     expect(card).toContain("Shivamogga");
-    expect(card).toContain("Thirthahalli");
+    expect(card).not.toContain("Sagara");
     expect(card).not.toContain("Koppa");
     expect(html).toContain("Show all 8 branches");
     expect(html).toContain('class="home-date-pill');
