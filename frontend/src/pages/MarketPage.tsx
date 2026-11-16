@@ -167,7 +167,7 @@ export function MarketPage() {
         const query = coop[index];
         const names = COOPERATIVE_NAMES[source];
         const rows = query?.data?.data ?? [];
-        const basis = source === "tss" ? copy.tssBasis : source === "tumcos" ? copy.tumcosBasis : copy.coopBasis;
+        const basis = source === "tss" || source === "tms" ? copy.tssBasis : source === "tumcos" ? copy.tumcosBasis : copy.coopBasis;
         return <section className="rate-card rate-card-coop" key={source} aria-labelledby={`market-${source}`}>
           <header className="rate-card-head">
             <div><h2 id={`market-${source}`} className="market-card-title">{copy.branch(language === "kn" ? names.kn : names.en, name)}</h2><span className="rate-card-basis">{basis}</span></div>

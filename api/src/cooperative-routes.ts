@@ -9,6 +9,7 @@ import { cooperativeSourceStatus, permissionLabel, permissionUpdate, readCoopera
 import { publishableUnit } from "./cooperative-units";
 import { backfillTss, refreshTss, validTssDate } from "./tss";
 import { refreshTumcos } from "./tumcos";
+import { backfillTms, refreshTms, validTmsDate } from "./tms";
 import { bearerMatches } from "./auth";
 
 export const cooperativeRoutes = new Hono<Env>();
@@ -38,10 +39,10 @@ async function cooperativeWindow(db: D1Database, source: string, commodity: stri
   }
   return { from: windowFrom, to: windowTo, latest, seriesFrom: shiftDays(anchor, -(COOPERATIVE_DEFAULT_WINDOW_DAYS - 1)), seriesTo: anchor };
 }
-const sourceSchema = z.enum(["mamcos", "tss", "tumcos"]);
+const sourceSchema = z.enum(["mamcos", "tss", "tumcos", "tms"]);
 const commoditySchema = z.enum(["arecanut", "black_pepper"]);
 const authorized = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
-const DEFAULT_VARIETY: Record<z.infer<typeof sourceSchema>, string> = { mamcos: "RASHI EDI", tss: "RASHI", tumcos: "areca" };
+const DEFAULT_VARIETY: Record<z.infer<typeof sourceSchema>, string> = { mamcos: "RASHI EDI", tss: "RASHI", tumcos: "areca", tms: "RASHI" };
 
 cooperativeRoutes.get("/cooperative/prices", async (c) => {
   const source = sourceSchema.safeParse(c.req.query("source") ?? "mamcos");
@@ -111,6 +112,8 @@ cooperativeRoutes.get("/cooperative/prices", async (c) => {
     } : null,
     methodology: source.data === "tumcos"
       ? "TUMCOS (Channagiri) publishes low, average and high values per date without a variety. Its page labels values \"kg\"; they are treated as INR/quintal by operator decision because their size is only plausible per quintal. Source records are kept unchanged. They are not APMC modal prices and are not merged with MAMCOS, TSS or AGMARKNET."
+      : source.data === "tms"
+      ? "TMS Sirsi general tender rates: the average is the plain mean of the day's tender lot rates, and the minimum and maximum are the lowest and highest lot. The portal states \"Rates in ₹/quintal\". One rate per variety per tender day, each under its exact TMS label. Lot, bag and quantity totals come from the same day's lots; the quantity unit is not stated. Not APMC modal prices and not merged with TSS, MAMCOS, TUMCOS or AGMARKNET."
       : source.data === "tss"
       ? `TSS reported averages (avgrate), with normal rates (norrate) preserved separately. TSS publishes no unit; INR/quintal is an operator assumption. The benchmark is the median across locations for one exact variety and date, with at least ${coverage} locations. Only the arecanut grades on the TSS list are included, each under its exact TSS label; pepper, coconut and by-products are archived but not published.`
       : `Median of published cooperative branch averages for one exact variety and reporting date, with at least ${coverage} branches. Not the official APMC modal-price index. Branch constituents can differ between dates; changes do not imply a like-for-like market movement.`,
@@ -238,6 +241,28 @@ cooperativeRoutes.post("/admin/cooperative/tumcos/refresh", async (c) => {
     console.error("TUMCOS refresh failed", error);
     return c.json({ error: `TUMCOS refresh failed; prior records were preserved. Reason: ${failureMessage(error)}` }, 502);
   }
+});
+
+cooperativeRoutes.post("/admin/cooperative/tms/refresh", async (c) => {
+  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  const input = z.object({ date: z.string().refine(validTmsDate).refine((value) => value <= calendarTodayIST()).optional() }).strict()
+    .safeParse(await c.req.json().catch(() => ({})));
+  if (!input.success) return c.json({ error: "Provide a real date no later than today (IST), or none for today." }, 400);
+  try { return c.json(await refreshTms(c.env.DB, input.data.date ?? calendarTodayIST(), { attempts: configuredAttempts(c.env.COOPERATIVE_FETCH_ATTEMPTS) })); }
+  catch (error) {
+    console.error("TMS refresh failed", error);
+    return c.json({ error: `TMS refresh failed; prior records were preserved. Reason: ${failureMessage(error)}` }, 502);
+  }
+});
+
+cooperativeRoutes.post("/admin/cooperative/tms/backfill", async (c) => {
+  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  const input = z.object({
+    start: z.string().refine(validTmsDate), end: z.string().refine(validTmsDate).refine((value) => value <= calendarTodayIST()),
+  }).strict().safeParse(await c.req.json().catch(() => null));
+  if (!input.success) return c.json({ error: "Provide start and end dates (end no later than today IST)." }, 400);
+  try { return c.json(await backfillTms(c.env.DB, input.data.start, input.data.end, { attempts: configuredAttempts(c.env.COOPERATIVE_FETCH_ATTEMPTS, 2) })); }
+  catch (error) { return c.json({ error: failureMessage(error) }, 400); }
 });
 
 cooperativeRoutes.post("/admin/cooperative/tss/backfill", async (c) => {

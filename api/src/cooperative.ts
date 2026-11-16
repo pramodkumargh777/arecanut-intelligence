@@ -10,7 +10,7 @@ const sourceRow = z.object({
   itemname: z.string(), minprice: z.string(), maxprice: z.string(), avgprice: z.string(),
   branch: z.string().min(1), Date: z.string(),
 });
-export type CooperativeSource = "mamcos" | "tss" | "tumcos";
+export type CooperativeSource = "mamcos" | "tss" | "tumcos" | "tms";
 export type CooperativeCommodity = "arecanut" | "black_pepper";
 export type IngestMode = "scheduled" | "manual_refresh" | "backfill" | "manual_csv" | "snapshot_replay";
 export type UnitStatus = "source_confirmed" | "assumed" | "source_conflict";

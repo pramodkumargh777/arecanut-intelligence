@@ -17,11 +17,11 @@ export const SEO_PAGES: SeoPage[] = [
     path: "/", label: { kn: "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ", en: "Arecanut price today" },
     kn: {
       title: "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ · Arecanut price today | ಅಡಿಕೆ ನಾಡಿ",
-      description: "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ಶಿವಮೊಗ್ಗ, ಶಿರಸಿ ಸೇರಿ ಮ್ಯಾಮ್ಕೋಸ್, ಟಿಎಸ್‌ಎಸ್ ಮತ್ತು ಎಪಿಎಂಸಿ ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ದರ ದಿನಾಂಕದೊಂದಿಗೆ.",
+      description: "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ: ಶಿವಮೊಗ್ಗ, ಶಿರಸಿ ಸೇರಿ ಮ್ಯಾಮ್ಕೋಸ್, ಟಿಎಸ್‌ಎಸ್, ಟಿಎಂಎಸ್ ಮತ್ತು ಎಪಿಎಂಸಿ ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ದರ ದಿನಾಂಕದೊಂದಿಗೆ.",
     },
     en: {
       title: "Arecanut price today: MAMCOS, TSS and APMC rates | Areca Pulse",
-      description: "Today's arecanut (adike, supari) rates in Karnataka: MAMCOS Shivamogga, Sagara and Thirthahalli, TSS Sirsi, Siddapur and Yellapur, and APMC prices. Rashi, Chali, Bette and more, each with its date and source.",
+      description: "Today's arecanut (adike, supari) rates in Karnataka: MAMCOS Shivamogga, Sagara and Thirthahalli, TSS Sirsi, Siddapur and Yellapur, TMS Sirsi, and APMC prices. Rashi, Chali, Bette and more, each with its date and source.",
     },
   },
   {
@@ -32,7 +32,7 @@ export const SEO_PAGES: SeoPage[] = [
     },
     en: {
       title: "Arecanut market rates by market and variety | Areca Pulse",
-      description: "Search arecanut rates by market and variety across MAMCOS, TSS, TUMCOS and APMC (AGMARKNET) markets in Karnataka, with minimum, maximum and average price per quintal.",
+      description: "Search arecanut rates by market and variety across MAMCOS, TSS, TMS Sirsi, TUMCOS and APMC (AGMARKNET) markets in Karnataka, with minimum, maximum and average price per quintal.",
     },
   },
   {
@@ -158,12 +158,17 @@ export const varietyPath = (key: string) => `/variety/${key}`;
 export const varietyFromPath = (path: string) => path.startsWith("/variety/") ? VARIETIES.find((variety) => varietyPath(variety.key) === path) : undefined;
 
 /** The main branch of each cooperative, for descriptions that must stay short enough for a results page. */
-const SOURCE_MAIN_BRANCH = { mamcos: "ಮ್ಯಾಮ್ಕೋಸ್ ಶಿವಮೊಗ್ಗ", tss: "ಟಿಎಸ್‌ಎಸ್ ಶಿರಸಿ" };
+const SOURCE_MAIN_BRANCH = { mamcos: "ಮ್ಯಾಮ್ಕೋಸ್ ಶಿವಮೊಗ್ಗ", tss: "ಟಿಎಸ್‌ಎಸ್ ಶಿರಸಿ", tms: "ಟಿಎಂಎಸ್ ಶಿರಸಿ" };
 
 const SOURCE_PLACES = {
   mamcos: { kn: "ಮ್ಯಾಮ್ಕೋಸ್ (ಶಿವಮೊಗ್ಗ, ಸಾಗರ, ತೀರ್ಥಹಳ್ಳಿ)", en: "MAMCOS (Shivamogga, Sagara, Thirthahalli)" },
   tss: { kn: "ಟಿಎಸ್‌ಎಸ್ (ಶಿರಸಿ, ಸಿದ್ದಾಪುರ, ಯಲ್ಲಾಪುರ)", en: "TSS (Sirsi, Siddapur, Yellapur)" },
+  tms: { kn: "ಟಿಎಂಎಸ್ (ಶಿರಸಿ)", en: "TMS (Sirsi)" },
 };
+
+/** "A, B and C" in either language. */
+const listOf = (items: string[], language: "kn" | "en") => items.length < 2 ? items.join("")
+  : `${items.slice(0, -1).join(", ")}${language === "kn" ? " ಮತ್ತು " : " and "}${items.at(-1)}`;
 
 /** "Rashi arecanut", but not "Fresh red arecanut arecanut": names that already say arecanut are left as they are. */
 export const varietyNames = (variety: GrowerVariety) => ({
@@ -182,14 +187,14 @@ export function varietySeo(variety: GrowerVariety): SeoPage {
   // Growers search "chali adike rate today", so titles use their words; names already saying areca stay as they are.
   const adike = /areca/i.test(variety.en) ? variety.en : `${variety.en} adike`;
   const also = VARIETY_SEARCH_NAMES[variety.key];
-  const sources = (["mamcos", "tss"] as const).filter((source) => variety.labels[source]?.length);
-  const where = (language: "kn" | "en") => sources.map((source) => SOURCE_PLACES[source][language]).join(language === "kn" ? " ಮತ್ತು " : " and ");
+  const sources = (["mamcos", "tss", "tms"] as const).filter((source) => variety.labels[source]?.length);
+  const where = (language: "kn" | "en") => listOf(sources.map((source) => SOURCE_PLACES[source][language]), language);
   return {
     path: varietyPath(variety.key), label: { kn: `${name.kn} ಧಾರಣೆ`, en: `${name.en} price` },
     kn: { title: `${name.kn} ಧಾರಣೆ ಇಂದು · ${adike} rate today | ಅಡಿಕೆ ನಾಡಿ`,
       // Growers also write ರೇಟ್ ("ಸಿಪ್ಪೆ ಅಡಿಕೆ ರೇಟ್"), so the description says both.
       description: `${name.kn}${also ? ` (${also.kn})` : ""} ಇಂದಿನ ರೇಟ್: ${sources.map((source) => SOURCE_MAIN_BRANCH[source]).join(", ")} ಶಾಖೆವಾರು ಧಾರಣೆ, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.` },
-    en: { title: `${adike} rate today: ${name.en} price at ${sources.map((source) => source.toUpperCase()).join(" and ")} | Areca Pulse`,
+    en: { title: `${adike} rate today: ${name.en} price at ${listOf(sources.map((source) => source.toUpperCase()), "en")} | Areca Pulse`,
       description: `Latest ${name.en}${also ? ` (${also.en})` : ""} rates per quintal at ${where("en")}, by branch, each with its date and source.` },
   };
 }

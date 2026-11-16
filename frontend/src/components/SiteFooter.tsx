@@ -28,7 +28,7 @@ const COPY = defineCopy({
     rates: "Rates", tools: "Tools", sources: "Data sources",
     links: { "/": "Latest rates", "/prices": "Explore prices", "/analytics": "Price trends", "/compare": "Compare markets",
       "/sell-or-hold": "Sell or wait", "/assistant": "Ask a question", "/intelligence": "Market intelligence" } as Record<string, string>,
-    sourceNotes: { MAMCOS: "Cooperative, Shivamogga", TSS: "Cooperative, Sirsi", TUMCOS: "Cooperative, Channagiri", AGMARKNET: "APMC markets, data.gov.in" } as Record<string, string>,
+    sourceNotes: { MAMCOS: "Cooperative, Shivamogga", TSS: "Cooperative, Sirsi", TMS: "Cooperative, Sirsi", TUMCOS: "Cooperative, Channagiri", AGMARKNET: "APMC markets, data.gov.in" } as Record<string, string>,
     disclaimer: "Rates as each source publishes them, with the report date. Areca Pulse is independent, not affiliated with any cooperative or APMC. Market information only, not financial advice.",
     /** Phones: the same three points in three lines. */
     disclaimerShort: "Rates as published by each source, with dates. Independent, not affiliated with any cooperative or APMC. Not financial advice.",
@@ -55,7 +55,7 @@ const COPY = defineCopy({
     rates: "ದರಗಳು", tools: "ಸಾಧನಗಳು", sources: "ದತ್ತಾಂಶ ಮೂಲಗಳು",
     links: { "/": "ಇತ್ತೀಚಿನ ಧಾರಣೆ", "/prices": "ಮಾರುಕಟ್ಟೆ ದರಗಳು", "/analytics": "ದರ ಪ್ರವೃತ್ತಿ", "/compare": "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ",
       "/sell-or-hold": "ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ", "/assistant": "ಪ್ರಶ್ನೆ ಕೇಳಿ", "/intelligence": "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ" } as Record<string, string>,
-    sourceNotes: { MAMCOS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿವಮೊಗ್ಗ", TSS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿರಸಿ", TUMCOS: "ಸಹಕಾರಿ ಸಂಘ, ಚನ್ನಗಿರಿ", AGMARKNET: "ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳು, data.gov.in" } as Record<string, string>,
+    sourceNotes: { MAMCOS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿವಮೊಗ್ಗ", TSS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿರಸಿ", TMS: "ಸಹಕಾರಿ ಸಂಘ, ಶಿರಸಿ", TUMCOS: "ಸಹಕಾರಿ ಸಂಘ, ಚನ್ನಗಿರಿ", AGMARKNET: "ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳು, data.gov.in" } as Record<string, string>,
     disclaimer: "ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ, ವರದಿ ದಿನಾಂಕದೊಂದಿಗೆ. ಅಡಿಕೆ ನಾಡಿ ಸ್ವತಂತ್ರ ತಾಣ, ಯಾವುದೇ ಸಹಕಾರಿ ಸಂಘ ಅಥವಾ ಎಪಿಎಂಸಿಗೆ ಸಂಬಂಧಿಸಿಲ್ಲ. ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಮಾತ್ರ, ಹಣಕಾಸು ಸಲಹೆ ಅಲ್ಲ.",
     /** Empty: the Kannada note keeps its full wording on phones. */
     disclaimerShort: "",
@@ -65,7 +65,7 @@ const COPY = defineCopy({
 
 const RATE_LINKS = ["/", "/prices", "/analytics", "/compare"];
 const TOOL_LINKS = ["/sell-or-hold", "/assistant", "/intelligence"];
-const SOURCES = ["MAMCOS", "TSS", "TUMCOS", "AGMARKNET"];
+const SOURCES = ["MAMCOS", "TSS", "TMS", "TUMCOS", "AGMARKNET"];
 
 /** Instagram and X marks, drawn inline like the WhatsApp one so they take the link's colour and need no extra request. */
 function InstagramIcon({ size = 18 }: { size?: number }) {

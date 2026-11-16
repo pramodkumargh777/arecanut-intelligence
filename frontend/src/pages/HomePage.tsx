@@ -31,6 +31,8 @@ const SOURCES: { key: CooperativeSource; kn: string; en: string; assumedUnit: bo
   // TSS states no unit and its rates are read as per quintal. The home page shows them without a caveat (an owner's
   // decision); Explore prices still marks the unit as assumed.
   { key: "tss", kn: "ಟಿಎಸ್ಎಸ್ (TSS)", en: "TSS", assumedUnit: false },
+  // TMS Sirsi states "Rates in ₹/quintal" on its portal, so its unit is the source's own.
+  { key: "tms", kn: "ಟಿಎಂಎಸ್ ಶಿರಸಿ (TMS)", en: "TMS Sirsi", assumedUnit: false },
 ];
 
 const COPY = defineCopy({

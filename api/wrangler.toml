@@ -15,6 +15,7 @@ REFERENCE_STATE = "Karnataka"
 MAMCOS_SCHEDULE_ENABLED = "true"
 TSS_SCHEDULE_ENABLED = "true"
 TUMCOS_SCHEDULE_ENABLED = "true"
+TMS_SCHEDULE_ENABLED = "true"
 # Publish scheduled quotations that pass every check (src/cooperative-auto-publish.ts). The rest wait for review.
 COOPERATIVE_AUTO_PUBLISH = "true"
 # AGMARKNET current-daily feed: verify rows that pass every check at import (src/auto-verify.ts). The 09:00 IST cron

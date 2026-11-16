@@ -57,10 +57,11 @@ const DISTRICTS: [canonical: string, patterns: RegExp[]][] = [
   ["Mysuru", [/\bmysuru\b/i, /\bmysore\b/i, /ಮೈಸೂರು/]],
 ];
 
-const SOURCES: [canonical: "mamcos" | "tss" | "tumcos" | "agmarknet", patterns: RegExp[]][] = [
+const SOURCES: [canonical: "mamcos" | "tss" | "tumcos" | "tms" | "agmarknet", patterns: RegExp[]][] = [
   ["mamcos", [/\bmamcos\b/i, /ಮ್ಯಾಮ್ಕೋಸ್/]],
   ["tss", [/\btss\b/i, /ಟಿಎಸ್ಎಸ್/]],
   ["tumcos", [/\btumcos\b/i, /ತುಮ್ಕೋಸ್/]],
+  ["tms", [/\btms\b/i, /ಟಿಎಂಎಸ್/]],
   ["agmarknet", [/\bagmarknet\b/i, /\bapmc\b/i, /\bmandi\b/i, /ಎಪಿಎಂಸಿ/]],
 ];
 
@@ -83,7 +84,7 @@ export type Classification = {
     district?: string;
     /** A town named in the question (a PLACES name), for market-level history. */
     market?: string;
-    source?: "mamcos" | "tss" | "tumcos" | "agmarknet";
+    source?: "mamcos" | "tss" | "tumcos" | "tms" | "agmarknet";
     from_month?: string;
     to_month?: string;
     geography?: string;

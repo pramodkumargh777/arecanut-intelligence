@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { CalendarCheck, Gauge, History, ShieldCheck } from "lucide-react";
 import { api } from "../services/api";
+import type { CooperativeSource } from "../services/cooperative";
 import { useCommodity } from "../services/commodity";
 import { completeness, forecastValidationStatus, reportingFreshness, type ForecastStatus } from "../services/insights";
 import { calendarTodayIST, completedMonthIST } from "../../../shared/dates";
@@ -24,7 +25,7 @@ const COPY = defineCopy({
       reference_only: { value: "Reference baselines", detail: "No evaluated model demonstrably beats its naive baseline; only reference estimates are shown." },
       not_evaluated: { value: "Not evaluated", detail: "No forecasting experiment has been published." },
     } as Record<ForecastStatus, { value: string; detail: string }>,
-    feed: { official: "AGMARKNET daily", mamcos: "MAMCOS", tss: "TSS", tumcos: "TUMCOS" } as Record<MarketFeed, string>,
+    feed: { official: "AGMARKNET daily", mamcos: "MAMCOS", tss: "TSS", tms: "TMS", tumcos: "TUMCOS" } as Record<MarketFeed, string>,
     freshness: "Data freshness", unavailable: "Unavailable", awaitingReview: "Awaiting review", noReports: "No reports",
     awaitingDetail: (count: number, archived: string | null) => `${count} quotation${count === 1 ? " is" : "s are"} waiting for reviewer approval in Data quality.${archived ? ` Latest archived reporting date ${archived}.` : ""}`,
     noOfficial: "No verified daily observations are published for this commodity.", noCooperative: "No reviewed quotations are published.",
@@ -54,7 +55,7 @@ const COPY = defineCopy({
       reference_only: { value: "ಮೂಲ ಅಂದಾಜುಗಳು ಮಾತ್ರ", detail: "ಯಾವ ಮಾದರಿಯೂ ಸರಳ ಮೂಲ ಅಂದಾಜನ್ನು ಸ್ಪಷ್ಟವಾಗಿ ಮೀರಿಲ್ಲ; ಉಲ್ಲೇಖ ಅಂದಾಜುಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ." },
       not_evaluated: { value: "ಪರಿಶೀಲಿಸಿಲ್ಲ", detail: "ಯಾವುದೇ ಮುನ್ಸೂಚನೆ ಪ್ರಯೋಗ ಪ್ರಕಟವಾಗಿಲ್ಲ." },
     },
-    feed: { official: "AGMARKNET ದೈನಂದಿನ", mamcos: "MAMCOS", tss: "TSS", tumcos: "TUMCOS" },
+    feed: { official: "AGMARKNET ದೈನಂದಿನ", mamcos: "MAMCOS", tss: "TSS", tms: "TMS", tumcos: "TUMCOS" },
     freshness: "ದತ್ತಾಂಶ ಎಷ್ಟು ಹೊಸದು", unavailable: "ಲಭ್ಯವಿಲ್ಲ", awaitingReview: "ಪರಿಶೀಲನೆಗೆ ಕಾಯುತ್ತಿದೆ", noReports: "ವರದಿಗಳಿಲ್ಲ",
     awaitingDetail: (count: number, archived: string | null) => `${count} ದರ ವರದಿಗಳು ದತ್ತಾಂಶ ಗುಣಮಟ್ಟ ಪುಟದಲ್ಲಿ ಪರಿಶೀಲಕರ ಅನುಮೋದನೆಗೆ ಕಾಯುತ್ತಿವೆ.${archived ? ` ಸಂಗ್ರಹದಲ್ಲಿರುವ ಇತ್ತೀಚಿನ ವರದಿ ದಿನಾಂಕ ${archived}.` : ""}`,
     noOfficial: "ಈ ಬೆಳೆಗೆ ಪರಿಶೀಲಿಸಿದ ದೈನಂದಿನ ದಾಖಲೆಗಳು ಪ್ರಕಟವಾಗಿಲ್ಲ.", noCooperative: "ಪರಿಶೀಲಿಸಿದ ದರ ವರದಿಗಳು ಪ್ರಕಟವಾಗಿಲ್ಲ.",
@@ -119,7 +120,7 @@ export function IntelligenceScorecard({ feed, variety }: { feed: MarketFeed; var
   const overview = useQuery({ queryKey: ["overview", commodity, officialVariety], queryFn: () => api.overview(officialVariety, commodity), enabled: official && Boolean(officialVariety) });
   const cooperative = useQuery({
     queryKey: ["cooperative", feed, commodity, variety, "", ""], enabled: !official,
-    queryFn: () => api.cooperativePrices(feed as "mamcos" | "tss" | "tumcos", variety || undefined, commodity as "arecanut" | "black_pepper", {}),
+    queryFn: () => api.cooperativePrices(feed as CooperativeSource, variety || undefined, commodity as "arecanut" | "black_pepper", {}),
   });
   const history = useQuery({ queryKey: ["history", "2021-01", completed, "Rashi"], queryFn: () => api.monthlyHistory("2021-01", completed, "Rashi"), enabled: monthlyEnabled });
   const forecasting = useQuery({ queryKey: ["forecasting-overview"], queryFn: () => api.forecastingOverview(), enabled: forecastEnabled });

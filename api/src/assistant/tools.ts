@@ -31,7 +31,7 @@ export type ToolContext = {
 
 const text = (max = 120) => z.string().trim().min(1).max(max);
 const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
-const source = z.enum(["agmarknet", "mamcos", "tss", "tumcos"]);
+const source = z.enum(["agmarknet", "mamcos", "tss", "tumcos", "tms"]);
 const money = z.number().finite().min(0).max(1e8);
 
 const calculationArgs = {
@@ -103,7 +103,7 @@ const MONTHLY_BASIS = "MONTHLY_STATE_WEIGHTED_AVERAGE";
 const DEFAULT_VARIETY = "Rashi";
 const AGMARKNET = "AGMARKNET (Directorate of Marketing and Inspection)";
 const STALE_DAYS = 7;
-const COOP_LABEL: Record<string, string> = { mamcos: "MAMCOS", tss: "TSS", tumcos: "TUMCOS" };
+const COOP_LABEL: Record<string, string> = { mamcos: "MAMCOS", tss: "TSS", tumcos: "TUMCOS", tms: "TMS Sirsi" };
 
 class ToolHttpError extends Error {
   constructor(readonly path: string, readonly status: number, message: string) {
@@ -242,7 +242,7 @@ type CooperativeView = {
   rank: boolean;
 };
 
-async function cooperativeLatest(ctx: ToolContext, target: ToolResult, sourceKey: "mamcos" | "tss" | "tumcos", requested: string, now: Date, view: CooperativeView) {
+async function cooperativeLatest(ctx: ToolContext, target: ToolResult, sourceKey: "mamcos" | "tss" | "tumcos" | "tms", requested: string, now: Date, view: CooperativeView) {
   const label = COOP_LABEL[sourceKey];
   const overview = await getJson(ctx, `/cooperative/prices?source=${sourceKey}`);
   const varieties: string[] = overview?.varieties ?? [];
@@ -308,7 +308,7 @@ async function getCurrentPrices(ctx: ToolContext, args: ToolArgs<"get_current_pr
   const target = result("get_current_prices", args, "Current prices by source");
   const monthly = await monthlySnapshot(ctx);
   const variety = args.variety ? matchVariety(args.variety, monthly.varieties) ?? args.variety : (resolveVariety(target, undefined, monthly.varieties) ?? DEFAULT_VARIETY);
-  const sources = args.source ? [args.source] : (["agmarknet", "mamcos", "tss", "tumcos"] as const);
+  const sources = args.source ? [args.source] : (["agmarknet", "mamcos", "tss", "tms", "tumcos"] as const);
 
   if (sources.includes("agmarknet")) {
     const params = new URLSearchParams({ variety, limit: "12", include_count: "false" });
@@ -503,7 +503,7 @@ async function compareMarkets(ctx: ToolContext, args: ToolArgs<"compare_markets"
     if (dates.size > 1) target.uncertainty.push(`AGMARKNET markets reported on different dates (${[...dates].sort().join(", ")}); each value is that market's latest verified day.`);
     if (!rows.length) target.missing.push(`AGMARKNET daily: no verified market observations for "${variety}" in Karnataka.`);
   }
-  const coop = args.source && args.source !== "agmarknet" ? [args.source] : args.source ? [] : (["mamcos", "tss", "tumcos"] as const);
+  const coop = args.source && args.source !== "agmarknet" ? [args.source] : args.source ? [] : (["mamcos", "tss", "tms", "tumcos"] as const);
   for (const key of coop) await cooperativeLatest(ctx, target, key, args.variety ?? variety, now, { maxBranches: 15, onlyNamedPlaces: false, rank: true });
   target.limitations.push("Markets are compared only within the same source and price basis. AGMARKNET modal prices and cooperative branch averages are not ranked against each other.");
   target.reporting_period = target.facts.map((fact) => fact.reporting_period).filter(Boolean).sort().at(-1) ?? null;

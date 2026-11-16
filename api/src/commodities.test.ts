@@ -83,7 +83,7 @@ describe("commodity domain helpers", () => {
   it("keeps a complete arecanut fallback so production pages work without the catalogue endpoint", () => {
     const arecanut = findCommodity(FALLBACK_CATALOG, "arecanut");
     expect(CAPABILITIES.every((capability) => capabilityStatus(arecanut, capability) === "available")).toBe(true);
-    expect(marketFeeds(arecanut)).toEqual(["mamcos", "tss", "tumcos", "official"]);
+    expect(marketFeeds(arecanut)).toEqual(["mamcos", "tss", "tms", "tumcos", "official"]);
     expect(unitLabel(FALLBACK_CATALOG, arecanut)).toBe("INR / QUINTAL");
     expect(unitLabel(FALLBACK_CATALOG, arecanut, "text")).toBe("INR / quintal");
     expect(gradeOptions(arecanut).map((grade) => grade.label)).toEqual(["Local", "Large", "Medium", "FAQ"]);
@@ -139,7 +139,7 @@ describe("commodity master after migration", () => {
   });
 
   it("exposes capability-driven feeds: pepper only via TUMCOS, other configured commodities none", () => {
-    expect(marketFeeds(findCommodity(catalog, "arecanut"))).toEqual(["mamcos", "tss", "tumcos", "official"]);
+    expect(marketFeeds(findCommodity(catalog, "arecanut"))).toEqual(["mamcos", "tss", "tms", "tumcos", "official"]);
     expect(marketFeeds(findCommodity(catalog, "black_pepper"))).toEqual(["tumcos"]);
     expect(capabilityStatus(findCommodity(catalog, "black_pepper"), "cooperative_tumcos")).toBe("available");
     expect(marketFeeds(findCommodity(catalog, "coffee"))).toEqual([]);

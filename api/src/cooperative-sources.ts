@@ -2,7 +2,7 @@ import { z } from "zod";
 import { calendarTodayIST, calendarDateToTime, DAY_MS } from "../../shared/dates";
 import type { CooperativeSource } from "./cooperative";
 
-export const COOPERATIVE_SOURCES = ["mamcos", "tss", "tumcos"] as const;
+export const COOPERATIVE_SOURCES = ["mamcos", "tss", "tumcos", "tms"] as const;
 
 export type CooperativeSourceRecord = {
   source_key: CooperativeSource; display_name: string; operator: string; source_url: string; access_method: string;

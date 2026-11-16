@@ -562,7 +562,7 @@ describe("market experience", () => {
   it("keeps methodology collapsed and drops repeated banner text on cooperative pages", () => {
     const html = render(<MarketDataPage official={<p>Official</p>} />, "/analytics?feed=tss");
     expect(html).toContain('<details class="about-data">');
-    expect(html).toContain("branch averages · ₹/quintal (unit assumed)");
+    expect(html).toContain("TSS tender averages · ₹/quintal (unit assumed)");
     expect(html).not.toContain('class="eyebrow"');
     expect(html).not.toContain("Supported sources are listed even when no prices are published");
     expect(html).not.toContain("No variety aliases are merged.");
@@ -579,9 +579,11 @@ describe("market experience", () => {
   });
 
   it("shows only the cooperatives that publish a variety and names the others in one line", () => {
-    state.cooperative = [ready({ latest_by_branch: [cooperativeQuote("tss", "Sirsi", "CHURU")], data: [] })];
+    // Churu is published by TSS and TMS Sirsi, one query each, in that order.
+    state.cooperative = [ready({ latest_by_branch: [cooperativeQuote("tss", "Sirsi", "CHURU")], data: [] }), ready({ latest_by_branch: [], data: [] })];
     const html = render(<HomePage />, "/?v=churu");
     expect(html).toContain('id="rates-tss"');
+    expect(html).toContain('id="rates-tms"');
     expect(html).not.toContain('id="rates-mamcos"');
     expect(html).not.toContain('id="rates-tumcos"');
     expect(html).toContain("MAMCOS does not publish this variety.");
@@ -590,7 +592,7 @@ describe("market experience", () => {
   });
 
   it("explains that fresh red arecanut is undried nut", () => {
-    state.cooperative = [ready({ latest_by_branch: [], data: [] })];
+    state.cooperative = [ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] })];
     expect(render(<HomePage />, "/?v=fresh-red")).toContain("Fresh, undried nuts");
   });
 
@@ -826,7 +828,7 @@ describe("town pages", () => {
 
   it("gives each town its own title naming only the sources it has", () => {
     const sirsi = MARKET_PLACES.find((place) => place.slug === "sirsi")!;
-    expect(marketSeo(sirsi).en.title).toBe("Sirsi adike rate today: TSS, APMC arecanut prices | Areca Pulse");
+    expect(marketSeo(sirsi).en.title).toBe("Sirsi adike rate today: TSS, TMS, APMC arecanut prices | Areca Pulse");
     expect(seoPage("/market/puttur")?.en.title).toBe("Puttur adike rate today: APMC arecanut prices | Areca Pulse");
     // Older spellings people search by ("today adike rate shimoga") are in the title.
     expect(seoPage("/market/shivamogga")?.kn.title).toContain("Shivamogga (Shimoga) adike rate today");
@@ -1054,17 +1056,31 @@ describe("all varieties in one month", () => {
     };
   });
 
-  it("shows one tile per variety, main grades first, with the change from the month before", () => {
+  it("lists one row per variety, main grades first, with the change from the month before", () => {
     const html = render(<MonthlySnapshot />);
     expect(html.indexOf(">Main grades<")).toBeLessThan(html.indexOf(">Other grades and by-products<"));
     expect(html.indexOf(">Rashi<")).toBeLessThan(html.indexOf(">Chali<"));
     expect(html.indexOf(">Chali<")).toBeLessThan(html.indexOf(">Arecanut-Husk<"));
-    expect(html).toContain("₹46,842");
-    expect(html).toContain("↓ 1.4% <span class=\"variety-month-vs\">vs Sept</span>");
+    expect(html).toContain("<span class=\"variety-month-currency\">₹</span>46,842");
+    // A fall is a red pill; the month it is measured against is said once, in the group heading.
+    expect(html).toContain("<span class=\"variety-month-chip hold-down\">↓ 1.4%</span>");
+    expect(html).toContain(">change vs Sept<");
+    // One row per variety, not a box each, and a switch to re-order them.
+    expect(html).toContain("class=\"variety-month-row\"");
+    expect(html).toContain(">Usual order<");
+    expect(html).toContain(">Biggest move<");
     expect(html).toContain("No Sept report");
+    expect(html).toContain("Main grades</span><span class=\"variety-month-count\">2<");
     // The month and source are said once, not on every row.
     expect(html.match(/AGMARKNET CSV/g)).toHaveLength(1);
     expect(html).not.toContain("<table");
+  });
+
+  it("makes each tile a button that charts its variety when the page can", () => {
+    const html = render(<MonthlySnapshot onPick={() => undefined} />);
+    expect(html).toContain("aria-label=\"Show Rashi price history\"");
+    expect(html).toContain("Tap a variety to chart its history above.");
+    expect(render(<MonthlySnapshot />)).not.toContain("<button type=\"button\" class=\"variety-month-pick\"");
   });
 
   it("names the main grades in Kannada", () => {
@@ -1076,7 +1092,8 @@ describe("all varieties in one month", () => {
 describe("TSS grade names", () => {
   it("uses the Kannada name TSS publishes for every grade only TSS reports", async () => {
     const { TSS_KANNADA } = await import("../../../shared/tss-varieties");
-    const tssOnly = VARIETIES.filter((variety) => variety.labels.tss?.length === 1 && Object.keys(variety.labels).length === 1);
+    // TMS Sirsi also reports many of these grades; the grower's name still comes from TSS unless MAMCOS or TUMCOS names it.
+    const tssOnly = VARIETIES.filter((variety) => variety.labels.tss?.length === 1 && Object.keys(variety.labels).every((source) => source === "tss" || source === "tms"));
     expect(tssOnly.length).toBeGreaterThan(15);
     for (const variety of tssOnly) expect(variety.kn, variety.key).toBe(TSS_KANNADA[variety.labels.tss![0] as keyof typeof TSS_KANNADA]);
     expect(VARIETIES.find((variety) => variety.key === "fresh-sippe")?.kn).toBe("ಹಸಿ ಅಡಿಕೆ(ಸಿಪ್ಪೆ ಅಡಿಕೆ)");

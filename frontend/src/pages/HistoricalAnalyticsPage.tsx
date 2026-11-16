@@ -288,7 +288,8 @@ export function HistoricalAnalyticsPage() {
       </section>
       {!long && <section className="panel"><div className="panel-heading"><div><h2>{t.snapshots}</h2><p>{t.snapshotsHint(data.versions.length, changes.length)}</p></div></div><div className="monthly-details"><details><summary>{t.inspectVersions}</summary><div className="table-scroll" tabIndex={0} role="region" aria-label={t.versionsAria}><table><caption>{t.versionsCaption}</caption><thead><tr><th>{t.month}</th><th>{t.pricePresence}</th><th>{t.fetchedAt}</th><th>{t.captured}</th><th>{c.source}</th></tr></thead><tbody>{data.versions.map((row) => <tr key={`${row.reporting_month}:${row.refresh_run_id}`}><td>{format.month(row.reporting_month)}</td><td>{row.variety_present ? number(row.weighted_price) : t.absent}</td><td>{format.timestamp(row.fetched_at)}</td><td><a href={api.monthlySnapshotUrl(row.refresh_run_id)} target="_blank" rel="noreferrer">{t.archivedCsv}</a></td><td><a href={row.source_url} target="_blank" rel="noreferrer">{t.officialCsv}</a></td></tr>)}</tbody></table></div></details><p className="phone-hide">{t.methodology}</p></div></section>}
     </>}
-    <MonthlySnapshot />
+    {/* Tapping a variety charts it in the history at the top of the page. */}
+    <MonthlySnapshot onPick={(value) => { setVariety(value); document.querySelector(".page-stack")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }} />
     <DailyAggregation />
     <MonthlyRefresh />
   </div>;

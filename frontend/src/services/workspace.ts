@@ -11,7 +11,7 @@ export type WorkspaceRole = typeof WORKSPACE_ROLES[number];
 export const WORKSPACE_SECTIONS = ["scorecard", "latest_quotes", "monthly_insights", "forecast_status", "shortcuts"] as const;
 export type WorkspaceSection = typeof WORKSPACE_SECTIONS[number];
 
-const FEEDS = ["official", "mamcos", "tss", "tumcos"] as const;
+const FEEDS = ["official", "mamcos", "tss", "tms", "tumcos"] as const;
 const PRESETS = ["all", "7d", "30d", "90d", "365d", "ytd"] as const;
 
 export const workspaceProfileSchema = z.object({
