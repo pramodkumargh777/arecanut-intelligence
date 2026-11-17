@@ -40,7 +40,10 @@ if args.daily:
 props = json.loads(Path(args.props).read_text("utf-8")) if args.props else None
 if args.daily:
     voice = props.get("voice") or {}
-    frames = {k: (max(60, voice[k]["frames"] + DAILY_VOICE_DELAY + 10) if k in voice else m) for k, m in DAILY_MIN.items()}
+    # The 30-second cut has no "others" or "trend" scene: they take no time.
+    short = props.get("cut") == "30"
+    frames = {k: 0 if short and k in ("others", "trend") else (max(60, voice[k]["frames"] + DAILY_VOICE_DELAY + 10) if k in voice else m)
+              for k, m in DAILY_MIN.items()}
     t, at = 0.0, {}
     for k, f in frames.items():
         at[k] = t
@@ -50,7 +53,7 @@ if args.daily:
               ("compare", 0), ("sellwait", 0), ("intel", 0), ("ask", 0), ("advanced", at["cta"] - at["trend"]), ("trust", 0),
               ("cta", t - at["cta"])]
     lang = props.get("lang", "kn")
-    out_path = ROOT / "public" / "music" / f"daily-{lang}.wav"
+    out_path = ROOT / "public" / "music" / f"daily-{lang}{'-30' if short else ''}.wav"
 elif props and props.get("timeline"):
     scenes = [(s["key"], s["frames"] / FPS) for s in props["timeline"]]
     lang = props.get("lang", "kn")

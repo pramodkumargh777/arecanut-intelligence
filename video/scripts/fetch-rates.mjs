@@ -11,6 +11,9 @@ const at = (p) => new URL(`../${p}`, import.meta.url);
 const langs = (process.env.LANGS ?? "kn en").split(/\s+/).filter((l) => l === "kn" || l === "en");
 // PROPS_NAME=story (scripts/story.sh) writes out/story-props-<lang>.json only, and leaves the daily video's files alone.
 const name = process.env.PROPS_NAME ?? "today";
+// CUT=30 (the 30-second Story cut) writes out/today-props-<lang>-30.json and out/narration-30.json beside the full video's.
+const cut = process.env.CUT === "30" ? "30" : "full";
+const suf = cut === "full" ? "" : `-${cut}`;
 try {
   const data = await fetchRates(AbortSignal.timeout(30_000));
   const newest = newestDate(data);
@@ -19,10 +22,10 @@ try {
   const music = existsSync(at("public/music/bed.mp3")) ? { music: "music/bed.mp3" } : {};
   const narration = { newest, langs: {} };
   for (const lang of langs) {
-    writeFileSync(at(`out/${name}-props-${lang}.json`), JSON.stringify({ data, source: "live", lang, ...(name === "today" ? music : {}) }));
-    narration.langs[lang] = buildNarration(data, lang);
+    writeFileSync(at(`out/${name}-props-${lang}${suf}.json`), JSON.stringify({ data, source: "live", lang, ...(cut === "full" ? {} : { cut }), ...(name === "today" ? music : {}) }));
+    narration.langs[lang] = buildNarration(data, lang, cut);
   }
-  if (name === "today") writeFileSync(at("out/narration.json"), JSON.stringify(narration, null, 1));
+  if (name === "today") writeFileSync(at(`out/narration${suf}.json`), JSON.stringify({ ...narration, cut }, null, 1));
   // `npm run snapshot:update`: make Studio and render:snapshot show today's rates.
   if (process.env.UPDATE_SNAPSHOT) writeFileSync(at("src/data/snapshot.json"), JSON.stringify({ ...data, live: false }, null, 1));
   console.log(`✓ Rates fetched · newest report ${newest} · languages: ${langs.join(", ")}`);

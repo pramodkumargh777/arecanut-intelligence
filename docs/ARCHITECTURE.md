@@ -2,7 +2,7 @@
 
 This document describes the storage and query architecture as implemented in the repository
 (migrations `0001`–`0019`). Source-specific behaviour is documented separately in
-[AGMARKNET_DAILY_CONNECTOR.md](./AGMARKNET_DAILY_CONNECTOR.md),
+[AGMARKNET_DAILY_CONNECTOR.md](./AGMARKNET_DAILY_CONNECTOR.md), [AGMARKNET_V2_ARRIVALS.md](./AGMARKNET_V2_ARRIVALS.md), [DAILY_ARRIVALS.md](./DAILY_ARRIVALS.md),
 [COOPERATIVE_SOURCES.md](./COOPERATIVE_SOURCES.md), [COMMODITY_MODEL.md](./COMMODITY_MODEL.md) and
 [FORECASTING.md](./FORECASTING.md), [SUPPLY_AND_RISK.md](./SUPPLY_AND_RISK.md) and [AI_ASSISTANT.md](./AI_ASSISTANT.md).
 Backup, restore and retention procedures are in [DATA_RETENTION_AND_BACKUP.md](./DATA_RETENTION_AND_BACKUP.md).

@@ -28,7 +28,7 @@ The earlier generic connector (`fetch_api.py`) and CSV importer
 - **What the source does not publish:**
   - **No historical archive.** The resource returned only the current arrival date.
   - **No unit field.** The unit is operator-confirmed configuration (`AGMARKNET_PRICE_UNIT=Rs./Quintal`), based on a magnitude cross-check against same-day MAMCOS INR/quintal quotations. The connector refuses to run without it and accepts only quintal units.
-  - **No arrival quantity.** `arrival_quantity` is stored as `NULL` and never estimated.
+  - **No arrival quantity.** `arrival_quantity` is stored as `NULL` and never estimated. Arrival quantities come from AGMARKNET 2.0 reports instead ([AGMARKNET_V2_ARRIVALS.md](AGMARKNET_V2_ARRIVALS.md)); they are stored in their own tables and never attached to these price rows.
   - **No record ID.** `source_record_id` is derived as `datagovin:<resource>:<sha256(state|district|market|commodity|variety|grade|date)>`.
   - **No publication date.** `publication_date` is `NULL`. The platform fetch time is stored separately in `platform_fetched_at`.
 

@@ -24,6 +24,8 @@ and adds append-only tables for authorized imports.
 |---|---|---|
 | DASD (dasd.kerala.gov.in) | Public PDFs; already captured by the intelligence pipeline | `production_estimates` view unions DASD captures with imported documents |
 | AGMARKNET daily API (data.gov.in `9ef84268…`) | Exposes prices only, **no arrival quantities** | Arrivals need an authorized file import (`source_key = agmarknet`) |
+| AGMARKNET 2.0 weekly/monthly arrivals (checked 2026-11-17) | Public market-wise reports in metric tonnes; daily arrivals need a CAPTCHA or login | `market_arrival_periods`, see [AGMARKNET_V2_ARRIVALS.md](AGMARKNET_V2_ARRIVALS.md) |
+| KRAMA, Department of Agricultural Marketing, Karnataka (checked 2026-11-17) | Public daily market × variety × grade arrivals (quintals) and prices, 2014 onward | `market_arrival_days`, see [DAILY_ARRIVALS.md](DAILY_ARRIVALS.md) |
 | eNAM | No public API | Authorized CSV/file import only (`source_key = enam`) |
 | IMD APIs | Registration, an API key/JWT and a **whitelisted static IP**. Cloudflare Workers have no static egress IP | Authorized import (`provider = imd`) through an operator-run relay or file. No scraping |
 | Open-Meteo | Free for non-commercial use, CC BY 4.0; model output, not station data | Optional development source. `OPEN_METEO_ENABLED=false` disables the scheduled capture |
@@ -84,11 +86,25 @@ within the file and against stored rows, and conflicts are rejected.
 - `GET /api/v1/supply/arrivals?granularity=daily|weekly|monthly|seasonal&from&to&district&market&source`
   (maximum range 1,100 days). Weeks start on Monday, and seasons follow the IMD meteorological seasons.
   Market participation is reported as the number of markets and reporting days.
+  - **Default window (no `from`/`to`):** whole periods only. Daily: the last 31 days. Weekly: 26 completed weeks.
+    Monthly: 12 completed months. Seasonal: 4 completed seasons.
+  - **Order:** buckets come back in calendar order.
 - `GET /api/v1/supply/arrivals/price-comparison` pairs arrivals with **reviewer-verified AGMARKNET APMC prices on the
   same market, date and variety** only.
 
-**Current state.** No arrival rows exist, because no authorized file has been imported. Arrival forecasts are
-suppressed below 104 weekly points.
+**Current state.** No file-import arrival rows exist, because no authorized file has been imported. Daily arrivals come
+from KRAMA (scheduled) and AGMARKNET 2.0's date-wise report (operator session); they are stored in `market_arrival_days`
+(migration 0027, [DAILY_ARRIVALS.md](DAILY_ARRIVALS.md)). AGMARKNET 2.0 weekly and monthly market totals are stored
+separately in `market_arrival_periods` (migration 0026, [AGMARKNET_V2_ARRIVALS.md](AGMARKNET_V2_ARRIVALS.md)).
+
+- **Supply page, daily data.** With `DAILY_ARRIVALS_IN_SUPPLY = "true"`, `GET /supply/arrivals` includes daily rows at
+  every granularity. KRAMA is used for every date it reports.
+- **Supply page, monthly totals.** With `AGMARKNET_V2_ARRIVALS_IN_SUPPLY = "true"`, closed-month totals are added only
+  for months without daily rows.
+- **No double counting.** A market-day or market-month that already has file-import rows uses those instead.
+- **Raw data.** `GET /api/v1/supply/arrival-days` and `GET /api/v1/supply/arrival-periods` return the stored rows as
+  published.
+- **Forecasts.** Arrival forecasts are suppressed below 104 weekly points, counted from `market_arrivals` only.
 
 ## C. Weather
 
@@ -166,7 +182,7 @@ Currently **no rule is approved, so no advisory is issued**.
 | District production comparison | Ready; empty until original district records are imported |
 | Historical production growth | Live (DASD 2021-22 to 2025-26, Karnataka and All India) |
 | Weather and seasonal analysis | Live for Uttara Kannada (Sirsi grid); other districts are empty until imported |
-| Arrival trends | Ready; empty until an authorized import |
+| Arrival trends | Live: daily from KRAMA (2014 onward as the backfill completes) and AGMARKNET date-wise (2021–2026), monthly totals from AGMARKNET 2.0 for months without daily data |
 | Production and arrival forecasts | Suppressed by data-sufficiency gates (15 annual / 104 weekly points) |
 
 ## F. Tests

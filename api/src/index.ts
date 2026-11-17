@@ -20,6 +20,8 @@ import { commodityRoutes, resolveCommodity } from "./commodity-routes";
 import { priceBasisForSource } from "../../shared/commodities";
 import { sourceStatusRoutes } from "./source-status";
 import { agmarknetHistoryRoutes } from "./agmarknet-history";
+import { agmarknetV2ArrivalRoutes } from "./agmarknet-v2-arrivals";
+import { dailyArrivalRoutes } from "./daily-arrivals";
 import { AGMARKNET_DAILY_REVIEWER, AGMARKNET_DAILY_SOURCE, autoRejectStaleFlagged, autoVerifyPendingDaily, autoVerifyStatements, OBSERVATION_AUTO_REJECT_DAYS } from "./auto-verify";
 import { coveredReferenceSeries, overviewSnapshot, referenceChart, refreshAllDirtySummaries, refreshDirtySummaries, type ChartInterval } from "./summaries";
 import { operationsRoutes } from "./operations-routes";
@@ -49,6 +51,14 @@ export type Env = {
     AGMARKNET_DAILY_AUTO_VERIFY?: string;
     /** "true" verifies AGMARKNET history records that pass every check at import (src/agmarknet-history.ts). */
     AGMARKNET_HISTORY_AUTO_VERIFY?: string;
+    /** "false" refuses AGMARKNET 2.0 arrival imports (src/agmarknet-v2-arrivals.ts). */
+    AGMARKNET_V2_ARRIVALS_IMPORT_ENABLED?: string;
+    /** "true" adds AGMARKNET 2.0 monthly arrivals to GET /supply/arrivals (monthly and seasonal views only). */
+    AGMARKNET_V2_ARRIVALS_IN_SUPPLY?: string;
+    /** "false" refuses daily arrival imports (KRAMA and AGMARKNET date-wise; src/daily-arrivals.ts). */
+    DAILY_ARRIVALS_IMPORT_ENABLED?: string;
+    /** "true" adds daily arrivals (KRAMA first, then AGMARKNET date-wise) to GET /supply/arrivals at every granularity. */
+    DAILY_ARRIVALS_IN_SUPPLY?: string;
     INTELLIGENCE_SCHEDULE_ENABLED?: string;
     /** Optional R2 evidence archive. Absent locally and on deployments without a bucket. */
     ARCHIVE?: R2Bucket;
@@ -181,6 +191,8 @@ app.route("/", historyRoutes);
 app.route("/", decisionRoutes);
 app.route("/", sourceStatusRoutes);
 app.route("/", agmarknetHistoryRoutes);
+app.route("/", agmarknetV2ArrivalRoutes);
+app.route("/", dailyArrivalRoutes);
 app.route("/", intelligenceRoutes);
 app.route("/", forecastRoutes);
 app.route("/", forecastingRoutes);

@@ -4,11 +4,13 @@ import type { Env } from "./index";
 import { hashText } from "./intelligence-routes";
 import {
   ESTIMATE_TYPES, HAZARDS, IMD_SEASONS, addDays, approvalProblems, bucketSql, collapseVintages, conditionSchema, currentSeries,
-  daysBetween, districtResolver, evaluateRule, forecastEligibility, freshness, growthSeries, isCalendarDate, istDate,
-  parseReportingYear, preferredDays, publishedRules, revisionHistory, ruleStatus, seasonalSummary, toTonnes,
+  daysBetween, districtResolver, evaluateRule, forecastEligibility, freshness, growthSeries, imdSeason, isCalendarDate, istDate,
+  parseReportingYear, preferredDays, publishedRules, revisionHistory, ruleStatus, seasonalSummary, toTonnes, weekStart,
   type EstimateRow, type FieldReport, type ReviewRow, type RuleRow, type WeatherDay,
 } from "./supply";
 import { bearerMatches } from "./auth";
+import { AGMARKNET_V2_ARRIVALS_SOURCE, AGMARKNET_V2_GO_LIVE, AGMARKNET_V2_SOURCE_ID, AGMARKNET_V2_SOURCE_NAME, AGMARKNET_V2_SOURCE_URL } from "./agmarknet-v2-arrivals";
+import { DAILY_SOURCE_KEYS, dailyArrivalBuckets } from "./daily-arrivals";
 
 export const supplyRoutes = new Hono<Env>();
 const bearer = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
@@ -271,13 +273,42 @@ function dateRange(from: string | undefined, to: string | undefined, defaultDays
   return { from: start, to: end };
 }
 
+/**
+ * The window /supply/arrivals shows when no dates are asked for: whole periods only, so no bucket is a partial period
+ * that reads as a fall in arrivals. Daily: the last 31 days. Weekly: the last 26 completed Monday weeks. Monthly: the last
+ * 12 completed months. Seasonal: the last 4 completed IMD seasons.
+ */
+export function defaultArrivalWindow(granularity: string, today: string) {
+  if (granularity === "daily") return { from: addDays(today, -30), to: today };
+  if (granularity === "weekly") {
+    const to = addDays(weekStart(today), -1);
+    return { from: addDays(weekStart(to), -7 * 25), to };
+  }
+  if (granularity === "monthly") {
+    const to = addDays(`${today.slice(0, 7)}-01`, -1);
+    const year = Number(to.slice(0, 4)), month = Number(to.slice(5, 7));
+    const fromMonth = month === 12 ? `${year}-01` : `${year - 1}-${String(month + 1).padStart(2, "0")}`;
+    return { from: `${fromMonth}-01`, to };
+  }
+  const to = addDays(imdSeason(today).start, -1);
+  let season = imdSeason(to);
+  for (let step = 0; step < 3; step += 1) season = imdSeason(addDays(season.start, -1));
+  return { from: season.start, to };
+}
+
 supplyRoutes.get("/supply/arrivals", async (c) => {
   const granularity = c.req.query("granularity") ?? "weekly";
   if (!["daily", "weekly", "monthly", "seasonal"].includes(granularity)) return c.json({ error: "granularity must be daily, weekly, monthly or seasonal." }, 400);
-  const range = dateRange(c.req.query("from"), c.req.query("to"), 365);
+  const asked = { from: c.req.query("from"), to: c.req.query("to") };
+  const range = asked.from || asked.to ? dateRange(asked.from, asked.to, 365) : defaultArrivalWindow(granularity, istDate(new Date()));
   if ("error" in range) return c.json({ error: range.error }, 400);
   const state = c.req.query("state") ?? "Karnataka", district = c.req.query("district"), market = c.req.query("market"), source = c.req.query("source");
-  if (source && !(ARRIVAL_SOURCES as readonly string[]).includes(source)) return c.json({ error: "Unknown arrival source." }, 400);
+  const v2Enabled = c.env.AGMARKNET_V2_ARRIVALS_IN_SUPPLY === "true";
+  const dailyEnabled = c.env.DAILY_ARRIVALS_IN_SUPPLY === "true";
+  const dailySource = dailyEnabled && !!source && (DAILY_SOURCE_KEYS as string[]).includes(source);
+  if (source && !(ARRIVAL_SOURCES as readonly string[]).includes(source) && !(v2Enabled && source === AGMARKNET_V2_ARRIVALS_SOURCE) && !dailySource) {
+    return c.json({ error: "Unknown arrival source." }, 400);
+  }
   const filters = ["commodity_code=?", "state=?", "observation_date BETWEEN ? AND ?"], args: (string | number)[] = [COMMODITY, state, range.from, range.to];
   if (district) { filters.push("district=?"); args.push(district); }
   if (market) { filters.push("market=?"); args.push(market); }
@@ -298,8 +329,46 @@ supplyRoutes.get("/supply/arrivals", async (c) => {
       ORDER BY b.imported_at DESC LIMIT 50`).bind(...args),
     db.prepare(`SELECT COUNT(DISTINCT ${bucketSql("weekly", "observation_date")}) AS weeks FROM market_arrivals WHERE commodity_code=? AND state=? AND measure='arrival'`).bind(COMMODITY, state),
   ]);
-  const rows = series.results as Record<string, string | number | null>[];
+  let rows = series.results as Record<string, string | number | null>[];
+  let marketRows = markets.results as Record<string, string | number | null>[];
+  const sources = batches.results as Record<string, string | null>[];
+  const notes = ["Arrivals and traded quantities are separate measures and are never added together.",
+    "Weekly buckets start on Monday; seasons follow IMD meteorological seasons, not the arecanut harvest calendar."];
+  // Both additions fail soft: on any error (for example, code deployed before its migration) the response is what it was
+  // without them, so the Supply page never shows an error because of them.
+  if (dailyEnabled && (!source || dailySource)) {
+    try {
+      const daily = await dailyArrivalBuckets(db, { granularity, state, from: range.from, to: range.to, district, market, source: dailySource ? source : undefined });
+      if (daily.series.length || daily.sources.length) {
+        rows = mergeBuckets(rows, daily.series);
+        marketRows = mergeMarkets(marketRows, daily.markets);
+        sources.push(...daily.sources);
+        notes.push("Daily arrivals come from KRAMA (Department of Agricultural Marketing, Karnataka; published in quintals) for every date it reports, and from AGMARKNET 2.0's date-wise report for other dates. A market-day with daily file imports uses those instead.");
+      }
+    } catch (error) { console.error("Daily arrivals left out of /supply/arrivals", error); }
+  }
+  if (v2Enabled && (!source || source === AGMARKNET_V2_ARRIVALS_SOURCE)) {
+    try {
+    const v2 = await agmarknetV2Monthly(db, { granularity, from: range.from, to: range.to, state, district, market, deferToDaily: dailyEnabled });
+    if (v2.latestFetch) {
+      rows = mergeBuckets(rows, v2.series);
+      marketRows = mergeMarkets(marketRows, v2.markets);
+      // Named only where it contributed, or where it is the only source: then the section (and its period selector)
+      // stays on the page in views AGMARKNET's monthly totals cannot fill.
+      if (v2.series.length || !sources.length) {
+        sources.push({ id: AGMARKNET_V2_SOURCE_ID, source_key: AGMARKNET_V2_ARRIVALS_SOURCE, source_name: AGMARKNET_V2_SOURCE_NAME,
+          source_url: AGMARKNET_V2_SOURCE_URL, file_name: null, imported_at: v2.latestFetch,
+          authorization_note: "Public AGMARKNET 2.0 market-wise monthly arrivals report (no login or CAPTCHA); source unit Metric Tonnes." });
+      }
+      notes.push(granularity === "monthly" || granularity === "seasonal"
+        ? `AGMARKNET 2.0 monthly market totals are included for closed months with no daily data; a market-month with daily file imports uses those instead. AGMARKNET 2.0 went live on ${AGMARKNET_V2_GO_LIVE} and October 2025 is under-reported in every market, so comparisons across it are not like for like.`
+        : "AGMARKNET 2.0 publishes monthly and month-relative weekly totals, not daily or Monday-week figures; they appear in the monthly and seasonal views and at /supply/arrival-periods.");
+    }
+    } catch (error) { console.error("AGMARKNET 2.0 monthly arrivals left out of /supply/arrivals", error); }
+  }
   const actual = rows.flatMap((row) => [row.first_date as string, row.last_date as string]).sort();
+  // Chronological, not by label: seasonal labels ("2026-winter", "2026-pre_monsoon") do not sort by name.
+  rows = [...rows].sort((a, b) => String(a.first_date).localeCompare(String(b.first_date)) || String(a.bucket).localeCompare(String(b.bucket)));
   return c.json({
     commodity: COMMODITY, state, district: district ?? null, market: market ?? null, granularity, requested_range: range,
     reporting_period: actual.length ? { from: actual[0], to: actual.at(-1) } : null,
@@ -308,15 +377,78 @@ supplyRoutes.get("/supply/arrivals", async (c) => {
       arrival: rows.filter((row) => row.measure === "arrival"),
       traded: rows.filter((row) => row.measure === "traded"),
     },
-    markets: markets.results, sources: batches.results,
+    markets: marketRows, sources,
     seasons: granularity === "seasonal" ? IMD_SEASONS : undefined,
     forecast: forecastEligibility("arrivals", Number((history.results[0] as { weeks: number } | undefined)?.weeks ?? 0)),
     message: rows.length ? null
       : "No arrival or traded-quantity records exist for this selection. The AGMARKNET daily API resource carries no arrival quantities, and eNAM offers no public API; records appear only after an authorized file import.",
-    notes: ["Arrivals and traded quantities are separate measures and are never added together.",
-      "Weekly buckets start on Monday; seasons follow IMD meteorological seasons, not the arecanut harvest calendar."],
+    notes,
   });
 });
+
+type Row = Record<string, string | number | null>;
+
+/**
+ * AGMARKNET 2.0 closed-month market totals for /supply/arrivals. Months lie wholly inside the requested range, and a
+ * market-month that already has daily file-import arrivals is left out so the same arrivals are never counted twice.
+ * With deferToDaily, a month holding any stored daily arrivals (KRAMA or AGMARKNET date-wise) is left to those.
+ */
+async function agmarknetV2Monthly(db: D1Database, query: { granularity: string; from: string; to: string; state: string; district?: string; market?: string;
+  deferToDaily?: boolean }) {
+  const latest = await db.prepare("SELECT MAX(first_seen_at) AS latest FROM market_arrival_periods WHERE commodity_code=? AND state=?")
+    .bind(COMMODITY, query.state).first<{ latest: string | null }>();
+  if (!latest?.latest || (query.granularity !== "monthly" && query.granularity !== "seasonal")) {
+    return { latestFetch: latest?.latest ?? null, series: [] as Row[], markets: [] as Row[] };
+  }
+  const filters = ["v.period_type='month'", "v.value_status='reported'", "v.commodity_code=?", "v.state=?", "v.period_start>=?", "v.period_end<=?",
+    `NOT EXISTS (SELECT 1 FROM market_arrivals a WHERE a.measure='arrival' AND a.commodity_code=v.commodity_code AND a.state=v.state
+      AND lower(a.market)=lower(v.market) AND a.observation_date BETWEEN v.period_start AND v.period_end)`];
+  if (query.deferToDaily) {
+    filters.push(`NOT EXISTS (SELECT 1 FROM market_arrival_days d WHERE d.commodity_code=v.commodity_code AND d.state=v.state
+      AND d.observation_date BETWEEN v.period_start AND v.period_end)`);
+  }
+  const args: (string | number)[] = [COMMODITY, query.state, query.from, query.to];
+  if (query.district) { filters.push("v.district=?"); args.push(query.district); }
+  if (query.market) { filters.push("v.market=?"); args.push(query.market); }
+  const where = filters.join(" AND ");
+  const bucket = bucketSql(query.granularity as "monthly", "v.period_start");
+  const [series, markets] = await db.batch([
+    db.prepare(`SELECT 'arrival' AS measure, ${bucket} AS bucket, MIN(v.period_start) AS first_date, MAX(v.period_end) AS last_date,
+      ROUND(SUM(v.quantity_tonnes), 3) AS quantity_tonnes, COUNT(*) AS records, 0 AS unknown_unit_records,
+      COUNT(DISTINCT v.market) AS markets_reporting, 0 AS reporting_days
+      FROM market_arrival_periods_current v WHERE ${where} GROUP BY bucket ORDER BY bucket LIMIT 5000`).bind(...args),
+    db.prepare(`SELECT 'arrival' AS measure, v.market AS market, v.district AS district, 0 AS reporting_days,
+      ROUND(SUM(v.quantity_tonnes), 3) AS quantity_tonnes, 0 AS unknown_unit_records
+      FROM market_arrival_periods_current v WHERE ${where} GROUP BY v.market, v.district`).bind(...args),
+  ]);
+  return { latestFetch: latest.latest, series: series.results as Row[], markets: markets.results as Row[] };
+}
+
+const plus = (a: string | number | null | undefined, b: string | number | null | undefined) =>
+  a == null && b == null ? null : Number((Number(a ?? 0) + Number(b ?? 0)).toFixed(3));
+
+/** Adds AGMARKNET 2.0 buckets to file-import buckets of the same measure and period. */
+export function mergeBuckets(files: Row[], v2: Row[]): Row[] {
+  const merged = new Map(files.map((row) => [`${row.measure}\u0000${row.bucket}`, { ...row }]));
+  for (const row of v2) {
+    const key = `${row.measure}\u0000${row.bucket}`, prior = merged.get(key);
+    if (!prior) { merged.set(key, { ...row }); continue; }
+    merged.set(key, { ...prior,
+      first_date: [prior.first_date, row.first_date].sort()[0], last_date: [prior.last_date, row.last_date].sort()[1],
+      quantity_tonnes: plus(prior.quantity_tonnes, row.quantity_tonnes), records: Number(prior.records) + Number(row.records),
+      markets_reporting: Number(prior.markets_reporting) + Number(row.markets_reporting) });
+  }
+  return [...merged.values()].sort((a, b) => String(a.measure).localeCompare(String(b.measure)) || String(a.bucket).localeCompare(String(b.bucket)));
+}
+
+export function mergeMarkets(files: Row[], v2: Row[]): Row[] {
+  const merged = new Map(files.map((row) => [`${row.measure}\u0000${String(row.market).toLowerCase()}\u0000${row.district}`, { ...row }]));
+  for (const row of v2) {
+    const key = `${row.measure}\u0000${String(row.market).toLowerCase()}\u0000${row.district}`, prior = merged.get(key);
+    merged.set(key, prior ? { ...prior, quantity_tonnes: plus(prior.quantity_tonnes, row.quantity_tonnes) } : { ...row });
+  }
+  return [...merged.values()].sort((a, b) => Number(b.quantity_tonnes ?? -1) - Number(a.quantity_tonnes ?? -1)).slice(0, 50);
+}
 
 supplyRoutes.get("/supply/arrivals/price-comparison", async (c) => {
   const range = dateRange(c.req.query("from"), c.req.query("to"), 365);

@@ -1,0 +1,67 @@
+name: AGMARKNET 2.0 arrivals
+
+# Weekly and monthly arecanut arrivals from AGMARKNET 2.0 (docs/AGMARKNET_V2_ARRIVALS.md). Separate from the
+# data.gov.in price workflows, which are unchanged. Each run, after the source's day is done:
+# 1. re-reads the last 2 closed months and 4 closed AGMARKNET weeks for every Karnataka arecanut district (about 126
+#    requests, 2 s apart), so a late source revision is stored as a new version;
+# 2. backfills months not stored yet, newest first, back to January 2010, at most AGMARKNET_V2_BACKFILL_REQUESTS
+#    source requests per run (default 400, about 14 minutes), then does nothing more once complete.
+# Set the repository variable AGMARKNET_V2_ARRIVALS_ENABLED to "false" to stop it.
+on:
+  schedule:
+    - cron: "15 2 * * *" # 07:45 IST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Fetch and check only; store nothing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agmarknet-v2-arrivals
+  cancel-in-progress: false
+
+jobs:
+  arrivals:
+    if: ${{ vars.ANI_API_URL != '' && vars.AGMARKNET_V2_ARRIVALS_ENABLED != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check credentials
+        id: credentials
+        run: |
+          if [ -z "$INGESTION_TOKEN" ]; then
+            echo "::warning::INGESTION_TOKEN secret is not configured; skipping."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
+      - name: Import Karnataka arecanut arrivals (AGMARKNET 2.0)
+        if: steps.credentials.outputs.configured == 'true'
+        run: |
+          args=(--env-file /dev/null --report-dir "$RUNNER_TEMP/agmarknet-v2-arrivals" --backfill-from 2010-01
+                --backfill-requests "${AGMARKNET_V2_BACKFILL_REQUESTS:-400}")
+          if [ "${{ inputs.dry_run }}" = "true" ]; then args+=(--dry-run); fi
+          python data-platform/connectors/agmarknet_v2/run_arrivals.py "${args[@]}"
+        env:
+          AGMARKNET_V2_BASE_URL: ${{ vars.AGMARKNET_V2_BASE_URL }}
+          AGMARKNET_V2_BACKFILL_REQUESTS: ${{ vars.AGMARKNET_V2_BACKFILL_REQUESTS }}
+          INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
+          ANI_API_URL: ${{ vars.ANI_API_URL }}
+      - name: Archive source responses and reports
+        if: always() && steps.credentials.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: agmarknet-v2-arrivals-${{ github.run_id }}
+          path: ${{ runner.temp }}/agmarknet-v2-arrivals
+          if-no-files-found: ignore
+          retention-days: 90

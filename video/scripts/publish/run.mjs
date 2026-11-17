@@ -9,15 +9,16 @@
 //   node scripts/publish/run.mjs --fresh    exit 10 when every target already has today's newest report (no new rates)
 //   node scripts/publish/run.mjs --only instagram-story   one target only
 //
-// Settings (video/.daily.env): PUBLISH_TARGETS (default "youtube instagram-reel instagram-story facebook-reel"),
-// YT_LANGS (default "kn"; "kn en" for both), IG_LANG / FB_LANG (default kn), YT_PRIVACY (default public),
+// Settings (video/.daily.env): PUBLISH_TARGETS (default "youtube instagram-reel instagram-story facebook-reel"; also
+// "instagram-story-video" for the video as a Story and "facebook-photo" for the Story image as a Page photo post),
+// YT_LANGS / IG_LANG / FB_LANG (default "kn"; "kn en" posts both), YT_PRIVACY (default public),
 // FORCE=1 to post even when the report date was posted.
 import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildYouTubeTitle, newestDate } from "../../src/data/narration.ts";
 import { fetchRates } from "../../src/data/rates.ts";
 import { env, readJson, root, todayIST, videoSeconds, writeJson } from "./lib.mjs";
-import { checkFacebook, checkInstagram, facebookMissing, instagramMissing, metaAccessWarning, postFacebookReel, postInstagramReel, postInstagramStory } from "./meta.mjs";
+import { checkFacebook, checkInstagram, facebookMissing, instagramMissing, metaAccessWarning, postFacebookPhoto, postFacebookReel, postInstagramReel, postInstagramStory, postInstagramVideoStory } from "./meta.mjs";
 import { checkYouTube, postYouTube, youtubeMissing } from "./youtube.mjs";
 
 const args = process.argv.slice(2);
@@ -49,7 +50,8 @@ function targets() {
     const platform = kind.split("-")[0];
     if (!PLATFORMS[platform]) throw new Error(`Unknown target "${kind}".`);
     if (PLATFORMS[platform].missing().length) continue;
-    const langs = kind === "youtube" ? env("YT_LANGS", "kn").split(/\s+/) : [env(platform === "facebook" ? "FB_LANG" : "IG_LANG", "kn")];
+    // Each setting takes one language or several ("kn en"); every language is its own post.
+    const langs = env(kind === "youtube" ? "YT_LANGS" : platform === "facebook" ? "FB_LANG" : "IG_LANG", "kn").split(/\s+/);
     for (const lang of langs.filter(Boolean)) out.push({ key: `${kind}:${lang}`, kind, platform, lang });
   }
   return out;
@@ -105,6 +107,10 @@ function plan(target, m) {
       return { file: m.video, run: () => postInstagramReel({ file: m.video, caption: m.caption }), text: m.caption };
     case "instagram-story":
       return { file: m.story, run: () => postInstagramStory({ image: m.story }), text: "(Story image)" };
+    case "instagram-story-video":
+      return { file: m.video, run: () => postInstagramVideoStory({ file: m.video }), text: "(the daily video as a Story)" };
+    case "facebook-photo":
+      return { file: m.story, run: () => postFacebookPhoto({ image: m.story, caption: m.caption }), text: m.caption };
     case "facebook-reel":
       return { file: m.video, run: () => postFacebookReel({ file: m.video, description: m.caption }), text: m.caption };
   }
@@ -141,7 +147,7 @@ async function main() {
     }
     const p = plan(target, material(newest, target.lang));
     if (!p.file) {
-      results.push(`✗ ${target.key}: today's ${target.kind === "instagram-story" ? "Story image" : "video"} is missing`);
+      results.push(`✗ ${target.key}: today's ${/story$|photo$/.test(target.kind) ? "Story image" : "video"} is missing`);
       continue;
     }
     if (flag("--dry-run")) {

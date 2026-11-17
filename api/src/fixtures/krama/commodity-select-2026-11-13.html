@@ -1,0 +1,2668 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><link rel="alternate" hreflang="en" href="../Home.aspx" /><link rel="alternate" hreflang="kn" href="../Home_kan.aspx" /><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge"><meta name="description" content="Online Agricultural Marketing Information System of the Department of Agricultural Marketing, Government of Karnataka, providing agricultural market prices, commodity information, reports, schemes and market services."><meta name="keywords" content="Department of Agricultural Marketing, Karnataka, KSAMB, Krishimaratavahini, agricultural marketing, market prices, commodities, APMC, Karnataka agriculture">
+<title>
+
+</title><meta name="theme-color" content="#0F5757">
+
+    <!-- Core Native Engine Framework Libraries -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" /><link rel="stylesheet" href="../css/bootstrap.min.css" /><link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/bsnav.min.css" /><link rel="stylesheet" href="../css/owl.css" /><link rel="stylesheet" href="../css/font-awesome.min.css" /><link rel="stylesheet" href="../fonts/fonts/style.css" /><link rel="stylesheet" href="../css/jquery-ui.css" /><link rel="stylesheet" href="../css/jquery.fancybox.min.css" /><link rel="stylesheet" href="../revolution/css/settings.css" /><link rel="stylesheet" href="../revolution/css/layers.css" /><link rel="stylesheet" href="../revolution/css/navigation.css" /><link rel="shortcut icon" href="../img/Krishi_title_logo.png" type="image/png" />
+
+    <style>
+
+        /* =========================================================
+   DBIM DESIGN SYSTEM COLOURS
+   ========================================================= */
+:root {
+    --dbim-key: #0F5757;
+    --dbim-1: #2D8686;
+    --dbim-2: #75BDBD;
+    --dbim-3: #A6D9D9;
+    --dbim-4: #D9F2F2;
+
+    --dbim-text: #150202;
+    --dbim-white: #FFFFFF;
+    --dbim-linen: #EBEAEA;
+
+    --dbim-success: #198754;
+    --dbim-warning: #FFC107;
+    --dbim-error: #DC3545;
+    --dbim-info: #0D6EFD;
+
+    --dbim-black: #000000;
+    --dbim-grey-1: #C6C6C6;
+    --dbim-grey-2: #8E8E8E;
+    --dbim-grey-3: #606060;
+}
+
+        body {
+            background-color: var(--dbim-linen);
+            margin: 0;
+            padding: 0;
+        }
+        .main {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .access-toolbar {
+    background-color: var(--dbim-key);
+    padding: 10px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+        .access-toolbar a {
+            color: white;
+            text-decoration: none;
+        }
+        .access-toolbar img {
+            border-radius: 4px;
+        }
+        
+        body.theme-yellow-black { background-color: #000; color: yellow; }
+        body.theme-fuchsia-black { background-color: #000; color: fuchsia; }
+        body.theme-yellow-blue { background-color: #001f3f; color: yellow; }
+
+
+        /* =========================================================
+   ACCESSIBILITY CONTRAST THEMES
+   ========================================================= */
+
+/* Yellow on Black */
+body.theme-yellow-black,
+body.theme-yellow-black .main,
+body.theme-yellow-black .page_wapper,
+body.theme-yellow-black .service_box1,
+body.theme-yellow-black .left-section,
+body.theme-yellow-black .right-section {
+    background-color: #000000 !important;
+    color: #ffff00 !important;
+}
+
+body.theme-yellow-black p,
+body.theme-yellow-black h1,
+body.theme-yellow-black h2,
+body.theme-yellow-black h3,
+body.theme-yellow-black span,
+body.theme-yellow-black label,
+body.theme-yellow-black td,
+body.theme-yellow-black th {
+    color: #ffff00 !important;
+}
+
+
+/* Fuchsia on Black */
+body.theme-fuchsia-black,
+body.theme-fuchsia-black .main,
+body.theme-fuchsia-black .page_wapper,
+body.theme-fuchsia-black .service_box1,
+body.theme-fuchsia-black .left-section,
+body.theme-fuchsia-black .right-section {
+    background-color: #000000 !important;
+    color: #ff66ff !important;
+}
+
+body.theme-fuchsia-black p,
+body.theme-fuchsia-black h1,
+body.theme-fuchsia-black h2,
+body.theme-fuchsia-black h3,
+body.theme-fuchsia-black span,
+body.theme-fuchsia-black label,
+body.theme-fuchsia-black td,
+body.theme-fuchsia-black th {
+    color: #ff66ff !important;
+}
+
+
+/* Yellow on Blue */
+body.theme-yellow-blue,
+body.theme-yellow-blue .main,
+body.theme-yellow-blue .page_wapper,
+body.theme-yellow-blue .service_box1,
+body.theme-yellow-blue .left-section,
+body.theme-yellow-blue .right-section {
+    background-color: #001f3f !important;
+    color: #ffff00 !important;
+}
+
+body.theme-yellow-blue p,
+body.theme-yellow-blue h1,
+body.theme-yellow-blue h2,
+body.theme-yellow-blue h3,
+body.theme-yellow-blue span,
+body.theme-yellow-blue label,
+body.theme-yellow-blue td,
+body.theme-yellow-blue th {
+    color: #ffff00 !important;
+}
+
+
+        .btn-access {
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            display: inline-block;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-access.skip {
+    background-color: var(--dbim-grey-3);
+    color: #ffffff !important;
+}
+
+.btn-access.decrease {
+    background-color: var(--dbim-error);
+    color: #ffffff !important;
+}
+
+.btn-access.resetMe {
+    background-color: var(--dbim-info);
+    color: #ffffff !important;
+}
+
+.btn-access.increase {
+    background-color: var(--dbim-success);
+    color: #ffffff !important;
+}
+
+.btn-access.standard {
+    background-color: var(--dbim-grey-3);
+    color: #ffffff !important;
+}
+
+.btn-access.yellowonblack {
+    background-color: #000000;
+    color: #ffff00 !important;
+}
+
+.btn-access.fusiaonblack {
+    background-color: #000000;
+    color: #ff66ff !important;
+}
+
+.btn-access.yellowonblue {
+    background-color: #003366;
+    color: #ffff00 !important;
+}
+
+.btn-access:hover,
+.btn-access:focus {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+    text-decoration: underline;
+}
+
+
+
+
+
+/* Digital India Logo */
+.digital-india-top {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    background: #ffffff;
+    border-radius: 5px;
+    text-decoration: none !important;
+    white-space: nowrap;
+}
+
+.digital-india-top:hover,
+.digital-india-top:focus {
+    background: #eeeeee;
+    text-decoration: none !important;
+}
+
+.digital-india-logo {
+    width: 135px;
+    height: 32px;
+    object-fit: contain;
+    display: block;
+}
+
+
+
+
+
+
+
+
+
+        /* =========================================================
+   OFFICIAL GOVERNMENT / DEPARTMENT HEADER
+   ========================================================= */
+
+.mid_bar {
+    background-color: #FFFFFF;
+    padding: 0;
+    width: 100%;
+    height: auto;
+}
+
+/* Official header: corner logos and two side-by-side text panels */
+.official-header {
+    width: 100%; max-width: 1400px; min-height: 150px;
+    margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center;
+    background: #FFFFFF; box-sizing: border-box;
+}
+.official-logo {
+    flex: 0 0 135px; width: 135px;
+    display: flex; align-items: center; justify-content: center;
+}
+.official-logo img {
+    display: block; width: auto !important;
+    height: 120px !important; max-width: 130px !important;
+    object-fit: contain;
+}
+.official-header-text {
+    flex: 1 1 auto; min-width: 0;
+    padding: 0 14px; color: var(--dbim-text);
+}
+.official-header-titles {
+    display: grid; grid-template-columns: 1fr 1fr;
+    align-items: center; gap: 0; width: 100%;
+}
+.official-title-panel {
+    min-width: 0; text-align: center;
+    padding: 10px 12px;
+}
+.official-title-panel + .official-title-panel {
+    border-left: 1px solid var(--dbim-grey-1);
+}
+.government-name {
+    margin: 0 0 6px; font-family: "Noto Sans", Arial, sans-serif;
+    font-size: 17px; line-height: 1.35; font-weight: 500;
+}
+.department-name, .board-name {
+    margin: 4px 0; font-family: "Noto Sans", Arial, sans-serif;
+    font-size: 18px; line-height: 1.35; font-weight: 600;
+}
+.portal-name {
+    margin: 0 0 10px; font-family: "Noto Sans", Arial, sans-serif;
+    font-size: 25px; line-height: 1.25; font-weight: 700;
+    color: var(--dbim-key);
+}
+.portal-subtitle {
+    margin: 0; font-family: "Noto Sans", Arial, sans-serif;
+    font-size: 17px; line-height: 1.35; font-weight: 500;
+}
+@media (max-width: 991px) {
+    .official-header { padding: 10px; min-height: 120px; }
+    .official-logo { flex-basis: 90px; width: 90px; }
+    .official-logo img { height: 85px !important; max-width: 85px !important; }
+    .official-header-text { padding: 0 8px; }
+    .official-title-panel { padding: 8px 6px; }
+    .government-name, .portal-subtitle { font-size: 13px; }
+    .department-name, .board-name { font-size: 14px; }
+    .portal-name { font-size: 19px; }
+}
+@media (max-width: 600px) {
+    .official-header { padding: 8px 4px; min-height: 100px; }
+    .official-logo { flex-basis: 50px; width: 50px; }
+    .official-logo img { height: 48px !important; max-width: 48px !important; }
+    .official-header-text { padding: 0 3px; }
+    .official-header-titles { grid-template-columns: 1fr; }
+    .official-title-panel { padding: 4px 3px; }
+    .official-title-panel + .official-title-panel {
+        border-left: 0; border-top: 1px solid var(--dbim-grey-1);
+    }
+    .government-name, .portal-subtitle { font-size: 10px; line-height: 1.25; }
+    .department-name, .board-name { font-size: 10px; line-height: 1.25; }
+    .portal-name { font-size: 13px; margin-bottom: 3px; }
+}
+
+        /* DYNAMIC NAVIGATION OVERRIDES */
+        .custom-navbar-container {
+    background-color: var(--dbim-key) !important;
+    width: 100%;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+        .custom-nav-menu {
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: flex;
+            align-items: center;
+            flex-direction: row;
+        }
+
+        .custom-nav-menu > li > a {
+            color: #ffffff !important;
+            font-weight: bold !important;
+            font-size: 15px !important;
+            text-decoration: none !important;
+            padding: 15px 25px !important;
+            display: block;
+            transition: background 0.2s ease;
+        }
+
+        .custom-nav-menu > li > a:hover,
+.custom-nav-menu > li > a:focus {
+    background-color: var(--dbim-1) !important;
+}
+
+        .custom-nav-radio {
+            padding: 0 25px !important;
+            color: #ffffff !important;
+            font-weight: bold !important;
+            font-size: 15px !important;
+            display: flex;
+            align-items: center;
+        }
+
+        .custom-nav-radio label {
+            color: #ffffff !important;
+            margin-left: 6px !important;
+            margin-bottom: 0px !important;
+            cursor: pointer;
+        }
+
+        /* MOBILE PRESENTATION DRAWER ENGINE */
+        .custom-nav-toggle {
+            display: none;
+            background: transparent;
+            border: 1px solid #ffffff;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 8px 15px;
+            cursor: pointer;
+        }
+        .custom-nav-toggle .bar {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background-color: #ffffff;
+            margin: 4px 0;
+        }
+
+        @media (max-width: 768px) {
+            .custom-navbar-container {
+                position: relative;
+            }
+            .custom-nav-toggle {
+                display: block; /* Reveals hamburger anchor on narrow targets */
+                float: right;
+            }
+            .custom-nav-menu {
+    display: none;
+    flex-direction: column !important;
+    width: 100% !important;
+    background-color: var(--dbim-key) !important;
+    border-top: 1px solid var(--dbim-1);
+    clear: both;
+}
+            .custom-nav-menu.open {
+                display: flex !important; /* Expands open upon user activation */
+            }
+            .custom-nav-menu > li {
+    width: 100%;
+    border-bottom: 1px solid var(--dbim-1);
+}
+            .custom-nav-menu > li > a {
+                padding: 12px 20px !important;
+            }
+            .custom-nav-radio {
+                padding: 12px 20px !important;
+            }
+        }
+        /* =========================================================
+   GIGW / WCAG - FOOTER LINK CONTRAST
+   ========================================================= */
+
+.footer-links {
+    color: #150202 !important;
+}
+
+.footer-links a,
+.footer-links a:visited {
+    color: #150202 !important;
+    font-weight: 600;
+    text-decoration: underline !important;
+}
+
+.footer-links a:hover,
+.footer-links a:focus {
+    color: #150202 !important;
+    text-decoration: underline !important;
+    outline: 2px solid #150202;
+    outline-offset: 2px;
+}
+
+
+        /* =========================================================
+   PRINT / A4 ACCESSIBILITY
+   ========================================================= */
+
+@media print {
+
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
+    html,
+    body {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 10pt !important;
+    }
+
+    /* Do not print website controls/navigation */
+    .access-toolbar,
+    .custom-navbar-container,
+    .custom-nav-toggle,
+    .carousel,
+    .carousel-control,
+    .carousel-indicators {
+        display: none !important;
+    }
+
+    /* Force all major containers inside A4 printable width */
+    .page_wapper,
+    .main,
+    .container,
+    .container-fluid,
+    .row,
+    .service_box1,
+    .left-section,
+    .right-section,
+    .card-grid-row,
+    .card-grid-col {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        float: none !important;
+        box-sizing: border-box !important;
+    }
+
+    /*
+       Home.aspx uses Flexbox for the 60% + 40% screen layout.
+       Disable Flexbox while printing so it cannot exceed A4.
+    */
+    .container-fluid,
+    .card-grid-row {
+        display: block !important;
+    }
+
+    .left-section,
+    .right-section {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 10px 0 !important;
+        padding: 5px !important;
+        box-shadow: none !important;
+    }
+
+    /* Cards */
+    .card-grid-col {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .card {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        page-break-inside: avoid;
+    }
+
+    /* Never allow images to exceed printable width */
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Tables must remain within A4 */
+    table {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+    }
+
+    th,
+    td {
+        max-width: 100% !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        box-sizing: border-box !important;
+    }
+
+    /* ASP.NET panels and normal content containers */
+    main,
+    section,
+    article,
+    div {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Prevent long links/text from creating horizontal overflow */
+    p,
+    span,
+    a,
+    label,
+    strong {
+        max-width: 100% !important;
+        overflow-wrap: anywhere !important;
+        word-wrap: break-word !important;
+    }
+
+    /* Print links clearly */
+    a,
+    a:visited {
+        color: #000000 !important;
+        text-decoration: underline !important;
+    }
+
+    /* Footer should fit A4 */
+    footer,
+    .footer_last,
+    .footer_last_type_three {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 5px 0 !important;
+        box-sizing: border-box !important;
+    }
+}
+
+/* =========================================================
+   GIGW / WCAG - FOOTER TEXT CONTRAST
+   ========================================================= */
+
+.footer-info,
+.footer-info span,
+.footer-info label {
+    color: #150202 !important;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   FINAL GIGW / DBIM ACCESSIBILITY FIXES
+   Keep this block LAST in <style>
+   ========================================================= */
+
+/* ---------- DBIM typography ---------- */
+
+html,
+body,
+input,
+button,
+select,
+textarea {
+    font-family: "Noto Sans", Arial, sans-serif !important;
+}
+
+body {
+    color: #150202;
+    text-align: left;
+    line-height: 1.5;
+}
+
+/* DBIM desktop type scale */
+h1 {
+    font-size: 36px;
+    line-height: 1.2;
+}
+
+h2 {
+    font-size: 24px;
+    line-height: 1.2;
+}
+
+h3 {
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+p,
+li {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* Do not centre normal paragraph text */
+.main p {
+    text-align: left;
+}
+
+/* ---------- WCAG keyboard focus ---------- */
+
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+[tabindex]:focus {
+    outline: 3px solid #0D6EFD !important;
+    outline-offset: 2px !important;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid #0D6EFD !important;
+    outline-offset: 2px !important;
+}
+
+/* Search box currently had outline:none */
+.site-search-input:focus {
+    outline: 3px solid #0D6EFD !important;
+    outline-offset: -3px !important;
+}
+
+/* ---------- Links ---------- */
+
+.main a {
+    color: var(--dbim-info);
+}
+
+.main a:hover,
+.main a:focus {
+    color: #150202;
+    text-decoration: underline;
+}
+
+/* ---------- Footer contrast ---------- */
+
+.footer-links {
+    color: #150202 !important;
+}
+
+.footer-links a,
+.footer-links a:visited {
+    color: #150202 !important;
+    font-weight: 600;
+    text-decoration: underline !important;
+}
+
+.footer-links a:hover,
+.footer-links a:focus {
+    color: #150202 !important;
+    text-decoration: underline !important;
+}
+
+.footer-info,
+.footer-info span,
+.footer-info label {
+    color: #150202 !important;
+    font-weight: 600;
+}
+
+/* ---------- Mobile DBIM type scale ---------- */
+
+@media (max-width: 767px) {
+
+    h1 {
+        font-size: 24px !important;
+    }
+
+    h2 {
+        font-size: 20px !important;
+    }
+
+    h3 {
+        font-size: 16px !important;
+    }
+
+    p,
+    li {
+        font-size: 14px;
+    }
+}
+
+
+/* =========================================================
+   DBIM FOOTER - FINAL OVERRIDE
+   ========================================================= */
+
+.footer_last,
+.footer_last_type_three {
+    background: var(--dbim-key) !important;
+    background-color: var(--dbim-key) !important;
+}
+
+.footer-links,
+.footer-info,
+.footer-info span,
+.footer-info label {
+    color: #FFFFFF !important;
+}
+
+.footer-links a,
+.footer-links a:visited {
+    color: #FFFFFF !important;
+    font-weight: 600;
+    text-decoration: underline !important;
+}
+
+.footer-links a:hover,
+.footer-links a:focus {
+    color: #FFFFFF !important;
+    text-decoration: underline !important;
+}
+
+
+
+/* ==========================================================
+   KRAMA - DBIM COMPLIANCE OVERRIDES
+   Add at END of main stylesheet
+   ========================================================== */
+
+:root {
+    --dbim-green: #0F5757;
+    --dbim-white: #FFFFFF;
+    --dbim-text: #150202;
+    --dbim-focus: #FFBF47;
+}
+
+/* ---------- BODY / TYPOGRAPHY ---------- */
+
+body {
+    color: var(--dbim-text);
+    line-height: 1.5;
+}
+
+p {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* Avoid centred/justified body paragraphs */
+main p,
+.content p,
+.container p {
+    text-align: left;
+}
+
+/* ---------- ACCESSIBLE FOCUS ---------- */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.dropdown-toggle:focus-visible {
+    outline: 3px solid var(--dbim-focus) !important;
+    outline-offset: 2px !important;
+}
+
+/* ---------- DBIM FOOTER ---------- */
+
+footer,
+.footer,
+.footer-section,
+#footer {
+    background-color: #0F5757 !important;
+    color: #FFFFFF !important;
+}
+
+footer p,
+footer span,
+footer li,
+footer strong,
+footer h2,
+footer h3,
+.footer p,
+.footer span,
+.footer li {
+    color: #FFFFFF !important;
+}
+
+footer a,
+.footer a {
+    color: #FFFFFF !important;
+    text-decoration: underline;
+}
+
+footer a:hover,
+footer a:focus,
+.footer a:hover,
+.footer a:focus {
+    color: #FFFFFF !important;
+    text-decoration: underline;
+}
+
+/* ---------- PRICE TABLE ACCESSIBILITY ---------- */
+
+/* Don't use light red/green text for Min/Max */
+.minimum-price,
+.maximum-price,
+th.minimum-price,
+th.maximum-price {
+    color: #222222 !important;
+    font-weight: 700;
+}
+
+/* ---------- SEMANTIC PAGE HEADING ---------- */
+
+.dbim-page-title {
+    font-size: 24px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #222222;
+    margin: 0 0 15px;
+}
+
+/* ---------- SKIP LINK ---------- */
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 99999;
+    padding: 10px 16px;
+    background: #FFFFFF;
+    color: #000000;
+}
+
+.skip-link:focus {
+    left: 10px;
+    top: 10px;
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 767px) {
+    p {
+        font-size: 14px;
+    }
+
+    .dbim-page-title {
+        font-size: 24px;
+    }
+}
+
+
+/* =========================================================
+   FOOTER LAYOUT FIX - prevent visitor count/logo overlap
+   ========================================================= */
+
+.footer_last .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.footer_last .col-lg-1,
+.footer_last .col-md-1,
+.footer_last .col-sm-1 {
+    flex: 0 0 140px;
+    max-width: 140px;
+}
+
+.footer_last .col-lg-10,
+.footer_last .col-md-10,
+.footer_last .col-sm-10 {
+    flex: 1 1 600px;
+    max-width: calc(100% - 280px);
+    text-align: left;
+}
+
+.footer_last img {
+    max-width: 130px;
+    height: auto;
+}
+
+/* Footer links and visitor information */
+.footer-links,
+.footer-info {
+    width: 100%;
+    clear: both;
+}
+
+/* Mobile / tablet */
+@media (max-width: 768px) {
+
+    .footer_last .row {
+        display: block;
+        text-align: center;
+    }
+
+    .footer_last .col-lg-1,
+    .footer_last .col-md-1,
+    .footer_last .col-sm-1,
+    .footer_last .col-lg-10,
+    .footer_last .col-md-10,
+    .footer_last .col-sm-10 {
+        width: 100%;
+        max-width: 100%;
+        float: none;
+        text-align: center;
+    }
+
+    .footer_last img {
+        margin: 10px auto;
+    }
+}
+
+
+/* DBIM 5.4: single compact language and search block */
+.header-language-search {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.header-language-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.header-language-selector a {
+    color: var(--dbim-key);
+    text-decoration: underline;
+    padding: 4px;
+}
+.header-language-selector a:hover,
+.header-language-selector a:focus {
+    color: var(--dbim-text);
+}
+.header-language-search .site-search-wrap {
+    display: flex;
+    align-items: center;
+    width: 170px;
+    height: 32px;
+    margin: 0;
+    background: var(--dbim-white);
+    border: 1px solid var(--dbim-grey-1);
+    border-radius: 4px;
+    overflow: visible;
+}
+.header-language-search .site-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    height: 30px;
+    padding: 4px 7px;
+    border: 0;
+    border-radius: 4px 0 0 4px;
+    background: var(--dbim-white);
+    color: var(--dbim-text);
+    font-size: 12px;
+}
+.header-language-search .site-search-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    height: 30px;
+    background: var(--dbim-key);
+    color: var(--dbim-white) !important;
+    border-radius: 0 3px 3px 0;
+    text-decoration: none;
+}
+.header-language-search .site-search-btn:hover,
+.header-language-search .site-search-btn:focus {
+    background: var(--dbim-1);
+    color: var(--dbim-white) !important;
+}
+.header-language-search .site-search-btn svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+@media (max-width: 600px) {
+    .header-language-search { justify-content: center; gap: 6px; }
+    .header-language-selector { font-size: 12px; }
+    .header-language-search .site-search-wrap { width: 140px; }
+}
+
+
+/* GIGW 3.0 / WCAG 2.4.7 - Visible keyboard focus */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex="0"]:focus-visible {
+    outline: 3px solid #0D6EFD !important;
+    outline-offset: 3px !important;
+}
+
+
+/* Compact toolbar icons */
+.tool-dropdown {
+    position: relative;
+}
+
+.tool-icon-button {
+    width: 48px;
+    height: 44px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #28166f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.language-symbol {
+    font-size: 23px;
+    font-weight: 600;
+}
+
+.language-symbol span {
+    font-size: 15px;
+    margin-left: 2px;
+}
+
+.language-panel,
+.accessibility-panel {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    z-index: 99999;
+    background: #ffffff;
+    color: #150202;
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.18);
+}
+
+.language-panel[hidden],
+.accessibility-panel[hidden] {
+    display: none !important;
+}
+
+.language-panel {
+    width: 190px;
+}
+
+.language-panel a {
+    display: block;
+    padding: 12px 16px;
+    color: #150202 !important;
+    text-decoration: none;
+}
+
+.language-panel a:hover,
+.language-panel a:focus {
+    background: #eeeeee;
+    color: #150202 !important;
+}
+
+.accessibility-panel {
+    width: min(530px, calc(100vw - 24px));
+    max-height: 75vh;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.accessibility-panel h2 {
+    font-size: 20px;
+    text-align: center;
+    margin: 0 0 16px;
+}
+
+.accessibility-panel h3 {
+    font-size: 16px;
+    margin: 15px 0 10px;
+}
+
+.accessibility-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.accessibility-grid button {
+    min-height: 85px;
+    padding: 10px 5px;
+    background: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 7px;
+    color: #28166f;
+    cursor: pointer;
+    white-space: normal;
+}
+
+.accessibility-grid button:hover,
+.accessibility-grid button:focus {
+    background: #eeeeff;
+    border-color: #28166f;
+}
+
+.screen-reader-link {
+    display: block;
+    margin-top: 18px;
+    color: #28166f !important;
+    text-decoration: underline !important;
+}
+
+body.access-highlight-links main a {
+    background: #ffff00 !important;
+    color: #000000 !important;
+    text-decoration: underline !important;
+}
+
+body.access-hide-images main img {
+    visibility: hidden !important;
+}
+
+body.access-big-cursor,
+body.access-big-cursor * {
+    cursor: crosshair !important;
+}
+
+body.access-text-spacing main {
+    letter-spacing: 0.08em;
+    word-spacing: 0.16em;
+}
+
+body.access-line-height main p,
+body.access-line-height main li {
+    line-height: 1.8 !important;
+}
+
+@media (max-width: 600px) {
+    .accessibility-panel {
+        position: fixed;
+        top: 60px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+    }
+
+    .accessibility-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+
+
+/* =========================================
+   TOP TOOLBAR - FINAL ALIGNMENT
+   ========================================= */
+
+.access-toolbar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    width: 100%;
+    padding: 10px 20px;
+    gap: 15px;
+    box-sizing: border-box;
+    background: #0F5757;
+    position: relative;
+    z-index: 1100;
+}
+
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-left: auto;
+    flex-wrap: nowrap;
+}
+
+.toolbar-right > a {
+    white-space: nowrap;
+}
+
+.toolbar-right .tool-dropdown {
+    flex-shrink: 0;
+}
+
+/* Open accessibility panel toward the left */
+.toolbar-right .accessibility-panel {
+    left: auto;
+    right: 0;
+}
+
+/* Keep language dropdown aligned with icon */
+.toolbar-right .language-panel {
+    left: auto;
+    right: 0;
+}
+
+/* Prevent Digital India from stretching */
+.toolbar-left .digital-india-top {
+    flex-shrink: 0;
+}
+
+/* Mobile responsive alignment */
+@media (max-width: 768px) {
+
+    .access-toolbar {
+        flex-wrap: wrap !important;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .toolbar-left {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .toolbar-right {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .toolbar-right .btn-access {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+}
+
+
+
+
+/* Screen reader and skip-to-content icons */
+.toolbar-right .toolbar-icon-link {
+    width: 48px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: #28166f !important;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    text-decoration: none !important;
+    flex-shrink: 0;
+}
+
+.toolbar-right .toolbar-icon-link i {
+    font-size: 25px;
+}
+
+.toolbar-right .toolbar-icon-link svg {
+    display: block;
+}
+
+.toolbar-right .toolbar-icon-link:hover,
+.toolbar-right .toolbar-icon-link:focus {
+    background: #eeeeff;
+    outline: 3px solid #0D6EFD;
+    outline-offset: 2px;
+}
+
+/* Accessible language selector text */
+.visually-hidden-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+    </style>
+</head>
+<body>
+    <form name="aspnetForm" method="post" action="./Commadity" id="aspnetForm">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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" />
+
+<script type="text/javascript">
+<!--
+var theForm = document.forms['aspnetForm'];
+if (!theForm) {
+    theForm = document.aspnetForm;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+// -->
+</script>
+
+
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="B406F09B" />
+<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="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" />
+
+        <!-- First keyboard focusable element -->
+<a href="#MainContent" class="skip-link">
+    Skip to main content
+</a>
+
+        
+
+<!-- Accessibility and language toolbar -->
+<div class="access-toolbar">
+
+    <!-- LEFT SIDE: Digital India -->
+    <div class="toolbar-left">
+
+        <a href="https://www.digitalindia.gov.in/"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="digital-india-top"
+           aria-label="Digital India - opens in a new window">
+
+            <img src="../img/DigitalIndia.jpg" alt="Digital India" class="digital-india-logo" width="135" height="32" />
+        </a>
+
+    </div>
+
+    <!-- RIGHT SIDE: Accessibility controls -->
+    <div class="toolbar-right">
+
+        
+<!-- 1. Screen Reader Access -->
+<a href="../ScreenReaderAccess.aspx" class="toolbar-icon-link" title="Screen Reader Access" aria-label="Screen Reader Access">
+    <i class="fa fa-book" aria-hidden="true"></i>
+</a>
+
+<!-- 2. Skip to Main Content -->
+<a href="#MainContent"
+   class="toolbar-icon-link"
+   title="Skip to Main Content"
+   aria-label="Skip to Main Content">
+
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="27" height="27"
+         viewBox="0 0 24 24"
+         fill="none"
+         stroke="currentColor"
+         stroke-width="1.8"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         aria-hidden="true">
+        <path d="M9 5h12v14H9"/>
+        <path d="M3 12h13"/>
+        <path d="m12 8 4 4-4 4"/>
+        <path d="M3 5h3M3 19h3"/>
+    </svg>
+</a>
+
+
+        <!-- Language dropdown -->
+
+    <!-- Language dropdown -->
+    <div class="tool-dropdown">
+        <button type="button"
+        id="languageToggle"
+        class="tool-icon-button"
+        aria-label="ಅ A - Select language / ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="languagePanel"
+        title="Select language / ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ">
+
+    <span aria-hidden="true" class="language-symbol">
+        ಅ<span>A</span>
+    </span>
+
+</button>
+
+        <div id="languagePanel"
+     class="language-panel"
+     role="group"
+     aria-label="Select website language / ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+     hidden>
+
+    <a href="../Home.aspx" lang="en" hreflang="en">
+        English
+    </a>
+
+    <a href="../Home_kan.aspx" lang="kn" hreflang="kn">
+        ಕನ್ನಡ
+    </a>
+
+</div>
+    </div>
+
+    <!-- Accessibility dropdown -->
+    <div class="tool-dropdown">
+        <button type="button"
+                id="accessibilityToggle"
+                class="tool-icon-button"
+                aria-label="Accessibility tools"
+                aria-expanded="false"
+                aria-controls="accessibilityPanel">
+
+            <svg viewBox="0 0 24 24"
+                 width="28" height="28"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="1.8"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 aria-hidden="true">
+                <circle cx="12" cy="3.5" r="2"/>
+                <path d="M4 8.5h16M12 6v7M12 13l-4 8M12 13l4 8"/>
+            </svg>
+        </button>
+
+        <div id="accessibilityPanel"
+             class="accessibility-panel" hidden>
+
+            <h2>Accessibility Tools</h2>
+
+            <h3>Color Contrast</h3>
+            <div class="accessibility-grid">
+                <button type="button" class="standard">
+                    Normal Contrast
+                </button>
+                <button type="button" class="yellowonblack">
+                    Yellow on Black
+                </button>
+                <button type="button" class="fusiaonblack">
+                    Fuchsia on Black
+                </button>
+                <button type="button" class="yellowonblue">
+                    Yellow on Blue
+                </button>
+            </div>
+
+            <h3>Text Size</h3>
+            <div class="accessibility-grid">
+                <button type="button" class="increase">
+                    A+ Font Size Increase
+                </button>
+                <button type="button" class="decrease">
+                    A- Font Size Decrease
+                </button>
+                <button type="button" class="resetMe">
+                    A Normal Font
+                </button>
+            </div>
+
+            <h3>Others</h3>
+            <div class="accessibility-grid">
+                <button type="button" id="highlightLinks">
+                    Highlight Links
+                </button>
+                <button type="button" id="hideImages">
+                    Hide Images
+                </button>
+                <button type="button" id="bigCursor">
+                    Big Cursor
+                </button>
+                <button type="button" id="textSpacing">
+                    Text Spacing
+                </button>
+                <button type="button" id="lineHeight">
+                    Line Height
+                </button>
+            </div>
+
+            <a href="../ScreenReaderAccess.aspx" class="screen-reader-link">
+                Screen Reader Access
+            </a>
+        
+        </div> <!-- accessibilityPanel -->
+
+    </div> <!-- accessibility tool-dropdown -->
+
+</div> <!-- toolbar-right -->
+
+</div> <!-- access-toolbar -->
+
+<!-- Layout Banner Block -->
+<div class="page_wapper">
+            <!-- =========================================================
+     OFFICIAL GOVERNMENT / DEPARTMENT HEADER
+     ========================================================= -->
+<section class="mid_bar mid_type_two">
+    <div class="official-header">
+
+        <!-- Government of Karnataka Emblem -->
+        <div class="official-logo">
+            <a href="../Home.aspx" aria-label="Government of Karnataka - Home">
+
+    <img src="../img/Karnataka_emblem.png" alt="Government of Karnataka Emblem" width="150" height="150" />
+
+</a>
+        </div>
+
+
+        <!-- Department / Portal Name -->
+        <div class="official-header-text">
+          
+            <div class="header-language-search">
+
+    <div class="site-search-wrap"
+         role="search"
+         aria-label="Website search">
+
+        <input name="_ctl0:txtSiteSearch" type="text" maxlength="100" id="_ctl0_txtSiteSearch" class="site-search-input" placeholder="Search" aria-label="Search this website" />
+
+        <a id="_ctl0_btnSiteSearch" title="Search" class="site-search-btn" aria-label="Search" href="javascript:__doPostBack(&#39;_ctl0$btnSiteSearch&#39;,&#39;&#39;)">
+
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="24" height="24" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true" focusable="false">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="M20 20L16 16"></path>
+            </svg>
+
+        </a>
+
+    </div>
+
+</div>
+            <div class="official-header-titles">
+                <div class="official-title-panel">
+                    <div class="government-name">Government of Karnataka</div>
+                    <div class="department-name">Department of Agricultural Marketing</div>
+                    <div class="board-name">Karnataka State Agricultural Marketing Board</div>
+                </div>
+                <div class="official-title-panel">
+                    <div class="portal-name">KRISHI MARATA VAHINI</div>
+                    <div class="portal-subtitle">Online Agricultural Marketing Information System</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Karnataka State Agricultural Marketing Board Logo -->
+        <div class="official-logo">
+
+            <img src="../img/Department_Logo.png" alt="Karnataka State Agricultural Marketing Board Logo" width="150" height="150" />
+
+        </div>
+
+    </div>
+</section>
+
+            <!-- Refined Structural Green Menu Bar -->
+            <nav class="custom-navbar-container clearfix"
+                         aria-label="Main navigation">
+                <button type="button"
+        class="custom-nav-toggle"
+        id="mobileMenuTrigger"
+        aria-label="Toggle navigation menu"
+        aria-controls="navMenuDropdown"
+        aria-expanded="false">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+                
+                <ul class="custom-nav-menu" id="navMenuDropdown">
+                  <li>
+                    <a href="../Home.aspx">Home</a>
+                </li>
+
+                <li>
+                    <a href="https://krama.karnataka.gov.in/krama/login.aspx">Login</a>
+                </li>
+                    <li>
+                       <a href="../img/OnlineMarketFeePayment.mp4" onclick="openvideo(this.href); return false;" aria-label="₹ Payment Guide (MP4, 22.6 MB) - Online Market Fee Payment Guide">
+    ₹ Payment Guide (MP4, 22.6 MB)
+</a>
+                    </li>
+                    
+                </ul>
+            </nav>
+
+            <!-- Main Content Insertion Area -->
+            <!-- Main Content Insertion Area -->
+<main class="main" id="MainContent" tabindex="-1"
+      style="background: var(--dbim-white); padding: 0; margin: 0;">
+
+    <nav aria-label="Breadcrumb" class="site-breadcrumb">
+        <a href="Home.aspx">Home</a>
+        <span aria-hidden="true"> / </span>
+        <span id="_ctl0_breadcrumbCurrent">Krishi Marata Vahini</span>
+    </nav>
+
+    
+    <br />
+    <br />
+    <br />
+     <center>
+        &nbsp;<br />
+        <table cellpadding="0" cellspacing="0" width="800" class="data" style="background-color: #F4FFE4">
+            <tr>
+                <td style="width: auto; text-align: center">
+                    <span id="_ctl0_MainContent_lbl_reportname" style="color:Olive;font-size:14pt;width:175px;">Commodities Reported on 13/11/2026</span></td>
+            </tr>
+            <tr>
+                <td style="width: auto; text-align: center">
+        <table bordercolor="Green" style="background-color: #F4FFE4" class="data" width="700px">
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt">All Commodities<input id="_ctl0_MainContent_28,29,262,299,119,5,4,121,2,30,3,271,122,286,120,1,15,16,280,227,232,231,229,230,233,235,228,234,209,204,205,206,207,261,208,203,17,19,189,188,71,22,185,182,187,20,181,77,222,18,202,72,21,190,201,183,70,73,214,215,212,219,216,213,282,217,283,218,226,123,129,99,118,276,10,268,279,125,124,67,12,126,98,59,11,13,14,272,241,239,296,37,252,151,61,288,237,291,48,150,200,287,140,143,141,281,49,91,269,263,6,264,8,284,295,92,265,50,9,114,96,93,95,7,275,260,41,40,26,108,42,132,25,27,47,38,39,166,83,90,94,157,51,81,82,35,224,154,164,153,34,169,88,43,89,159,168,163,64,165,87,103,177,155,171,180,172,225,46,23,174,24,161,160,277,176,156,178,152,173,170,162,66,78,158," type="checkbox" name="_ctl0:MainContent:28,29,262,299,119,5,4,121,2,30,3,271,122,286,120,1,15,16,280,227,232,231,229,230,233,235,228,234,209,204,205,206,207,261,208,203,17,19,189,188,71,22,185,182,187,20,181,77,222,18,202,72,21,190,201,183,70,73,214,215,212,219,216,213,282,217,283,218,226,123,129,99,118,276,10,268,279,125,124,67,12,126,98,59,11,13,14,272,241,239,296,37,252,151,61,288,237,291,48,150,200,287,140,143,141,281,49,91,269,263,6,264,8,284,295,92,265,50,9,114,96,93,95,7,275,260,41,40,26,108,42,132,25,27,47,38,39,166,83,90,94,157,51,81,82,35,224,154,164,153,34,169,88,43,89,159,168,163,64,165,87,103,177,155,171,180,172,225,46,23,174,24,161,160,277,176,156,178,152,173,170,162,66,78,158," /></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Cereals</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]BAJRA</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_28" type="checkbox" name="_ctl0:MainContent:28" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]BARLEY</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_29" type="checkbox" name="_ctl0:MainContent:29" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]BEATEN RICE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_262" type="checkbox" name="_ctl0:MainContent:262" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]FOXTAIL MILLET</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_299" type="checkbox" name="_ctl0:MainContent:299" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]HYBRID CUMBU</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_119" type="checkbox" name="_ctl0:MainContent:119" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]JOWAR</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_5" type="checkbox" name="_ctl0:MainContent:5" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]MAIZE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_4" type="checkbox" name="_ctl0:MainContent:4" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]NAVANE</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_121" type="checkbox" name="_ctl0:MainContent:121" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]PADDY</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_2" type="checkbox" name="_ctl0:MainContent:2" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">10   ]RAGI</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_30" type="checkbox" name="_ctl0:MainContent:30" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">11   ]RICE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_3" type="checkbox" name="_ctl0:MainContent:3" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">12   ]SAJJE</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_271" type="checkbox" name="_ctl0:MainContent:271" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">13   ]SAME/SAVI</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_122" type="checkbox" name="_ctl0:MainContent:122" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">14   ]SOJI</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_286" type="checkbox" name="_ctl0:MainContent:286" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">15   ]T. V. CUMBU</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_120" type="checkbox" name="_ctl0:MainContent:120" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">16   ]WHEAT</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_1" type="checkbox" name="_ctl0:MainContent:1" /></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Fibre Crops</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]COTTON</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_15" type="checkbox" name="_ctl0:MainContent:15" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]JUTE</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_16" type="checkbox" name="_ctl0:MainContent:16" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]LINT </td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_280" type="checkbox" name="_ctl0:MainContent:280" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px"></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Flowers</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]ALL FLOWERS</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_227" type="checkbox" name="_ctl0:MainContent:227" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]ASTERA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_232" type="checkbox" name="_ctl0:MainContent:232" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]CRYSANTHAMUM</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_231" type="checkbox" name="_ctl0:MainContent:231" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]JASMINE</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_229" type="checkbox" name="_ctl0:MainContent:229" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]KAKADA</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_230" type="checkbox" name="_ctl0:MainContent:230" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]KANAKAMBARA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_233" type="checkbox" name="_ctl0:MainContent:233" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]MARYGOLD</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_235" type="checkbox" name="_ctl0:MainContent:235" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]ROSE</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_228" type="checkbox" name="_ctl0:MainContent:228" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]TUBE FLOWER</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_234" type="checkbox" name="_ctl0:MainContent:234" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px"></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Forest Products</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]ANTAWALA</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_209" type="checkbox" name="_ctl0:MainContent:209" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]BAMBOO</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_204" type="checkbox" name="_ctl0:MainContent:204" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]CANE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_205" type="checkbox" name="_ctl0:MainContent:205" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]FIREWOOD</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_206" type="checkbox" name="_ctl0:MainContent:206" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]SOAPNUT</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_207" type="checkbox" name="_ctl0:MainContent:207" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]TAMARIND FRUIT</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_261" type="checkbox" name="_ctl0:MainContent:261" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]TAMARIND SEED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_208" type="checkbox" name="_ctl0:MainContent:208" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]WOOD</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_203" type="checkbox" name="_ctl0:MainContent:203" /></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Fruits</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]APPLE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_17" type="checkbox" name="_ctl0:MainContent:17" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]BANANA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_19" type="checkbox" name="_ctl0:MainContent:19" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]BOREHANNU</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_189" type="checkbox" name="_ctl0:MainContent:189" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]CHAKOOTHA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_188" type="checkbox" name="_ctl0:MainContent:188" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]CHIKOOS (SAPOTA)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_71" type="checkbox" name="_ctl0:MainContent:71" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]GRAPES</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_22" type="checkbox" name="_ctl0:MainContent:22" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]GUAVA</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_185" type="checkbox" name="_ctl0:MainContent:185" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]JACK FRUIT</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_182" type="checkbox" name="_ctl0:MainContent:182" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]KARBUJA</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_187" type="checkbox" name="_ctl0:MainContent:187" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">10   ]MANGO</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_20" type="checkbox" name="_ctl0:MainContent:20" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">11   ]MARASEBU</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_181" type="checkbox" name="_ctl0:MainContent:181" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">12   ]MOUSAMBI</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_77" type="checkbox" name="_ctl0:MainContent:77" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">13   ]NERALE HANNU</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_222" type="checkbox" name="_ctl0:MainContent:222" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">14   ]ORANGE</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_18" type="checkbox" name="_ctl0:MainContent:18" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">15   ]OTHER FRUITS</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_202" type="checkbox" name="_ctl0:MainContent:202" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">16   ]PAPAYA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_72" type="checkbox" name="_ctl0:MainContent:72" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">17   ]PINE APPLE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_21" type="checkbox" name="_ctl0:MainContent:21" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">18   ]POMAGRANATE</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_190" type="checkbox" name="_ctl0:MainContent:190" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">19   ]SEETHAPHAL</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_201" type="checkbox" name="_ctl0:MainContent:201" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">20   ]SIDDOTA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_183" type="checkbox" name="_ctl0:MainContent:183" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">21   ]SWEET LIME</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_70" type="checkbox" name="_ctl0:MainContent:70" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">22   ]WATER MELON</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_73" type="checkbox" name="_ctl0:MainContent:73" /></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Live Stock/Poultry</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]BULL (FOR EACH)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_214" type="checkbox" name="_ctl0:MainContent:214" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]CALF (FOR EACH)</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_215" type="checkbox" name="_ctl0:MainContent:215" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]COW (FOR EACH)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_212" type="checkbox" name="_ctl0:MainContent:212" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]GOAT (FOR EACH)</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_219" type="checkbox" name="_ctl0:MainContent:219" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]HE BAFFALO (FOR EACH)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_216" type="checkbox" name="_ctl0:MainContent:216" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]OX (FOR EACH)</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_213" type="checkbox" name="_ctl0:MainContent:213" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]RAM (FOR EACH)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_282" type="checkbox" name="_ctl0:MainContent:282" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]SHE BAFFALO (FOR EACH)</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_217" type="checkbox" name="_ctl0:MainContent:217" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]SHE GOAT (FOR EACH)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_283" type="checkbox" name="_ctl0:MainContent:283" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">10   ]SHEEP (FOR EACH)</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_218" type="checkbox" name="_ctl0:MainContent:218" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">11   ]SKIN AND HIDE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_226" type="checkbox" name="_ctl0:MainContent:226" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px"></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Oil Seeds</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]CASTOR SEED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_123" type="checkbox" name="_ctl0:MainContent:123" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]COPRA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_129" type="checkbox" name="_ctl0:MainContent:129" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]COTTON SEED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_99" type="checkbox" name="_ctl0:MainContent:99" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]GINGELLY</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_118" type="checkbox" name="_ctl0:MainContent:118" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]GINGELLY OIL</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_276" type="checkbox" name="_ctl0:MainContent:276" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]GROUNDNUT</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_10" type="checkbox" name="_ctl0:MainContent:10" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]GROUNDNUT SEED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_268" type="checkbox" name="_ctl0:MainContent:268" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]GURELLU</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_279" type="checkbox" name="_ctl0:MainContent:279" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]HIPPE SEED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_125" type="checkbox" name="_ctl0:MainContent:125" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">10   ]HONGE SEED</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_124" type="checkbox" name="_ctl0:MainContent:124" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">11   ]LINSEED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_67" type="checkbox" name="_ctl0:MainContent:67" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">12   ]MUSTARD</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_12" type="checkbox" name="_ctl0:MainContent:12" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">13   ]NEEM SEED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_126" type="checkbox" name="_ctl0:MainContent:126" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">14   ]NIGER SEED</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_98" type="checkbox" name="_ctl0:MainContent:98" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">15   ]SAFFLOWER</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_59" type="checkbox" name="_ctl0:MainContent:59" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">16   ]SESAMUM</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_11" type="checkbox" name="_ctl0:MainContent:11" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">17   ]SOYABEEN</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_13" type="checkbox" name="_ctl0:MainContent:13" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">18   ]SUNFLOWER</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_14" type="checkbox" name="_ctl0:MainContent:14" /></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Other</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]BUTTER</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_272" type="checkbox" name="_ctl0:MainContent:272" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]CHENNANGI (W)</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_241" type="checkbox" name="_ctl0:MainContent:241" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]CITRUS FRUIT</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_239" type="checkbox" name="_ctl0:MainContent:239" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]COCO BROOMS</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_296" type="checkbox" name="_ctl0:MainContent:296" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]COCONUT (PER 1000)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_37" type="checkbox" name="_ctl0:MainContent:37" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]HARALEKAI</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_252" type="checkbox" name="_ctl0:MainContent:252" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]JAGGERY</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_151" type="checkbox" name="_ctl0:MainContent:151" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]KHARIF MASH</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_61" type="checkbox" name="_ctl0:MainContent:61" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]MAIDA ATTA</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_288" type="checkbox" name="_ctl0:MainContent:288" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">10   ]MILLETS</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_237" type="checkbox" name="_ctl0:MainContent:237" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">11   ]SABUDAN</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_291" type="checkbox" name="_ctl0:MainContent:291" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">12   ]SUGAR</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_48" type="checkbox" name="_ctl0:MainContent:48" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">13   ]SUGARCANE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_150" type="checkbox" name="_ctl0:MainContent:150" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">14   ]TENDER COCONUT</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_200" type="checkbox" name="_ctl0:MainContent:200" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">15   ]WHEAT ATTA</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_287" type="checkbox" name="_ctl0:MainContent:287" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px"></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Plantation Crops</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]ARECANUT</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_140" type="checkbox" name="_ctl0:MainContent:140" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]BETAL LEAVES</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_143" type="checkbox" name="_ctl0:MainContent:143" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]TOBACCO</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_141" type="checkbox" name="_ctl0:MainContent:141" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px"></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Pulses</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]ALASANDE GRAM</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_281" type="checkbox" name="_ctl0:MainContent:281" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]ARHAR</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_49" type="checkbox" name="_ctl0:MainContent:49" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]AVARE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_91" type="checkbox" name="_ctl0:MainContent:91" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]AVAREDAL</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_269" type="checkbox" name="_ctl0:MainContent:269" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]BENGAL GRAMDAL</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_263" type="checkbox" name="_ctl0:MainContent:263" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]BENGALGRAM</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_6" type="checkbox" name="_ctl0:MainContent:6" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]BLACK GRAMDAL</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_264" type="checkbox" name="_ctl0:MainContent:264" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]BLACKGRAM</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_8" type="checkbox" name="_ctl0:MainContent:8" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]BULLAR</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_284" type="checkbox" name="_ctl0:MainContent:284" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">10   ]CHENNANGIDAL</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_295" type="checkbox" name="_ctl0:MainContent:295" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">11   ]COWPEA</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_92" type="checkbox" name="_ctl0:MainContent:92" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">12   ]GREEN GRAMDAL</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_265" type="checkbox" name="_ctl0:MainContent:265" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">13   ]GREEN PEAS</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_50" type="checkbox" name="_ctl0:MainContent:50" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">14   ]GREENGRAM</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_9" type="checkbox" name="_ctl0:MainContent:9" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">15   ]HORSE GRAM</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_114" type="checkbox" name="_ctl0:MainContent:114" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">16   ]LAK</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_96" type="checkbox" name="_ctl0:MainContent:96" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">17   ]MATAKI</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_93" type="checkbox" name="_ctl0:MainContent:93" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">18   ]MOATH</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_95" type="checkbox" name="_ctl0:MainContent:95" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">19   ]REDGRAM</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_7" type="checkbox" name="_ctl0:MainContent:7" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">20   ]TUR</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_275" type="checkbox" name="_ctl0:MainContent:275" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">21   ]TUR DAL</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_260" type="checkbox" name="_ctl0:MainContent:260" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px"></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Spices</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]BETALNUTS</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_41" type="checkbox" name="_ctl0:MainContent:41" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]CARDAMOMS</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_40" type="checkbox" name="_ctl0:MainContent:40" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]CHILLY RED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_26" type="checkbox" name="_ctl0:MainContent:26" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]CORIANDER SEED</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_108" type="checkbox" name="_ctl0:MainContent:108" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]CUMMINSEED</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_42" type="checkbox" name="_ctl0:MainContent:42" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]DRY CHILLIES</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_132" type="checkbox" name="_ctl0:MainContent:132" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]GARLIC</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_25" type="checkbox" name="_ctl0:MainContent:25" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]GINGER</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_27" type="checkbox" name="_ctl0:MainContent:27" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]METHI SEEDS</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_47" type="checkbox" name="_ctl0:MainContent:47" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">10   ]PEPPER</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_38" type="checkbox" name="_ctl0:MainContent:38" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">11   ]TURMERIC</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_39" type="checkbox" name="_ctl0:MainContent:39" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px"></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"></td>
+	</tr>
+	<tr>
+		<td class="data" colspan="4" width="800px" style="border-right: 1px solid;font-size: 13pt; color: darkgreen;  font-weight: bold">Vegetables</td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">1   ]ALASANDIKAI</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_166" type="checkbox" name="_ctl0:MainContent:166" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">2   ]ASH GOURD</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_83" type="checkbox" name="_ctl0:MainContent:83" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">3   ]BANANA GREEN</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_90" type="checkbox" name="_ctl0:MainContent:90" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">4   ]BEANS</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_94" type="checkbox" name="_ctl0:MainContent:94" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">5   ]BEETROOT</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_157" type="checkbox" name="_ctl0:MainContent:157" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">6   ]BINOULA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_51" type="checkbox" name="_ctl0:MainContent:51" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">7   ]BITTER GOURD</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_81" type="checkbox" name="_ctl0:MainContent:81" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">8   ]BOTTLE GOURD</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_82" type="checkbox" name="_ctl0:MainContent:82" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">9   ]BRINJAL</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_35" type="checkbox" name="_ctl0:MainContent:35" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">10   ]BUNCH BEANS</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_224" type="checkbox" name="_ctl0:MainContent:224" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">11   ]CABBAGE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_154" type="checkbox" name="_ctl0:MainContent:154" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">12   ]CAPSICUM</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_164" type="checkbox" name="_ctl0:MainContent:164" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">13   ]CARROT</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_153" type="checkbox" name="_ctl0:MainContent:153" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">14   ]CAULIFLOWER</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_34" type="checkbox" name="_ctl0:MainContent:34" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">15   ]CHAPPARADA AVARE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_169" type="checkbox" name="_ctl0:MainContent:169" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">16   ]CHILLY CAPSICUM</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_88" type="checkbox" name="_ctl0:MainContent:88" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">17   ]CORIANDER</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_43" type="checkbox" name="_ctl0:MainContent:43" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">18   ]COWPEA (VEG)</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_89" type="checkbox" name="_ctl0:MainContent:89" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">19   ]CUCUMBAR</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_159" type="checkbox" name="_ctl0:MainContent:159" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">20   ]DRUM STICK</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_168" type="checkbox" name="_ctl0:MainContent:168" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">21   ]DUSTER BEANS</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_163" type="checkbox" name="_ctl0:MainContent:163" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">22   ]FIELD PEA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_64" type="checkbox" name="_ctl0:MainContent:64" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">23   ]GREEN AVARE (W)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_165" type="checkbox" name="_ctl0:MainContent:165" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">24   ]GREEN CHILLY</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_87" type="checkbox" name="_ctl0:MainContent:87" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">25   ]GREEN GINGER</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_103" type="checkbox" name="_ctl0:MainContent:103" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">26   ]KNOOL KHOL</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_177" type="checkbox" name="_ctl0:MainContent:177" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">27   ]LADIES FINGER</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_155" type="checkbox" name="_ctl0:MainContent:155" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">28   ]LEAFY VEGETABLES</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_171" type="checkbox" name="_ctl0:MainContent:171" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">29   ]LIME (LEMON)</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_180" type="checkbox" name="_ctl0:MainContent:180" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">30   ]MANGO (RAW-RIPE)</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_172" type="checkbox" name="_ctl0:MainContent:172" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">31   ]MARAGENASU</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_225" type="checkbox" name="_ctl0:MainContent:225" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">32   ]METHI</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_46" type="checkbox" name="_ctl0:MainContent:46" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">33   ]ONION</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_23" type="checkbox" name="_ctl0:MainContent:23" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">34   ]PEAS WET</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_174" type="checkbox" name="_ctl0:MainContent:174" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">35   ]POTATO</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_24" type="checkbox" name="_ctl0:MainContent:24" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">36   ]RADDISH</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_161" type="checkbox" name="_ctl0:MainContent:161" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">37   ]RIDGEGUARD</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_160" type="checkbox" name="_ctl0:MainContent:160" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">38   ]SEASON LEAVES</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_277" type="checkbox" name="_ctl0:MainContent:277" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">39   ]SEEMEBADANEKAI</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_176" type="checkbox" name="_ctl0:MainContent:176" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">40   ]SNAKEGUARD</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_156" type="checkbox" name="_ctl0:MainContent:156" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">41   ]SUVARNAGADDE</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_178" type="checkbox" name="_ctl0:MainContent:178" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">42   ]SWEET POTATO</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_152" type="checkbox" name="_ctl0:MainContent:152" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">43   ]SWEET PUMPKIN</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_173" type="checkbox" name="_ctl0:MainContent:173" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">44   ]THOGARIKAI</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_170" type="checkbox" name="_ctl0:MainContent:170" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">45   ]THONDEKAI</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_162" type="checkbox" name="_ctl0:MainContent:162" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">46   ]THORIA</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_66" type="checkbox" name="_ctl0:MainContent:66" /></td>
+	</tr>
+	<tr class="data">
+		<td class="data" width="300px" style="border-right: 1px solid;font-size: 13pt; text-align: left;">47   ]TOMATO</td>
+		<td class="data" width="50px" style="border-right: 1px solid;font-size: 13pt"><input id="_ctl0_MainContent_78" type="checkbox" name="_ctl0:MainContent:78" /></td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt; text-align: left;" width="300px">48   ]WHITE PUMPKIN</td>
+		<td class="data" style="border-right: 1px solid;font-size: 13pt" width="50px"><input id="_ctl0_MainContent_158" type="checkbox" name="_ctl0:MainContent:158" /></td>
+	</tr>
+</table>
+
+                </td>
+            </tr>
+            <tr>
+                <td style="width:auto; text-align: center;">
+                    <span id="_ctl0_MainContent_LblMsg" style="color:Red;font-weight:bold;"></span>
+                </td>
+            </tr>
+            <tr>
+                <td style="width:auto; text-align: center">
+                    &nbsp;<input type="submit" name="_ctl0:MainContent:BtnRep" value="View Report" id="_ctl0_MainContent_BtnRep" class="btn-outline-success" />
+                    &nbsp; &nbsp;<input type="submit" name="_ctl0:MainContent:BtnRepM" value="Report Menu" id="_ctl0_MainContent_BtnRepM" class="btn-outline-info" style="width:105px;" /></td>
+            </tr>
+        </table>
+         <br />
+    </center>
+
+
+</main>
+
+          <!-- Footer Section Container -->
+<footer>
+    <section class="footer_last footer_last_type_three">
+        <div class="container">
+            <div class="row text-center">
+
+                <!-- India.gov Logo -->
+                <div class="col-lg-1 col-md-1 col-sm-1 mt-5">
+                    <ul>
+                        <li>
+                            <img src="../img/indiagov.png" alt="India.gov.in Logo" loading="lazy" />
+                        </li>
+                    </ul>
+                </div>
+
+
+                <!-- Footer Content -->
+                <div class="col-lg-10 col-md-10 col-sm-10">
+
+                    <!-- Footer Navigation Links -->
+                    <p class="footer-links"
+                    style="margin-bottom: 12px;">
+
+    <a href="../About.aspx" title="About Us">
+    About Us
+</a>
+
+    &nbsp; | &nbsp;
+
+    <a href="../Contact.aspx" title="Contact Us">
+        Contact Us
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="../Feedback.aspx" title="Online Feedback">
+        Feedback
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="../Help.aspx" title="Help">
+        Help
+    </a>
+   &nbsp; | &nbsp;
+
+    <a href="../TermsConditions.aspx" title="Terms and Conditions">
+        Terms &amp; Conditions
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="../Archive.aspx" title="View archived website content">
+        Archives
+    </a>
+                         &nbsp; | &nbsp;
+     <a href="../WebsitePolicies.aspx" title="View website Policies">
+         Website Policies</a>
+
+                        &nbsp; | &nbsp;
+
+<a href="../Sitemap.aspx" title="Sitemap">
+    Sitemap
+</a>
+
+</p>
+                    <!-- DBIM: Related Government Links -->
+<p class="footer-info">
+    <strong>Related Links:</strong>
+
+    <a href="https://www.india.gov.in/"
+       target="_blank"
+       rel="noopener noreferrer">
+        National Portal of India
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="https://nic.gov.in/"
+       target="_blank"
+       rel="noopener noreferrer">
+        National Informatics Centre (NIC)
+    </a>
+</p>
+
+
+                    <!-- Visitor Count -->
+                    <p class="footer-info">
+
+                        No. of Visitors:
+                        <span id="_ctl0_lblVisitorCount">4424203</span>
+
+                        &nbsp; | &nbsp;
+
+                        Today:
+                        <span id="_ctl0_lblTodayVisitorCount">43081</span>
+
+                    </p>
+
+
+                   
+                    
+
+
+                   <!-- DBIM 5.6: Website Ownership and Lineage -->
+<div class="footer-lineage"
+     role="region"
+     aria-label="Website ownership and lineage">
+
+    <p class="footer-info">
+        This is the official website of the
+        Online Agricultural Marketing Information System,
+        Department of Agricultural Marketing,
+        Government of Karnataka.
+    </p>
+
+    <p class="footer-info">
+        Website content owned and maintained by
+        Department of Agricultural Marketing,
+        Government of Karnataka.
+    </p>
+
+    <p class="footer-info">
+        Designed, Developed and Hosted by
+        National Informatics Centre (NIC).
+    </p>
+
+    <p class="footer-info">
+        Last Updated On:
+        <span id="_ctl0_lblLastUpdated">Not available</span>
+    </p>
+
+</div>
+                    <!-- Close central footer column -->
+</div>
+
+
+                <!-- NIC Logo -->
+                <div class="col-lg-1 col-md-1 col-sm-1 mt-5">
+                    <ul>
+                        <li>
+                            <img src="../img/NIClogo.png" style="width:120px;" alt="National Informatics Centre Logo" loading="lazy" />
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </section>
+</footer>
+        </div>
+
+        <!-- JAVASCRIPT SYSTEM DEPENDENCIES -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+
+        <script type="text/javascript">
+
+    function openvideo(url) {
+        var popup = window.open(url, '_blank', 'width=800,height=600');
+
+        if (popup) {
+            popup.focus();
+        }
+    }
+
+
+    $(document).ready(function () {
+        
+/* Language and accessibility dropdowns */
+function closeToolPanels() {
+    $('#languagePanel, #accessibilityPanel').prop('hidden', true);
+    $('#languageToggle, #accessibilityToggle')
+        .attr('aria-expanded', 'false');
+}
+
+$('#languageToggle, #accessibilityToggle').on('click', function (e) {
+    e.stopPropagation();
+
+    var panelId = $(this).attr('aria-controls');
+    var panel = $('#' + panelId);
+    var shouldOpen = panel.prop('hidden');
+
+    closeToolPanels();
+
+    if (shouldOpen) {
+        panel.prop('hidden', false);
+        $(this).attr('aria-expanded', 'true');
+    }
+});
+
+$(document).on('click', function (e) {
+    if (!$(e.target).closest('.tool-dropdown').length) {
+        closeToolPanels();
+    }
+});
+
+$(document).on('keydown', function (e) {
+    if (e.key === 'Escape') {
+        var openPanel = $('.tool-dropdown [aria-expanded="true"]');
+        closeToolPanels();
+        if (openPanel.length) openPanel.first().focus();
+    }
+});
+
+/* Additional accessibility functions */
+$('#highlightLinks').on('click', function () {
+    $('body').toggleClass('access-highlight-links');
+});
+
+$('#hideImages').on('click', function () {
+    $('body').toggleClass('access-hide-images');
+});
+
+$('#bigCursor').on('click', function () {
+    $('body').toggleClass('access-big-cursor');
+});
+
+$('#textSpacing').on('click', function () {
+    $('body').toggleClass('access-text-spacing');
+});
+
+$('#lineHeight').on('click', function () {
+    $('body').toggleClass('access-line-height');
+});
+
+        /* =====================================================
+           MOBILE MENU
+           ===================================================== */
+
+        $('#mobileMenuTrigger').on('click', function (e) {
+    e.preventDefault();
+
+    var menu = $('#navMenuDropdown');
+
+    menu.toggleClass('open');
+
+    var isExpanded = menu.hasClass('open');
+
+    $(this).attr('aria-expanded', isExpanded.toString());
+});
+
+
+        /* =====================================================
+           FONT SIZE ACCESSIBILITY
+           ===================================================== */
+
+        var defaultFontSize = 100;
+        var currentFontSize = defaultFontSize;
+
+        $('.decrease').on('click', function () {
+
+            if (currentFontSize > 80) {
+                currentFontSize -= 10;
+            }
+
+            $('body').css('font-size', currentFontSize + '%');
+
+        });
+
+
+        $('.resetMe').on('click', function () {
+
+            currentFontSize = defaultFontSize;
+
+            $('body').css('font-size', '100%');
+
+        });
+
+
+        $('.increase').on('click', function () {
+
+            if (currentFontSize < 130) {
+                currentFontSize += 10;
+            }
+
+            $('body').css('font-size', currentFontSize + '%');
+
+        });
+
+
+        /* =====================================================
+           STANDARD THEME
+           ===================================================== */
+
+        $('.standard').on('click', function () {
+
+            $('body').removeClass(
+                'theme-yellow-black ' +
+                'theme-fuchsia-black ' +
+                'theme-yellow-blue'
+            );
+
+        });
+
+
+        /* =====================================================
+           YELLOW ON BLACK
+           ===================================================== */
+
+        $('.yellowonblack').on('click', function () {
+
+            $('body')
+                .removeClass(
+                    'theme-fuchsia-black theme-yellow-blue'
+                )
+                .addClass('theme-yellow-black');
+
+        });
+
+
+        /* =====================================================
+           FUCHSIA ON BLACK
+           ===================================================== */
+
+        $('.fusiaonblack').on('click', function () {
+
+            $('body')
+                .removeClass(
+                    'theme-yellow-black theme-yellow-blue'
+                )
+                .addClass('theme-fuchsia-black');
+
+        });
+
+
+        /* =====================================================
+           YELLOW ON BLUE
+           ===================================================== */
+
+        $('.yellowonblue').on('click', function () {
+
+            $('body')
+                .removeClass(
+                    'theme-yellow-black theme-fuchsia-black'
+                )
+                .addClass('theme-yellow-blue');
+
+        });
+
+    });
+
+</script>
+    </form>
+</body>
+</html>

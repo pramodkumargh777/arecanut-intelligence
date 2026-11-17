@@ -70,5 +70,8 @@ export function arrivalRows(measures: SupplyArrivals["measures"]) {
     const entry = map.get(row.bucket) ?? { bucket: row.bucket, arrival: null, traded: null };
     entry[measure] = row; map.set(row.bucket, entry);
   }
-  return [...map.values()].sort((a, b) => a.bucket.localeCompare(b.bucket));
+  // Chronological by each bucket's first date: seasonal labels ("2026-winter", "2026-pre_monsoon") do not sort by name.
+  const start = (row: { arrival: ArrivalBucket | null; traded: ArrivalBucket | null }) =>
+    [row.arrival?.first_date, row.traded?.first_date].filter(Boolean).sort()[0] ?? "";
+  return [...map.values()].sort((a, b) => start(a).localeCompare(start(b)) || a.bucket.localeCompare(b.bucket));
 }
