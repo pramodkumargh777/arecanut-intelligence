@@ -10,6 +10,10 @@ import type { Lang } from "../i18n.ts";
 
 export type SceneKey = "glance" | "mamcos" | "tss" | "others" | "trend" | "cta";
 export const SCENES: SceneKey[] = ["glance", "mamcos", "tss", "others", "trend", "cta"];
+/** The 30-second cut (Instagram and Facebook Stories): the headline rates and the call to action only. */
+export const SHORT_SCENES: SceneKey[] = ["glance", "mamcos", "tss", "cta"];
+export type Cut = "full" | "30";
+export const scenesFor = (cut: Cut | undefined) => (cut === "30" ? SHORT_SCENES : SCENES);
 
 const ONES = ["", "ಒಂದು", "ಎರಡು", "ಮೂರು", "ನಾಲ್ಕು", "ಐದು", "ಆರು", "ಏಳು", "ಎಂಟು", "ಒಂಬತ್ತು"];
 const TEENS = ["ಹತ್ತು", "ಹನ್ನೊಂದು", "ಹನ್ನೆರಡು", "ಹದಿಮೂರು", "ಹದಿನಾಲ್ಕು", "ಹದಿನೈದು", "ಹದಿನಾರು", "ಹದಿನೇಳು", "ಹದಿನೆಂಟು", "ಹತ್ತೊಂಬತ್ತು"];
@@ -193,8 +197,35 @@ function narrationEn(f: ReturnType<typeof facts>) {
   return o;
 }
 
-export function buildNarration(d: RatesData, l: Lang = "kn"): Record<SceneKey, string[]> {
+/** One short line per scene, so the 30-second cut fits: the same facts as the full script, fewer words. */
+function narrationShort(f: ReturnType<typeof facts>, l: Lang) {
+  const o = empty();
+  const kn = l === "kn";
+  const s = say[l];
+  const town = (n: string) => place(n, l);
+  o.glance.push(kn ? `ಇವತ್ತಿನ ಅಡಿಕೆ ಧಾರಣೆ, ${s.date(f.newest)}.` : `Today's arecanut rates, ${s.date(f.newest)}.`);
+  if (f.mamcosDay) {
+    const lo = round100(f.mamcosDay.lo), hi = round100(f.mamcosDay.hi);
+    o.mamcos.push(kn
+      ? (lo !== hi ? `ಮ್ಯಾಮ್ಕೋಸ್ ರಾಶಿ ಸುಮಾರು ${s.num(lo)} ರೂಪಾಯಿಯಿಂದ ${s.num(hi)} ರೂಪಾಯಿವರೆಗೆ.` : `ಮ್ಯಾಮ್ಕೋಸ್ ರಾಶಿ ${s.rupees(lo)}.`)
+      : (lo !== hi ? `Mamcos Rashi, about ${s.num(lo)} to ${s.num(hi)} rupees.` : `Mamcos Rashi, ${s.rupees(lo)}.`));
+  }
+  const { tssRashi: r, tssChali: c } = f;
+  if (r && c && r.branch === c.branch) {
+    o.tss.push(kn ? `ಟಿ ಎಸ್ ಎಸ್ ${knIn(town(r.branch))} ರಾಶಿ ${s.rupees(r.avg)}, ಚಾಲಿ ${s.rupees(c.avg)}.` : `T S S ${town(r.branch)}: Rashi ${s.rupees(r.avg)}, Chali ${s.rupees(c.avg)}.`);
+  } else {
+    if (r) o.tss.push(kn ? `ಟಿ ಎಸ್ ಎಸ್ ${knIn(town(r.branch))} ರಾಶಿ ${s.rupees(r.avg)}.` : `T S S ${town(r.branch)} Rashi, ${s.rupees(r.avg)}.`);
+    if (c) o.tss.push(kn ? `${knIn(town(c.branch))} ಚಾಲಿ ${s.rupees(c.avg)}.` : `${town(c.branch)} Chali, ${s.rupees(c.avg)}.`);
+  }
+  o.cta.push(kn ? "ಎಲ್ಲಾ ಶಾಖೆಗಳ ಧಾರಣೆಗೆ ಅಡಿಕೆ ನಾಡಿ ಡಾಟ್ ಕಾಮ್ ನೋಡಿ." : "Every branch's rate at adikenaadi dot com.");
+  const bad = kn ? /[A-Za-z0-9]/ : /[0-9]/;
+  for (const k of SCENES) o[k] = o[k].filter((x) => !bad.test(x));
+  return o;
+}
+
+export function buildNarration(d: RatesData, l: Lang = "kn", cut: Cut = "full"): Record<SceneKey, string[]> {
   const f = facts(d);
+  if (cut === "30") return narrationShort(f, l);
   return l === "en" ? narrationEn(f) : narrationKn(f);
 }
 

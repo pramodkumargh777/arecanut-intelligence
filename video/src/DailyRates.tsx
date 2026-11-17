@@ -5,7 +5,7 @@ import { Background, PalmMark } from "./BrandIntro";
 import type { ApmcRow, CoopBlock, Quote, RatesData } from "./data/rates";
 import { apmcVariety, change, fmtDate as knDate, place, rupees } from "./format";
 import { lang, setLang, t, type Lang } from "./i18n";
-import { SCENES, type SceneKey } from "./data/narration";
+import { scenesFor, type Cut, type SceneKey } from "./data/narration";
 
 /**
  * Daily rates Reel / Short, 1080×1920 at 30 fps, filled from the live API at render time (see Root.tsx).
@@ -27,13 +27,15 @@ export type DailyRatesProps = {
   music?: string;
   /** Screen language; defaults to Kannada. */
   lang?: Lang;
+  /** "30": the 30-second Story cut (glance, MAMCOS, TSS, call to action). Defaults to the full video. */
+  cut?: Cut;
 };
 
 const VOICE_DELAY = 5;
 /** Lines follow each other with about half a second of air, so the voice flows across scenes. */
-export const sceneDurations = (p: Pick<DailyRatesProps, "voice">) =>
-  SCENES.map((k) => (p.voice?.[k] ? Math.max(60, p.voice[k]!.frames + VOICE_DELAY + 10) : T[k]));
-export const totalFrames = (p: Pick<DailyRatesProps, "voice">) => sceneDurations(p).reduce((a, b) => a + b, 0);
+export const sceneDurations = (p: Pick<DailyRatesProps, "voice" | "cut">) =>
+  scenesFor(p.cut).map((k) => (p.voice?.[k] ? Math.max(60, p.voice[k]!.frames + VOICE_DELAY + 10) : T[k]));
+export const totalFrames = (p: Pick<DailyRatesProps, "voice" | "cut">) => sceneDurations(p).reduce((a, b) => a + b, 0);
 export const DAILY_FRAMES = totalFrames({});
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -624,10 +626,11 @@ const ProgressBar: React.FC<{ total: number }> = ({ total }) => {
   return <div style={{ position: "absolute", top: 0, left: 0, height: 8, width: `${(f / total) * 100}%`, background: C.leaf }} />;
 };
 
-export const DailyRates: React.FC<DailyRatesProps> = ({ data, voice, music, lang: language = "kn" }) => {
+export const DailyRates: React.FC<DailyRatesProps> = ({ data, voice, music, lang: language = "kn", cut }) => {
   setLang(language);
   const newest = [...data.coop.flatMap((b) => b.latest.map((q) => q.date)), ...data.apmc.map((r) => r.date)].sort().at(-1) ?? "";
-  const durs = sceneDurations({ voice });
+  const scenes = scenesFor(cut);
+  const durs = sceneDurations({ voice, cut });
   const total = durs.reduce((a, b) => a + b, 0);
   const render = (k: SceneKey, dur: number): React.ReactNode => {
     const p = { d: data, newest, dur };
@@ -646,7 +649,7 @@ export const DailyRates: React.FC<DailyRatesProps> = ({ data, voice, music, lang
       <Background />
       {/* Composed to this video's scenes by scripts/make-music.py --daily; low enough to sit under the voice. */}
       {music && <Audio src={staticFile(music)} volume={0.16} />}
-      {SCENES.map((k, i) => {
+      {scenes.map((k, i) => {
         const clip = voice?.[k];
         const seq = (
           <Sequence key={k} from={from} durationInFrames={durs[i]}>

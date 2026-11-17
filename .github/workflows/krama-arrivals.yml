@@ -1,0 +1,67 @@
+name: KRAMA daily arrivals
+
+# Daily arecanut arrivals from KRAMA, the Karnataka Department of Agricultural Marketing's public market information
+# system (docs/DAILY_ARRIVALS.md). No login or CAPTCHA. Each run:
+# 1. re-reads the last 7 days (3 page requests per day, 2 s apart), so late uploads and corrections are picked up;
+# 2. backfills dates not stored yet, newest first, back to 2014-01-01, within KRAMA_BACKFILL_REQUESTS requests per run
+#    (default 900, about 300 dates and 30 minutes); once everything is stored it does nothing more.
+# Set the repository variable KRAMA_ARRIVALS_ENABLED to "false" to stop it.
+on:
+  schedule:
+    - cron: "0 16 * * *"  # 21:30 IST, after the day's markets have reported
+    - cron: "0 4 * * *"   # 09:30 IST, late uploads for the previous day
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Fetch and check only; store nothing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: krama-arrivals
+  cancel-in-progress: false
+
+jobs:
+  arrivals:
+    if: ${{ vars.ANI_API_URL != '' && vars.KRAMA_ARRIVALS_ENABLED != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check credentials
+        id: credentials
+        run: |
+          if [ -z "$INGESTION_TOKEN" ]; then
+            echo "::warning::INGESTION_TOKEN secret is not configured; skipping."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
+      - name: Import Karnataka arecanut daily arrivals (KRAMA)
+        if: steps.credentials.outputs.configured == 'true'
+        run: |
+          args=(--env-file /dev/null --report-dir "$RUNNER_TEMP/krama-arrivals" --recent-days 7 --backfill-from 2014-01-01
+                --backfill-requests "${KRAMA_BACKFILL_REQUESTS:-900}")
+          if [ "${{ inputs.dry_run }}" = "true" ]; then args+=(--dry-run); fi
+          python data-platform/connectors/krama/run_arrivals.py "${args[@]}"
+        env:
+          KRAMA_BASE_URL: ${{ vars.KRAMA_BASE_URL }}
+          KRAMA_BACKFILL_REQUESTS: ${{ vars.KRAMA_BACKFILL_REQUESTS }}
+          INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
+          ANI_API_URL: ${{ vars.ANI_API_URL }}
+      - name: Archive source pages and reports
+        if: always() && steps.credentials.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: krama-arrivals-${{ github.run_id }}
+          path: ${{ runner.temp }}/krama-arrivals
+          if-no-files-found: ignore
+          retention-days: 90

@@ -37,7 +37,9 @@ RATES = {
 RATE = RATES["kn"]
 ONLY = set(os.environ.get("VOICE_ONLY", "").split())
 FPS = 30
-OUT = ROOT / "public" / "voice" / "today"
+# CUT=30: the 30-second Story cut, with its own script, clips and props (…-30), beside the full video's.
+SUF = "-30" if os.environ.get("CUT") == "30" else ""
+OUT = ROOT / "public" / "voice" / f"today{SUF}"
 
 
 async def speak(text: str, voice: str, path: Path, rate: str = RATE) -> float:
@@ -64,11 +66,11 @@ async def check() -> None:
 
 
 async def main() -> None:
-    narration = json.loads((ROOT / "out" / "narration.json").read_text("utf-8"))
+    narration = json.loads((ROOT / "out" / f"narration{SUF}.json").read_text("utf-8"))
     failed = []
     for lang, scenes in narration["langs"].items():
         try:
-            props_path = ROOT / "out" / f"today-props-{lang}.json"
+            props_path = ROOT / "out" / f"today-props-{lang}{SUF}.json"
             props = json.loads(props_path.read_text("utf-8"))
             out = OUT / lang
             out.mkdir(parents=True, exist_ok=True)
@@ -78,7 +80,7 @@ async def main() -> None:
                     continue
                 path = out / f"{scene}.mp3"
                 seconds = await speak(" ".join(sentences), VOICES[lang], path, RATES[lang])
-                clips[scene] = {"src": f"voice/today/{lang}/{scene}.mp3", "frames": math.ceil(seconds * FPS)}
+                clips[scene] = {"src": f"voice/today{SUF}/{lang}/{scene}.mp3", "frames": math.ceil(seconds * FPS)}
                 print(f"  {lang} {scene}: {seconds:.1f}s", flush=True)
             props["voice"] = clips
             props_path.write_text(json.dumps(props), "utf-8")

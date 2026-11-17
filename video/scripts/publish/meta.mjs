@@ -90,6 +90,28 @@ export async function postInstagramStory({ image }) {
   return { id };
 }
 
+/** The daily video as an Instagram Story. Stories take at most 60 s, so a longer video is cut to its first 60 s. */
+export async function postInstagramVideoStory({ file }) {
+  const seconds = videoSeconds(file);
+  let video = file;
+  if (seconds !== null && seconds > 60) {
+    video = file.replace(/\.mp4$/, "-story60.mp4");
+    execFileSync("ffmpeg", ["-v", "error", "-y", "-i", file, "-t", "60", "-af", "afade=t=out:st=58.5:d=1.5", "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-movflags", "+faststart", video]);
+  }
+  const id = await instagramPublish({ media_type: "STORIES" }, video, "Instagram video Story");
+  return { id, note: video === file ? undefined : `cut to 60 s from ${Math.round(seconds)} s` };
+}
+
+/** The Story image as a Facebook Page photo post, uploaded straight from this Mac. */
+export async function postFacebookPhoto({ image, caption }) {
+  const page = env("FB_PAGE_ID");
+  const form = new FormData();
+  form.append("message", caption ?? "");
+  form.append("source", new Blob([readFileSync(image)], { type: "image/png" }), "rates.png");
+  const { body } = await request(`https://graph.facebook.com/${VERSION()}/${page}/photos`, { method: "POST", headers: { Authorization: `OAuth ${env("FB_PAGE_TOKEN")}` }, body: form }, { label: "Facebook photo", timeout: 120_000 });
+  return { id: body.post_id ?? body.id, url: `https://www.facebook.com/${body.post_id ?? body.id}` };
+}
+
 /** A Facebook Page Reel (3–90 s). Longer videos go up as a regular Page video instead. */
 export async function postFacebookReel({ file, description }) {
   const token = env("FB_PAGE_TOKEN");

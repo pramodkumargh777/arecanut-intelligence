@@ -604,7 +604,14 @@ async function getMarketArrivals(ctx: ToolContext, args: ToolArgs<"get_market_ar
   const target = result("get_market_arrivals", args, "Market arrivals");
   const params = new URLSearchParams({ granularity: args.granularity ?? "weekly" });
   if (args.district) params.set("district", args.district);
-  const body = await getJson(ctx, `/supply/arrivals?${params}`);
+  let body = await getJson(ctx, `/supply/arrivals?${params}`);
+  // AGMARKNET 2.0 arrivals are monthly totals: when no period was asked for and the weekly view is empty, read monthly.
+  const empty = (value: Json) => !(value?.measures?.arrival?.length || value?.measures?.traded?.length);
+  if (!args.granularity && empty(body)) {
+    params.set("granularity", "monthly");
+    const monthly = await getJson(ctx, `/supply/arrivals?${params}`);
+    if (!empty(monthly)) body = monthly;
+  }
   for (const batch of body?.sources ?? []) {
     addSource(target, { key: `arrivals:${batch.id}`, kind: "data", label: `${batch.source_name ?? batch.source_key} arrivals import ${batch.file_name ?? ""}`.trim(),
       publisher: batch.source_name ?? batch.source_key, url: batch.source_url ?? null, reporting_period: null, retrieved_at: batch.imported_at ?? null });
@@ -616,7 +623,7 @@ async function getMarketArrivals(ctx: ToolContext, args: ToolArgs<"get_market_ar
       if (!sourceKey) break;
       target.facts.push({ label: `${measure === "arrival" ? "Arrivals" : "Traded quantity"} (${body.granularity} bucket ${row.bucket})`, value: row.quantity_tonnes,
         unit: "tonnes", basis: measure === "arrival" ? "ARRIVAL_QUANTITY" : "TRADED_QUANTITY", reporting_period: `${row.first_date} to ${row.last_date}`,
-        source_key: sourceKey, note: `${row.markets_reporting} market(s), ${row.reporting_days} reporting day(s)` });
+        source_key: sourceKey, note: `${row.markets_reporting} market(s)${Number(row.reporting_days) > 0 ? `, ${row.reporting_days} reporting day(s)` : ""}` });
     }
   }
   if (!target.facts.length) target.missing.push(body?.message ?? "No arrival records are available.");

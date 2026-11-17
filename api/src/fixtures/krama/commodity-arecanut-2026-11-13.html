@@ -1,0 +1,2204 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><link rel="alternate" hreflang="en" href="../Home.aspx" /><link rel="alternate" hreflang="kn" href="../Home_kan.aspx" /><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta http-equiv="X-UA-Compatible" content="ie=edge"><meta name="description" content="Online Agricultural Marketing Information System of the Department of Agricultural Marketing, Government of Karnataka, providing agricultural market prices, commodity information, reports, schemes and market services."><meta name="keywords" content="Department of Agricultural Marketing, Karnataka, KSAMB, Krishimaratavahini, agricultural marketing, market prices, commodities, APMC, Karnataka agriculture">
+<title>
+
+</title><meta name="theme-color" content="#0F5757">
+
+    <!-- Core Native Engine Framework Libraries -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" /><link rel="stylesheet" href="../css/bootstrap.min.css" /><link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/bsnav.min.css" /><link rel="stylesheet" href="../css/owl.css" /><link rel="stylesheet" href="../css/font-awesome.min.css" /><link rel="stylesheet" href="../fonts/fonts/style.css" /><link rel="stylesheet" href="../css/jquery-ui.css" /><link rel="stylesheet" href="../css/jquery.fancybox.min.css" /><link rel="stylesheet" href="../revolution/css/settings.css" /><link rel="stylesheet" href="../revolution/css/layers.css" /><link rel="stylesheet" href="../revolution/css/navigation.css" /><link rel="shortcut icon" href="../img/Krishi_title_logo.png" type="image/png" />
+
+    <style>
+
+        /* =========================================================
+   DBIM DESIGN SYSTEM COLOURS
+   ========================================================= */
+:root {
+    --dbim-key: #0F5757;
+    --dbim-1: #2D8686;
+    --dbim-2: #75BDBD;
+    --dbim-3: #A6D9D9;
+    --dbim-4: #D9F2F2;
+
+    --dbim-text: #150202;
+    --dbim-white: #FFFFFF;
+    --dbim-linen: #EBEAEA;
+
+    --dbim-success: #198754;
+    --dbim-warning: #FFC107;
+    --dbim-error: #DC3545;
+    --dbim-info: #0D6EFD;
+
+    --dbim-black: #000000;
+    --dbim-grey-1: #C6C6C6;
+    --dbim-grey-2: #8E8E8E;
+    --dbim-grey-3: #606060;
+}
+
+        body {
+            background-color: var(--dbim-linen);
+            margin: 0;
+            padding: 0;
+        }
+        .main {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .access-toolbar {
+    background-color: var(--dbim-key);
+    padding: 10px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+        .access-toolbar a {
+            color: white;
+            text-decoration: none;
+        }
+        .access-toolbar img {
+            border-radius: 4px;
+        }
+        
+        body.theme-yellow-black { background-color: #000; color: yellow; }
+        body.theme-fuchsia-black { background-color: #000; color: fuchsia; }
+        body.theme-yellow-blue { background-color: #001f3f; color: yellow; }
+
+
+        /* =========================================================
+   ACCESSIBILITY CONTRAST THEMES
+   ========================================================= */
+
+/* Yellow on Black */
+body.theme-yellow-black,
+body.theme-yellow-black .main,
+body.theme-yellow-black .page_wapper,
+body.theme-yellow-black .service_box1,
+body.theme-yellow-black .left-section,
+body.theme-yellow-black .right-section {
+    background-color: #000000 !important;
+    color: #ffff00 !important;
+}
+
+body.theme-yellow-black p,
+body.theme-yellow-black h1,
+body.theme-yellow-black h2,
+body.theme-yellow-black h3,
+body.theme-yellow-black span,
+body.theme-yellow-black label,
+body.theme-yellow-black td,
+body.theme-yellow-black th {
+    color: #ffff00 !important;
+}
+
+
+/* Fuchsia on Black */
+body.theme-fuchsia-black,
+body.theme-fuchsia-black .main,
+body.theme-fuchsia-black .page_wapper,
+body.theme-fuchsia-black .service_box1,
+body.theme-fuchsia-black .left-section,
+body.theme-fuchsia-black .right-section {
+    background-color: #000000 !important;
+    color: #ff66ff !important;
+}
+
+body.theme-fuchsia-black p,
+body.theme-fuchsia-black h1,
+body.theme-fuchsia-black h2,
+body.theme-fuchsia-black h3,
+body.theme-fuchsia-black span,
+body.theme-fuchsia-black label,
+body.theme-fuchsia-black td,
+body.theme-fuchsia-black th {
+    color: #ff66ff !important;
+}
+
+
+/* Yellow on Blue */
+body.theme-yellow-blue,
+body.theme-yellow-blue .main,
+body.theme-yellow-blue .page_wapper,
+body.theme-yellow-blue .service_box1,
+body.theme-yellow-blue .left-section,
+body.theme-yellow-blue .right-section {
+    background-color: #001f3f !important;
+    color: #ffff00 !important;
+}
+
+body.theme-yellow-blue p,
+body.theme-yellow-blue h1,
+body.theme-yellow-blue h2,
+body.theme-yellow-blue h3,
+body.theme-yellow-blue span,
+body.theme-yellow-blue label,
+body.theme-yellow-blue td,
+body.theme-yellow-blue th {
+    color: #ffff00 !important;
+}
+
+
+        .btn-access {
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            display: inline-block;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-access.skip {
+    background-color: var(--dbim-grey-3);
+    color: #ffffff !important;
+}
+
+.btn-access.decrease {
+    background-color: var(--dbim-error);
+    color: #ffffff !important;
+}
+
+.btn-access.resetMe {
+    background-color: var(--dbim-info);
+    color: #ffffff !important;
+}
+
+.btn-access.increase {
+    background-color: var(--dbim-success);
+    color: #ffffff !important;
+}
+
+.btn-access.standard {
+    background-color: var(--dbim-grey-3);
+    color: #ffffff !important;
+}
+
+.btn-access.yellowonblack {
+    background-color: #000000;
+    color: #ffff00 !important;
+}
+
+.btn-access.fusiaonblack {
+    background-color: #000000;
+    color: #ff66ff !important;
+}
+
+.btn-access.yellowonblue {
+    background-color: #003366;
+    color: #ffff00 !important;
+}
+
+.btn-access:hover,
+.btn-access:focus {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+    text-decoration: underline;
+}
+
+
+
+
+
+/* Digital India Logo */
+.digital-india-top {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    background: #ffffff;
+    border-radius: 5px;
+    text-decoration: none !important;
+    white-space: nowrap;
+}
+
+.digital-india-top:hover,
+.digital-india-top:focus {
+    background: #eeeeee;
+    text-decoration: none !important;
+}
+
+.digital-india-logo {
+    width: 135px;
+    height: 32px;
+    object-fit: contain;
+    display: block;
+}
+
+
+
+
+
+
+
+
+
+        /* =========================================================
+   OFFICIAL GOVERNMENT / DEPARTMENT HEADER
+   ========================================================= */
+
+.mid_bar {
+    background-color: #FFFFFF;
+    padding: 0;
+    width: 100%;
+    height: auto;
+}
+
+/* Official header: corner logos and two side-by-side text panels */
+.official-header {
+    width: 100%; max-width: 1400px; min-height: 150px;
+    margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center;
+    background: #FFFFFF; box-sizing: border-box;
+}
+.official-logo {
+    flex: 0 0 135px; width: 135px;
+    display: flex; align-items: center; justify-content: center;
+}
+.official-logo img {
+    display: block; width: auto !important;
+    height: 120px !important; max-width: 130px !important;
+    object-fit: contain;
+}
+.official-header-text {
+    flex: 1 1 auto; min-width: 0;
+    padding: 0 14px; color: var(--dbim-text);
+}
+.official-header-titles {
+    display: grid; grid-template-columns: 1fr 1fr;
+    align-items: center; gap: 0; width: 100%;
+}
+.official-title-panel {
+    min-width: 0; text-align: center;
+    padding: 10px 12px;
+}
+.official-title-panel + .official-title-panel {
+    border-left: 1px solid var(--dbim-grey-1);
+}
+.government-name {
+    margin: 0 0 6px; font-family: "Noto Sans", Arial, sans-serif;
+    font-size: 17px; line-height: 1.35; font-weight: 500;
+}
+.department-name, .board-name {
+    margin: 4px 0; font-family: "Noto Sans", Arial, sans-serif;
+    font-size: 18px; line-height: 1.35; font-weight: 600;
+}
+.portal-name {
+    margin: 0 0 10px; font-family: "Noto Sans", Arial, sans-serif;
+    font-size: 25px; line-height: 1.25; font-weight: 700;
+    color: var(--dbim-key);
+}
+.portal-subtitle {
+    margin: 0; font-family: "Noto Sans", Arial, sans-serif;
+    font-size: 17px; line-height: 1.35; font-weight: 500;
+}
+@media (max-width: 991px) {
+    .official-header { padding: 10px; min-height: 120px; }
+    .official-logo { flex-basis: 90px; width: 90px; }
+    .official-logo img { height: 85px !important; max-width: 85px !important; }
+    .official-header-text { padding: 0 8px; }
+    .official-title-panel { padding: 8px 6px; }
+    .government-name, .portal-subtitle { font-size: 13px; }
+    .department-name, .board-name { font-size: 14px; }
+    .portal-name { font-size: 19px; }
+}
+@media (max-width: 600px) {
+    .official-header { padding: 8px 4px; min-height: 100px; }
+    .official-logo { flex-basis: 50px; width: 50px; }
+    .official-logo img { height: 48px !important; max-width: 48px !important; }
+    .official-header-text { padding: 0 3px; }
+    .official-header-titles { grid-template-columns: 1fr; }
+    .official-title-panel { padding: 4px 3px; }
+    .official-title-panel + .official-title-panel {
+        border-left: 0; border-top: 1px solid var(--dbim-grey-1);
+    }
+    .government-name, .portal-subtitle { font-size: 10px; line-height: 1.25; }
+    .department-name, .board-name { font-size: 10px; line-height: 1.25; }
+    .portal-name { font-size: 13px; margin-bottom: 3px; }
+}
+
+        /* DYNAMIC NAVIGATION OVERRIDES */
+        .custom-navbar-container {
+    background-color: var(--dbim-key) !important;
+    width: 100%;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+        .custom-nav-menu {
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: flex;
+            align-items: center;
+            flex-direction: row;
+        }
+
+        .custom-nav-menu > li > a {
+            color: #ffffff !important;
+            font-weight: bold !important;
+            font-size: 15px !important;
+            text-decoration: none !important;
+            padding: 15px 25px !important;
+            display: block;
+            transition: background 0.2s ease;
+        }
+
+        .custom-nav-menu > li > a:hover,
+.custom-nav-menu > li > a:focus {
+    background-color: var(--dbim-1) !important;
+}
+
+        .custom-nav-radio {
+            padding: 0 25px !important;
+            color: #ffffff !important;
+            font-weight: bold !important;
+            font-size: 15px !important;
+            display: flex;
+            align-items: center;
+        }
+
+        .custom-nav-radio label {
+            color: #ffffff !important;
+            margin-left: 6px !important;
+            margin-bottom: 0px !important;
+            cursor: pointer;
+        }
+
+        /* MOBILE PRESENTATION DRAWER ENGINE */
+        .custom-nav-toggle {
+            display: none;
+            background: transparent;
+            border: 1px solid #ffffff;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 8px 15px;
+            cursor: pointer;
+        }
+        .custom-nav-toggle .bar {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background-color: #ffffff;
+            margin: 4px 0;
+        }
+
+        @media (max-width: 768px) {
+            .custom-navbar-container {
+                position: relative;
+            }
+            .custom-nav-toggle {
+                display: block; /* Reveals hamburger anchor on narrow targets */
+                float: right;
+            }
+            .custom-nav-menu {
+    display: none;
+    flex-direction: column !important;
+    width: 100% !important;
+    background-color: var(--dbim-key) !important;
+    border-top: 1px solid var(--dbim-1);
+    clear: both;
+}
+            .custom-nav-menu.open {
+                display: flex !important; /* Expands open upon user activation */
+            }
+            .custom-nav-menu > li {
+    width: 100%;
+    border-bottom: 1px solid var(--dbim-1);
+}
+            .custom-nav-menu > li > a {
+                padding: 12px 20px !important;
+            }
+            .custom-nav-radio {
+                padding: 12px 20px !important;
+            }
+        }
+        /* =========================================================
+   GIGW / WCAG - FOOTER LINK CONTRAST
+   ========================================================= */
+
+.footer-links {
+    color: #150202 !important;
+}
+
+.footer-links a,
+.footer-links a:visited {
+    color: #150202 !important;
+    font-weight: 600;
+    text-decoration: underline !important;
+}
+
+.footer-links a:hover,
+.footer-links a:focus {
+    color: #150202 !important;
+    text-decoration: underline !important;
+    outline: 2px solid #150202;
+    outline-offset: 2px;
+}
+
+
+        /* =========================================================
+   PRINT / A4 ACCESSIBILITY
+   ========================================================= */
+
+@media print {
+
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
+    html,
+    body {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 10pt !important;
+    }
+
+    /* Do not print website controls/navigation */
+    .access-toolbar,
+    .custom-navbar-container,
+    .custom-nav-toggle,
+    .carousel,
+    .carousel-control,
+    .carousel-indicators {
+        display: none !important;
+    }
+
+    /* Force all major containers inside A4 printable width */
+    .page_wapper,
+    .main,
+    .container,
+    .container-fluid,
+    .row,
+    .service_box1,
+    .left-section,
+    .right-section,
+    .card-grid-row,
+    .card-grid-col {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        float: none !important;
+        box-sizing: border-box !important;
+    }
+
+    /*
+       Home.aspx uses Flexbox for the 60% + 40% screen layout.
+       Disable Flexbox while printing so it cannot exceed A4.
+    */
+    .container-fluid,
+    .card-grid-row {
+        display: block !important;
+    }
+
+    .left-section,
+    .right-section {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 10px 0 !important;
+        padding: 5px !important;
+        box-shadow: none !important;
+    }
+
+    /* Cards */
+    .card-grid-col {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .card {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        page-break-inside: avoid;
+    }
+
+    /* Never allow images to exceed printable width */
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Tables must remain within A4 */
+    table {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+    }
+
+    th,
+    td {
+        max-width: 100% !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        box-sizing: border-box !important;
+    }
+
+    /* ASP.NET panels and normal content containers */
+    main,
+    section,
+    article,
+    div {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Prevent long links/text from creating horizontal overflow */
+    p,
+    span,
+    a,
+    label,
+    strong {
+        max-width: 100% !important;
+        overflow-wrap: anywhere !important;
+        word-wrap: break-word !important;
+    }
+
+    /* Print links clearly */
+    a,
+    a:visited {
+        color: #000000 !important;
+        text-decoration: underline !important;
+    }
+
+    /* Footer should fit A4 */
+    footer,
+    .footer_last,
+    .footer_last_type_three {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 5px 0 !important;
+        box-sizing: border-box !important;
+    }
+}
+
+/* =========================================================
+   GIGW / WCAG - FOOTER TEXT CONTRAST
+   ========================================================= */
+
+.footer-info,
+.footer-info span,
+.footer-info label {
+    color: #150202 !important;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   FINAL GIGW / DBIM ACCESSIBILITY FIXES
+   Keep this block LAST in <style>
+   ========================================================= */
+
+/* ---------- DBIM typography ---------- */
+
+html,
+body,
+input,
+button,
+select,
+textarea {
+    font-family: "Noto Sans", Arial, sans-serif !important;
+}
+
+body {
+    color: #150202;
+    text-align: left;
+    line-height: 1.5;
+}
+
+/* DBIM desktop type scale */
+h1 {
+    font-size: 36px;
+    line-height: 1.2;
+}
+
+h2 {
+    font-size: 24px;
+    line-height: 1.2;
+}
+
+h3 {
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+p,
+li {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* Do not centre normal paragraph text */
+.main p {
+    text-align: left;
+}
+
+/* ---------- WCAG keyboard focus ---------- */
+
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+[tabindex]:focus {
+    outline: 3px solid #0D6EFD !important;
+    outline-offset: 2px !important;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid #0D6EFD !important;
+    outline-offset: 2px !important;
+}
+
+/* Search box currently had outline:none */
+.site-search-input:focus {
+    outline: 3px solid #0D6EFD !important;
+    outline-offset: -3px !important;
+}
+
+/* ---------- Links ---------- */
+
+.main a {
+    color: var(--dbim-info);
+}
+
+.main a:hover,
+.main a:focus {
+    color: #150202;
+    text-decoration: underline;
+}
+
+/* ---------- Footer contrast ---------- */
+
+.footer-links {
+    color: #150202 !important;
+}
+
+.footer-links a,
+.footer-links a:visited {
+    color: #150202 !important;
+    font-weight: 600;
+    text-decoration: underline !important;
+}
+
+.footer-links a:hover,
+.footer-links a:focus {
+    color: #150202 !important;
+    text-decoration: underline !important;
+}
+
+.footer-info,
+.footer-info span,
+.footer-info label {
+    color: #150202 !important;
+    font-weight: 600;
+}
+
+/* ---------- Mobile DBIM type scale ---------- */
+
+@media (max-width: 767px) {
+
+    h1 {
+        font-size: 24px !important;
+    }
+
+    h2 {
+        font-size: 20px !important;
+    }
+
+    h3 {
+        font-size: 16px !important;
+    }
+
+    p,
+    li {
+        font-size: 14px;
+    }
+}
+
+
+/* =========================================================
+   DBIM FOOTER - FINAL OVERRIDE
+   ========================================================= */
+
+.footer_last,
+.footer_last_type_three {
+    background: var(--dbim-key) !important;
+    background-color: var(--dbim-key) !important;
+}
+
+.footer-links,
+.footer-info,
+.footer-info span,
+.footer-info label {
+    color: #FFFFFF !important;
+}
+
+.footer-links a,
+.footer-links a:visited {
+    color: #FFFFFF !important;
+    font-weight: 600;
+    text-decoration: underline !important;
+}
+
+.footer-links a:hover,
+.footer-links a:focus {
+    color: #FFFFFF !important;
+    text-decoration: underline !important;
+}
+
+
+
+/* ==========================================================
+   KRAMA - DBIM COMPLIANCE OVERRIDES
+   Add at END of main stylesheet
+   ========================================================== */
+
+:root {
+    --dbim-green: #0F5757;
+    --dbim-white: #FFFFFF;
+    --dbim-text: #150202;
+    --dbim-focus: #FFBF47;
+}
+
+/* ---------- BODY / TYPOGRAPHY ---------- */
+
+body {
+    color: var(--dbim-text);
+    line-height: 1.5;
+}
+
+p {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* Avoid centred/justified body paragraphs */
+main p,
+.content p,
+.container p {
+    text-align: left;
+}
+
+/* ---------- ACCESSIBLE FOCUS ---------- */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.dropdown-toggle:focus-visible {
+    outline: 3px solid var(--dbim-focus) !important;
+    outline-offset: 2px !important;
+}
+
+/* ---------- DBIM FOOTER ---------- */
+
+footer,
+.footer,
+.footer-section,
+#footer {
+    background-color: #0F5757 !important;
+    color: #FFFFFF !important;
+}
+
+footer p,
+footer span,
+footer li,
+footer strong,
+footer h2,
+footer h3,
+.footer p,
+.footer span,
+.footer li {
+    color: #FFFFFF !important;
+}
+
+footer a,
+.footer a {
+    color: #FFFFFF !important;
+    text-decoration: underline;
+}
+
+footer a:hover,
+footer a:focus,
+.footer a:hover,
+.footer a:focus {
+    color: #FFFFFF !important;
+    text-decoration: underline;
+}
+
+/* ---------- PRICE TABLE ACCESSIBILITY ---------- */
+
+/* Don't use light red/green text for Min/Max */
+.minimum-price,
+.maximum-price,
+th.minimum-price,
+th.maximum-price {
+    color: #222222 !important;
+    font-weight: 700;
+}
+
+/* ---------- SEMANTIC PAGE HEADING ---------- */
+
+.dbim-page-title {
+    font-size: 24px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #222222;
+    margin: 0 0 15px;
+}
+
+/* ---------- SKIP LINK ---------- */
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 99999;
+    padding: 10px 16px;
+    background: #FFFFFF;
+    color: #000000;
+}
+
+.skip-link:focus {
+    left: 10px;
+    top: 10px;
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 767px) {
+    p {
+        font-size: 14px;
+    }
+
+    .dbim-page-title {
+        font-size: 24px;
+    }
+}
+
+
+/* =========================================================
+   FOOTER LAYOUT FIX - prevent visitor count/logo overlap
+   ========================================================= */
+
+.footer_last .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.footer_last .col-lg-1,
+.footer_last .col-md-1,
+.footer_last .col-sm-1 {
+    flex: 0 0 140px;
+    max-width: 140px;
+}
+
+.footer_last .col-lg-10,
+.footer_last .col-md-10,
+.footer_last .col-sm-10 {
+    flex: 1 1 600px;
+    max-width: calc(100% - 280px);
+    text-align: left;
+}
+
+.footer_last img {
+    max-width: 130px;
+    height: auto;
+}
+
+/* Footer links and visitor information */
+.footer-links,
+.footer-info {
+    width: 100%;
+    clear: both;
+}
+
+/* Mobile / tablet */
+@media (max-width: 768px) {
+
+    .footer_last .row {
+        display: block;
+        text-align: center;
+    }
+
+    .footer_last .col-lg-1,
+    .footer_last .col-md-1,
+    .footer_last .col-sm-1,
+    .footer_last .col-lg-10,
+    .footer_last .col-md-10,
+    .footer_last .col-sm-10 {
+        width: 100%;
+        max-width: 100%;
+        float: none;
+        text-align: center;
+    }
+
+    .footer_last img {
+        margin: 10px auto;
+    }
+}
+
+
+/* DBIM 5.4: single compact language and search block */
+.header-language-search {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.header-language-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.header-language-selector a {
+    color: var(--dbim-key);
+    text-decoration: underline;
+    padding: 4px;
+}
+.header-language-selector a:hover,
+.header-language-selector a:focus {
+    color: var(--dbim-text);
+}
+.header-language-search .site-search-wrap {
+    display: flex;
+    align-items: center;
+    width: 170px;
+    height: 32px;
+    margin: 0;
+    background: var(--dbim-white);
+    border: 1px solid var(--dbim-grey-1);
+    border-radius: 4px;
+    overflow: visible;
+}
+.header-language-search .site-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    height: 30px;
+    padding: 4px 7px;
+    border: 0;
+    border-radius: 4px 0 0 4px;
+    background: var(--dbim-white);
+    color: var(--dbim-text);
+    font-size: 12px;
+}
+.header-language-search .site-search-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    height: 30px;
+    background: var(--dbim-key);
+    color: var(--dbim-white) !important;
+    border-radius: 0 3px 3px 0;
+    text-decoration: none;
+}
+.header-language-search .site-search-btn:hover,
+.header-language-search .site-search-btn:focus {
+    background: var(--dbim-1);
+    color: var(--dbim-white) !important;
+}
+.header-language-search .site-search-btn svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+@media (max-width: 600px) {
+    .header-language-search { justify-content: center; gap: 6px; }
+    .header-language-selector { font-size: 12px; }
+    .header-language-search .site-search-wrap { width: 140px; }
+}
+
+
+/* GIGW 3.0 / WCAG 2.4.7 - Visible keyboard focus */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex="0"]:focus-visible {
+    outline: 3px solid #0D6EFD !important;
+    outline-offset: 3px !important;
+}
+
+
+/* Compact toolbar icons */
+.tool-dropdown {
+    position: relative;
+}
+
+.tool-icon-button {
+    width: 48px;
+    height: 44px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #28166f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.language-symbol {
+    font-size: 23px;
+    font-weight: 600;
+}
+
+.language-symbol span {
+    font-size: 15px;
+    margin-left: 2px;
+}
+
+.language-panel,
+.accessibility-panel {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    z-index: 99999;
+    background: #ffffff;
+    color: #150202;
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.18);
+}
+
+.language-panel[hidden],
+.accessibility-panel[hidden] {
+    display: none !important;
+}
+
+.language-panel {
+    width: 190px;
+}
+
+.language-panel a {
+    display: block;
+    padding: 12px 16px;
+    color: #150202 !important;
+    text-decoration: none;
+}
+
+.language-panel a:hover,
+.language-panel a:focus {
+    background: #eeeeee;
+    color: #150202 !important;
+}
+
+.accessibility-panel {
+    width: min(530px, calc(100vw - 24px));
+    max-height: 75vh;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.accessibility-panel h2 {
+    font-size: 20px;
+    text-align: center;
+    margin: 0 0 16px;
+}
+
+.accessibility-panel h3 {
+    font-size: 16px;
+    margin: 15px 0 10px;
+}
+
+.accessibility-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.accessibility-grid button {
+    min-height: 85px;
+    padding: 10px 5px;
+    background: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 7px;
+    color: #28166f;
+    cursor: pointer;
+    white-space: normal;
+}
+
+.accessibility-grid button:hover,
+.accessibility-grid button:focus {
+    background: #eeeeff;
+    border-color: #28166f;
+}
+
+.screen-reader-link {
+    display: block;
+    margin-top: 18px;
+    color: #28166f !important;
+    text-decoration: underline !important;
+}
+
+body.access-highlight-links main a {
+    background: #ffff00 !important;
+    color: #000000 !important;
+    text-decoration: underline !important;
+}
+
+body.access-hide-images main img {
+    visibility: hidden !important;
+}
+
+body.access-big-cursor,
+body.access-big-cursor * {
+    cursor: crosshair !important;
+}
+
+body.access-text-spacing main {
+    letter-spacing: 0.08em;
+    word-spacing: 0.16em;
+}
+
+body.access-line-height main p,
+body.access-line-height main li {
+    line-height: 1.8 !important;
+}
+
+@media (max-width: 600px) {
+    .accessibility-panel {
+        position: fixed;
+        top: 60px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+    }
+
+    .accessibility-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+
+
+/* =========================================
+   TOP TOOLBAR - FINAL ALIGNMENT
+   ========================================= */
+
+.access-toolbar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    width: 100%;
+    padding: 10px 20px;
+    gap: 15px;
+    box-sizing: border-box;
+    background: #0F5757;
+    position: relative;
+    z-index: 1100;
+}
+
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-left: auto;
+    flex-wrap: nowrap;
+}
+
+.toolbar-right > a {
+    white-space: nowrap;
+}
+
+.toolbar-right .tool-dropdown {
+    flex-shrink: 0;
+}
+
+/* Open accessibility panel toward the left */
+.toolbar-right .accessibility-panel {
+    left: auto;
+    right: 0;
+}
+
+/* Keep language dropdown aligned with icon */
+.toolbar-right .language-panel {
+    left: auto;
+    right: 0;
+}
+
+/* Prevent Digital India from stretching */
+.toolbar-left .digital-india-top {
+    flex-shrink: 0;
+}
+
+/* Mobile responsive alignment */
+@media (max-width: 768px) {
+
+    .access-toolbar {
+        flex-wrap: wrap !important;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .toolbar-left {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .toolbar-right {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .toolbar-right .btn-access {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+}
+
+
+
+
+/* Screen reader and skip-to-content icons */
+.toolbar-right .toolbar-icon-link {
+    width: 48px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: #28166f !important;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    text-decoration: none !important;
+    flex-shrink: 0;
+}
+
+.toolbar-right .toolbar-icon-link i {
+    font-size: 25px;
+}
+
+.toolbar-right .toolbar-icon-link svg {
+    display: block;
+}
+
+.toolbar-right .toolbar-icon-link:hover,
+.toolbar-right .toolbar-icon-link:focus {
+    background: #eeeeff;
+    outline: 3px solid #0D6EFD;
+    outline-offset: 2px;
+}
+
+/* Accessible language selector text */
+.visually-hidden-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+    </style>
+</head>
+<body>
+    <form name="aspnetForm" method="post" action="./CommadityRep" id="aspnetForm">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="xaQe8O3NkSpAVM77Yfw7Q+O1GVUG//rsbC4faEbGCu+95v1wBtwqG2n49j9FFczg6K2T3zOUuejNH7BtBmhLKIJYxY+CW3Q5u3dJYkpn3dZNNSXq2Kq5iBfBAkndrpXfcNMVNT6P0KSlWI2cT74SxBsSqS1+vEgx274qUTez7G8s+E4zWq3hnT1AIoPW0AWcCu798CDSf3NNOYW1REvPr0UogrRNkGI9D6Gd6byZhmo6fmxg5HcA0bxRsN98rMxMrGelC3+2J9Cyj/Ww0i8N9qTMe/9E+wrwOiXivh8QQdJ8yq4BcvTq1FGBg6mYWNWkU9sOnSERnIu0ewcoltlREAeaMQD+2DlgD/Bp2NVVXT53tmmsDyjj13Mm7ZsNlTNjpKOi8N4l8etw6Wwf2bi2wrXuqKLKyckWgy5hXkyEBf2Te6XOmpYMS0kp0HA+yBJeYFhXul4M7R7LY5IoRFFsb6wXHBNojEvhWogLgKc5d0UMKXHcIVpnPVHDfxg3oa8bfd1tLULdaHEuDlwsIdRf/1ImXIYpI8Yo/hCHMe49V5n36iZOf3gmScu+WEDrl/onrzB2UEOWhejiToXixSvgsD8z9YQiaoZt1DecqBWyqRXDqAxDuOa5k+dHR8TEO/kHfseag/tM3QOIKNwj4nN9r8WxE9Yr8AVA5DV4Ho4WKmtQp7Nat4cWzgNLhDkzDNhWM0fVfr9R2W8JFTgTWGWKESnEBT/K3fQ0o/FuTmPNsVvih09ckHpKQkl9IXr4hZB4DjZLN2ukpvZghF4v50GugIPzt3wPK4FYrRBehaI3FHR7I21dqwwpwCmzC25h9LMhw0YdjYmAxENOiSNjVYJw2Fydil2wh8r8Go75udsPoJ5GEU3NdRyolWo/uBPh9UiA" />
+
+<script type="text/javascript">
+<!--
+var theForm = document.forms['aspnetForm'];
+if (!theForm) {
+    theForm = document.aspnetForm;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+// -->
+</script>
+
+
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="8B53D1B8" />
+<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="CpIcVWIK1twYWWSpiTA9+9XBhH7PuPffxCwn6HKKFLZrSCs+ifvX20NdomjfLg4fuXuyLaS9mB/Qnd5ZNZmte1t1/tyTAdONFLHM0U3ZUNOx9r5Lu8f1URDSRklTStMM9upl7AYqw87OWmzEQtJeDlZ2CcEMfoWkA66ODbIemflO4TbVoz5JpoOuH/9pZYiuGjZGOQkMQNROFUjTVyY7nA==" />
+
+        <!-- First keyboard focusable element -->
+<a href="#MainContent" class="skip-link">
+    Skip to main content
+</a>
+
+        
+
+<!-- Accessibility and language toolbar -->
+<div class="access-toolbar">
+
+    <!-- LEFT SIDE: Digital India -->
+    <div class="toolbar-left">
+
+        <a href="https://www.digitalindia.gov.in/"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="digital-india-top"
+           aria-label="Digital India - opens in a new window">
+
+            <img src="../img/DigitalIndia.jpg" alt="Digital India" class="digital-india-logo" width="135" height="32" />
+        </a>
+
+    </div>
+
+    <!-- RIGHT SIDE: Accessibility controls -->
+    <div class="toolbar-right">
+
+        
+<!-- 1. Screen Reader Access -->
+<a href="../ScreenReaderAccess.aspx" class="toolbar-icon-link" title="Screen Reader Access" aria-label="Screen Reader Access">
+    <i class="fa fa-book" aria-hidden="true"></i>
+</a>
+
+<!-- 2. Skip to Main Content -->
+<a href="#MainContent"
+   class="toolbar-icon-link"
+   title="Skip to Main Content"
+   aria-label="Skip to Main Content">
+
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="27" height="27"
+         viewBox="0 0 24 24"
+         fill="none"
+         stroke="currentColor"
+         stroke-width="1.8"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         aria-hidden="true">
+        <path d="M9 5h12v14H9"/>
+        <path d="M3 12h13"/>
+        <path d="m12 8 4 4-4 4"/>
+        <path d="M3 5h3M3 19h3"/>
+    </svg>
+</a>
+
+
+        <!-- Language dropdown -->
+
+    <!-- Language dropdown -->
+    <div class="tool-dropdown">
+        <button type="button"
+        id="languageToggle"
+        class="tool-icon-button"
+        aria-label="ಅ A - Select language / ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="languagePanel"
+        title="Select language / ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ">
+
+    <span aria-hidden="true" class="language-symbol">
+        ಅ<span>A</span>
+    </span>
+
+</button>
+
+        <div id="languagePanel"
+     class="language-panel"
+     role="group"
+     aria-label="Select website language / ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+     hidden>
+
+    <a href="../Home.aspx" lang="en" hreflang="en">
+        English
+    </a>
+
+    <a href="../Home_kan.aspx" lang="kn" hreflang="kn">
+        ಕನ್ನಡ
+    </a>
+
+</div>
+    </div>
+
+    <!-- Accessibility dropdown -->
+    <div class="tool-dropdown">
+        <button type="button"
+                id="accessibilityToggle"
+                class="tool-icon-button"
+                aria-label="Accessibility tools"
+                aria-expanded="false"
+                aria-controls="accessibilityPanel">
+
+            <svg viewBox="0 0 24 24"
+                 width="28" height="28"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="1.8"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 aria-hidden="true">
+                <circle cx="12" cy="3.5" r="2"/>
+                <path d="M4 8.5h16M12 6v7M12 13l-4 8M12 13l4 8"/>
+            </svg>
+        </button>
+
+        <div id="accessibilityPanel"
+             class="accessibility-panel" hidden>
+
+            <h2>Accessibility Tools</h2>
+
+            <h3>Color Contrast</h3>
+            <div class="accessibility-grid">
+                <button type="button" class="standard">
+                    Normal Contrast
+                </button>
+                <button type="button" class="yellowonblack">
+                    Yellow on Black
+                </button>
+                <button type="button" class="fusiaonblack">
+                    Fuchsia on Black
+                </button>
+                <button type="button" class="yellowonblue">
+                    Yellow on Blue
+                </button>
+            </div>
+
+            <h3>Text Size</h3>
+            <div class="accessibility-grid">
+                <button type="button" class="increase">
+                    A+ Font Size Increase
+                </button>
+                <button type="button" class="decrease">
+                    A- Font Size Decrease
+                </button>
+                <button type="button" class="resetMe">
+                    A Normal Font
+                </button>
+            </div>
+
+            <h3>Others</h3>
+            <div class="accessibility-grid">
+                <button type="button" id="highlightLinks">
+                    Highlight Links
+                </button>
+                <button type="button" id="hideImages">
+                    Hide Images
+                </button>
+                <button type="button" id="bigCursor">
+                    Big Cursor
+                </button>
+                <button type="button" id="textSpacing">
+                    Text Spacing
+                </button>
+                <button type="button" id="lineHeight">
+                    Line Height
+                </button>
+            </div>
+
+            <a href="../ScreenReaderAccess.aspx" class="screen-reader-link">
+                Screen Reader Access
+            </a>
+        
+        </div> <!-- accessibilityPanel -->
+
+    </div> <!-- accessibility tool-dropdown -->
+
+</div> <!-- toolbar-right -->
+
+</div> <!-- access-toolbar -->
+
+<!-- Layout Banner Block -->
+<div class="page_wapper">
+            <!-- =========================================================
+     OFFICIAL GOVERNMENT / DEPARTMENT HEADER
+     ========================================================= -->
+<section class="mid_bar mid_type_two">
+    <div class="official-header">
+
+        <!-- Government of Karnataka Emblem -->
+        <div class="official-logo">
+            <a href="../Home.aspx" aria-label="Government of Karnataka - Home">
+
+    <img src="../img/Karnataka_emblem.png" alt="Government of Karnataka Emblem" width="150" height="150" />
+
+</a>
+        </div>
+
+
+        <!-- Department / Portal Name -->
+        <div class="official-header-text">
+          
+            <div class="header-language-search">
+
+    <div class="site-search-wrap"
+         role="search"
+         aria-label="Website search">
+
+        <input name="_ctl0:txtSiteSearch" type="text" maxlength="100" id="_ctl0_txtSiteSearch" class="site-search-input" placeholder="Search" aria-label="Search this website" />
+
+        <a id="_ctl0_btnSiteSearch" title="Search" class="site-search-btn" aria-label="Search" href="javascript:__doPostBack(&#39;_ctl0$btnSiteSearch&#39;,&#39;&#39;)">
+
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="24" height="24" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true" focusable="false">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="M20 20L16 16"></path>
+            </svg>
+
+        </a>
+
+    </div>
+
+</div>
+            <div class="official-header-titles">
+                <div class="official-title-panel">
+                    <div class="government-name">Government of Karnataka</div>
+                    <div class="department-name">Department of Agricultural Marketing</div>
+                    <div class="board-name">Karnataka State Agricultural Marketing Board</div>
+                </div>
+                <div class="official-title-panel">
+                    <div class="portal-name">KRISHI MARATA VAHINI</div>
+                    <div class="portal-subtitle">Online Agricultural Marketing Information System</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Karnataka State Agricultural Marketing Board Logo -->
+        <div class="official-logo">
+
+            <img src="../img/Department_Logo.png" alt="Karnataka State Agricultural Marketing Board Logo" width="150" height="150" />
+
+        </div>
+
+    </div>
+</section>
+
+            <!-- Refined Structural Green Menu Bar -->
+            <nav class="custom-navbar-container clearfix"
+                         aria-label="Main navigation">
+                <button type="button"
+        class="custom-nav-toggle"
+        id="mobileMenuTrigger"
+        aria-label="Toggle navigation menu"
+        aria-controls="navMenuDropdown"
+        aria-expanded="false">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+                
+                <ul class="custom-nav-menu" id="navMenuDropdown">
+                  <li>
+                    <a href="../Home.aspx">Home</a>
+                </li>
+
+                <li>
+                    <a href="https://krama.karnataka.gov.in/krama/login.aspx">Login</a>
+                </li>
+                    <li>
+                       <a href="../img/OnlineMarketFeePayment.mp4" onclick="openvideo(this.href); return false;" aria-label="₹ Payment Guide (MP4, 22.6 MB) - Online Market Fee Payment Guide">
+    ₹ Payment Guide (MP4, 22.6 MB)
+</a>
+                    </li>
+                    
+                </ul>
+            </nav>
+
+            <!-- Main Content Insertion Area -->
+            <!-- Main Content Insertion Area -->
+<main class="main" id="MainContent" tabindex="-1"
+      style="background: var(--dbim-white); padding: 0; margin: 0;">
+
+    <nav aria-label="Breadcrumb" class="site-breadcrumb">
+        <a href="Home.aspx">Home</a>
+        <span aria-hidden="true"> / </span>
+        <span id="_ctl0_breadcrumbCurrent">Krishi Marata Vahini</span>
+    </nav>
+
+    
+    <script>
+    function Print()
+    {
+        var prtContent = document.getElementById('divprint');
+        var WinPrint = window.open('','','left=0,top=10,width=1000,height=750,toolbar=0,scrollbars=0,status=0');
+        WinPrint.document.write(prtContent.innerHTML);
+        WinPrint.document.close();
+        WinPrint.focus();
+        WinPrint.print();
+        WinPrint.close();
+    }
+</script> 
+    <center style="text-align: center">
+        <span id="_ctl0_MainContent_Lbl_Heading" style="color:Olive;font-weight:bold;position: static; font-size: 12pt">MARKETWISE REPORT FOR VARIOUS COMMODITIES AS ON 13/11/2026</span>&nbsp;</center>
+    <center>
+        &nbsp;</center>
+    <center>
+        <span style="color:Red;font-size:11pt;font-weight:bold;">COMMODITY: Arecanut</span><div>
+	<table cellspacing="0" rules="all" bordercolor="Black" border="1" style="border-color:Black;width:680px;border-collapse:collapse;text-align: left;Font-Size=13pt;">
+		<tr style="color:DarkGreen;font-size:11pt;">
+			<th scope="col" style="width:100px;">Market</th><th scope="col" style="width:100px;">Variety</th><th scope="col" style="width:80px;">Grade</th><th scope="col" style="width:80px;">Arrivals</th><th scope="col" style="width:80px;">Units</th><th scope="col" style="width:80px;">Min (Rs.)</th><th scope="col" style="width:80px;">Max (Rs.)</th><th scope="col" style="width:80px;">Modal (Rs.)</th>
+		</tr><tr>
+			<td>YELLAPURA</td><td>Api</td><td>Average</td><td>1</td><td>Quintal   </td><td>55695</td><td>55695</td><td>55695</td>
+		</tr><tr>
+			<td>GONIKOPPAL</td><td>ARECANUT-HUSK</td><td>Average</td><td>549</td><td>Quintal   </td><td>4000</td><td>4100</td><td>4000</td>
+		</tr><tr>
+			<td>BYADGI</td><td>Bette</td><td>Medium</td><td>265</td><td>Quintal   </td><td>26875</td><td>29205</td><td>28005</td>
+		</tr><tr>
+			<td>SHIVAMOGGA</td><td>Bette</td><td>Average</td><td>10</td><td>Quintal   </td><td>49700</td><td>57399</td><td>56172</td>
+		</tr><tr>
+			<td>SIRSI</td><td>Bette</td><td>Average</td><td>4</td><td>Quintal   </td><td>36399</td><td>44116</td><td>40171</td>
+		</tr><tr>
+			<td>SIDDAPURA</td><td>Bilegotu</td><td>Large</td><td>12</td><td>Quintal   </td><td>24799</td><td>29219</td><td>27899</td>
+		</tr><tr>
+			<td>SIRSI</td><td>Bilegotu</td><td>Average</td><td>31</td><td>Quintal   </td><td>22099</td><td>31200</td><td>28408</td>
+		</tr><tr>
+			<td>YELLAPURA</td><td>Bilegotu</td><td>Average</td><td>46</td><td>Quintal   </td><td>16600</td><td>31099</td><td>28899</td>
+		</tr><tr>
+			<td>KUMTA</td><td>Chali</td><td>Average</td><td>175</td><td>Quintal   </td><td>36019</td><td>42529</td><td>40859</td>
+		</tr><tr>
+			<td>SIDDAPURA</td><td>Chali</td><td>Large</td><td>76</td><td>Quintal   </td><td>36500</td><td>42699</td><td>41699</td>
+		</tr><tr>
+			<td>SIRSI</td><td>Chali</td><td>Average</td><td>214</td><td>Quintal   </td><td>37800</td><td>46556</td><td>41808</td>
+		</tr><tr>
+			<td>YELLAPURA</td><td>Chali</td><td>Average</td><td>412</td><td>Quintal   </td><td>32209</td><td>46609</td><td>45299</td>
+		</tr><tr>
+			<td>KUMTA</td><td>Chippu</td><td>Average</td><td>40</td><td>Quintal   </td><td>23099</td><td>29999</td><td>27689</td>
+		</tr><tr>
+			<td>KADUR</td><td>Churu</td><td>Medium</td><td>442</td><td>Quintal   </td><td>10000</td><td>12000</td><td>11000</td>
+		</tr><tr>
+			<td>SHIKARIPUR</td><td>Churu</td><td>FAQ</td><td>143</td><td>Quintal   </td><td>24073</td><td>24073</td><td>24073</td>
+		</tr><tr>
+			<td>TIRTHAHALLI</td><td>Churu</td><td>Average</td><td>156</td><td>Quintal   </td><td>20400</td><td>24200</td><td>21800</td>
+		</tr><tr>
+			<td>BANTWALA</td><td>Coca</td><td>Average</td><td>202</td><td>Quintal   </td><td>18000</td><td>30000</td><td>29000</td>
+		</tr><tr>
+			<td>KUMTA</td><td>Coca</td><td>Average</td><td>30</td><td>Quintal   </td><td>15699</td><td>29019</td><td>26799</td>
+		</tr><tr>
+			<td>PUTTUR</td><td>Coca</td><td>Average</td><td>162</td><td>Quintal   </td><td>20000</td><td>30500</td><td>29000</td>
+		</tr><tr>
+			<td>SIDDAPURA</td><td>Coca</td><td>Large</td><td>11</td><td>Quintal   </td><td>22919</td><td>32889</td><td>29889</td>
+		</tr><tr>
+			<td>SULYA</td><td>Coca</td><td>Average</td><td>733</td><td>Quintal   </td><td>18000</td><td>30000</td><td>27000</td>
+		</tr><tr>
+			<td>YELLAPURA</td><td>Coca</td><td>Average</td><td>97</td><td>Quintal   </td><td>15700</td><td>31099</td><td>25699</td>
+		</tr><tr>
+			<td>HONNALI</td><td>EDI</td><td>Medium</td><td>113</td><td>Quintal   </td><td>21000</td><td>21000</td><td>21000</td>
+		</tr><tr>
+			<td>KUMTA</td><td>Factory</td><td>Average</td><td>40</td><td>Quintal   </td><td>6509</td><td>18929</td><td>17399</td>
+		</tr><tr>
+			<td>KOPPA</td><td>Gorabalu</td><td>Average</td><td>66</td><td>Quintal   </td><td>24500</td><td>30000</td><td>28000</td>
+		</tr><tr>
+			<td>SHIVAMOGGA</td><td>Gorabalu</td><td>Average</td><td>202</td><td>Quintal   </td><td>19000</td><td>38855</td><td>35899</td>
+		</tr><tr>
+			<td>TIRTHAHALLI</td><td>Gorabalu</td><td>Average</td><td>8</td><td>Quintal   </td><td>33000</td><td>33000</td><td>33000</td>
+		</tr><tr>
+			<td>HONNAVAR</td><td>Hale Chali</td><td>Average</td><td>4</td><td>Quintal   </td><td>40000</td><td>42000</td><td>41000</td>
+		</tr><tr>
+			<td>KUMTA</td><td>Hale Chali</td><td>Average</td><td>10</td><td>Quintal   </td><td>39999</td><td>42298</td><td>40829</td>
+		</tr><tr>
+			<td>KUNDAPUR</td><td>Hale Chali</td><td>Average</td><td>42</td><td>Quintal   </td><td>36000</td><td>48000</td><td>47000</td>
+		</tr><tr>
+			<td>KUMTA</td><td>Hannadike</td><td>Average</td><td>5</td><td>Quintal   </td><td>6565</td><td>6667</td><td>6620</td>
+		</tr><tr>
+			<td>HONNAVAR</td><td>Hosa Chali</td><td>Average</td><td>8</td><td>Quintal   </td><td>35000</td><td>37000</td><td>36000</td>
+		</tr><tr>
+			<td>KUMTA</td><td>Hosa Chali</td><td>Average</td><td>25</td><td>Quintal   </td><td>30009</td><td>34210</td><td>31769</td>
+		</tr><tr>
+			<td>KUNDAPUR</td><td>Hosa Chali</td><td>Average</td><td>2</td><td>Quintal   </td><td>25000</td><td>33500</td><td>31500</td>
+		</tr><tr>
+			<td>HOSANAGAR</td><td>Kempugotu</td><td>Large</td><td>33</td><td>Quintal   </td><td>33000</td><td>37300</td><td>35289</td>
+		</tr><tr>
+			<td>SIDDAPURA</td><td>Kempugotu</td><td>Large</td><td>2</td><td>Quintal   </td><td>31600</td><td>32089</td><td>32089</td>
+		</tr><tr>
+			<td>SIRSI</td><td>Kempugotu</td><td>Average</td><td>2</td><td>Quintal   </td><td>24019</td><td>32761</td><td>29441</td>
+		</tr><tr>
+			<td>YELLAPURA</td><td>Kempugotu</td><td>Average</td><td>7</td><td>Quintal   </td><td>16899</td><td>33212</td><td>28299</td>
+		</tr><tr>
+			<td>BELTHANGADI</td><td>New Variety</td><td>Average</td><td>284</td><td>Quintal   </td><td>27000</td><td>47000</td><td>29500</td>
+		</tr><tr>
+			<td>KARKALA</td><td>New Variety</td><td>Average</td><td>2</td><td>Quintal   </td><td>20000</td><td>36000</td><td>30000</td>
+		</tr><tr>
+			<td>SHIVAMOGGA</td><td>New Variety</td><td>Average</td><td>58</td><td>Quintal   </td><td>46089</td><td>46089</td><td>46089</td>
+		</tr><tr>
+			<td>BANTWALA</td><td>Old Variety</td><td>Average</td><td>48</td><td>Quintal   </td><td>35000</td><td>56000</td><td>48300</td>
+		</tr><tr>
+			<td>KARKALA</td><td>Old Variety</td><td>Average</td><td>50</td><td>Quintal   </td><td>30000</td><td>56000</td><td>40000</td>
+		</tr><tr>
+			<td>MANGALURU</td><td>Old Variety</td><td>Average</td><td>50</td><td>Quintal   </td><td>39500</td><td>48000</td><td>43800</td>
+		</tr><tr>
+			<td>SULYA</td><td>Old Variety</td><td>Average</td><td>15</td><td>Quintal   </td><td>37000</td><td>55000</td><td>47000</td>
+		</tr><tr>
+			<td>BHADRAVATHI</td><td>Other</td><td>Average</td><td>175</td><td>Quintal   </td><td>20000</td><td>20000</td><td>20000</td>
+		</tr><tr>
+			<td>C.R.NAGAR</td><td>Other</td><td>Average</td><td>160</td><td>Quintal   </td><td>20000</td><td>21900</td><td>20000</td>
+		</tr><tr>
+			<td>HIRIYUR</td><td>Other</td><td>Average</td><td>29</td><td>Quintal   </td><td>22672</td><td>22672</td><td>22672</td>
+		</tr><tr>
+			<td>HOLALKERE</td><td>Other</td><td>Average</td><td>547</td><td>Quintal   </td><td>25100</td><td>30000</td><td>26782</td>
+		</tr><tr>
+			<td>HOLENARASIPUR</td><td>Other</td><td>Medium</td><td>1042</td><td>Quintal   </td><td>25000</td><td>28000</td><td>27000</td>
+		</tr><tr>
+			<td>KADUR</td><td>Other</td><td>Medium</td><td>1481</td><td>Quintal   </td><td>10000</td><td>27200</td><td>26500</td>
+		</tr><tr>
+			<td>SHIVAMOGGA</td><td>Other</td><td>Average</td><td>672</td><td>Quintal   </td><td>13000</td><td>53288</td><td>47500</td>
+		</tr><tr>
+			<td>TIRTHAHALLI</td><td>Other</td><td>Average</td><td>9</td><td>Quintal   </td><td>21400</td><td>21400</td><td>21400</td>
+		</tr><tr>
+			<td>DAVANAGERE</td><td>Rashi</td><td>Average</td><td>98</td><td>Quintal   </td><td>25227</td><td>25229</td><td>25228</td>
+		</tr><tr>
+			<td>HOSANAGAR</td><td>Rashi</td><td>Large</td><td>2015</td><td>Quintal   </td><td>41809</td><td>48419</td><td>46813</td>
+		</tr><tr>
+			<td>K.R.PET</td><td>Rashi</td><td>Average</td><td>10</td><td>Quintal   </td><td>46100</td><td>46100</td><td>46100</td>
+		</tr><tr>
+			<td>KADUR</td><td>Rashi</td><td>Medium</td><td>80</td><td>Quintal   </td><td>46500</td><td>47811</td><td>47511</td>
+		</tr><tr>
+			<td>KOPPA</td><td>Rashi</td><td>Average</td><td>17</td><td>Quintal   </td><td>48250</td><td>48250</td><td>48250</td>
+		</tr><tr>
+			<td>SHIVAMOGGA</td><td>Rashi</td><td>Average</td><td>130</td><td>Quintal   </td><td>42099</td><td>48209</td><td>46209</td>
+		</tr><tr>
+			<td>SIDDAPURA</td><td>Rashi</td><td>Large</td><td>46</td><td>Quintal   </td><td>43899</td><td>46809</td><td>45989</td>
+		</tr><tr>
+			<td>SIRSI</td><td>Rashi</td><td>Average</td><td>63</td><td>Quintal   </td><td>40699</td><td>47320</td><td>45468</td>
+		</tr><tr>
+			<td>TIPTUR</td><td>Rashi</td><td>Average</td><td>10</td><td>Quintal   </td><td>45182</td><td>45182</td><td>45182</td>
+		</tr><tr>
+			<td>TIRTHAHALLI</td><td>Rashi</td><td>Average</td><td>12</td><td>Quintal   </td><td>45329</td><td>45329</td><td>45329</td>
+		</tr><tr>
+			<td>YELLAPURA</td><td>Rashi</td><td>Average</td><td>230</td><td>Quintal   </td><td>41609</td><td>51209</td><td>48499</td>
+		</tr><tr>
+			<td>HULIYAR</td><td>Red</td><td>Medium</td><td>37</td><td>Quintal   </td><td>29000</td><td>30000</td><td>29500</td>
+		</tr><tr>
+			<td>PERIYAPATNA</td><td>Red</td><td>Medium</td><td>120</td><td>Quintal   </td><td>23500</td><td>23500</td><td>23500</td>
+		</tr><tr>
+			<td>SHIVAMOGGA</td><td>Saraku</td><td>Average</td><td>1</td><td>Quintal   </td><td>56699</td><td>78100</td><td>77500</td>
+		</tr><tr>
+			<td>BHADRAVATHI</td><td>Sippegotu</td><td>Average</td><td>93</td><td>Quintal   </td><td>10500</td><td>14000</td><td>10500</td>
+		</tr><tr>
+			<td>HONNALI</td><td>Sippegotu</td><td>Medium</td><td>28</td><td>Quintal   </td><td>10500</td><td>10500</td><td>10500</td>
+		</tr><tr>
+			<td>K.R.NAGAR</td><td>Sippegotu</td><td>Small</td><td>63</td><td>Quintal   </td><td>10000</td><td>11000</td><td>10603</td>
+		</tr><tr>
+			<td>K.R.PET</td><td>Sippegotu</td><td>Average</td><td>28</td><td>Quintal   </td><td>11000</td><td>11000</td><td>11000</td>
+		</tr><tr>
+			<td>KADUR</td><td>Sippegotu</td><td>Medium</td><td>177</td><td>Quintal   </td><td>10000</td><td>12000</td><td>11000</td>
+		</tr><tr>
+			<td>MYSURU</td><td>Sippegotu</td><td>Average</td><td>128</td><td>Quintal   </td><td>10500</td><td>10900</td><td>10900</td>
+		</tr><tr>
+			<td>SHIVAMOGGA</td><td>Sippegotu</td><td>Average</td><td>28</td><td>Quintal   </td><td>11000</td><td>11000</td><td>11000</td>
+		</tr><tr>
+			<td>SIDDAPURA</td><td>Tattibettee</td><td>Large</td><td>5</td><td>Quintal   </td><td>34399</td><td>45509</td><td>39299</td>
+		</tr><tr>
+			<td>YELLAPURA</td><td>Tattibettee</td><td>Average</td><td>37</td><td>Quintal   </td><td>30119</td><td>41100</td><td>37016</td>
+		</tr>
+	</table>
+</div>
+        &nbsp;</center>
+        <center>
+            <input type="submit" name="_ctl0:MainContent:BtnRepM" value="Report Menu" id="_ctl0_MainContent_BtnRepM" class="btn-primary" />
+            <input type="submit" name="_ctl0:MainContent:btnprint" value="Print" onclick="Print();" language="javascript" id="_ctl0_MainContent_btnprint" class="btn-primary" style="width:79px;" />
+            </center>
+
+
+</main>
+
+          <!-- Footer Section Container -->
+<footer>
+    <section class="footer_last footer_last_type_three">
+        <div class="container">
+            <div class="row text-center">
+
+                <!-- India.gov Logo -->
+                <div class="col-lg-1 col-md-1 col-sm-1 mt-5">
+                    <ul>
+                        <li>
+                            <img src="../img/indiagov.png" alt="India.gov.in Logo" loading="lazy" />
+                        </li>
+                    </ul>
+                </div>
+
+
+                <!-- Footer Content -->
+                <div class="col-lg-10 col-md-10 col-sm-10">
+
+                    <!-- Footer Navigation Links -->
+                    <p class="footer-links"
+                    style="margin-bottom: 12px;">
+
+    <a href="../About.aspx" title="About Us">
+    About Us
+</a>
+
+    &nbsp; | &nbsp;
+
+    <a href="../Contact.aspx" title="Contact Us">
+        Contact Us
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="../Feedback.aspx" title="Online Feedback">
+        Feedback
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="../Help.aspx" title="Help">
+        Help
+    </a>
+   &nbsp; | &nbsp;
+
+    <a href="../TermsConditions.aspx" title="Terms and Conditions">
+        Terms &amp; Conditions
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="../Archive.aspx" title="View archived website content">
+        Archives
+    </a>
+                         &nbsp; | &nbsp;
+     <a href="../WebsitePolicies.aspx" title="View website Policies">
+         Website Policies</a>
+
+                        &nbsp; | &nbsp;
+
+<a href="../Sitemap.aspx" title="Sitemap">
+    Sitemap
+</a>
+
+</p>
+                    <!-- DBIM: Related Government Links -->
+<p class="footer-info">
+    <strong>Related Links:</strong>
+
+    <a href="https://www.india.gov.in/"
+       target="_blank"
+       rel="noopener noreferrer">
+        National Portal of India
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="https://nic.gov.in/"
+       target="_blank"
+       rel="noopener noreferrer">
+        National Informatics Centre (NIC)
+    </a>
+</p>
+
+
+                    <!-- Visitor Count -->
+                    <p class="footer-info">
+
+                        No. of Visitors:
+                        <span id="_ctl0_lblVisitorCount">4424204</span>
+
+                        &nbsp; | &nbsp;
+
+                        Today:
+                        <span id="_ctl0_lblTodayVisitorCount">43082</span>
+
+                    </p>
+
+
+                   
+                    
+
+
+                   <!-- DBIM 5.6: Website Ownership and Lineage -->
+<div class="footer-lineage"
+     role="region"
+     aria-label="Website ownership and lineage">
+
+    <p class="footer-info">
+        This is the official website of the
+        Online Agricultural Marketing Information System,
+        Department of Agricultural Marketing,
+        Government of Karnataka.
+    </p>
+
+    <p class="footer-info">
+        Website content owned and maintained by
+        Department of Agricultural Marketing,
+        Government of Karnataka.
+    </p>
+
+    <p class="footer-info">
+        Designed, Developed and Hosted by
+        National Informatics Centre (NIC).
+    </p>
+
+    <p class="footer-info">
+        Last Updated On:
+        <span id="_ctl0_lblLastUpdated">Not available</span>
+    </p>
+
+</div>
+                    <!-- Close central footer column -->
+</div>
+
+
+                <!-- NIC Logo -->
+                <div class="col-lg-1 col-md-1 col-sm-1 mt-5">
+                    <ul>
+                        <li>
+                            <img src="../img/NIClogo.png" style="width:120px;" alt="National Informatics Centre Logo" loading="lazy" />
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </section>
+</footer>
+        </div>
+
+        <!-- JAVASCRIPT SYSTEM DEPENDENCIES -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+
+        <script type="text/javascript">
+
+    function openvideo(url) {
+        var popup = window.open(url, '_blank', 'width=800,height=600');
+
+        if (popup) {
+            popup.focus();
+        }
+    }
+
+
+    $(document).ready(function () {
+        
+/* Language and accessibility dropdowns */
+function closeToolPanels() {
+    $('#languagePanel, #accessibilityPanel').prop('hidden', true);
+    $('#languageToggle, #accessibilityToggle')
+        .attr('aria-expanded', 'false');
+}
+
+$('#languageToggle, #accessibilityToggle').on('click', function (e) {
+    e.stopPropagation();
+
+    var panelId = $(this).attr('aria-controls');
+    var panel = $('#' + panelId);
+    var shouldOpen = panel.prop('hidden');
+
+    closeToolPanels();
+
+    if (shouldOpen) {
+        panel.prop('hidden', false);
+        $(this).attr('aria-expanded', 'true');
+    }
+});
+
+$(document).on('click', function (e) {
+    if (!$(e.target).closest('.tool-dropdown').length) {
+        closeToolPanels();
+    }
+});
+
+$(document).on('keydown', function (e) {
+    if (e.key === 'Escape') {
+        var openPanel = $('.tool-dropdown [aria-expanded="true"]');
+        closeToolPanels();
+        if (openPanel.length) openPanel.first().focus();
+    }
+});
+
+/* Additional accessibility functions */
+$('#highlightLinks').on('click', function () {
+    $('body').toggleClass('access-highlight-links');
+});
+
+$('#hideImages').on('click', function () {
+    $('body').toggleClass('access-hide-images');
+});
+
+$('#bigCursor').on('click', function () {
+    $('body').toggleClass('access-big-cursor');
+});
+
+$('#textSpacing').on('click', function () {
+    $('body').toggleClass('access-text-spacing');
+});
+
+$('#lineHeight').on('click', function () {
+    $('body').toggleClass('access-line-height');
+});
+
+        /* =====================================================
+           MOBILE MENU
+           ===================================================== */
+
+        $('#mobileMenuTrigger').on('click', function (e) {
+    e.preventDefault();
+
+    var menu = $('#navMenuDropdown');
+
+    menu.toggleClass('open');
+
+    var isExpanded = menu.hasClass('open');
+
+    $(this).attr('aria-expanded', isExpanded.toString());
+});
+
+
+        /* =====================================================
+           FONT SIZE ACCESSIBILITY
+           ===================================================== */
+
+        var defaultFontSize = 100;
+        var currentFontSize = defaultFontSize;
+
+        $('.decrease').on('click', function () {
+
+            if (currentFontSize > 80) {
+                currentFontSize -= 10;
+            }
+
+            $('body').css('font-size', currentFontSize + '%');
+
+        });
+
+
+        $('.resetMe').on('click', function () {
+
+            currentFontSize = defaultFontSize;
+
+            $('body').css('font-size', '100%');
+
+        });
+
+
+        $('.increase').on('click', function () {
+
+            if (currentFontSize < 130) {
+                currentFontSize += 10;
+            }
+
+            $('body').css('font-size', currentFontSize + '%');
+
+        });
+
+
+        /* =====================================================
+           STANDARD THEME
+           ===================================================== */
+
+        $('.standard').on('click', function () {
+
+            $('body').removeClass(
+                'theme-yellow-black ' +
+                'theme-fuchsia-black ' +
+                'theme-yellow-blue'
+            );
+
+        });
+
+
+        /* =====================================================
+           YELLOW ON BLACK
+           ===================================================== */
+
+        $('.yellowonblack').on('click', function () {
+
+            $('body')
+                .removeClass(
+                    'theme-fuchsia-black theme-yellow-blue'
+                )
+                .addClass('theme-yellow-black');
+
+        });
+
+
+        /* =====================================================
+           FUCHSIA ON BLACK
+           ===================================================== */
+
+        $('.fusiaonblack').on('click', function () {
+
+            $('body')
+                .removeClass(
+                    'theme-yellow-black theme-yellow-blue'
+                )
+                .addClass('theme-fuchsia-black');
+
+        });
+
+
+        /* =====================================================
+           YELLOW ON BLUE
+           ===================================================== */
+
+        $('.yellowonblue').on('click', function () {
+
+            $('body')
+                .removeClass(
+                    'theme-yellow-black theme-fuchsia-black'
+                )
+                .addClass('theme-yellow-blue');
+
+        });
+
+    });
+
+</script>
+    </form>
+</body>
+</html>

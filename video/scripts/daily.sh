@@ -9,7 +9,9 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 notify() { osascript -e "display notification \"$1\" with title \"ಅಡಿಕೆ ನಾಡಿ · Daily Reel\"" >/dev/null 2>&1 || true; }
 fail() { echo "✗ $1"; notify "$1"; exit 1; }
-echo "── $(date '+%Y-%m-%d %H:%M') daily Reel"
+# CUT=30 makes the 30-second Story cut instead (…-30.mp4), leaving the full video's files alone.
+SUF=""; [ "${CUT:-}" = "30" ] && SUF="-30"
+echo "── $(date '+%Y-%m-%d %H:%M') daily Reel${SUF:+ (30-second cut)}"
 
 node scripts/fetch-rates.mjs || fail "Rates fetch failed; nothing rendered."
 
@@ -28,15 +30,15 @@ fi
 # Music bed composed to each language's scene timings (after the voice, which sets them). A licensed track at
 # public/music/bed.mp3, when present, is used instead.
 [ -f public/music/bed.mp3 ] || for lang in ${LANGS:-kn en}; do
-  voice/.venv/bin/python scripts/make-music.py --daily "out/today-props-$lang.json" >/dev/null \
+  voice/.venv/bin/python scripts/make-music.py --daily "out/today-props-$lang$SUF.json" >/dev/null \
     || echo "! Music for $lang could not be composed; that video is made without music."
 done
 
 for lang in ${LANGS:-kn en}; do
   echo "Rendering $lang …"
-  npx --no-install remotion render src/index.ts DailyRates "out/daily-rates-$lang.mp4" --codec h264 --crf 18 \
-    --props="./out/today-props-$lang.json" --log=error ${RENDER_CONCURRENCY:+--concurrency=$RENDER_CONCURRENCY} || fail "Render failed ($lang)."
-  bash scripts/loudnorm.sh "out/daily-rates-$lang.mp4"
+  npx --no-install remotion render src/index.ts DailyRates "out/daily-rates-$lang$SUF.mp4" --codec h264 --crf 18 \
+    --props="./out/today-props-$lang$SUF.json" --log=error ${RENDER_CONCURRENCY:+--concurrency=$RENDER_CONCURRENCY} || fail "Render failed ($lang)."
+  bash scripts/loudnorm.sh "out/daily-rates-$lang$SUF.mp4"
 done
 node scripts/finish.mjs || fail "Could not file today's Reel."
 notify "Today's Reels (Kannada + English) are ready in video/out/daily."
