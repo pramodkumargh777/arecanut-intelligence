@@ -11,6 +11,11 @@ import { backfillTss, refreshTss, validTssDate } from "./tss";
 import { refreshTumcos } from "./tumcos";
 import { backfillTms, refreshTms, validTmsDate } from "./tms";
 import { bearerMatches } from "./auth";
+import { canTransition, HELD_QUOTE_AUTO_REJECT_DAYS, LIFECYCLES, reviewQueueStates, sqlStates } from "../../shared/lifecycles";
+import { refusal } from "./lifecycle-guards";
+
+/** Quotation states a reviewer can act on (shared/lifecycles.ts), as a SQL list. */
+const COOPERATIVE_QUEUE = sqlStates(reviewQueueStates(LIFECYCLES.cooperativeQuote));
 
 export const cooperativeRoutes = new Hono<Env>();
 const COOPERATIVE_DEFAULT_WINDOW_DAYS = 366;
@@ -158,12 +163,18 @@ cooperativeRoutes.get("/admin/cooperative/quality", async (c) => {
   }
   const result = await c.env.DB.prepare(`SELECT id,source_key,commodity,branch,reporting_date,variety,variety_reported,minimum_price,maximum_price,
       average_price,normal_price,price_type,price_unit,source_unit_label,unit_status,lot_count,bag_count,reported_weight,session_codes,
-      source_record_id,source_published_at,review_flags,ingest_mode,source_url,fetched_at,fetch_id,raw_record,validation_message,status
-    FROM cooperative_quotes WHERE status IN ('pending','invalid') AND (? IS NULL OR source_key=?)
-    ORDER BY reporting_date DESC,source_key,commodity,branch,variety,id LIMIT ? OFFSET ?`).bind(source?.data ?? null, source?.data ?? null, limit, offset).all();
-  const total = await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM cooperative_quotes WHERE status IN ('pending','invalid') AND (? IS NULL OR source_key=?)`)
+      source_record_id,source_published_at,review_flags,ingest_mode,source_url,fetched_at,fetch_id,raw_record,validation_message,status,
+      hold_reason,held_at
+    FROM cooperative_quotes WHERE status IN (${COOPERATIVE_QUEUE}) AND (? IS NULL OR source_key=?)
+    ORDER BY reporting_date DESC,source_key,commodity,branch,variety,id LIMIT ? OFFSET ?`).bind(source?.data ?? null, source?.data ?? null, limit, offset)
+    .all<{ status: string; hold_reason: string | null; held_at: string | null }>();
+  const total = await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM cooperative_quotes WHERE status IN (${COOPERATIVE_QUEUE}) AND (? IS NULL OR source_key=?)`)
     .bind(source?.data ?? null, source?.data ?? null).first<{ total: number }>();
-  return c.json({ data: result.results, total: total?.total ?? 0, limit, offset });
+  // The "held" sub-state (shared/lifecycles.ts): say when automation will reject it, so a reviewer can act first.
+  const data = result.results.map((row) => ({ ...row,
+    auto_reject_at: row.status === "pending" && row.hold_reason && row.held_at
+      ? new Date(Date.parse(row.held_at) + HELD_QUOTE_AUTO_REJECT_DAYS * 86_400_000).toISOString() : null }));
+  return c.json({ data, total: total?.total ?? 0, limit, offset });
 });
 
 cooperativeRoutes.post("/admin/cooperative/refresh", async (c) => {
@@ -198,10 +209,10 @@ cooperativeRoutes.post("/admin/cooperative/:id/review", async (c) => {
   if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   const payload = z.object({ action: z.enum(["approve", "reject"]) }).strict().safeParse(await c.req.json().catch(() => null));
   if (!payload.success) return c.json({ error: "Action must be approve or reject." }, 400);
-  const row = await c.env.DB.prepare("SELECT * FROM cooperative_quotes WHERE id=? AND status IN ('pending','invalid')")
+  const row = await c.env.DB.prepare(`SELECT * FROM cooperative_quotes WHERE id=? AND status IN (${COOPERATIVE_QUEUE})`)
     .bind(c.req.param("id")).first<CooperativeQuote>();
-  if (!row) return c.json({ error: "Pending cooperative quotation not found." }, 404);
-  if (payload.data.action === "approve" && (row.status !== "pending" || row.validation_message !== null
+  if (!row) return c.json(await refusal(c.env.DB, LIFECYCLES.cooperativeQuote, c.req.param("id"), "Cooperative quotation"), 404);
+  if (payload.data.action === "approve" && (!canTransition(LIFECYCLES.cooperativeQuote, row.status, "verified", "reviewer") || row.validation_message !== null
     || row.average_price === null || row.minimum_price === null || row.maximum_price === null
     || row.minimum_price <= 0 || row.average_price < row.minimum_price || row.average_price > row.maximum_price
     || row.reporting_date > calendarTodayIST())) {
@@ -212,18 +223,21 @@ cooperativeRoutes.post("/admin/cooperative/:id/review", async (c) => {
     AND other.reporting_date=? AND other.variety=? AND other.status='verified' AND other.average_price!=?`;
   const conflictValues = [row.id, row.source_key, row.commodity ?? "arecanut", row.branch, row.reporting_date, row.variety, row.average_price];
   // Checked inside the UPDATE so two concurrent approvals cannot both publish different prices for one branch and date.
+  // An approval ends any automatic hold, as auto-publish does; a rejection keeps the hold reason as its audit trail.
   const results = await c.env.DB.batch([
-    c.env.DB.prepare(`UPDATE cooperative_quotes SET status=? WHERE id=? AND status=? AND (?!='verified' OR NOT EXISTS (${conflict}))`)
-      .bind(status, row.id, row.status, status, ...conflictValues),
+    c.env.DB.prepare(`UPDATE cooperative_quotes SET status=?, hold_reason=CASE WHEN ?='rejected' THEN hold_reason END,
+        held_at=CASE WHEN ?='rejected' THEN held_at END
+      WHERE id=? AND status=? AND (?!='verified' OR NOT EXISTS (${conflict}))`)
+      .bind(status, status, status, row.id, row.status, status, ...conflictValues),
     c.env.DB.prepare(`INSERT INTO cooperative_reviews (id,quote_id,action,reviewer,reviewed_at,previous_status,new_status)
       SELECT ?,?,?,'shared-reviewer-token',?,?,? WHERE changes()=1`)
       .bind(crypto.randomUUID(), row.id, payload.data.action, new Date().toISOString(), row.status, status),
   ]);
   if (!results[0].meta.changes) {
     const conflicted = status === "verified" && await c.env.DB.prepare(conflict).bind(...conflictValues).first();
-    return c.json({ error: conflicted
-      ? "A different verified price already exists for this branch, date and variety. Reject this quotation or resolve the source conflict first."
-      : "Quotation changed during review. Reload the queue." }, 409);
+    if (!conflicted) return c.json(await refusal(c.env.DB, LIFECYCLES.cooperativeQuote, row.id, "Quotation", true), 409);
+    return c.json({ error: "A different verified price already exists for this branch, date and variety. Reject this quotation or resolve the source conflict first.",
+      current_status: row.status }, 409);
   }
   return c.json({ success: true, status, published: status === "verified",
     note: status === "accepted_unit_unconfirmed" ? "Accepted as a source record, but the unit is unconfirmed, so it is not published as a verified price." : null });

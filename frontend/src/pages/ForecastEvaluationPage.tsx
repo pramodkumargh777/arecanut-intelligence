@@ -36,6 +36,7 @@ const COPY = defineCopy({
     datasets: "Datasets by price basis",
     datasetsAria: "Forecasting datasets", dataset: "Dataset", priceBasis: "Price basis", frequencyUnit: "Frequency / unit", series: "Series (eligible)", observations: "Observations", statusCol: "Status",
     suppressed: (reasons: string) => `Suppressed: ${reasons}`, evaluated: "Evaluated", notEligible: "Not publication eligible",
+    outlookRanges: "Sets the outlook's range widths only (not evaluated)",
     horizon: "Horizon (months)", all: "All", evaluationStatusFilter: "Evaluation status",
     pooled: "Pooled walk-forward metrics", pooledHint: "INR/quintal errors across all eligible monthly series · relative MAE below 1.00 means lower error than the better naive baseline in-sample, not a proven edge",
     pooledAria: "Pooled metrics", model: "Model", horizonCol: "Horizon", forecasts: "Forecasts", direction: "Direction", coverage80: "80% coverage", width: "Interval width", relative: "Relative MAE",
@@ -82,6 +83,7 @@ const COPY = defineCopy({
     datasets: "ದರದ ಆಧಾರವಾರು ದತ್ತಾಂಶ",
     datasetsAria: "ಮುನ್ಸೂಚನಾ ದತ್ತಾಂಶ", dataset: "ದತ್ತಾಂಶ", priceBasis: "ದರದ ಆಧಾರ", frequencyUnit: "ಆವರ್ತನ / ಘಟಕ", series: "ಸರಣಿಗಳು (ಅರ್ಹ)", observations: "ದಾಖಲೆಗಳು", statusCol: "ಸ್ಥಿತಿ",
     suppressed: (reasons: string) => `ತಡೆಹಿಡಿಯಲಾಗಿದೆ: ${reasons}`, evaluated: "ಮೌಲ್ಯಮಾಪನವಾಗಿದೆ", notEligible: "ಪ್ರಕಟಣೆಗೆ ಅರ್ಹವಲ್ಲ",
+    outlookRanges: "ಮುನ್ನೋಟದ ಶ್ರೇಣಿಯ ಅಗಲಕ್ಕೆ ಮಾತ್ರ (ಮೌಲ್ಯಮಾಪನವಲ್ಲ)",
     horizon: "ಮುಂದಿನ ಅವಧಿ (ತಿಂಗಳು)", all: "ಎಲ್ಲಾ", evaluationStatusFilter: "ಮೌಲ್ಯಮಾಪನ ಸ್ಥಿತಿ",
     pooled: "ಒಟ್ಟು ಹಂತ ಹಂತದ ಅಂಕಿಗಳು", pooledHint: "ಎಲ್ಲಾ ಅರ್ಹ ತಿಂಗಳ ಸರಣಿಗಳ ₹/ಕ್ವಿಂಟಾಲ್ ದೋಷಗಳು · ಸಾಪೇಕ್ಷ MAE 1.00 ಕ್ಕಿಂತ ಕಡಿಮೆ ಎಂದರೆ ಉತ್ತಮ ಸರಳ ಅಂದಾಜಿಗಿಂತ ಕಡಿಮೆ ದೋಷ, ಸಾಬೀತಾದ ಲಾಭವಲ್ಲ",
     pooledAria: "ಒಟ್ಟು ಅಂಕಿಗಳು", model: "ಮಾದರಿ", horizonCol: "ಅವಧಿ", forecasts: "ಮುನ್ಸೂಚನೆಗಳು", direction: "ದಿಕ್ಕು", coverage80: "80% ವ್ಯಾಪ್ತಿ", width: "ಶ್ರೇಣಿಯ ಅಗಲ", relative: "ಸಾಪೇಕ್ಷ MAE",
@@ -177,7 +179,8 @@ export function ForecastEvaluationPage() {
       <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.datasets}</h2></div></div>
         <div className="table-scroll" tabIndex={0} role="region" aria-label={t.datasetsAria}><table><thead><tr><th>{t.dataset}</th><th>{t.priceBasis}</th><th>{t.frequencyUnit}</th><th>{t.series}</th><th>{t.observations}</th><th>{t.statusCol}</th></tr></thead><tbody>
           {(meta?.datasets ?? []).map((row) => <tr key={row.key}><td>{row.key}<br /><small lang="en">{row.provenance}</small></td><td>{label(row.price_basis)}</td><td>{row.frequency} · {row.unit} ({label(row.unit_status)})</td><td>{row.series_total} ({row.series_eligible})</td><td>{num(row.observations)}</td>
-            <td>{row.suppressed ? t.suppressed(row.suppression_reasons.map(label).join(", ")) : row.publication_eligible ? t.evaluated : t.notEligible}</td></tr>)}
+            <td>{row.suppressed ? t.suppressed(row.suppression_reasons.map(label).join(", ")) : row.key === meta?.outlook?.calibration?.dataset && row.key !== experiment?.dataset_key ? t.outlookRanges
+              : row.publication_eligible ? t.evaluated : t.notEligible}</td></tr>)}
         </tbody></table></div></section>
 
       <section className="filter-bar">

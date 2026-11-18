@@ -7,6 +7,7 @@ import { calendarDateToTime, calendarTodayIST, DAY_MS } from "../../shared/dates
 import type { CooperativeSource } from "./cooperative";
 import { publishableUnit } from "./cooperative-units";
 import { median } from "./domain/analytics";
+import { HELD_QUOTE_AUTO_REJECT_DAYS } from "../../shared/lifecycles";
 
 export const AUTO_REVIEWER = "auto-validation-v1";
 /**
@@ -35,7 +36,7 @@ const MAX_ROWS_PER_RUN = 200;
  * A row still held this many days after it was first held is rejected automatically, with its reason kept, so the queue
  * empties itself and nothing doubtful is ever published. In practice these are odd low-grade lots (₹250 fresh kole).
  */
-export const AUTO_REJECT_AFTER_DAYS = 14;
+export const AUTO_REJECT_AFTER_DAYS = HELD_QUOTE_AUTO_REJECT_DAYS;
 export const CONFLICT_REASON = "a different price is already published for this branch and date";
 const STATEMENTS_PER_BATCH = 100;
 /**

@@ -164,7 +164,8 @@ For local development, restore by replacing `api/.wrangler/state` from a copy, o
 - **Cooperative sources:** `POST /api/v1/admin/cooperative/replay/:fetchId` re-parses the archived
   snapshot. It reads from D1, or from R2 if the snapshot was offloaded.
 - **Summary cache:** `POST /api/v1/admin/summaries/rebuild` with `from`/`to` (≤ 3660 days).
-- **Failed jobs** release their idempotency key and may be retried with the same key.
+- **Failed jobs** release their idempotency key and may be retried with the same key. A job still
+  running 30 minutes after it started is treated as abandoned and released by the next retry.
 
 ## Operations endpoints (reviewer token required)
 

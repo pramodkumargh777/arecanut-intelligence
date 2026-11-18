@@ -16,6 +16,7 @@ import type { Env } from "./index";
 import { bearerMatches } from "./auth";
 import { priceBasisForSource } from "../../shared/commodities";
 import { logOperationalError } from "./archive";
+import { importStillRunning, releaseAbandonedImport } from "./lifecycle-guards";
 
 export const AGMARKNET_HISTORY_SOURCE = "agmarknet_history";
 export const AGMARKNET_HISTORY_REVIEWER = "auto-validation-history-v1";
@@ -165,11 +166,15 @@ agmarknetHistoryRoutes.post("/admin/agmarknet-history/import", async (c) => {
   const source = await db.prepare("SELECT id FROM data_sources WHERE source_key = ? AND is_enabled = 1")
     .bind(AGMARKNET_HISTORY_SOURCE).first<{ id: string }>();
   if (!source) return c.json({ error: "The AGMARKNET history source is not enabled. Apply migration 0021." }, 400);
-  const prior = await db.prepare(`SELECT id, status, received_count, inserted_count, duplicate_count, corrected_count
+  let prior = await db.prepare(`SELECT id, status, started_at, received_count, inserted_count, duplicate_count, corrected_count
       FROM ingestion_jobs WHERE source_id = ? AND idempotency_key = ? AND reprocess_of IS NULL AND status != 'failed'`)
-    .bind(source.id, idempotencyKey).first<{ id: string; status: string; received_count: number; inserted_count: number;
+    .bind(source.id, idempotencyKey).first<{ id: string; status: string; started_at: string; received_count: number; inserted_count: number;
       duplicate_count: number | null; corrected_count: number | null }>();
-  if (prior?.status === "running") return c.json({ error: "An import with this idempotency key is still running.", job_id: prior.id }, 409);
+  if (prior?.status === "running") {
+    // The history import is one atomic batch, so an abandoned job stored nothing and can simply run again.
+    if (!(await releaseAbandonedImport(db, prior.id))) return c.json(importStillRunning(prior), 409);
+    prior = null;
+  }
   if (prior) {
     return c.json({ job_id: prior.id, received_count: prior.received_count, inserted_count: prior.inserted_count,
       duplicate_count: prior.duplicate_count ?? 0, corrected_count: prior.corrected_count ?? 0, replayed: true }, 200);

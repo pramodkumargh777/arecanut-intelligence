@@ -19,6 +19,8 @@ const COPY = defineCopy({
     normal: (normal: string) => `Normal rate ${normal} (separate from reported average)`,
     lots: (lots: number, bags: string, weight: string) => ` · Tender lots ${lots} · Bags ${bags} · Reported weight ${weight} (unit unconfirmed)`,
     flags: (flags: string) => `Review flags: ${flags}`, evidence: "Original source evidence", source: "Source",
+    heldSince: (since: string) => `Held by automatic checks since ${since}:`,
+    autoReject: (when: string) => `Approve or reject it; otherwise it is rejected automatically from ${when}.`,
     fetched: (time: string, published: string) => ` · Platform fetched ${time} · Source publication timestamp ${published}`, notSupplied: "not supplied",
     record: (id: string) => ` · Source record ${id}`, mode: (mode: string) => ` · Ingest mode ${mode}`,
     archiveNote: "Approval archives the record as accepted; it is not published while the unit is unconfirmed.",
@@ -61,6 +63,8 @@ const COPY = defineCopy({
     normal: (normal: string) => `ಸಾಮಾನ್ಯ ದರ ${normal} (ವರದಿಯಾದ ಸರಾಸರಿಯಿಂದ ಪ್ರತ್ಯೇಕ)`,
     lots: (lots: number, bags: string, weight: string) => ` · ಟೆಂಡರ್ ಲಾಟ್‌ಗಳು ${lots} · ಚೀಲಗಳು ${bags} · ವರದಿಯಾದ ತೂಕ ${weight} (ಘಟಕ ದೃಢಪಟ್ಟಿಲ್ಲ)`,
     flags: (flags: string) => `ಪರಿಶೀಲನಾ ಗುರುತುಗಳು: ${flags}`, evidence: "ಮೂಲದ ಆಧಾರ", source: "ಮೂಲ",
+    heldSince: (since: string) => `${since} ರಿಂದ ಸ್ವಯಂ ಪರಿಶೀಲನೆ ತಡೆಹಿಡಿದಿದೆ:`,
+    autoReject: (when: string) => `ಅನುಮೋದಿಸಿ ಅಥವಾ ತಿರಸ್ಕರಿಸಿ; ಇಲ್ಲದಿದ್ದರೆ ${when} ರಿಂದ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ತಿರಸ್ಕರಿಸಲಾಗುತ್ತದೆ.`,
     fetched: (time: string, published: string) => ` · ತಂದ ಸಮಯ ${time} · ಮೂಲದ ಪ್ರಕಟಣೆ ಸಮಯ ${published}`, notSupplied: "ನೀಡಿಲ್ಲ",
     record: (id: string) => ` · ಮೂಲ ದಾಖಲೆ ${id}`, mode: (mode: string) => ` · ಸಂಗ್ರಹ ವಿಧಾನ ${mode}`,
     archiveNote: "ಅನುಮೋದನೆಯು ದಾಖಲೆಯನ್ನು ಸ್ವೀಕೃತ ಎಂದು ಉಳಿಸುತ್ತದೆ; ಘಟಕ ದೃಢಪಡುವವರೆಗೆ ಪ್ರಕಟವಾಗುವುದಿಲ್ಲ.",
@@ -95,7 +99,7 @@ const COPY = defineCopy({
   },
 });
 
-function QueueRow({ row, busy, onReview }: { row: CooperativeQuote; busy: boolean; onReview: (action: "approve" | "reject") => void }) {
+export function QueueRow({ row, busy, onReview }: { row: CooperativeQuote; busy: boolean; onReview: (action: "approve" | "reject") => void }) {
   const t = useCopy(COPY);
   const format = useFormat();
   const flags = reviewFlags(row.review_flags);
@@ -107,6 +111,8 @@ function QueueRow({ row, busy, onReview }: { row: CooperativeQuote; busy: boolea
     <p>{t.prices(value(row.minimum_price), value(row.average_price), value(row.maximum_price))}</p>
     {row.source_key === "tss" && <p>{t.normal(value(row.normal_price))}{row.lot_count != null ? t.lots(row.lot_count, value(row.bag_count), value(row.reported_weight)) : ""}</p>}
     {flags.length > 0 && <p role="note">{t.flags(flags.map((flag) => flag.replace(/_/g, " ")).join(", "))}</p>}
+    {row.hold_reason && row.held_at && <p role="note">{t.heldSince(format.timestamp(row.held_at))} <span lang="en">{row.hold_reason}</span>.
+      {row.auto_reject_at ? <> {t.autoReject(format.timestamp(row.auto_reject_at))}</> : null}</p>}
     {row.validation_message && <p role="note" lang="en">{row.validation_message}</p>}
     <details className="review-evidence"><summary>{t.evidence}</summary><p><a href={row.source_url} target="_blank" rel="noreferrer">{t.source}</a>{t.fetched(format.timestamp(row.fetched_at), row.source_published_at ?? t.notSupplied)}{row.source_record_id ? t.record(row.source_record_id) : ""}{row.ingest_mode ? t.mode(row.ingest_mode) : ""}</p><pre>{row.raw_record}</pre></details>
   </div><div className="review-actions"><button className="approve-button" disabled={busy || row.status !== "pending"} title={publishable ? undefined : t.archiveNote} onClick={() => onReview("approve")}>{publishable ? t.verify : t.accept}</button>

@@ -132,7 +132,8 @@ KRAMA only answers Indian IP addresses. On 2026-11-18, probes from data centres 
 **`GET /api/v1/supply/arrivals`** (the Supply page) includes daily arrivals at every granularity when
 `DAILY_ARRIVALS_IN_SUPPLY = "true"` (wrangler.toml; on since 2026-11-18 after the rollout below).
 
-- **Same response shape**, and the same page section and wording.
+- **Same response shape**, and the same page section and wording. The page hides the Traded columns while no period in
+  view has a traded quantity, since these sources publish arrivals only.
 - **KRAMA wins a whole date.** AGMARKNET date-wise rows count only for dates KRAMA has no reported rows for.
 - **File imports win a market-day.** A market-day that already has daily file imports (`market_arrivals`) uses those.
 - **Daily data replaces AGMARKNET 2.0 monthly totals.** A closed month holding any daily rows is not also counted from

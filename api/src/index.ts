@@ -31,6 +31,11 @@ import { supplyRoutes } from "./supply-routes";
 import { createAssistantRoutes } from "./assistant/routes";
 import type { AssistantConfig } from "./assistant/providers";
 import { bearerMatches } from "./auth";
+import { canTransition, LIFECYCLES, reviewQueueStates, sqlStates } from "../../shared/lifecycles";
+import { importStillRunning, refusal, releaseAbandonedImport } from "./lifecycle-guards";
+
+/** Observation states a reviewer can act on (shared/lifecycles.ts), as a SQL list. */
+const OBSERVATION_QUEUE = sqlStates(reviewQueueStates(LIFECYCLES.observation));
 
 export type Env = {
   Bindings: {
@@ -535,11 +540,11 @@ app.get("/admin/quality", async (c) => {
      FROM market_price_observations o
      JOIN markets m ON m.id = o.market_id
      JOIN data_sources s ON s.id = o.source_id
-     WHERE o.validation_status IN ('validated', 'review_required')
+     WHERE o.validation_status IN (${OBSERVATION_QUEUE})
      ORDER BY o.reporting_date DESC, o.ingested_at DESC, o.id
      LIMIT ? OFFSET ?`,
   ).bind(limit, offset), c.env.DB.prepare(
-    "SELECT COUNT(*) AS total FROM market_price_observations WHERE validation_status IN ('validated', 'review_required')",
+    `SELECT COUNT(*) AS total FROM market_price_observations WHERE validation_status IN (${OBSERVATION_QUEUE})`,
   )]);
   return c.json({ data: result.results, count: result.results.length, total: Number(total.results[0]?.total ?? 0), limit, offset });
 });
@@ -557,11 +562,15 @@ app.post("/admin/import", async (c) => {
   const idempotencyKey = parsed.data.idempotency_key ?? null;
   let reprocessOf: string | null = null;
   if (idempotencyKey) {
-    const prior = await c.env.DB.prepare(`SELECT id, status, received_count, inserted_count, duplicate_count, corrected_count
+    let prior = await c.env.DB.prepare(`SELECT id, status, started_at, received_count, inserted_count, duplicate_count, corrected_count
       FROM ingestion_jobs WHERE source_id = ? AND idempotency_key = ? AND reprocess_of IS NULL AND status != 'failed'`)
-      .bind(source.id, idempotencyKey).first<{ id: string; status: string; received_count: number; inserted_count: number;
+      .bind(source.id, idempotencyKey).first<{ id: string; status: string; started_at: string; received_count: number; inserted_count: number;
         duplicate_count: number | null; corrected_count: number | null }>();
-    if (prior?.status === "running") return c.json({ error: "An import with this idempotency key is still running.", job_id: prior.id }, 409);
+    if (prior?.status === "running") {
+      // An abandoned job (its Worker stopped) would otherwise hold the key forever; rows already stored are idempotent.
+      if (!(await releaseAbandonedImport(c.env.DB, prior.id))) return c.json(importStillRunning(prior), 409);
+      prior = null;
+    }
     if (prior && !parsed.data.reprocess) {
       return c.json({ job_id: prior.id, received_count: prior.received_count, inserted_count: prior.inserted_count,
         duplicate_count: prior.duplicate_count ?? 0, corrected_count: prior.corrected_count ?? 0, replayed: true }, 200);
@@ -727,12 +736,14 @@ app.post("/admin/observations/:id/review", async (c) => {
   if (!parsed.success) return c.json({ error: "Action must be 'approve' or 'reject'." }, 400);
   const status = parsed.data.action === "approve" ? "verified" : "rejected";
   const observation = await c.env.DB.prepare(
-    "SELECT * FROM market_price_observations WHERE id = ? AND validation_status IN ('validated', 'review_required')",
+    `SELECT * FROM market_price_observations WHERE id = ? AND validation_status IN (${OBSERVATION_QUEUE})`,
   ).bind(c.req.param("id")).first<{
     market_id: string; minimum_price: number; modal_price: number; maximum_price: number;
     reporting_date: string; validation_status: string; validation_message: string | null;
   }>();
-  if (!observation) return c.json({ error: "Pending observation not found." }, 404);
+  if (!observation || !canTransition(LIFECYCLES.observation, observation.validation_status, status, "reviewer")) {
+    return c.json(await refusal(c.env.DB, LIFECYCLES.observation, c.req.param("id"), "Observation"), 404);
+  }
   if (status === "verified" && (observation.minimum_price > observation.modal_price
       || observation.modal_price > observation.maximum_price || observation.reporting_date > new Date().toISOString().slice(0, 10))) {
     return c.json({ error: "Invalid price range or future reporting date cannot be approved. Correct the source record first." }, 409);
@@ -752,7 +763,7 @@ app.post("/admin/observations/:id/review", async (c) => {
       AND EXISTS (SELECT 1 FROM observation_reviews WHERE id = ?)`).bind(observation.market_id, reviewId));
   }
   const results = await c.env.DB.batch(statements);
-  if (!results[0].meta.changes) return c.json({ error: "Observation changed during review. Reload the queue." }, 409);
+  if (!results[0].meta.changes) return c.json(await refusal(c.env.DB, LIFECYCLES.observation, c.req.param("id"), "Observation", true), 409);
   return c.json({ success: true, status });
 });
 

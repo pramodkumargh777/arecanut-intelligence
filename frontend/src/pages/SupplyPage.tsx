@@ -247,6 +247,8 @@ function ArrivalsSection() {
   const [granularity, setGranularity] = useState<Granularity>("monthly");
   const arrivals = useQuery({ queryKey: ["supply-arrivals", granularity], queryFn: () => api.supplyArrivals({ granularity }) });
   const data = arrivals.data, rows = data ? arrivalRows(data.measures) : [];
+  // Arrival-only sources (KRAMA, AGMARKNET) publish no traded quantity, so those columns appear only when a row has one.
+  const showTraded = rows.some((row) => row.traded);
   // Nothing has been imported yet, so there is nothing to show at any period.
   if (data && !data.sources.length && !rows.length) return null;
   return <section className="panel table-panel" aria-labelledby="supply-arrivals">
@@ -256,9 +258,9 @@ function ArrivalsSection() {
     {arrivals.isLoading ? <LoadingState /> : arrivals.error ? <ErrorState error={arrivals.error} onRetry={() => void arrivals.refetch()} /> : !data ? null : <>
       <p className="data-disclosure">{t.arrivalsMeta(periodText(t, data.reporting_period), data.requested_range.from, data.requested_range.to, data.sources.length ? data.sources.map((source) => t.imported(source.source_name, format.timestamp(source.imported_at))).join("; ") : t.noneImported, data.unit)}</p>
       {!rows.length ? <EmptyState title={t.noArrivals}>{t.noArrivalsHint}</EmptyState> :
-        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.arrivalsAria}><table><thead><tr><th>{t.period}</th><th>{headed(t.arrivalsT)}</th><th>{t.arrivalMarkets}</th><th>{headed(t.tradedT)}</th><th>{t.tradedMarkets}</th><th>{t.unknownUnit}</th></tr></thead><tbody>
+        <div className="table-scroll" tabIndex={0} role="region" aria-label={t.arrivalsAria}><table><thead><tr><th>{t.period}</th><th>{headed(t.arrivalsT)}</th><th>{t.arrivalMarkets}</th>{showTraded && <><th>{headed(t.tradedT)}</th><th>{t.tradedMarkets}</th></>}<th>{t.unknownUnit}</th></tr></thead><tbody>
           {rows.map((row) => <tr key={row.bucket}><td>{row.bucket}</td><td>{num(row.arrival?.quantity_tonnes, 3)}</td><td>{row.arrival?.markets_reporting ?? "—"}</td>
-            <td>{num(row.traded?.quantity_tonnes, 3)}</td><td>{row.traded?.markets_reporting ?? "—"}</td><td>{(row.arrival?.unknown_unit_records ?? 0) + (row.traded?.unknown_unit_records ?? 0)}</td></tr>)}
+            {showTraded && <><td>{num(row.traded?.quantity_tonnes, 3)}</td><td>{row.traded?.markets_reporting ?? "—"}</td></>}<td>{(row.arrival?.unknown_unit_records ?? 0) + (row.traded?.unknown_unit_records ?? 0)}</td></tr>)}
         </tbody></table></div>}
       <ul className="phone-hide">{t.arrivalNotes.map((note) => <li key={note}>{note}</li>)}</ul>
       <ForecastNotice gate={data.forecast} subject={t.arrivalSubject} />

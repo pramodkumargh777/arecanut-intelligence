@@ -159,6 +159,22 @@ describe("prospective reconciliation", () => {
       model_version: "theta-1", reason: "x" }, "import")).status).toBe(401);
   });
 
+  it("counts a forecast once when the engine is rerun for the same month, keeping the first one made", async () => {
+    let month = "2026-01", price = 50000;
+    seedMonth(month, price);
+    for (let step = 0; step < 3; step++) {
+      // Three runs from the same month: the first forecast is the worst, the reruns better.
+      for (const [suffix, theta] of [["a", price + 200], ["b", price + 900], ["c", price + 1000]] as const) {
+        expect((await post("/admin/forecasting/experiments", payload(month, price, { theta, idSuffix: `${month.replace("-", "")}${suffix}` }), "import")).status).toBe(201);
+      }
+      month = nextMonth(month); price += 1000; seedMonth(month, price);
+      expect((await reconcileForecastOutcomes(env.DB)).events).toEqual([]);
+    }
+    const theta = (await get("/forecasting/performance")).keys.find((k: { model: string }) => k.model === "theta");
+    // Three months, not nine, and the first forecast's error (800), not a rerun's.
+    expect(theta).toMatchObject({ outcomes: 3, paired: 3, mae: 800, baseline_mae: 1000 });
+  });
+
   it("revokes degraded models and leaves undecided keys alone", () => {
     const base = { effective_status: "validated", paired: 8, coverage: 0.8 };
     expect(statusDecision({ ...base, mae_ratio: 0.9, recent_mae_ratio: 0.95 })).toBeNull();

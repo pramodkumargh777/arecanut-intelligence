@@ -25,7 +25,7 @@ from .config import CANDIDATE_MODELS, ExperimentConfig
 from .datasets import IncomparableDatasets, build_all, build_unified_dataset, exogenous_availability
 from .evaluate import evaluate
 from .legacy import compare_with_engine, parity_check
-from .outlook import build_outlook
+from .outlook import build_outlook_selected
 from .publish import build_payload, build_track, post_payload
 from .report import render
 from .sources import connect, table_exists
@@ -60,6 +60,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="Add Chronos-2, TimesFM 2.5 and the median ensemble of theta, auto_ets and chronos2 (CPU).")
     parser.add_argument("--monthly-source", choices=["reports", "daily"], default="reports",
                         help="Monthly series to evaluate: AGMARKNET monthly reports (D1) or the 2014+ daily archive.")
+    parser.add_argument("--outlook-history", choices=["evaluated", "daily"], default="evaluated",
+                        help="Errors the outlook ranges are fitted on: the evaluated series' own, or the 2014+ daily archive's "
+                             "baseline errors centred on zero (tested on the evaluated series either way).")
     parser.add_argument("--last-origins", type=int, default=0, help="Evaluate only the latest N origins (smoke runs).")
     parser.add_argument("--publish", action="store_true", help="POST the experiment to ANI_API_URL with INGESTION_TOKEN.")
     parser.add_argument("--dry-run", action="store_true", help="Build the payload and report but never POST.")
@@ -176,6 +179,20 @@ def main(argv: list[str] | None = None) -> int:
     recorder.frame("backtest.csv", result.rows)
     evaluation = evaluate(result, config)
     recorder.json("evaluation.json", evaluation)
+    calibration = None
+    if args.outlook_history == "daily" and args.monthly_source != "daily":
+        from .datasets import build_monthly_from_daily
+        long = datasets.setdefault("monthly_from_daily", build_monthly_from_daily(config))
+        baselines = ExperimentConfig(models=("last_value", "seasonal_naive"))
+        long_periods = sorted({p for s in long.eligible_series for p in s.values.index})
+        long_result = walk_forward(long, baselines, mode="revised", origins=long_periods[baselines.initial_training_periods - 1:], progress=log)
+        # The archive's latest month can be partial (it is topped up during the month): only targets the evaluated series
+        # has already reported count, so every error is against a complete month.
+        long_result.rows = long_result.rows[long_result.rows.target.astype(str) <= str(periods[-1])]
+        recorder.frame("outlook_backtest.csv", long_result.rows)
+        calibration = {"rows": long_result.rows, "dataset": long, "evaluation": evaluate(long_result, baselines)}
+        recorder.json("datasets.json", {k: d.summary() for k, d in datasets.items()})
+        log(f"outlook calibration: {long.key} baselines, {long_result.origins_evaluated} origins")
     legacy = compare_with_engine(parity_check(conn), result.rows) if table_exists(conn, "forecast_snapshots") else []
     recorder.json("legacy_comparison.json", legacy)
     exogenous = exogenous_availability(conn)
@@ -184,7 +201,8 @@ def main(argv: list[str] | None = None) -> int:
     payload["experiment"].update(strict_vintage=strict_meta, pooled=evaluation["pooled"],
                                  status_counts=evaluation["status_counts"], legacy_comparison=legacy,
                                  exogenous=exogenous, track=build_track(result.rows, monthly, evaluation["pooled"]),
-                                 outlook=build_outlook(result.rows, monthly, evaluation, config.horizons, config.interval_level),
+                                 outlook=build_outlook_selected(result.rows, monthly, evaluation, config.horizons,
+                                                                config.interval_level, calibration=calibration),
                                  covariates=covariate_meta)
     recorder.json("payload.json", payload)
     backtest_meta = {"origins_evaluated": result.origins_evaluated, "horizons": list(config.horizons),

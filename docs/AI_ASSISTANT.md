@@ -41,17 +41,17 @@ User question (English or Kannada)
 | Tool | ANI source |
 |---|---|
 | `get_current_prices` | Monthly reference, AGMARKNET daily, MAMCOS, TSS, TUMCOS. Each keeps its own price basis and is never averaged across bases. |
-| `get_historical_prices` | Monthly history (`/history/monthly`). When the question names a town with an APMC market (`PLACES` in `places.ts`, e.g. Sagara → Sagar APMC), also that market's monthly medians of verified AGMARKNET daily modal prices (`/prices?market_id=`), the last 12 months by default. A town with no APMC market says so and gets the state series only. |
+| `get_historical_prices` | Monthly history (`/history/monthly`). A range starting before 2021 (when the monthly report begins) reads `basis=long`, the 2014+ median of APMC daily modal prices, for varieties whose series follows the report; its facts carry basis `MONTHLY_APMC_MODAL_MEDIAN` and their own source label. Other varieties say where their prices begin. When the question names a town with an APMC market (`PLACES` in `places.ts`, e.g. Sagara → Sagar APMC), also that market's monthly medians of verified AGMARKNET daily modal prices (`/prices?market_id=`), the last 12 months by default. A town with no APMC market says so and gets the state series only. |
 | `compare_markets` | Verified daily/cooperative quotations by market |
 | `get_market_index` | `/analytics/reference-index` |
-| `get_market_arrivals` | `/supply/arrivals` |
+| `get_market_arrivals` | `/supply/arrivals`: KRAMA daily reports, AGMARKNET 2.0 monthly totals and file imports, in tonnes. The period type comes from the question ("today", "this week", "this month", "season"; weekly otherwise), and a month range from named years (completed months only, at most 12). A named town is matched to its market by the `PLACES` spelling rules plus the report spellings (Sullia → Sulya APMC); a market outside the 50 largest is looked up in `/supply/arrival-days` for the last 31 days. A town with no market says so and gets district or state figures. Beside the latest period (not a single day), the same period a year earlier (52 weeks earlier for a week) and the change, with markets and reporting days for both, so market holidays are visible. |
 | `get_price_forecast` | Stored experimental baseline snapshots (`/forecasts`) |
 | `get_production_statistics` | `/supply/production` (DASD estimates, stage and revision aware) |
 | `get_trade_statistics` | `/intelligence/trade` |
 | `get_weather` | `/supply/weather` (observations, forecasts and warnings, labelled by data type) |
 | `get_advisories` | `/supply/risk/advisories` (only expert-approved rules) |
 | `calculate_net_realization` | Deterministic calculator using the user's own inputs |
-| `calculate_sell_hold` | What the Karnataka monthly price did after this calendar month in past years (`shared/hold-history.ts`), plus a deterministic hold scenario from the user's own assumptions; no probability is assigned |
+| `calculate_sell_hold` | What the Karnataka monthly price did after this calendar month in past years (`shared/hold-history.ts`), from the same series as the sell-or-hold page (`/history/monthly?basis=long` from 2014, the report from 2021 for varieties without a long series). It adds how selling a quarter every 2 months, or waiting 6 months, compared with selling everything that month on the same past years, before costs (`stagedSelling`). It also gives a deterministic hold scenario from the user's own assumptions; no probability is assigned |
 | `search_industry_news` | `/intelligence/news` (captured official notices and bulletins) |
 | `search_agricultural_documents` | CPCRI, DASD and government document passages |
 

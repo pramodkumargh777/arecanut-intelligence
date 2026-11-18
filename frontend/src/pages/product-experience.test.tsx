@@ -41,6 +41,7 @@ import { fromFirstCapture, shortPeriod } from "./HistoricalAnalyticsPage";
 import { MonthlySnapshot } from "./MonthlyTrendsPage";
 import { anomalyEvents } from "../services/anomalies";
 import { MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
+import { stagedSelling } from "../../../shared/hold-history";
 import { runInNewContext } from "node:vm";
 import { ImportsPanel } from "../components/ImportsPanel";
 import { eventsBetween, MARKET_EVENTS } from "../services/market-events";
@@ -54,9 +55,11 @@ const state = vi.hoisted(() => ({
   comparison: [] as object[],
   cooperativePage: {} as object,
   intelligence: {} as object,
+  supplyArrivals: undefined as object | undefined,
   language: "en" as "en" | "kn",
   branch: [] as object[],
   monthly: {} as Record<string, object>,
+  sellOrHold: undefined as object | undefined,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -72,6 +75,8 @@ vi.mock("@tanstack/react-query", () => ({
     if (queryKey[0] === "market-comparison") return { data: { data: state.comparison }, isLoading: false };
     if (queryKey[0] === "cooperative") return state.cooperativePage;
     if (queryKey[0] === "intelligence") return state.intelligence;
+    if (queryKey[0] === "supply-arrivals" && state.supplyArrivals) return state.supplyArrivals;
+    if (queryKey[0] === "sell-or-hold" && state.sellOrHold) return state.sellOrHold;
     if (queryKey[0] === "monthly-prices") return state.monthly[queryKey[1]] ?? { data: undefined, isLoading: false };
     // A real query is still loading until it has data, so pages never see "finished with no data" for these.
     if (queryKey[0] === "history") return { data: undefined, isLoading: true, isPending: true };
@@ -109,6 +114,8 @@ beforeEach(() => {
   state.language = "en";
   state.branch = [];
   state.intelligence = { data: undefined, isLoading: true };
+  state.supplyArrivals = undefined;
+  state.sellOrHold = undefined;
   state.cooperativePage = ready({
     data: [], latest_by_branch: [], branches: [], varieties: [], series: [], counts: [], recent_fetches: [],
     publication: { awaiting_review_count: 2, blocked_reason: null, latest_archived_reporting_date: "2026-09-30" },
@@ -611,6 +618,25 @@ describe("market experience", () => {
     expect(heading, `${path} heading`).toMatch(/[\u0C80-\u0CFF]/);
   });
 
+  it("shows the traded columns in market arrivals only when a row has a traded quantity", () => {
+    const bucket = (measure: "arrival" | "traded", quantity: number) => ({ measure, bucket: "2026-10", first_date: "2026-10-01", last_date: "2026-10-31",
+      quantity_tonnes: quantity, records: 10, unknown_unit_records: 0, markets_reporting: 5, reporting_days: 31 });
+    const arrivals = (traded: object[]) => ({ data: {
+      state: "Karnataka", granularity: "monthly", requested_range: { from: "2026-10-01", to: "2026-10-31" }, reporting_period: { from: "2026-10-01", to: "2026-10-31" },
+      unit: "tonnes", measures: { arrival: [bucket("arrival", 36613.8)], traded }, markets: [],
+      sources: [{ id: "k", source_key: "krama_arrivals", source_name: "KRAMA daily arrivals", source_url: null, file_name: null, imported_at: "2026-11-18T01:47:38Z", authorization_note: "" }],
+      forecast: { status: "suppressed", points: 0, minimum: 104, reason: "Too few weeks." }, message: null, notes: [],
+    }, isLoading: false, error: null, refetch: vi.fn() });
+    state.supplyArrivals = arrivals([]);
+    const arrivalOnly = render(<SupplyPage />, "/supply");
+    expect(arrivalOnly).toContain("Arrival markets");
+    expect(arrivalOnly).toContain("36,613.8");
+    expect(arrivalOnly).not.toContain("Traded markets");
+    expect(arrivalOnly).not.toContain("Traded (t)");
+    state.supplyArrivals = arrivals([bucket("traded", 1200)]);
+    expect(render(<SupplyPage />, "/supply")).toContain("Traded markets");
+  });
+
   it("places the source dropdown in the page heading row instead of a separate row", () => {
     const html = render(<MarketDataPage official={<p />} />, "/prices?feed=mamcos");
     const heading = html.slice(html.indexOf('class="page-heading"'), html.indexOf("</section>", html.indexOf('class="page-heading"')));
@@ -743,6 +769,20 @@ describe("price outlook", () => {
     expect(html).toContain("1 of 2 months");
     expect(html).toContain("Outside range");
     expect(html).toContain("Outlook chart: 2 months");
+  });
+
+  it("says where the range widths come from when they are set from the longer daily-price history", () => {
+    const outlook = { experiment_id: "fx", calibrated_at: "2026-11-18", level: 80, last_month: "2026-10", last_price: 47175, volatility_percent: 2.4, point_rule: "",
+      horizons: [{ horizon: 1, target_month: "2026-11", model: "last_value", point: 47175, lower: 45706, upper: 48820, chance_higher: 0.5, band: [-1.33, 1.44] as [number, number],
+        tested: { coverage: 0.89, months: 199, from: "2025-10", direction_skill: -0.01 } }],
+      calibration_history: { price_basis: "MONTHLY_APMC_MODAL_MEDIAN", from: "2017-11", to: "2026-09", series: 11 } };
+    const prices = [{ reporting_month: "2026-09", weighted_price: 47805 }, { reporting_month: "2026-10", weighted_price: 47175 }];
+    const text = spoken(render(<PriceOutlook variety="Rashi" historyCount={70} evaluation={null} outlook={outlook} forecast={null} prices={prices} />));
+    expect(text).toContain("Likely between ₹45,706 and ₹48,820");
+    expect(text).toContain("in the APMC daily-price series that goes back to 2014, checked against official prices.");
+    const official = spoken(render(<PriceOutlook variety="Rashi" historyCount={70} evaluation={null} outlook={{ ...outlook, calibration_history: null }} forecast={null} prices={prices} />));
+    expect(official).not.toContain("goes back to 2014");
+    expect(official).toContain("Ranges widen when prices have been swinging");
   });
 });
 
@@ -1096,5 +1136,44 @@ describe("TSS grade names", () => {
     expect(tssOnly.length).toBeGreaterThan(15);
     for (const variety of tssOnly) expect(variety.kn, variety.key).toBe(TSS_KANNADA[variety.labels.tss![0] as keyof typeof TSS_KANNADA]);
     expect(VARIETIES.find((variety) => variety.key === "fresh-sippe")?.kn).toBe("ಹಸಿ ಅಡಿಕೆ(ಸಿಪ್ಪೆ ಅಡಿಕೆ)");
+  });
+});
+
+describe("sell-or-hold: selling in parts", () => {
+  // Twelve years of a yearly swing on a gentle rise, reported every month.
+  const points = Array.from({ length: 142 }, (_, index) => ({
+    reporting_month: `${2015 + Math.floor(index / 12)}-${String(index % 12 + 1).padStart(2, "0")}`,
+    weighted_price: Math.round(40000 + 3000 * Math.sin((2 * Math.PI * index) / 12) + 150 * index), review_flags: [],
+  }));
+
+  it("compares each way of selling on the same past years, after the reader's default costs", () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-18T06:00:00Z"));
+    try {
+      state.sellOrHold = { data: { points, varieties: ["Rashi"], from: "2015-01" }, isLoading: false, error: null, refetch: vi.fn() };
+      const staged = stagedSelling(points, 11, { annualInterestPercent: 10, weightLossPercent: 0, storagePerQuintalPerMonth: 0 })!;
+      const summary = (plan: string) => staged.summaries.find((item) => item.plan === plan)!;
+      const signed = (value: number) => `${value > 0 ? "+" : value < 0 ? "\u2212" : ""}${Math.abs(value)}%`;
+      expect(summary("parts").years).toBe(11);
+      const html = render(<SellOrHoldPage />, "/sell-or-hold");
+      expect(html).toContain("If you had sold in parts");
+      expect(html).toContain("A quarter now, then a quarter every 2 months");
+      expect(html).toContain("Selling everything in November (0%)");
+      expect(html).toContain(`In the worst year, selling in parts came out ${signed(summary("parts").lowest_percent!)}; waiting 6 months and selling everything came out ${signed(summary("wait6").lowest_percent!)}.`);
+      expect(html).toContain(`Better in ${summary("halves").beat_selling_now} of 11 years`);
+      state.language = "kn";
+      expect(render(<SellOrHoldPage />, "/sell-or-hold")).toContain("ಹಂತ ಹಂತವಾಗಿ ಮಾರಿದ್ದರೆ");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("hides the comparison until three complete years exist", () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-18T06:00:00Z"));
+    try {
+      state.sellOrHold = { data: { points: points.slice(-30), varieties: ["Rashi"], from: "2024-05" }, isLoading: false, error: null, refetch: vi.fn() };
+      expect(render(<SellOrHoldPage />, "/sell-or-hold")).not.toContain("If you had sold in parts");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

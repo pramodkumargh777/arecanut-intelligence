@@ -10,7 +10,7 @@ type Source = CooperativeSourceStatus["sources"][number];
 
 const COPY = defineCopy({
   en: {
-    availability: { available: "Available", running: "Fetch in progress", failing: "Failing", never_fetched: "Never fetched" } as Record<Source["availability"]["state"], string>,
+    availability: { available: "Available", running: "Fetch in progress", stalled: "Stalled: no result recorded (the run stopped)", failing: "Failing", never_fetched: "Never fetched" } as Record<Source["availability"]["state"], string>,
     permissionStatus: { not_requested: "Not requested", requested: "Requested", granted: "Granted", denied: "Denied" } as Record<PermissionStatus, string>,
     permissionLabel: (status: string, redistribution: boolean) => status === "granted" && redistribution ? "Permission recorded for collection and redistribution"
       : status === "granted" ? "Collection permission recorded; redistribution not confirmed" : status === "denied" ? "Permission denied"
@@ -32,7 +32,7 @@ const COPY = defineCopy({
     generated: (time: string, today: string) => `Status generated ${time} · market calendar today ${today}.`,
   },
   kn: {
-    availability: { available: "ಲಭ್ಯ", running: "ಸಂಗ್ರಹ ನಡೆಯುತ್ತಿದೆ", failing: "ವಿಫಲವಾಗುತ್ತಿದೆ", never_fetched: "ಎಂದೂ ತಂದಿಲ್ಲ" },
+    availability: { available: "ಲಭ್ಯ", running: "ಸಂಗ್ರಹ ನಡೆಯುತ್ತಿದೆ", stalled: "ಸ್ಥಗಿತ: ಫಲಿತಾಂಶ ದಾಖಲಾಗಿಲ್ಲ (ಸಂಗ್ರಹ ನಿಂತುಹೋಗಿದೆ)", failing: "ವಿಫಲವಾಗುತ್ತಿದೆ", never_fetched: "ಎಂದೂ ತಂದಿಲ್ಲ" },
     permissionStatus: { not_requested: "ಕೋರಿಲ್ಲ", requested: "ಕೋರಲಾಗಿದೆ", granted: "ನೀಡಲಾಗಿದೆ", denied: "ನಿರಾಕರಿಸಲಾಗಿದೆ" },
     permissionLabel: (status: string, redistribution: boolean) => status === "granted" && redistribution ? "ಸಂಗ್ರಹ ಮತ್ತು ಮರುಪ್ರಕಟಣೆಗೆ ಅನುಮತಿ ದಾಖಲಾಗಿದೆ"
       : status === "granted" ? "ಸಂಗ್ರಹಕ್ಕೆ ಅನುಮತಿ ದಾಖಲಾಗಿದೆ; ಮರುಪ್ರಕಟಣೆ ದೃಢಪಟ್ಟಿಲ್ಲ" : status === "denied" ? "ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿದೆ"
@@ -93,7 +93,7 @@ function SourceCard({ source, token }: { source: Source; token: string }) {
   const freshness = (item: Source["commodity_status"][number]) => describeFreshness(item, format.language);
   return <article className="source-status-card">
     <strong>{source.display_name}<span>{source.source_key} · {source.operator}</span></strong>
-    <p className={availability.state === "failing" ? "message-error" : undefined}>
+    <p className={availability.state === "failing" || availability.state === "stalled" ? "message-error" : undefined}>
       {t.availabilityLine} <b>{t.availability[availability.state]}</b>
       {availability.last_attempt_at ? t.lastAttempt(format.timestamp(availability.last_attempt_at)) : ""}
       {availability.http_status ? ` · HTTP ${availability.http_status}` : ""}

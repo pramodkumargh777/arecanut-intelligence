@@ -4,6 +4,7 @@ import type { Forecast, ForecastData, Outlook, OutlookHorizon } from "../service
 import { defineCopy, useCopy, useFormat } from "../services/language";
 import { LazyOutlookChart } from "./LazyCharts";
 import { RollingText } from "./RollingNumber";
+import { monthlyVolatility } from "../../../shared/volatility";
 
 /**
  * The reader-facing outlook for one variety: the likely range and most likely price for each of the next six months,
@@ -40,8 +41,9 @@ const COPY = defineCopy({
     chance: (month: string, pct: string) => `Chance it ends above ${month}'s price: ${pct}.`,
     chanceTip: (pct: string) => `Chance higher than now: ${pct}`,
     heldTested: (pct: string) => pct, heldTestedNote: (n: number) => `of ${n} held-out tests · target 80%`,
-    swing: "Typical monthly swing", swingNote: "over the past 12 months",
+    swing: "Typical monthly swing", swingNote: "over the past 12 months", swingNoteWeighted: "recent months count most",
     basedOn: (n: number, from: string, to: string) => `Based on ${n} months of official prices, ${from} – ${to}. Ranges widen when prices have been swinging and tighten when they are calm.`,
+    basedOnLonger: (n: number, from: string, to: string, errorsFrom: string, errorsTo: string) => `Based on ${n} months of official prices, ${from} – ${to}. The range widths come from forecast errors over ${errorsFrom} – ${errorsTo} in the APMC daily-price series that goes back to 2014, checked against official prices. Ranges widen when prices have been swinging and tighten when they are calm.`,
     ahead: "Next six months", aheadHint: "Likely range and the chance of ending above the latest official price. Further out, the range widens.",
     colRange: "Likely range", colMost: "Most likely", colChance: "Chance higher",
     inMonths: (n: number) => n === 1 ? "next month" : `in ${n} months`,
@@ -73,8 +75,9 @@ const COPY = defineCopy({
     chance: (month: string, pct: string) => `${month} ದರಕ್ಕಿಂತ ಹೆಚ್ಚಾಗುವ ಸಾಧ್ಯತೆ: ${pct}.`,
     chanceTip: (pct: string) => `ಈಗಿನ ದರಕ್ಕಿಂತ ಹೆಚ್ಚಾಗುವ ಸಾಧ್ಯತೆ: ${pct}`,
     heldTested: (pct: string) => pct, heldTestedNote: (n: number) => `${n} ಪ್ರತ್ಯೇಕ ಪರೀಕ್ಷೆಗಳಲ್ಲಿ · ಗುರಿ 80%`,
-    swing: "ಸಾಮಾನ್ಯ ತಿಂಗಳ ಏರಿಳಿತ", swingNote: "ಕಳೆದ 12 ತಿಂಗಳಲ್ಲಿ",
+    swing: "ಸಾಮಾನ್ಯ ತಿಂಗಳ ಏರಿಳಿತ", swingNote: "ಕಳೆದ 12 ತಿಂಗಳಲ್ಲಿ", swingNoteWeighted: "ಇತ್ತೀಚಿನ ತಿಂಗಳುಗಳಿಗೆ ಹೆಚ್ಚು ತೂಕ",
     basedOn: (n: number, from: string, to: string) => `${from} – ${to} ರ ${n} ತಿಂಗಳ ಅಧಿಕೃತ ದರಗಳ ಆಧಾರ. ದರ ಏರಿಳಿತ ಹೆಚ್ಚಿದ್ದಾಗ ಶ್ರೇಣಿ ಅಗಲ, ಶಾಂತವಾಗಿದ್ದಾಗ ಕಿರಿದು.`,
+    basedOnLonger: (n: number, from: string, to: string, errorsFrom: string, errorsTo: string) => `${from} – ${to} ರ ${n} ತಿಂಗಳ ಅಧಿಕೃತ ದರಗಳ ಆಧಾರ. ಶ್ರೇಣಿಯ ಅಗಲವನ್ನು 2014 ರಿಂದಿನ ಎಪಿಎಂಸಿ ದೈನಂದಿನ ದರ ಸರಣಿಯ ${errorsFrom} – ${errorsTo} ಮುನ್ಸೂಚನೆ ದೋಷಗಳಿಂದ ನಿಗದಿಪಡಿಸಿ, ಅಧಿಕೃತ ದರಗಳ ಮೇಲೆ ಪರೀಕ್ಷಿಸಲಾಗಿದೆ. ದರ ಏರಿಳಿತ ಹೆಚ್ಚಿದ್ದಾಗ ಶ್ರೇಣಿ ಅಗಲ, ಶಾಂತವಾಗಿದ್ದಾಗ ಕಿರಿದು.`,
     ahead: "ಮುಂದಿನ ಆರು ತಿಂಗಳು", aheadHint: "ಸಾಧ್ಯ ಶ್ರೇಣಿ ಮತ್ತು ಇತ್ತೀಚಿನ ಅಧಿಕೃತ ದರಕ್ಕಿಂತ ಹೆಚ್ಚಾಗುವ ಸಾಧ್ಯತೆ. ಹೆಚ್ಚು ಮುಂದೆ ಹೋದಂತೆ ಶ್ರೇಣಿ ಅಗಲ.",
     colRange: "ಸಾಧ್ಯ ಶ್ರೇಣಿ", colMost: "ಹೆಚ್ಚು ಸಾಧ್ಯ", colChance: "ಹೆಚ್ಚಾಗುವ ಸಾಧ್ಯತೆ",
     inMonths: (n: number) => n === 1 ? "ಮುಂದಿನ ತಿಂಗಳು" : `${n} ತಿಂಗಳಲ್ಲಿ`,
@@ -85,13 +88,6 @@ const COPY = defineCopy({
 
 const rupees = (value: number | null | undefined) => value == null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const pct = (value: number) => `${Math.round(value * 100)}%`;
-
-/** Root-mean-square of the last 12 monthly log returns, floored at 1% (mirrors api/src/outlook.ts). */
-function volatility(values: number[]): number | null {
-  const returns = values.slice(1).map((value, i) => Math.log(value / values[i])).slice(-12);
-  if (returns.length < 6) return null;
-  return Math.max(Math.sqrt(returns.reduce((sum, value) => sum + value ** 2, 0) / returns.length), 0.01);
-}
 
 type Ahead = Omit<OutlookHorizon, "chance_higher" | "band" | "tested"> & Partial<Pick<OutlookHorizon, "chance_higher" | "band" | "tested">>;
 
@@ -125,7 +121,9 @@ export function PriceOutlook({ variety, outlook, forecast, evaluation, prices, h
   const radius = evaluation?.calibration.absolute_residual_radius ?? (next.upper - next.point);
   const proof = (evaluation?.holdout.points ?? []).map((point) => {
     const estimate = selected ? point[selected] : point.last_value;
-    const vol = next.band ? volatility(observed.filter((row) => row.reporting_month <= point.training_through).map((row) => row.weighted_price)) : null;
+    // Measured the way the API measured today's volatility, which is the way the ranges were fitted.
+    const vol = next.band ? monthlyVolatility(observed.filter((row) => row.reporting_month <= point.training_through).map((row) => row.weighted_price),
+      outlook?.volatility ?? { vol_window: 12 }) : null;
     const [lower, upper] = next.band && vol !== null
       ? [estimate * Math.exp(vol * next.band[0]), estimate * Math.exp(vol * next.band[1])] : [estimate - radius, estimate + radius];
     return { month: point.reporting_month, estimate, lower, upper, actual: point.actual, miss: Math.abs(point.actual - estimate), inside: point.actual >= lower && point.actual <= upper };
@@ -150,7 +148,9 @@ export function PriceOutlook({ variety, outlook, forecast, evaluation, prices, h
           {Math.abs(change) < 0.0005 ? t.flat(month(last.reporting_month)) : t.vsLast(month(last.reporting_month), `${change > 0 ? "+" : "−"}${Math.abs(change * 100).toFixed(1)}%`)}
           {next.chance_higher != null && <> {t.chance(month(last.reporting_month), pct(next.chance_higher))}</>}
           {next.model === "last_value" && <> {t.whyFlat}</>}</p>
-        <p className="fx-tested">{t.basedOn(historyCount, month(observed[0].reporting_month), month(last.reporting_month))}</p>
+        <p className="fx-tested">{outlook?.calibration_history
+          ? t.basedOnLonger(historyCount, month(observed[0].reporting_month), month(last.reporting_month), month(outlook.calibration_history.from), month(outlook.calibration_history.to))
+          : t.basedOn(historyCount, month(observed[0].reporting_month), month(last.reporting_month))}</p>
       </div>
       <div className="po-gauge" role="img" aria-label={`${t.gaugeRange}: ${rupees(next.lower)} – ${rupees(next.upper)}`}>
         <div className="po-track">
@@ -171,7 +171,7 @@ export function PriceOutlook({ variety, outlook, forecast, evaluation, prices, h
       {tested ? <div><dt>{t.held}</dt><dd>{t.heldTested(pct(tested.coverage))}</dd><small>{t.heldTestedNote(tested.months)}</small></div>
         : proof.length > 0 && <div><dt>{t.held}</dt><dd>{t.heldValue(inside, proof.length)}</dd><small>{t.rangeLevel(80)}</small></div>}
       {mae !== null && <div><dt>{t.miss}</dt><dd>±{rupees(mae)}</dd><small>{meanActual ? t.missNote(`${(mae / meanActual * 100).toFixed(1)}%`) : ""}</small></div>}
-      {outlook ? <div><dt>{t.swing}</dt><dd>±{outlook.volatility_percent.toFixed(1)}%</dd><small>{t.swingNote}</small></div>
+      {outlook ? <div><dt>{t.swing}</dt><dd>±{outlook.volatility_percent.toFixed(1)}%</dd><small>{outlook.volatility?.vol_method === "ewma" ? t.swingNoteWeighted : t.swingNote}</small></div>
         : <div><dt>{t.history}</dt><dd>{t.historyValue(historyCount)}</dd><small>{t.historyNote(month(observed[0].reporting_month), month(last.reporting_month))}</small></div>}
     </dl>
 

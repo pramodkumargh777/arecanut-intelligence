@@ -105,6 +105,84 @@ The frontend page `/forecasts/evaluation` (`ForecastEvaluationPage.tsx`) shows:
 - the datasets with their suppression reasons, pooled metrics, per-series evaluations with Holm p-values, and publishable predictions;
 - prospective performance, the legacy comparison, and limitations and licences.
 
+## Outlook ranges from the 2014+ history
+
+The live 1–6 month outlook (`outlook.py`, applied by `api/src/outlook.ts`) takes its range widths from pooled
+walk-forward errors, scaled by each series' volatility. With `--outlook-history daily` (used by
+`forecasting-refresh.yml`), those errors come from the baselines (last value, seasonal naive) run on `monthly_from_daily`:
+
+- **Source:** the median across Karnataka APMCs of each market's mean daily modal price, from the committed 2014+
+  archive (`daily_archive/`, kept current by `long-history-topup.yml`). This gives 11 series and about 900 errors per
+  horizon, against about 500 from the report's own 35 origins.
+- **Complete months only:** errors whose target month is later than the report's latest month are dropped, because the
+  archive's newest month can be partial.
+- **Centred on zero:** each era leans its own way (the median 3-month error was +1.21 in 2020 and −0.67 in 2026), so
+  no drift is assumed and the chance of a rise stays near 50% unless a validated model says otherwise.
+- **Tested on the official report:** quantiles fitted on errors before the report's 12th-latest origin are scored on
+  the report's last 12 origins, the series the ranges are applied to. That is the `test` published per horizon and
+  shown as "how the range held".
+- **What stays the same:** forecasts, evaluations, the candidate gate, prospective validation and `/forecasts` all stay
+  on the official report (`MONTHLY_STATE_WEIGHTED_AVERAGE`). The API accepts no other monthly basis, and outcomes are
+  scored only against the report.
+- **Disclosure:** the outlook's `calibration` metadata records the dataset, basis and origins. `/forecasts` returns
+  them as `calibration_history`, and the Forecasts page names that history.
+
+**Evidence (2026-11-18).** The 80% range was scored on the official report:
+
+| Test origins | Horizon | Report-only calibration: coverage / width | 2014+ calibration, centred: coverage / width |
+|---|---|---|---|
+| 2024-10 to 2025-09 | 1 | 0.77 / 18.5% | 0.75 / 16.8% |
+| 2024-10 to 2025-09 | 6 | 0.50 / 36.9% | 0.74 / 41.1% |
+| 2025-10 to 2026-09 | 1 | 0.90 / 26.8% | 0.89 / 23.8% |
+| 2025-10 to 2026-09 | 6 | 0.91 / 67.9% | 0.87 / 54.3% |
+
+- **Earlier window:** with only a few years of its own history, the report-only calibration was far too narrow (half
+  of the 6-month ranges missed).
+- **Latest window:** it was too wide.
+- **2014+ calibration:** stayed nearer 80% in both windows.
+- **Direction:** its Brier score was 0.24–0.25, at or below the no-skill level in both windows.
+
+Without the option, the engine fits the evaluated series' own errors, as before.
+
+### Volatility method
+
+Range widths scale with each series' monthly volatility. The method used is recorded in the calibration and shared by
+the engine (`recent_volatility` in `outlook.py`), the Worker and the Forecasts page (`shared/volatility.ts`):
+
+| Method | How it is measured |
+|---|---|
+| `rms` | Root-mean-square of the last 12 monthly log returns, all weighted equally. |
+| `ewma` | Exponentially weighted log returns: the newest has weight 1, the one before 0.94, then 0.94² and so on, over at most 60 months. |
+
+Both need at least 6 returns and are floored at 1%.
+
+- **Decay is fixed in advance.** 0.94 is the RiskMetrics convention, chosen before any comparison. A probe also tried
+  0.90 and 0.97, and they were not used.
+- **Memory.** The effective memory of `ewma` is about 17 months. A large move fades gradually instead of dropping out
+  the month it leaves the 12-month window. It does not react faster than `rms`.
+- **Selection.** `build_outlook_selected` fits both methods on identical errors, quantile fits and test origins.
+  - It publishes `ewma` only when its mean held-out interval score (Gneiting & Raftery, on the log scale) is strictly
+    lower over the horizons tested under both.
+  - The comparison is recorded in `vol_selection`.
+  - The chosen method's test is therefore slightly optimistic, which is acceptable with two candidates fixed in advance.
+- **What the API applies.** `/forecasts` applies the published method and returns it as `outlook.volatility`.
+  Calibrations published before the field existed are read as `rms`.
+- **Deploy the Worker first.** A Worker older than this field ignores `vol_method` and would apply EWMA-fitted ranges
+  to an RMS volatility. Deploy the Worker (and the Pages build, whose "How the range held" table uses the same
+  formula) before the first engine run that can publish `ewma`, whether that is `forecasting-refresh.yml` on the 20th
+  or a manual dispatch.
+
+**Probe (2026-11-18, 2014+ series, last-value errors, 80% band):**
+
+| Fit / test split | Horizon | Coverage, `rms` / `ewma` | Interval score, `rms` / `ewma` |
+|---|---|---|---|
+| < 2019 / ≥ 2019 | 1 | 0.76 / 0.74 | 26.5 / 26.6 |
+| < 2019 / ≥ 2019 | 6 | 0.68 / 0.72 | 55.6 / 53.6 |
+| < 2022 / ≥ 2022 | 1 | 0.79 / 0.77 | 26.0 / 25.9 |
+| < 2022 / ≥ 2022 | 6 | 0.75 / 0.78 | 51.7 / 48.3 |
+
+The gain is small and comes at 3–6 months, not at 1 month.
+
 ## Commands
 
 From `data-platform/`, with the repository `.venv`:
@@ -112,6 +190,7 @@ From `data-platform/`, with the repository `.venv`:
 ```bash
 ../.venv/bin/python -m forecasting datasets                    # dataset summaries and suppression reasons
 ../.venv/bin/python -m forecasting run --dry-run               # baselines + statistical + LightGBM
+../.venv/bin/python -m forecasting run --outlook-history daily --dry-run   # outlook ranges from the 2014+ archive
 ../.venv/bin/python -m forecasting run --with-chronos --dry-run
 ../.venv/bin/python -m forecasting parity                      # legacy evaluator parity
 ANI_API_URL=http://127.0.0.1:8787/api/v1 INGESTION_TOKEN=... ../.venv/bin/python -m forecasting publish --run-id <id>

@@ -156,6 +156,49 @@ These calculators do not predict prices. The separate evaluated-baseline
 module ([FORECASTING.md](FORECASTING.md)) supplies measured one-month forecasting, not an AI recommendation.
 No OpenRouter key or paid AI model is required.
 
+## Sell or hold: past years and selling in parts
+
+`/sell-or-hold` (`shared/hold-history.ts`) shows what the price did after the chosen month in past years. It uses the
+2014+ APMC median series where that series follows the monthly report, and the report itself otherwise. Nothing on
+the page is a forecast or a recommendation.
+
+**Selling in parts** (`stagedSelling`) compares three ways of selling with selling everything in the chosen month.
+The plans were fixed before they were compared with any data:
+
+| Plan | Shares sold |
+|---|---|
+| A quarter every 2 months | ¼ at 0, 2, 4 and 6 months |
+| Half now, half later | ½ at 0 and ½ at 6 months |
+| Wait 6 months | everything at 6 months |
+
+- **Costs.** Each share kept `m` months is charged the reader's costs, the same ones as the break-even rule:
+  - weight loss on its later price;
+  - `m` months of storage;
+  - `m` months of interest on the money it would have brought.
+
+  A share therefore comes out ahead exactly when its rise beats `holdBreakEvenPercent`.
+- **Same years for every plan.** A year missing any needed month, or touching a one-month spike, is left out for all
+  plans and named on the page. A year whose sixth month has not been reported yet is not shown.
+- **Minimum history.** The table appears only with at least three complete years (`MIN_HOLD_YEARS`).
+- **Summary columns.** Median, worst year, best year, and the years each plan brought more than selling everything at
+  once.
+
+**Evidence** (2026-11-18). On the 2014+ series (11 varieties, every start month, before costs), measured as the
+price received against the price at the start:
+
+| Plan | Median | 10th percentile | Worst |
+|---|---|---|---|
+| Wait 6 months | +1.8% | −14.8% | −36.3% |
+| A quarter every 2 months | +1.2% | −8.6% | −24.3% |
+| Half now, half after 6 months | +0.9% | −7.4% | −18.1% |
+
+Selling in parts kept most of the typical result of waiting while roughly halving how bad the bad years were. That
+is spreading the timing over months, not a prediction. Overlapping windows and varieties that move together make
+these figures less independent than their count suggests.
+
+The assistant's `calculate_sell_hold` reports the same comparison for the current month, before costs, because the
+assistant takes storage as a total rather than per month.
+
 ## Independent source intelligence
 
 Open `http://localhost:5173/intelligence/production` and use the module tabs.

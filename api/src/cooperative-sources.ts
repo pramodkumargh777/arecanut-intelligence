@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { calendarTodayIST, calendarDateToTime, DAY_MS } from "../../shared/dates";
 import type { CooperativeSource } from "./cooperative";
+import { isStale, LIFECYCLES } from "../../shared/lifecycles";
 
 export const COOPERATIVE_SOURCES = ["mamcos", "tss", "tumcos", "tms"] as const;
 
@@ -117,7 +118,9 @@ export async function cooperativeSourceStatus(db: D1Database, now = new Date()) 
         source_key: source.source_key, display_name: source.display_name, operator: source.operator, source_url: source.source_url,
         access_method: source.access_method, commodities: source.commodities,
         availability: attempts[0] ? {
-          state: attempts[0].status === "succeeded" ? "available" : attempts[0].status === "running" ? "running" : "failing",
+          // A run with no outcome after the lifecycle's limit was abandoned; "running" would otherwise show forever.
+          state: attempts[0].status === "succeeded" ? "available" : attempts[0].status === "running"
+            ? (isStale(LIFECYCLES.cooperativeFetch, "running", attempts[0].started_at, now) ? "stalled" : "running") : "failing",
           last_attempt_at: attempts[0].started_at, last_status: attempts[0].status, http_status: attempts[0].http_status,
           attempts: attempts[0].attempt_count,
         } : { state: "never_fetched", last_attempt_at: null, last_status: null, http_status: null, attempts: null },

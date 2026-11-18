@@ -572,6 +572,49 @@ describe("sell-or-hold questions", () => {
     vi.useRealTimers();
   });
 
+  /** The 2014+ daily-price median series, tracking the report: three months after November it was higher in 2014–2020 and lower since. */
+  function seedLongSeries() {
+    const insert = db.sqlite.prepare("INSERT INTO monthly_apmc_prices VALUES('Karnataka',?,'Rashi',?,12,240,'v1','2026-11-11T07:26:03Z')");
+    for (let year = 2014; year <= 2025; year += 1) {
+      for (let offset = 0; offset <= 6; offset += 1) {
+        const index = year * 12 + 10 + offset;
+        const value = offset === 3 ? (year <= 2020 ? 50000 : 45000) : offset === 6 ? 52000 : 46000 + year;
+        insert.run(`${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`, value);
+      }
+    }
+    db.sqlite.prepare(`INSERT INTO monthly_apmc_series VALUES('Karnataka','Rashi','2014-11','2026-05',84,35,0.6,86,0.9,1,'v1','2026-11-11T07:26:03Z')`).run();
+  }
+
+  it("reads the same 2014+ series as the sell-or-hold page where the variety has one", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-06T06:00:00Z"));
+    seedMonths("11");
+    seedLongSeries();
+    const { body } = await ask({ question: "Should I sell my rashi now or wait a month?" });
+    expect(body.interpretation.text).toContain("Rashi, Karnataka monthly APMC median, from November: 3 months later it was higher in 7 of 12 years");
+    expect(body.facts.map((fact: any) => fact.label)).toContain("Rashi Karnataka monthly APMC median: median change 3 months after November");
+    // Sold in parts on the same years: three quarters at 46,000 + year and the last at 52,000.
+    expect(body.interpretation.text).toContain("Selling a quarter every 2 months from November ranged from +2.1% to +2.1% against selling everything then; waiting 6 months and selling everything ranged from +8.3% to +8.3% (12 years, before costs).");
+    expect(body.facts).toEqual(expect.arrayContaining([expect.objectContaining({
+      label: "Rashi Karnataka monthly APMC median: selling a quarter every 2 months from November, median against selling everything in November", value: 2.1,
+      note: expect.stringContaining("more than selling everything at once in 12 of 12 years"),
+    })]));
+    expect(body.citations[0].label).toContain("Median of Karnataka APMC monthly modal prices");
+    expect(body.limitations.join(" ")).toContain("The sell-or-hold page uses the same series.");
+    expect(body.uncertainty.join(" ")).not.toContain("the years shown are few");
+    vi.useRealTimers();
+  });
+
+  it("answers price history before 2021 from the 2014+ series, labelled with its own basis", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-06T06:00:00Z"));
+    seedMonths("11");
+    seedLongSeries();
+    const { body } = await ask({ question: "How did Rashi prices move from 2015 to 2016?" });
+    const first = body.facts.find((fact: any) => fact.label === "Rashi monthly price, first month in range");
+    expect(first).toMatchObject({ value: 46000 + 2014, basis: "MONTHLY_APMC_MODAL_MEDIAN", reporting_period: "2015-01" });
+    expect(body.citations.some((citation: any) => String(citation.label).startsWith("Median of Karnataka APMC monthly modal prices"))).toBe(true);
+    vi.useRealTimers();
+  });
+
   it("gives the record in Kannada, and rejects a model telling the reader to wait", async () => {
     vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-06T06:00:00Z"));
     seedMonths("11");
@@ -1073,6 +1116,108 @@ describe("market-level price history", () => {
     const result = await runTool("get_historical_prices", { variety: "Rashi", market: "Sringeri" }, ctx([]) as never);
     expect(result.missing.join(" ")).toContain("No AGMARKNET market for Sringeri");
     expect(result.facts.some((fact) => fact.label === "Rashi monthly price, latest month")).toBe(true);
+  });
+});
+
+describe("market arrivals", () => {
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  const krama = { id: "krama", source_key: "krama_arrivals", source_name: "KRAMA daily arrivals", source_url: "https://krama.karnataka.gov.in/Reports/Main_rep",
+    file_name: null, imported_at: "2026-11-18T01:47:38Z" };
+  const bucket = (label: string, tonnes: number, markets = 1) => ({ measure: "arrival", bucket: label, first_date: label.length === 7 ? `${label}-01` : label,
+    last_date: label.length === 7 ? `${label}-28` : label, quantity_tonnes: tonnes, records: 5, unknown_unit_records: 0, markets_reporting: markets, reporting_days: 5 });
+  type Reply = { buckets: ReturnType<typeof bucket>[]; markets?: string[] };
+  const calls: URLSearchParams[] = [];
+  const dayCalls: string[] = [];
+  /** `reply` decides each /supply/arrivals answer from its query; requested_range echoes from/to as the API does. */
+  const ctx = (reply: (query: URLSearchParams) => Reply, question = "", recentMarkets: string[] = []) => ({
+    call: async (path: string) => {
+      if (path.startsWith("/supply/arrival-days")) { dayCalls.push(path); return json({ rows: recentMarkets.map((market) => ({ market })) }); }
+      if (!path.startsWith("/supply/arrivals?")) return json({ error: "not found" }, 404);
+      const query = new URLSearchParams(path.split("?")[1]);
+      calls.push(query);
+      const { buckets, markets = [] } = reply(query);
+      return json({ granularity: query.get("granularity"), market: query.get("market"), district: query.get("district"),
+        requested_range: { from: query.get("from") ?? "2026-05-18", to: query.get("to") ?? "2026-11-15" },
+        reporting_period: buckets.length ? { from: buckets[0].first_date, to: buckets.at(-1)!.last_date } : null,
+        measures: { arrival: buckets, traded: [] }, markets: markets.map((market) => ({ market, quantity_tonnes: 1 })),
+        sources: buckets.length ? [krama] : [], notes: [], message: buckets.length ? null : "No arrival or traded-quantity records exist for this selection." });
+    },
+    db: null as never, question, language: "en" as const, embedder: null, now: new Date("2026-11-18T06:00:00Z"),
+  });
+  beforeEach(() => { calls.length = 0; dayCalls.length = 0; });
+  const values = (result: ToolResult) => Object.fromEntries(result.facts.map((fact) => [fact.label, fact.value]));
+
+  it("recognises arrival questions in English and Kannada, with the town and district", () => {
+    for (const question of ["How much arecanut arrived in Sirsi this week?", "Sirsi arrivals this week", "ಶಿರಸಿ ಆವಕ ಈ ವಾರ"]) {
+      const classification = classifyQuestion(question);
+      expect(classification.tools, question).toContain("get_market_arrivals");
+      expect(argumentsFor("get_market_arrivals", question, classification)).toMatchObject({ market: "Sirsi", district: "Uttara Kannada" });
+    }
+    expect(argumentsFor("get_market_arrivals", "Arrivals in 2025", classifyQuestion("Arrivals in 2025"))).toMatchObject({ from_month: "2025-01", to_month: "2025-12" });
+  });
+
+  it("finds the town's market, reads its weeks, and compares the latest week with 52 weeks earlier", async () => {
+    const result = await runTool("get_market_arrivals", { market: "Sirsi", district: "Uttara Kannada" }, ctx((query) => {
+      if (!query.get("market")) return { buckets: [bucket("2026-11-09", 900, 9)], markets: ["Yellapur APMC", "Sirsi APMC"] };
+      if (query.get("from") === "2025-11-10") return { buckets: [bucket("2025-11-10", 200)] };
+      return { buckets: [bucket("2026-11-02", 230), bucket("2026-11-09", 250)] };
+    }, "How much arecanut arrived in Sirsi this week?") as never);
+    expect(calls[0].get("granularity")).toBe("weekly");
+    expect(calls[1].get("market")).toBe("Sirsi APMC");
+    expect(calls[1].has("district")).toBe(false);
+    expect(calls[2].get("from")).toBe("2025-11-10");
+    expect(calls[2].get("to")).toBe("2025-11-16");
+    const facts = values(result);
+    expect(facts["Arrivals, Sirsi APMC (weekly bucket 2026-11-09)"]).toBe(250);
+    expect(facts["Arrivals, Sirsi APMC, same period a year earlier (2025-11-10 to 2025-11-16)"]).toBe(200);
+    expect(facts["Change in arrivals, Sirsi APMC, 2026-11-09 against a year earlier"]).toBe(25);
+    expect(result.facts.at(-1)!.note).toBe("1 market(s), 5 reporting day(s) now; 1 market(s), 5 reporting day(s) a year earlier");
+    expect(result.limitations).toContain("Only completed weeks are given, so the current one is not shown; the latest is 2026-11-09.");
+    expect(result.sources.map((source) => source.label)).toEqual(["KRAMA daily arrivals"]);
+  });
+
+  it("finds a smaller market beyond the 50 largest under its report spelling", async () => {
+    const fifty = Array.from({ length: 50 }, (_, index) => `Market ${index} APMC`);
+    await runTool("get_market_arrivals", { market: "Sullia" }, ctx((query) => query.get("market") ? { buckets: [bucket("2026-11-09", 12)] }
+      : { buckets: [bucket("2026-11-09", 900, 50)], markets: fifty }, "Sullia arrivals", ["Puttur APMC", "Sulya APMC"]) as never);
+    expect(dayCalls).toEqual(["/supply/arrival-days?from=2026-10-19&to=2026-11-18"]);
+    expect(calls[1].get("market")).toBe("Sulya APMC");
+  });
+
+  it("says so and answers state-wide when a town has no market in the reports", async () => {
+    const result = await runTool("get_market_arrivals", { market: "Jayapura" }, ctx(() => ({ buckets: [bucket("2026-11-09", 900, 50)], markets: ["Shimoga APMC"] }), "Jayapura arrivals") as never);
+    expect(calls).toHaveLength(2);
+    expect(result.missing[0]).toBe("No arrivals are reported for a market at Jayapura, so the figures are for Karnataka.");
+    expect(values(result)["Arrivals, Karnataka (weekly bucket 2026-11-09)"]).toBe(900);
+  });
+
+  it("keeps an asked range to completed months, at most twelve, and compares only the part of a season inside it", async () => {
+    const result = await runTool("get_market_arrivals", { from_month: "2025-06", to_month: "2026-12" }, ctx((query) => query.get("from") === "2025-10-01"
+      ? { buckets: [bucket("2025-post_monsoon", 3000, 50)] } : { buckets: [bucket("2026-post_monsoon", 3600, 55)] }, "Seasonal arrivals from June 2025") as never);
+    expect(calls[0].get("granularity")).toBe("seasonal");
+    expect(calls[0].get("from")).toBe("2025-11-01");
+    expect(calls[0].get("to")).toBe("2026-10-31");
+    expect(result.limitations).toContain("Only completed months are given, up to 2026-10.");
+    expect(result.limitations).toContain("Arrivals are given for at most 12 months at a time: 2025-11 to 2026-10.");
+    // The 2026 post-monsoon bucket holds October only, so it is set against October 2025, not the whole of Oct–Dec 2025.
+    expect(calls[1].get("from")).toBe("2025-10-01");
+    expect(calls[1].get("to")).toBe("2025-10-31");
+    expect(values(result)["Change in arrivals, Karnataka, 2026-post_monsoon against a year earlier"]).toBe(20);
+  });
+
+  it("names a missing earlier year instead of comparing, and never compares single days", async () => {
+    const monthly = await runTool("get_market_arrivals", { granularity: "monthly" }, ctx((query) => ({ buckets: query.get("from") === "2025-10-01" ? [] : [bucket("2026-10", 36613.8, 55)] })) as never);
+    expect(monthly.missing).toContain("No arrivals are stored for the same period a year earlier (2025-10-01 to 2025-10-31).");
+    calls.length = 0;
+    await runTool("get_market_arrivals", {}, ctx(() => ({ buckets: [bucket("2026-11-17", 400, 48)] }), "How much arecanut arrived yesterday?") as never);
+    expect(calls.map((query) => query.get("granularity"))).toEqual(["daily"]);
+  });
+
+  it("rejects a range with no completed month instead of guessing", async () => {
+    const result = await runTool("get_market_arrivals", { from_month: "2026-12", to_month: "2027-03" }, ctx(() => ({ buckets: [] })) as never);
+    expect(calls).toHaveLength(0);
+    expect(result.status).toBe("empty");
+    expect(result.missing[0]).toContain("latest completed month is 2026-10");
   });
 });
 

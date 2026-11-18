@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { holdBreakEvenPercent, holdHistory, isIsolatedSpike, priceContext, seasonalPattern, type HoldPoint } from "../../shared/hold-history";
+import { holdBreakEvenPercent, holdHistory, isIsolatedSpike, priceContext, seasonalPattern, stagedSelling, type HoldPoint } from "../../shared/hold-history";
 
 // Rashi Karnataka monthly prices as published by AGMARKNET for November and the months compared with it.
 const RASHI: Record<string, number> = {
@@ -70,6 +70,51 @@ describe("rise needed to cover the cost of waiting", () => {
     expect(holdBreakEvenPercent(3, 47000, { ...costs, weightLossPercent: 100 })).toBeNull();
     expect(holdBreakEvenPercent(3, 47000, { ...costs, annualInterestPercent: -1 })).toBeNull();
     expect(holdBreakEvenPercent(3, 47000, { ...costs, annualInterestPercent: Number.NaN })).toBeNull();
+  });
+});
+
+describe("selling in parts", () => {
+  // From November each year: flat for four months, then a year-specific level from March on.
+  const later = { 2020: 110, 2021: 90, 2022: 120, 2023: 80 } as Record<number, number>;
+  const points: HoldPoint[] = Object.entries(later).flatMap(([year, level]) => Array.from({ length: 7 }, (_, offset) => {
+    const index = Number(year) * 12 + 10 + offset;
+    return { reporting_month: `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`, weighted_price: offset < 4 ? 100 : level };
+  }));
+  const summary = (staged: ReturnType<typeof stagedSelling>, plan: string) => staged!.summaries.find((item) => item.plan === plan)!;
+
+  it("averages what each share brought against selling everything in the start month", () => {
+    const staged = stagedSelling(points, 11)!;
+    expect(staged.years.map((year) => year.start_month)).toEqual(["2020-11", "2021-11", "2022-11", "2023-11"]);
+    // Parts: a quarter each at 0, 2, 4 and 6 months, so the last two quarters get the later level.
+    expect(staged.years.map((year) => year.results)).toEqual([
+      { parts: 5, halves: 5, wait6: 10 }, { parts: -5, halves: -5, wait6: -10 },
+      { parts: 10, halves: 10, wait6: 20 }, { parts: -10, halves: -10, wait6: -20 },
+    ]);
+    expect(summary(staged, "parts")).toEqual({ plan: "parts", years: 4, beat_selling_now: 2, median_percent: 0, lowest_percent: -10, highest_percent: 10 });
+    expect(summary(staged, "wait6")).toMatchObject({ lowest_percent: -20, highest_percent: 20 });
+  });
+
+  it("charges each share kept the same costs as the break-even rule", () => {
+    const costs = { annualInterestPercent: 12, weightLossPercent: 2, storagePerQuintalPerMonth: 1 };
+    const year = stagedSelling(points, 11, costs)!.years[0];
+    // wait6: 110 × 0.98 − 6 storage = 101.8 on 100, less 6% interest for half a year → −4.2%.
+    expect(year.results.wait6).toBe(-4.2);
+    // A share comes out ahead exactly when its rise beats the break-even.
+    const needed = holdBreakEvenPercent(6, 100, costs)!;
+    expect(needed).toBeGreaterThan(10);
+    expect(year.results.wait6).toBeLessThan(0);
+    expect(stagedSelling(points, 11, { ...costs, weightLossPercent: 100 })).toBeNull();
+  });
+
+  it("scores every plan on the same years, skips spikes and gaps, and leaves running years out", () => {
+    const spiked = points.map((point) => point.reporting_month === "2021-03"
+      ? { ...point, review_flags: [{ code: "large_change_from_previous" }, { code: "large_change_to_next" }] } : point);
+    const gap = spiked.filter((point) => point.reporting_month !== "2023-01");
+    const running = [...gap, { reporting_month: "2024-11", weighted_price: 100 }];
+    const staged = stagedSelling(running, 11)!;
+    expect(staged.years.map((year) => year.start_month)).toEqual(["2021-11", "2023-11"]);
+    expect(staged.skipped_years).toEqual(["2020-11", "2022-11"]);
+    expect(summary(staged, "parts")).toMatchObject({ years: 2, median_percent: null, lowest_percent: null });
   });
 });
 
