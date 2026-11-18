@@ -1,4 +1,4 @@
-# Relay for the AGMARKNET and KRAMA connectors (src/agmarknet-relay.ts; entry src/relay-worker.ts). Separate from the main API so that only this Worker
+# Relay for the AGMARKNET daily connector (src/agmarknet-relay.ts; entry src/relay-worker.ts). Separate from the main API so that only this Worker
 # is pinned to Mumbai. Deploy: npx wrangler deploy --config api/wrangler.relay.toml
 # Secret: INGESTION_TOKEN, the same value as the main API and the GitHub repository secret.
 name = "ani-agmarknet-relay"

@@ -17,9 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "data-platform"))
 
-from connectors.agmarknet.run_daily import load_env_file  # noqa: E402
 from connectors.krama.arrivals import (  # noqa: E402
-    BASE_URL, EARLIEST_DATE, Session, SourceError, backfill_days, ingest, recent_days, stored_dates, today_ist, whole_months,
+    BASE_URL, EARLIEST_DATE, Session, SourceError, backfill_days, ingest, load_env_file, recent_days, stored_dates, today_ist,
+    whole_months,
 )
 
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleRelay, KRAMA_ORIGIN, RELAY_HISTORY_RESOURCE_ID, RELAY_RESOURCE_ID, RELAY_TOKEN_HEADER } from "./agmarknet-relay";
+import { handleRelay, RELAY_HISTORY_RESOURCE_ID, RELAY_RESOURCE_ID, RELAY_TOKEN_HEADER } from "./agmarknet-relay";
 
 const env = { INGESTION_TOKEN: "relay-test-token" };
 const path = `https://relay.test/resource/${RELAY_RESOURCE_ID}`;
@@ -66,57 +66,3 @@ describe("AGMARKNET relay", () => {
   });
 });
 
-describe("KRAMA relay", () => {
-  const kramaRequest = (path: string, init: RequestInit = {}, token: string | null = env.INGESTION_TOKEN) =>
-    new Request(`https://relay.test/krama${path}`, { ...init, headers: { ...(token === null ? {} : { [RELAY_TOKEN_HEADER]: token }), ...(init.headers ?? {}) } });
-
-  it("forwards the form post with its cookie, and rewrites KRAMA's redirect and cookie to the relay", async () => {
-    const fetcher = vi.fn(async () => new Response(null, { status: 302, headers: [["Location", "/reports/Commadity"],
-      ["Set-Cookie", "ASP.NET_SessionId=abc; domain=krama.karnataka.gov.in; path=/; HttpOnly"]] }));
-    const response = await handleRelay(kramaRequest("/Reports/Main_rep", { method: "POST", body: "a=1&b=2",
-      headers: { Cookie: "ASP.NET_SessionId=abc", Referer: "https://relay.test/krama/Reports/Main_rep" } }), env, fetcher as never);
-    expect(response.status).toBe(302);
-    expect(response.headers.get("Location")).toBe("https://relay.test/krama/reports/Commadity");
-    expect(response.headers.get("Set-Cookie")).toBe("ASP.NET_SessionId=abc; path=/; HttpOnly");
-    const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit & { headers: Headers }];
-    expect(url).toBe(`${KRAMA_ORIGIN}/Reports/Main_rep`);
-    expect(init).toMatchObject({ method: "POST", body: "a=1&b=2", redirect: "manual" });
-    expect(init.headers.get("Cookie")).toBe("ASP.NET_SessionId=abc");
-    expect(init.headers.get("Referer")).toBe(`${KRAMA_ORIGIN}/Reports/Main_rep`);
-    expect([...init.headers.values()].join(" ")).not.toContain(env.INGESTION_TOKEN);
-  });
-
-  it("follows KRAMA's own spellings of its pages", async () => {
-    for (const path of ["/reports/Commadity.aspx", "/Reports/Main_rep.aspx", "/reports/Main_Rep", "/reports/CommadityRep"]) {
-      const fetcher = upstream();
-      expect((await handleRelay(kramaRequest(path), env, fetcher as never)).status).toBe(200);
-      expect((fetcher.mock.calls[0] as unknown as [string])[0]).toBe(`${KRAMA_ORIGIN}${path}`);
-    }
-  });
-
-  it("returns a report page as it is", async () => {
-    const fetcher = vi.fn(async () => new Response("<table/>", { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }));
-    const response = await handleRelay(kramaRequest("/reports/CommadityRep"), env, fetcher as never);
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe("<table/>");
-    expect(response.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
-  });
-
-  it.each([
-    ["no token", kramaRequest("/Reports/Main_rep", {}, null), 401],
-    ["another KRAMA page", kramaRequest("/Login.aspx"), 404],
-    ["a path outside KRAMA's reports", kramaRequest("/../resource/x"), 404],
-    ["a PUT", kramaRequest("/Reports/Main_rep", { method: "PUT", body: "x" }), 405],
-  ])("refuses %s without calling KRAMA", async (_name, incoming, status) => {
-    const fetcher = upstream();
-    expect((await handleRelay(incoming, env, fetcher as never)).status).toBe(status);
-    expect(fetcher).not.toHaveBeenCalled();
-  });
-
-  it("refuses a redirect away from KRAMA, and reports a failed upstream as 502", async () => {
-    const away = vi.fn(async () => new Response(null, { status: 302, headers: { Location: "https://example.org/" } }));
-    expect((await handleRelay(kramaRequest("/Reports/Main_rep"), env, away as never)).status).toBe(502);
-    const down = vi.fn(async () => { throw new Error("timeout"); });
-    expect((await handleRelay(kramaRequest("/Reports/Main_rep"), env, down as never)).status).toBe(502);
-  });
-});
