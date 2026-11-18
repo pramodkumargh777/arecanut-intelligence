@@ -109,6 +109,40 @@ class FetchTests(unittest.TestCase):
         self.assertEqual(Refusing.calls, 1)
 
 
+class RelayTests(unittest.TestCase):
+    def test_through_the_relay_the_token_goes_to_the_relay_and_provenance_names_krama(self):
+        fake = FakeKrama()
+        seen = []
+        original = fake.open
+
+        def open_(request, timeout):
+            seen.append((request.full_url, request.get_header("X-ani-relay-token")))
+            return original(request, timeout)
+
+        fake.open = open_
+        relay = Session("https://relay.example/krama/", opener=fake, sleep=lambda s: None, min_interval=0, relay_token="secret")
+        report = fetch_day(relay, DAY)
+        self.assertTrue(all(url.startswith("https://relay.example/krama/") and token == "secret" for url, token in seen))
+        self.assertEqual(report.document["request_url"], "https://krama.karnataka.gov.in/reports/CommadityRep")
+        direct = Session(opener=FakeKrama(), relay_token="secret")
+        self.assertIsNone(direct.relay_token)  # KRAMA itself never gets the token
+
+    def test_check_fails_fast_when_krama_cannot_be_reached(self):
+        class Down:
+            def open(self, request, timeout):
+                raise urllib.error.URLError("timed out")
+
+        with self.assertRaisesRegex(SourceError, "not reachable"):
+            Session(opener=Down()).check()
+        Session(opener=FakeKrama()).check()
+
+    def test_a_run_stops_after_three_dates_in_a_row_fail(self):
+        summary = ingest([date(2026, 11, d) for d in (1, 2, 3, 4, 5)], session(FakeKrama()), dry_run=True, api_url=None, token=None,
+                         report_dir=None, mode="daily", log=lambda message: None)
+        self.assertEqual((summary["source_errors"], summary["status"]), (3, "failed"))
+        self.assertIn("in a row", summary["errors"][0])
+
+
 class PlanTests(unittest.TestCase):
     def test_recent_and_backfill_dates(self):
         self.assertEqual(recent_days(date(2026, 11, 17), 3), [date(2026, 11, 17), date(2026, 11, 16), date(2026, 11, 15)])
@@ -145,6 +179,35 @@ class IngestTests(unittest.TestCase):
     def test_a_source_error_is_reported_and_the_rest_continues(self):
         summary = ingest([date(2026, 11, 12), DAY], session(FakeKrama()), dry_run=True, api_url=None, token=None, report_dir=None, mode="daily")
         self.assertEqual((summary["dates"], summary["source_errors"], summary["status"]), (1, 1, "completed_with_rejections"))
+
+    def test_a_date_sent_back_to_the_menu_is_tried_once_more(self):
+        class Flaky(FakeKrama):
+            failed = False
+
+            def open(self, request, timeout):
+                if request.full_url.endswith("reports/Commadity") and not Flaky.failed:
+                    Flaky.failed = True
+                    return Response(MENU, "https://krama.karnataka.gov.in/reports/Main_Rep")
+                return super().open(request, timeout)
+
+        summary = ingest([DAY], session(Flaky()), dry_run=True, api_url=None, token=None, report_dir=None, mode="daily")
+        self.assertEqual((summary["dates"], summary["source_errors"], summary["source_requests"]), (1, 0, 6))
+
+    def test_an_import_that_times_out_is_sent_again(self):
+        calls = []
+
+        def urlopen(request, timeout):
+            calls.append(request.full_url)
+            if len(calls) == 1:
+                raise TimeoutError("The read operation timed out")
+            return Response(b'{"documents_new": 0, "duplicates": 76}', request.full_url)
+
+        with patch.object(arrivals.urllib.request, "urlopen", side_effect=urlopen):
+            result = arrivals._api("POST", "http://api/v1/admin/arrivals/daily/import", "t", {"documents": []}, sleep=lambda s: None)
+        self.assertEqual((len(calls), result["duplicates"]), (2, 76))
+        with patch.object(arrivals.urllib.request, "urlopen", side_effect=TimeoutError("slow")):
+            with self.assertRaisesRegex(RuntimeError, "request failed"):
+                arrivals._api("POST", "http://api/v1/admin/arrivals/daily/import", "t", {}, sleep=lambda s: None)
 
     def test_request_budget_stops_before_a_partial_day(self):
         summary = ingest([DAY] * 5, session(FakeKrama()), dry_run=True, api_url=None, token=None, report_dir=None, mode="backfill", max_requests=7)

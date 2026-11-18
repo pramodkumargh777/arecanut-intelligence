@@ -53,6 +53,7 @@ jobs:
           if [ "${{ inputs.dry_run }}" = "true" ]; then args+=(--dry-run); fi
           python data-platform/connectors/agmarknet_v2/run_arrivals.py "${args[@]}"
         env:
+          PYTHONUNBUFFERED: "1"
           AGMARKNET_V2_BASE_URL: ${{ vars.AGMARKNET_V2_BASE_URL }}
           AGMARKNET_V2_BACKFILL_REQUESTS: ${{ vars.AGMARKNET_V2_BACKFILL_REQUESTS }}
           INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}

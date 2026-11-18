@@ -96,13 +96,20 @@ dates, up to `KRAMA_BACKFILL_REQUESTS` (default 900, about 300 dates).
 - **Backfill length:** going back to 2014 takes about two weeks of runs.
 - **Requirements:** `ANI_API_URL` and `INGESTION_TOKEN`.
 - **Stopping it:** set `KRAMA_ARRIVALS_ENABLED=false`.
-- **Relay:** if GitHub's runners cannot reach KRAMA, point `KRAMA_BASE_URL` at a relay that forwards cookies and form
-  posts. The existing data.gov.in relay does not.
+- **Relay:** KRAMA does not answer GitHub's runners (checked 2026-11-18), so the workflow goes through the Mumbai relay
+  Worker that already serves data.gov.in ([`agmarknet-relay.ts`](../api/src/agmarknet-relay.ts), deployed with the API).
+  - **Where it points:** unless `KRAMA_BASE_URL` is set, the workflow checks KRAMA directly and, if it does not answer,
+    uses `AGMARKNET_API_BASE_URL` with `/resource` replaced by `/krama/`.
+  - **What it allows:** only KRAMA's report pages, with the ingestion token in `X-ANI-Relay-Token` (never sent to KRAMA).
+    The session cookie and redirects pass through, so the pages come back exactly as KRAMA serves them.
+  - **Provenance:** documents always name KRAMA's own URL, not the relay's.
+- **Fail fast:** each run first makes one quick request to KRAMA, and stops after 3 dates in a row fail, so an
+  unreachable KRAMA fails in seconds rather than at the job's time limit. Progress is logged per date.
 
 ## Reading
 
 **`GET /api/v1/supply/arrivals`** (the Supply page) includes daily arrivals at every granularity when
-`DAILY_ARRIVALS_IN_SUPPLY = "true"` (wrangler.toml; off for the first deploy, see "Production rollout").
+`DAILY_ARRIVALS_IN_SUPPLY = "true"` (wrangler.toml; on since 2026-11-18 after the rollout below).
 
 - **Same response shape**, and the same page section and wording.
 - **KRAMA wins a whole date.** AGMARKNET date-wise rows count only for dates KRAMA has no reported rows for.

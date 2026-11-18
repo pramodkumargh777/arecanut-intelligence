@@ -102,8 +102,8 @@ stored periods as published, together with:
 - the source request URL and the fetch time.
 
 **`GET /api/v1/supply/arrivals`** (the Supply page) adds AGMARKNET 2.0 **monthly** totals to the **monthly and seasonal**
-views when `AGMARKNET_V2_ARRIVALS_IN_SUPPLY = "true"` (wrangler.toml; off for the first deploy, see
-[DAILY_ARRIVALS.md](DAILY_ARRIVALS.md), "Production rollout").
+views when `AGMARKNET_V2_ARRIVALS_IN_SUPPLY = "true"` (wrangler.toml; on since 2026-11-18, after the
+rollout in [DAILY_ARRIVALS.md](DAILY_ARRIVALS.md)).
 
 - **Same response shape**, and the same page section, wording and layout.
 - **Closed months only.** A month counts only if it lies wholly inside the requested range.
