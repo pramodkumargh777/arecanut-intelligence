@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { calendarTodayIST } from "../../shared/dates";
-import type { Env } from "./index";
+import type { Env } from "./env";
 import { cooperativeConflicts, cooperativeSeries, refreshMamcos, type CooperativeQuote } from "./cooperative";
 import { configuredAttempts } from "./cooperative-fetch";
 import { importCooperativeCsv, importRequest, replayCooperativeSnapshot } from "./cooperative-import";
@@ -46,7 +46,6 @@ async function cooperativeWindow(db: D1Database, source: string, commodity: stri
 }
 const sourceSchema = z.enum(["mamcos", "tss", "tumcos", "tms"]);
 const commoditySchema = z.enum(["arecanut", "black_pepper"]);
-const authorized = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
 const DEFAULT_VARIETY: Record<z.infer<typeof sourceSchema>, string> = { mamcos: "RASHI EDI", tss: "RASHI", tumcos: "areca", tms: "RASHI" };
 
 cooperativeRoutes.get("/cooperative/prices", async (c) => {
@@ -154,7 +153,7 @@ cooperativeRoutes.get("/cooperative/branch-latest", async (c) => {
 });
 
 cooperativeRoutes.get("/admin/cooperative/quality", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   const source = c.req.query("source") ? sourceSchema.safeParse(c.req.query("source")) : null;
   if (source && !source.success) return c.json({ error: "Unsupported cooperative source." }, 400);
   const limit = Number(c.req.query("limit") ?? 100), offset = Number(c.req.query("offset") ?? 0);
@@ -178,7 +177,7 @@ cooperativeRoutes.get("/admin/cooperative/quality", async (c) => {
 });
 
 cooperativeRoutes.post("/admin/cooperative/refresh", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   try { return c.json(await refreshMamcos(c.env.DB, { attempts: configuredAttempts(c.env.COOPERATIVE_FETCH_ATTEMPTS) })); }
   catch (error) {
     console.error("MAMCOS refresh failed", error);
@@ -187,7 +186,7 @@ cooperativeRoutes.post("/admin/cooperative/refresh", async (c) => {
 });
 
 cooperativeRoutes.post("/admin/cooperative/tss/refresh", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   const input = z.object({
     date: z.string().refine(validTssDate).refine((value) => value <= calendarTodayIST()),
     accept_assumed_unit: z.boolean().optional(), // Accepted for older clients; the unit decision is now recorded policy.
@@ -206,7 +205,7 @@ cooperativeRoutes.post("/admin/cooperative/tss/refresh", async (c) => {
 });
 
 cooperativeRoutes.post("/admin/cooperative/:id/review", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
   const payload = z.object({ action: z.enum(["approve", "reject"]) }).strict().safeParse(await c.req.json().catch(() => null));
   if (!payload.success) return c.json({ error: "Action must be approve or reject." }, 400);
   const row = await c.env.DB.prepare(`SELECT * FROM cooperative_quotes WHERE id=? AND status IN (${COOPERATIVE_QUEUE})`)
@@ -247,7 +246,7 @@ const reviewerRequired = { error: "A valid reviewer token is required." };
 const failureMessage = (error: unknown) => error instanceof Error ? error.message.slice(0, 500) : "Unknown failure";
 
 cooperativeRoutes.post("/admin/cooperative/tumcos/refresh", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   const input = z.object({ scope: z.enum(["recent", "full_history"]).default("recent") }).strict().safeParse(await c.req.json().catch(() => ({})));
   if (!input.success) return c.json({ error: "scope must be recent or full_history." }, 400);
   try { return c.json(await refreshTumcos(c.env.DB, { scope: input.data.scope, attempts: configuredAttempts(c.env.COOPERATIVE_FETCH_ATTEMPTS) })); }
@@ -258,7 +257,7 @@ cooperativeRoutes.post("/admin/cooperative/tumcos/refresh", async (c) => {
 });
 
 cooperativeRoutes.post("/admin/cooperative/tms/refresh", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   const input = z.object({ date: z.string().refine(validTmsDate).refine((value) => value <= calendarTodayIST()).optional() }).strict()
     .safeParse(await c.req.json().catch(() => ({})));
   if (!input.success) return c.json({ error: "Provide a real date no later than today (IST), or none for today." }, 400);
@@ -270,7 +269,7 @@ cooperativeRoutes.post("/admin/cooperative/tms/refresh", async (c) => {
 });
 
 cooperativeRoutes.post("/admin/cooperative/tms/backfill", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   const input = z.object({
     start: z.string().refine(validTmsDate), end: z.string().refine(validTmsDate).refine((value) => value <= calendarTodayIST()),
   }).strict().safeParse(await c.req.json().catch(() => null));
@@ -280,7 +279,7 @@ cooperativeRoutes.post("/admin/cooperative/tms/backfill", async (c) => {
 });
 
 cooperativeRoutes.post("/admin/cooperative/tss/backfill", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   const input = z.object({
     start: z.string().refine(validTssDate), end: z.string().refine(validTssDate).refine((value) => value <= calendarTodayIST()),
     accept_assumed_unit: z.boolean().optional(),
@@ -291,7 +290,7 @@ cooperativeRoutes.post("/admin/cooperative/tss/backfill", async (c) => {
 });
 
 cooperativeRoutes.post("/admin/cooperative/import", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   const input = importRequest.safeParse(await c.req.json().catch(() => null));
   if (!input.success) return c.json({ error: "Provide source, csv, authorized_by, permission_reference and attestation: true.", issues: input.error.issues.map((issue) => issue.message) }, 400);
   try { return c.json(await importCooperativeCsv(c.env.DB, input.data)); }
@@ -299,7 +298,7 @@ cooperativeRoutes.post("/admin/cooperative/import", async (c) => {
 });
 
 cooperativeRoutes.post("/admin/cooperative/replay/:fetchId", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   const input = z.object({ scope: z.enum(["recent", "full_history"]).optional() }).strict().safeParse(await c.req.json().catch(() => ({})));
   if (!input.success) return c.json({ error: "scope must be recent or full_history." }, 400);
   try { return c.json(await replayCooperativeSnapshot(c.env.DB, c.req.param("fetchId"), { ...input.data, archive: c.env.ARCHIVE })); }
@@ -307,12 +306,12 @@ cooperativeRoutes.post("/admin/cooperative/replay/:fetchId", async (c) => {
 });
 
 cooperativeRoutes.get("/admin/cooperative/sources", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   return c.json(await cooperativeSourceStatus(c.env.DB));
 });
 
 cooperativeRoutes.post("/admin/cooperative/sources/:key/permission", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json(reviewerRequired, 401);
   const key = sourceSchema.safeParse(c.req.param("key"));
   const input = permissionUpdate.safeParse(await c.req.json().catch(() => null));
   if (!key.success) return c.json({ error: "Unsupported cooperative source." }, 400);

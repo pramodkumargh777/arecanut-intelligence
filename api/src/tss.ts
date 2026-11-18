@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCalendarDate } from "../../shared/dates";
 import { failCooperativeFetch, startCooperativeFetch, storeCooperativeSnapshot, type CooperativeQuote, type IngestMode } from "./cooperative";
 import { fetchWithRetry, sha256Hex } from "./cooperative-fetch";
 import { TSS_VARIETIES } from "../../shared/tss-varieties";
@@ -12,10 +13,7 @@ const rowSchema = z.object({
   date1: z.string(), iname: z.string(), iname_en: z.string().optional(), itemcode: z.union([z.number(), z.string()]),
   mnrate: rateValue, mxrate: rateValue, avgrate: rateValue, norrate: rateValue,
 }).passthrough();
-export function validTssDate(date: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date))
-    && new Date(date).toISOString().slice(0, 10) === date;
-}
+export const validTssDate = isCalendarDate;
 export function tssUrl(location: string, date: string) {
   return `https://webapi.tssindia.in/getrateshomepage?${new URLSearchParams({ location, date_param: date, tabIndex: "0" })}`;
 }

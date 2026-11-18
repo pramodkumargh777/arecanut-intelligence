@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "./index";
+import type { Env } from "./env";
 import { calendarDateToTime, completedMonthIST, shiftCalendarMonth, timestampToTime } from "../../shared/dates";
 import { bearerMatches } from "./auth";
 import { loadOutlook } from "./outlook";

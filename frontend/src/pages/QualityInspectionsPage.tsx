@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
 import type { QualityInput } from "../services/modules";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
-import { IntelligenceNavigation, exportModule } from "./IntelligencePage";
+import { IntelligenceNavigation } from "./IntelligencePage";
+import { downloadCsv } from "../services/csvDownload";
 import { AboutData } from "../components/AboutData";
 import { useReviewerAccess } from "../components/useReviewerAccess";
 import { defineCopy, useCopy, useFormat } from "../services/language";
@@ -82,7 +83,7 @@ export function QualityInspectionsPage() {
     <IntelligenceNavigation current="quality" />
     {!rows.length && <p className="page-meta">{t.noneYet}</p>}
     <AboutData><p>{t.about}</p></AboutData>
-    {publicQuery.isLoading ? <LoadingState /> : publicQuery.error ? <ErrorState error={publicQuery.error} onRetry={() => void publicQuery.refetch()} /> : <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.reviewed}</h2><p>{t.reviewedHint(publicQuery.data?.limit ?? 500)}</p></div><ExportButton label={t.exportCsv} disabled={!rows.length} onClick={() => exportModule([
+    {publicQuery.isLoading ? <LoadingState /> : publicQuery.error ? <ErrorState error={publicQuery.error} onRetry={() => void publicQuery.refetch()} /> : <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.reviewed}</h2><p>{t.reviewedHint(publicQuery.data?.limit ?? 500)}</p></div><ExportButton label={t.exportCsv} disabled={!rows.length} onClick={() => downloadCsv([
       ["lot_id", "variety", "location", "sampled_on", "reported_on", "laboratory", "report_reference", "moisture_percent", "defects_percent", "notes", "evidence_url", "review_note", "reviewed_at"],
       ...rows.map((row) => [row.lot_id, row.variety, row.location, row.sampled_on, row.reported_on, row.laboratory, row.report_reference, row.moisture_percent, row.defects_percent, row.notes, row.evidence_url, row.review_note, row.reviewed_at]),
     ], "areca-pulse-quality-inspections.csv")} /></div>

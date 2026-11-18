@@ -10,6 +10,13 @@ export function calendarDateToTime(value: string): number {
   return time;
 }
 
+/** True for a real YYYY-MM-DD calendar date (2024-02-29 yes, 2026-02-30 no). */
+export function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+}
+
 // Fixed three-letter names: browsers disagree on en-IN abbreviations ("Sept" beside "Nov" on one axis).
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

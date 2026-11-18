@@ -9,7 +9,7 @@ const vars = readFileSync(new URL("../api/.dev.vars", import.meta.url), "utf8");
 const token = vars.match(/^ADMIN_TOKEN=(.+)$/m)?.[1]?.trim().replace(/^["']|["']$/g, "");
 if (!token) throw new Error("Local ADMIN_TOKEN missing.");
 const base = "http://127.0.0.1:8787/api/v1";
-const existingResponse = await fetch(`${base}/monthly-prices`);
+const existingResponse = await fetch(`${base}/monthly-prices`, { signal: AbortSignal.timeout(30_000) });
 if (!existingResponse.ok) throw new Error("Start the local API before backfill.");
 const existing = new Set((await existingResponse.json()).months);
 const failures = [];

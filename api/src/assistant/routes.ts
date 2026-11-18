@@ -4,7 +4,7 @@
  */
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "../index";
+import type { Env } from "../env";
 import { classifyQuestion, type Classification } from "./classify";
 import { composeAnswer, planToolsWithModel } from "./compose";
 import { detectInjection } from "./grounding";
@@ -20,10 +20,6 @@ export type ApiCaller = (path: string, init: RequestInit | undefined, env: Env["
 const DEFAULT_RATE_LIMIT = 30;
 const MAX_CHUNKS_PER_DOCUMENT = 400;
 const STATEMENTS_PER_BATCH = 50;
-
-function isAuthorized(header: string | undefined, token: string | undefined): boolean {
-  return bearerMatches(header, token);
-}
 
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -292,7 +288,7 @@ export function createAssistantRoutes(caller: ApiCaller) {
   }
 
   routes.post("/admin/documents", async (c) => {
-    if (!isAuthorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
+    if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
     const parsed = documentSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: "Invalid document payload.", issues: parsed.error.issues.slice(0, 10).map((issue) => `${issue.path.join(".")}: ${issue.message}`) }, 400);
     const { document, chunks, ingestion_job_id } = parsed.data;
@@ -358,12 +354,12 @@ export function createAssistantRoutes(caller: ApiCaller) {
   });
 
   routes.post("/admin/documents/reindex", async (c) => {
-    if (!isAuthorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
+    if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
     return c.json(await rebuildFtsIndex(c.env.DB));
   });
 
   routes.post("/admin/documents/embed", async (c) => {
-    if (!isAuthorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
+    if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required." }, 401);
     const embedder = embeddingProvider(config(c.env));
     if (!embedder) return c.json({ error: "No embedding provider is configured (ASSISTANT_EMBEDDING_PROVIDER)." }, 503);
     const body = z.object({ limit: z.number().int().min(1).max(64).default(16) }).strict().safeParse(await c.req.json().catch(() => ({})));

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
-import { toCsv } from "../services/csv";
+import { downloadCsv } from "../services/csvDownload";
 import type { Calculation, CalculationInputs, PriceReference } from "../services/intelligence";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { defineCopy, useCopy, useFormat } from "../services/language";
@@ -181,8 +181,7 @@ export function DecisionToolsPage() {
       ...fields.map((field) => ["user_inputs", field.key, value.inputs[field.key]]),
       ...Object.entries(value.results).map(([key, val]) => ["results", key, val]),
     ];
-    const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a"); link.href = url; link.download = "areca-pulse-decision-scenario.csv"; link.click(); URL.revokeObjectURL(url);
+    downloadCsv(rows, "areca-pulse-decision-scenario.csv");
   }
   const measureRows: [string, number][] = (["gross_realization", "selling_costs", "net_realization", "net_per_quintal", "farm_profit", "profit_per_hectare", "farm_break_even_price", "finance_cost", "hold_net_realization", "hold_advantage", "break_even_hold_price"] as const)
     .map((key) => [t.measures[key], result ? result.results[key] : 0]);

@@ -1,4 +1,4 @@
-import { shiftMonth } from "./forecast";
+import { shiftCalendarMonth } from "../../shared/dates";
 import { monthlyVolatility, type VolatilitySpec } from "../../shared/volatility";
 
 /**
@@ -71,10 +71,10 @@ export function buildOutlook({ prices, calibration, experimentId, calibratedAt, 
   if (lo < 0 || hi < 0) return null;
   const horizons: OutlookHorizon[] = [];
   for (const entry of calibration.horizons) {
-    const target = shiftMonth(last.reporting_month, entry.horizon);
+    const target = shiftCalendarMonth(last.reporting_month, entry.horizon);
     const rule = baselines.get(entry.horizon) ?? "last_value";
     const challenger = validated.get(entry.horizon);
-    const seasonal = byMonth.get(shiftMonth(target, -12));
+    const seasonal = byMonth.get(shiftCalendarMonth(target, -12));
     const model = challenger ? challenger.model : rule === "seasonal_naive" && seasonal ? "seasonal_naive" : "last_value";
     const point = challenger ? challenger.median : model === "seasonal_naive" ? seasonal! : last.weighted_price;
     const move = Math.log(point / last.weighted_price);

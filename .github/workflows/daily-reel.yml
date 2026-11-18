@@ -12,6 +12,9 @@ on:
         description: "Voice-over (on/off)"
         default: "on"
 
+permissions:
+  contents: read
+
 concurrency:
   group: daily-reel
   cancel-in-progress: false

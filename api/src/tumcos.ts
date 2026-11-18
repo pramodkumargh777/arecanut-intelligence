@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { calendarTodayIST, DAY_MS } from "../../shared/dates";
+import { calendarTodayIST, DAY_MS, isCalendarDate } from "../../shared/dates";
 import {
   failCooperativeFetch, startCooperativeFetch, storeCooperativeSnapshot,
   type CooperativeCommodity, type CooperativeQuote, type IngestMode, type UnitStatus,
@@ -65,11 +65,6 @@ function amount(value: string | number | null): number | null {
   return /^\d+(?:\.\d+)?$/.test(text) && Number.isFinite(Number(text)) ? Number(text) : null;
 }
 
-function realDate(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`))
-    && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
-}
-
 function textContent(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 }
@@ -81,7 +76,7 @@ export function tumcosPageLastUpdated(html: string): { label: string; date: stri
   const parts = /^(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\s+(\d{4})$/.exec(match[1].trim());
   const month = parts ? MONTHS.indexOf(parts[2]) + 1 : 0;
   const date = parts && month ? `${parts[3]}-${String(month).padStart(2, "0")}-${parts[1].padStart(2, "0")}` : null;
-  return { label: match[1].trim(), date: date && realDate(date) ? date : null };
+  return { label: match[1].trim(), date: date && isCalendarDate(date) ? date : null };
 }
 
 export type TumcosTableRow = { product: string; average: number | null; high: number | null; low: number | null; date: string | null; location: string };
@@ -97,7 +92,7 @@ export function parseTumcosTable(html: string): TumcosTableRow[] {
     return {
       product: (cells[0] ?? "").split(" ")[0] === "Black" ? "Black Pepper" : (cells[0] ?? "").split(" ")[0],
       average: money(cells[1]), high: money(cells[2]), low: money(cells[3]),
-      date: date && realDate(date) ? date : null, location: (cells[7] ?? "").replace(/Karnataka, India$/, "").trim(),
+      date: date && isCalendarDate(date) ? date : null, location: (cells[7] ?? "").replace(/Karnataka, India$/, "").trim(),
     };
   });
 }
@@ -134,12 +129,12 @@ export async function parseTumcos(html: string, fetchedAt: string, scope: "recen
   let excluded = 0;
   for (const { record, raw, spec } of parsed) {
     const reportingDate = record.date.slice(0, 10);
-    if (scope === "recent" && realDate(reportingDate) && reportingDate < recentFrom) { excluded += 1; continue; }
+    if (scope === "recent" && isCalendarDate(reportingDate) && reportingDate < recentFrom) { excluded += 1; continue; }
     const problems: string[] = [];
     const flags: string[] = ["variety_not_reported"];
     const branch = (record.location ?? "").trim();
     const itemName = record.name.trim();
-    if (!/^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?$/.test(record.date) || !realDate(reportingDate)) problems.push("Invalid source record date.");
+    if (!/^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?$/.test(record.date) || !isCalendarDate(reportingDate)) problems.push("Invalid source record date.");
     else if (reportingDate > todayIST) problems.push("Future reporting date.");
     if (!branch) problems.push("Missing reported market location.");
     const declaredCommodity = [record.category, record.product_name].filter(Boolean).map((value) => value!.trim());
@@ -170,7 +165,7 @@ export async function parseTumcos(html: string, fetchedAt: string, scope: "recen
       validation_message: problems.join(" ") || null, status: problems.length ? "invalid" : "pending",
     });
   }
-  const validDates = parsed.map(({ record }) => record.date.slice(0, 10)).filter(realDate).sort();
+  const validDates = parsed.map(({ record }) => record.date.slice(0, 10)).filter(isCalendarDate).sort();
   const latest = validDates.at(-1) ?? null;
   const pageLastUpdated = tumcosPageLastUpdated(html);
   const table = parseTumcosTable(html);

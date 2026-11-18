@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "./index";
+import { referenceState, type Env } from "./env";
 import { parseMonthlyEvidence, previousMonth, validMonth } from "./monthly";
 import { archiveReadMessage, readRelatedText } from "./archive";
 import { MONTHLY_ANOMALY_THRESHOLD, MONTHLY_REVIEW_METHOD, monthlyReviewFlags, type ReviewFlag } from "./monthly-quality";
-import { calendarTodayIST, shiftCalendarMonth } from "../../shared/dates";
+import { calendarTodayIST, isCalendarDate, shiftCalendarMonth } from "../../shared/dates";
 
 export function monthRange(from: string, to: string) {
   const months: string[] = [];
@@ -165,7 +165,7 @@ historyRoutes.get("/history/monthly", async (c) => {
     .safeParse({ from: c.req.query("from") ?? "2021-01", to: c.req.query("to") ?? previousMonth(new Date()), variety: c.req.query("variety") ?? "Rashi" });
   if (!input.success || input.data.from > input.data.to || input.data.to > previousMonth(new Date())
     || monthRange(input.data.from, input.data.to).length > 240) return c.json({ error: "Select an exact variety and up to 240 completed months in ascending order." }, 400);
-  const { to, variety } = input.data, state = c.env.REFERENCE_STATE ?? "Karnataka";
+  const { to, variety } = input.data, state = referenceState(c.env);
   let { from } = input.data;
   // ?basis=long asks for the 2014+ series built from daily APMC prices, used only for varieties that track the report.
   const long = c.req.query("basis") === "long" ? await longSeries(c.env.DB, state) : null;
@@ -245,9 +245,8 @@ historyRoutes.get("/history/monthly/snapshots/:id", async (c) => {
 });
 
 historyRoutes.get("/history/aggregates", async (c) => {
-  const validDay = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
   const input = z.object({ source: z.enum(["mamcos", "tss", "tumcos", "tms"]), variety: z.string().trim().min(1).max(160), branch: z.string().trim().min(1).max(160),
-    from: z.string().refine(validDay), to: z.string().refine(validDay), interval: z.enum(["weekly", "monthly"]) }).safeParse(c.req.query());
+    from: z.string().refine(isCalendarDate), to: z.string().refine(isCalendarDate), interval: z.enum(["weekly", "monthly"]) }).safeParse(c.req.query());
   if (!input.success || input.data.from > input.data.to || Date.parse(input.data.to) - Date.parse(input.data.from) > 366 * 86_400_000
     || input.data.to > calendarTodayIST()) return c.json({ error: "Select source, exact variety, branch, interval and a valid date range up to 366 days through today (IST)." }, 400);
   const { source, variety, branch, from, to, interval } = input.data;

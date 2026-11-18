@@ -1,12 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "./index";
+import { referenceState, type Env } from "./env";
 import { bearerMatches } from "./auth";
 
 export const sourceStatusRoutes = new Hono<Env>();
 const STATUS_SOURCES = ["agmarknet", "agmarknet_csv", "agmarknet_history"] as const;
 const SOURCE_PLACEHOLDERS = STATUS_SOURCES.map(() => "?").join(", ");
-const authorized = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
 const count = z.number().int().nonnegative().max(10_000_000);
 const isoTimestamp = z.string().datetime({ offset: true });
 const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -40,7 +39,7 @@ export const sourceRunSchema = z.object({
 }).refine((run) => run.started_at <= run.completed_at, { message: "started_at must not be after completed_at." });
 
 sourceStatusRoutes.post("/admin/source-runs", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) {
+  if (!bearerMatches(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) {
     return c.json({ error: "A valid ingestion token is required." }, 401);
   }
   const parsed = sourceRunSchema.safeParse(await c.req.json().catch(() => null));
@@ -70,10 +69,10 @@ sourceStatusRoutes.post("/admin/source-runs", async (c) => {
 type RunRow = Record<string, unknown> & { source_key: string; request_filters: string; reporting_dates: string; import_job_ids: string; rejected_sample: string };
 
 sourceStatusRoutes.get("/admin/source-status", async (c) => {
-  if (!authorized(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) {
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) {
     return c.json({ error: "A valid reviewer token is required." }, 401);
   }
-  const state = c.env.REFERENCE_STATE ?? "Karnataka";
+  const state = referenceState(c.env);
   const [sources, observations, latest, runs] = await c.env.DB.batch([
     c.env.DB.prepare(`SELECT id, source_key, name, source_type, is_enabled FROM data_sources
       WHERE source_key IN (${SOURCE_PLACEHOLDERS}) ORDER BY source_key`).bind(...STATUS_SOURCES),

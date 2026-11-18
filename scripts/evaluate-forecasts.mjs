@@ -5,7 +5,7 @@ if (!token) throw new Error("Local ADMIN_TOKEN missing.");
 const base = "http://127.0.0.1:8787/api/v1";
 const selected = process.argv[2] ?? "Rashi";
 const varieties = selected === "--all"
-  ? await fetch(`${base}/monthly-prices`).then(async (response) => {
+  ? await fetch(`${base}/monthly-prices`, { signal: AbortSignal.timeout(30_000) }).then(async (response) => {
     if (!response.ok) throw new Error(`Monthly source list HTTP ${response.status}`);
     return (await response.json()).data.map((row) => row.variety_name);
   }) : [selected];
@@ -13,7 +13,8 @@ let failed = false;
 for (const variety of varieties) {
   try {
     const response = await fetch(`${base}/admin/forecasts/evaluate`, { method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ variety }) });
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ variety }),
+      signal: AbortSignal.timeout(120_000) });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
     const results = body.snapshot.results;

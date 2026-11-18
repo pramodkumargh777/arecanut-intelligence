@@ -3,7 +3,8 @@ import {
   CAPABILITIES, DEFAULT_COMMODITY, isPriceBasis,
   type Capability, type CommodityCatalog, type CommodityDef, type GradeDef, type PriceBasis, type UnitDef, type VarietyDef,
 } from "../../shared/commodities";
-import type { Env } from "./index";
+import type { Env } from "./env";
+import { isCalendarDate } from "../../shared/dates";
 import { bearerMatches } from "./auth";
 
 export const commodityRoutes = new Hono<Env>();
@@ -54,11 +55,6 @@ export async function loadCatalog(db: D1Database): Promise<CommodityCatalog> {
 
 commodityRoutes.get("/commodities", async (c) => c.json(await loadCatalog(c.env.DB)));
 
-function validDate(value: string): boolean {
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-}
-
 /** Published observations from every integrated source, each with its own price basis. Bases are never combined. */
 commodityRoutes.get("/price-observations", async (c) => {
   const commodity = await resolveCommodity(c.env.DB, c.req.query("commodity"));
@@ -76,7 +72,7 @@ commodityRoutes.get("/price-observations", async (c) => {
   }
   for (const [parameter, operator] of [["from", ">="], ["to", "<="]] as const) {
     const value = c.req.query(parameter);
-    if (value && !validDate(value)) return c.json({ error: `Invalid ${parameter} date; expected YYYY-MM-DD.` }, 400);
+    if (value && !isCalendarDate(value)) return c.json({ error: `Invalid ${parameter} date; expected YYYY-MM-DD.` }, 400);
     if (value) { filters.push(`observation_date ${operator} ?`); values.push(value); }
   }
   const where = filters.join(" AND ");

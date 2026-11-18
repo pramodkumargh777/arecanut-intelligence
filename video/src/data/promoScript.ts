@@ -9,7 +9,6 @@ export type PromoScene =
   | "hook" | "logo" | "latest" | "explore" | "trends" | "compare" | "sellwait" | "intel" | "ask" | "advanced" | "trust" | "cta";
 
 export const BAR_FRAMES = 72;
-export const PROMO_FPS = 30;
 
 /** Scene order and length in bars. */
 export const PROMO_TIMELINE: { key: PromoScene; bars: number; minBeats: number }[] = [

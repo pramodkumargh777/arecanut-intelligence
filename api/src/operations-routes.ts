@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "./index";
+import type { Env } from "./env";
 import {
   ARCHIVE_CATEGORIES, ArchiveUnavailableError, MAX_UPLOAD_BYTES, archiveConfigured, archiveReadMessage, archiveStatus,
   purgeExpiredTemporary, putArchiveObject, readArchiveRow, syncArchive, type ArchiveCategory, type ArchiveRow,

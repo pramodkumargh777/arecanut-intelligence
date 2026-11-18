@@ -73,15 +73,6 @@ export async function rebuildSummaries(db: D1Database, commodityName: string, fr
   return { removed: results[0].meta.changes, written: results[1].meta.changes };
 }
 
-export type SummaryRow = {
-  reporting_date: string;
-  market_count: number;
-  observation_count: number;
-  median_modal_price: number;
-  min_modal_price: number;
-  max_modal_price: number;
-};
-
 export const MAX_REFERENCE_POINTS = 4000;
 
 type SeriesScope = { commodityName: string; state: string; variety: string; coverage: number };
