@@ -42,6 +42,9 @@ COMMODITY_CODE = "140"  # KRAMA's arecanut checkbox
 PAYLOAD_FORMAT = "krama_commodity_table/1"
 PARSER_VERSION = "krama-arrivals/1"
 USER_AGENT = "Mozilla/5.0 (compatible; ANI-krama-arrivals/1.0; Areca Pulse arecanut arrivals; contact@adikenaadi.com)"
+RELAY_TOKEN_HEADER = "X-ANI-Relay-Token"
+# A run stops after this many dates in a row fail (each already tried twice): KRAMA is down or unreachable from here.
+MAX_CONSECUTIVE_FAILURES = 3
 API_USER_AGENT = "ANI-data-platform/1.0"
 EXPECTED_HEADER = ["Market", "Variety", "Grade", "Arrivals", "Units", "Min (Rs.)", "Max (Rs.)", "Modal (Rs.)"]
 # Documents per import request; the API accepts at most this many (src/daily-arrivals.ts).
@@ -75,8 +78,11 @@ class Session:
     """One KRAMA browsing session: cookies kept, one request at a time, at least ``min_interval`` seconds apart."""
 
     def __init__(self, base_url: str = BASE_URL, *, min_interval: float = 2.0, timeout: float = 90.0, retries: int = 3,
-                 opener: Any = None, sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic):
+                 opener: Any = None, sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
+                 relay_token: str | None = None):
         self.base_url = base_url.rstrip("/") + "/"
+        # Only ANI's own relay (api/src/agmarknet-relay.ts) gets the token; KRAMA itself never sees it.
+        self.relay_token = relay_token if urllib.parse.urlsplit(self.base_url).hostname != urllib.parse.urlsplit(BASE_URL).hostname else None
         self.opener = opener or urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         self.min_interval, self.timeout, self.retries = min_interval, timeout, retries
         self.sleep, self.clock = sleep, clock
@@ -96,6 +102,8 @@ class Session:
             headers = {"User-Agent": USER_AGENT, "Accept": "text/html"}
             if referer:
                 headers["Referer"] = referer
+            if self.relay_token:
+                headers[RELAY_TOKEN_HEADER] = self.relay_token
             try:
                 with self.opener.open(urllib.request.Request(url, data=data, headers=headers), timeout=self.timeout) as response:
                     return response.geturl(), response.read()
@@ -111,6 +119,19 @@ class Session:
             if attempt < self.retries:
                 self.sleep(min(10 * 2 ** attempt, 120))
         raise SourceError(f"KRAMA {path} failed after {self.retries + 1} attempt(s): {last_error}")
+
+    def check(self, timeout: float = 30.0) -> None:
+        """One quick request to the report menu, so an unreachable KRAMA fails the run in seconds rather than hours."""
+        headers = {"User-Agent": USER_AGENT, "Accept": "text/html"}
+        if self.relay_token:
+            headers[RELAY_TOKEN_HEADER] = self.relay_token
+        try:
+            with self.opener.open(urllib.request.Request(self.base_url + "Reports/Main_rep", headers=headers), timeout=timeout) as response:
+                page = response.read().decode("utf-8", "replace")
+        except Exception as error:  # noqa: BLE001 - any failure means the run cannot proceed
+            raise SourceError(f"KRAMA is not reachable at {self.base_url}: {getattr(error, 'reason', error)}") from None
+        if "__VIEWSTATE" not in page:
+            raise SourceError(f"{self.base_url}Reports/Main_rep did not return KRAMA's report form.")
 
 
 @dataclass
@@ -170,7 +191,8 @@ def fetch_day(session: Session, day: date) -> DayReport:
     if not reported_on or reported_on.group(1) != day.strftime("%d/%m/%Y"):
         raise SourceError(f"{day.isoformat()}: the commodity list is not for the requested date.")
     request_params = {"report": "C", "date": day.strftime("%d/%m/%Y"), "commodity": COMMODITY_CODE}
-    base = {"request_url": f"{session.base_url}reports/CommadityRep", "request_params": request_params,
+    # Provenance names KRAMA's own page, also when the request went through the relay.
+    base = {"request_url": f"{BASE_URL}reports/CommadityRep", "request_params": request_params,
             "period_start": day.isoformat(), "period_end": day.isoformat(), "fetched_at": utc_now_iso(),
             "payload_format": PAYLOAD_FORMAT, "parser_version": PARSER_VERSION}
     if f'name="_ctl0:MainContent:{COMMODITY_CODE}"' not in listing_text:
@@ -194,19 +216,28 @@ def fetch_day(session: Session, day: date) -> DayReport:
                                        "payload": json.dumps(payload, ensure_ascii=False)}, {"report": report}, rows)
 
 
-def _api(method: str, url: str, token: str, body: Any = None, timeout: float = 120.0) -> Any:
+def _api(method: str, url: str, token: str, body: Any = None, timeout: float = 300.0, attempts: int = 3,
+         sleep: Callable[[float], None] = time.sleep) -> Any:
+    """Calls the ANI API. Timeouts, network errors and 5xx are retried: imports are idempotent (a document already stored
+    is counted as duplicates), so a request that timed out after the server stored it is safe to send again."""
     data = json.dumps(body).encode("utf-8") if body is not None else None
     headers = {"Authorization": f"Bearer {token}", "User-Agent": API_USER_AGENT}
     if data is not None:
         headers["Content-Type"] = "application/json"
-    try:
-        with urllib.request.urlopen(urllib.request.Request(url, data=data, method=method, headers=headers), timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")[:800].replace(token, "[redacted]")
-        raise RuntimeError(f"ANI API {url.rsplit('/v1', 1)[-1]} returned HTTP {error.code}: {detail}") from None
-    except (urllib.error.URLError, TimeoutError) as error:
-        raise RuntimeError(f"ANI API request failed: {getattr(error, 'reason', error)}") from None
+    endpoint = url.rsplit("/v1", 1)[-1]
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, data=data, method=method, headers=headers), timeout=timeout) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as error:
+            detail = error.read().decode("utf-8", errors="replace")[:800].replace(token, "[redacted]")
+            if error.code < 500 or attempt == attempts - 1:
+                raise RuntimeError(f"ANI API {endpoint} returned HTTP {error.code}: {detail}") from None
+        except (urllib.error.URLError, TimeoutError, socket.timeout) as error:
+            if attempt == attempts - 1:
+                raise RuntimeError(f"ANI API {endpoint} request failed: {getattr(error, 'reason', error)}") from None
+        sleep(15 * (attempt + 1))
+    raise RuntimeError("unreachable")
 
 
 def stored_dates(api_url: str, token: str, source_key: str = SOURCE_KEY) -> set[str]:
@@ -216,7 +247,8 @@ def stored_dates(api_url: str, token: str, source_key: str = SOURCE_KEY) -> set[
 
 
 def ingest(days: Iterable[date], session: Session, *, dry_run: bool, api_url: str | None, token: str | None,
-           report_dir: Path | None, mode: str, max_requests: int | None = None, log: Callable[[str], None] = print) -> dict[str, Any]:
+           report_dir: Path | None, mode: str, max_requests: int | None = None,
+           log: Callable[[str], None] = lambda message: print(message, flush=True)) -> dict[str, Any]:
     """Fetch each date, keep the pages, and import the documents in batches. A date that fails is retried next run."""
     if not dry_run and (not api_url or not token):
         raise ValueError("ANI_API_URL and INGESTION_TOKEN are required unless --dry-run is used.")
@@ -228,6 +260,8 @@ def ingest(days: Iterable[date], session: Session, *, dry_run: bool, api_url: st
     dates: list[str] = []
     pending: list[DayReport] = []
     import_failed = False
+    consecutive_failures = 0
+    stopped = False
 
     def flush() -> None:
         if not pending:
@@ -247,10 +281,23 @@ def ingest(days: Iterable[date], session: Session, *, dry_run: bool, api_url: st
                 break
             try:
                 report = fetch_day(session, day)
-            except SourceError as error:
-                totals["source_errors"] += 1
-                errors.append(str(error))
-                continue
+            except SourceError:
+                # KRAMA now and then sends a request back to its menu; the whole form is tried once more, from the start.
+                session.sleep(10)
+                try:
+                    report = fetch_day(session, day)
+                except SourceError as error:
+                    totals["source_errors"] += 1
+                    errors.append(str(error))
+                    consecutive_failures += 1
+                    log(f"{day.isoformat()} failed: {error}")
+                    if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                        errors.insert(0, f"Stopped after {consecutive_failures} dates in a row failed; KRAMA is down or unreachable from here.")
+                        stopped = True
+                        break
+                    continue
+            consecutive_failures = 0
+            log(f"{day.isoformat()} {report.status} {report.row_count} rows")
             totals["dates"] += 1
             totals[f"{report.status}_dates"] += 1
             totals["table_rows"] += report.row_count
@@ -266,7 +313,7 @@ def ingest(days: Iterable[date], session: Session, *, dry_run: bool, api_url: st
     except RuntimeError as error:
         import_failed = True
         errors.insert(0, str(error))
-    status = ("failed" if import_failed or (errors and not totals["dates"]) else "no_data" if not totals["dates"]
+    status = ("failed" if import_failed or stopped or (errors and not totals["dates"]) else "no_data" if not totals["dates"]
               else "completed_with_rejections" if errors or totals["rejected_rows"] else "completed")
     summary = {"source_key": SOURCE_KEY, "mode": mode, "dry_run": dry_run, "status": status, "started_at": started_at,
                "completed_at": utc_now_iso(), "source_requests": session.requests, **totals, "fetched_dates": sorted(dates),

@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "data-platform"))
 
 from connectors.agmarknet.run_daily import load_env_file  # noqa: E402
 from connectors.krama.arrivals import (  # noqa: E402
-    BASE_URL, EARLIEST_DATE, Session, backfill_days, ingest, recent_days, stored_dates, today_ist, whole_months,
+    BASE_URL, EARLIEST_DATE, Session, SourceError, backfill_days, ingest, recent_days, stored_dates, today_ist, whole_months,
 )
 
 
@@ -41,7 +41,13 @@ def main(argv: list[str] | None = None) -> int:
     if not args.dry_run and (not api_url or not token):
         parser.error("Set ANI_API_URL and INGESTION_TOKEN, or use --dry-run.")
     report_root = args.report_dir or ROOT / "data" / "processed" / "krama-arrivals" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    session = Session(env.get("KRAMA_BASE_URL") or BASE_URL, min_interval=args.min_interval)
+    session = Session(env.get("KRAMA_BASE_URL") or BASE_URL, min_interval=args.min_interval, relay_token=token)
+    try:
+        session.check()
+    except SourceError as error:
+        print(f"error: {error}", file=sys.stderr)
+        print("On GitHub's runners, set KRAMA_BASE_URL to the relay (https://<relay>/krama/); see docs/DAILY_ARRIVALS.md.", file=sys.stderr)
+        return 2
     today = today_ist()
     results = []
     recent = [date.fromisoformat(item) for item in args.dates.split(",")] if args.dates else recent_days(today, args.recent_days)
@@ -53,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         done.update(day.isoformat() for day in recent)
         remaining = backfill_days(done, start, today)
         work = whole_months(remaining, args.backfill_requests // 3)
-        budget = session.requests + 3 * len(work)
+        budget = session.requests + 3 * len(work) + 60  # room for one retry of up to 20 dates
         results.append(ingest(work, session, dry_run=args.dry_run, api_url=api_url, token=token, report_dir=report_root / "backfill",
                               mode="backfill", max_requests=budget))
         results[-1]["pending_after_run"] = max(0, len(remaining) - results[-1]["dates"])

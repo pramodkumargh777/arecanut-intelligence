@@ -27,14 +27,12 @@ AGMARKNET_HISTORY_AUTO_VERIFY = "true"
 # AGMARKNET 2.0 weekly/monthly arrivals (docs/AGMARKNET_V2_ARRIVALS.md). "false" refuses imports.
 AGMARKNET_V2_ARRIVALS_IMPORT_ENABLED = "true"
 # Show AGMARKNET 2.0 monthly arrivals in GET /supply/arrivals (Supply page, monthly and seasonal views). "false" hides
-# them again at once; the stored data is kept. Off for the first deploy: switch on after the data is loaded
-# (docs/DAILY_ARRIVALS.md, "Production rollout").
-AGMARKNET_V2_ARRIVALS_IN_SUPPLY = "false"
+# them again at once; the stored data is kept.
+AGMARKNET_V2_ARRIVALS_IN_SUPPLY = "true"
 # Daily arecanut arrivals (docs/DAILY_ARRIVALS.md): KRAMA first, AGMARKNET 2.0 date-wise for other dates. "false" refuses
 # imports / hides them from GET /supply/arrivals at once; the stored data is kept.
 DAILY_ARRIVALS_IMPORT_ENABLED = "true"
-# Off for the first deploy: switch on (with AGMARKNET_V2_ARRIVALS_IN_SUPPLY) once the KRAMA backfill has loaded.
-DAILY_ARRIVALS_IN_SUPPLY = "false"
+DAILY_ARRIVALS_IN_SUPPLY = "true"
 # Daily weather and official-news capture at 09:00 IST. Open-Meteo's free endpoint is non-commercial: get its paid
 # plan before charging users, or set OPEN_METEO_ENABLED = "false".
 INTELLIGENCE_SCHEDULE_ENABLED = "true"

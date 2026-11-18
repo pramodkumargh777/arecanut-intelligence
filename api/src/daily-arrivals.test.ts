@@ -260,6 +260,29 @@ describe("GET /supply/arrivals with daily arrivals", () => {
   });
 });
 
+describe("index usage", () => {
+  it("imports and the Supply page never scan the daily rows, whatever their number", async () => {
+    env.DAILY_ARRIVALS_IN_SUPPLY = "true";
+    env.AGMARKNET_V2_ARRIVALS_IN_SUPPLY = "true";
+    await post("/admin/arrivals/daily/import", { source_key: "krama_arrivals", documents: [kramaDoc("2026-11-12"), kramaDoc("2026-11-13")] });
+    const statements: string[] = [];
+    const prepare = db.prepare.bind(db);
+    db.prepare = (sql: string) => { statements.push(sql); return prepare(sql); };
+    await post("/admin/arrivals/daily/import", { source_key: "krama_arrivals", documents: [kramaDoc("2026-11-11"), kramaDoc("2026-11-13", undefined, {}, "2026-11-17T06:00:00Z")] });
+    await post("/admin/arrivals/daily/import", { source_key: "agmarknet_v2_daily", documents: [agmDoc()] });
+    for (const granularity of ["daily", "weekly", "monthly", "seasonal"]) await get(`/supply/arrivals?granularity=${granularity}`);
+    await get("/supply/arrival-days?from=2026-11-13&to=2026-11-13");
+    db.prepare = prepare;
+    const scans = statements.filter((sql) => /market_arrival_days/.test(sql) && !/^\s*INSERT/i.test(sql)).flatMap((sql) => {
+      const args = (sql.match(/\?/g) ?? []).map(() => "x");
+      const plan = (db.sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...args) as { detail: string }[]).map((row) => row.detail);
+      return plan.filter((step) => /^SCAN (r|c|market_arrival_days)\b/.test(step)).map((step) => `${step} :: ${sql.replace(/\s+/g, " ").slice(0, 160)}`);
+    });
+    expect(statements.some((sql) => /FROM market_arrival_days_current\s+WHERE commodity_code/.test(sql))).toBe(true);
+    expect(scans).toEqual([]);
+  });
+});
+
 describe("Supply page windows and ordering", () => {
   it("shows whole periods only when no dates are asked for", () => {
     expect(defaultArrivalWindow("daily", "2026-11-17")).toEqual({ from: "2026-10-18", to: "2026-11-17" });

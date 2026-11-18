@@ -226,10 +226,12 @@ dailyArrivalRoutes.post("/admin/arrivals/daily/import", async (c) => {
       totals.duplicates += doc.rows.length;
       continue;
     }
-    // Compared with the current snapshot of the same dates, to report what this document changes.
+    // Compared with the current snapshot of the same dates, to report what this document changes. commodity_code and
+    // state let this use market_arrival_days_scope; without them it scans every stored row, for every document.
     const previous = doc.status === "reported" ? (await db.prepare(`SELECT source_market_name, observation_date, variety, grade, quantity_original,
         unit_original, minimum_price, maximum_price, modal_price FROM market_arrival_days_current
-      WHERE source_key = ? AND observation_date BETWEEN ? AND ?`).bind(sourceKey, input.period_start, input.period_end)
+      WHERE commodity_code = 'arecanut' AND state = ? AND source_key = ? AND observation_date BETWEEN ? AND ?`)
+      .bind(STATE, sourceKey, input.period_start, input.period_end)
       .all<DailyRow>()).results : [];
     const before = new Map(previous.map((row) => [rowKey(row), rowValue(row)]));
     for (const row of doc.rows) {
@@ -276,8 +278,9 @@ dailyArrivalRoutes.get("/admin/arrivals/daily/coverage", async (c) => {
     db.prepare(`SELECT DISTINCT period_start AS day FROM arrival_daily_documents WHERE source_key = ? AND period_start = period_end ORDER BY day`).bind(sourceKey),
     db.prepare(`SELECT MIN(period_start) AS earliest, MAX(period_end) AS latest, COUNT(*) AS documents, SUM(status = 'not_reported') AS not_reported
       FROM arrival_daily_documents WHERE source_key = ?`).bind(sourceKey),
-    db.prepare(`SELECT DISTINCT source_market_name FROM market_arrival_days r WHERE r.source_key = ? AND NOT EXISTS
-      (SELECT 1 FROM arrival_market_aliases a WHERE a.source_key = r.source_key AND a.source_market_name = r.source_market_name)`).bind(sourceKey),
+    db.prepare(`SELECT source_market_name FROM (SELECT source_market_name FROM market_arrival_days WHERE source_key = ? GROUP BY source_market_name) r
+      WHERE NOT EXISTS (SELECT 1 FROM arrival_market_aliases a WHERE a.source_key = ? AND a.source_market_name = r.source_market_name)`)
+      .bind(sourceKey, sourceKey),
   ]);
   return c.json({ source_key: sourceKey, ...(summary.results[0] as object), fetched_dates: (dates.results as { day: string }[]).map((row) => row.day),
     unmapped_markets: (unmapped.results as { source_market_name: string }[]).map((row) => row.source_market_name) });
