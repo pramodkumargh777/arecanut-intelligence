@@ -67,7 +67,7 @@ jobs:
           AGMARKNET_API_BASE_URL: ${{ vars.AGMARKNET_API_BASE_URL }}
           AGMARKNET_PRICE_UNIT: ${{ vars.AGMARKNET_PRICE_UNIT }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.fetch.outputs.changed == 'true'
         with:
           node-version: 22
