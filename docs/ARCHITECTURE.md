@@ -111,13 +111,23 @@ Rows cannot be deleted, and their identity columns are immutable.
 Categories: `source_csv`, `source_html`, `source_json`, `source_pdf`, `imported_report`,
 `quality_image`, `source_payload`, `temporary_processing`.
 
+## Record lifecycles
+
+Every status column that changes over a record's life (review queues, import jobs, fetches, archive
+objects, documents, permissions) is declared once in `shared/lifecycles.ts`: its states, where rows
+start, and which transitions each actor may make. Tests compare it with the migrated schema and with
+every literal status write in `api/src`. Diagrams and tables: [LIFECYCLES.md](LIFECYCLES.md),
+regenerated with `npm run docs:lifecycles`.
+
 ## Ingestion reliability
 
 - Every import creates an `ingestion_jobs` row (job identifier) with `idempotency_key`,
   `content_sha256`, `source_file_name` and optional `reprocess_of`.
-- A completed key replays its original job (`200`, `replayed: true`), a running key returns 409,
-  and a failed key may be retried. `reprocess: true` creates a new job linked by `reprocess_of`;
-  observation-level duplicate detection still applies.
+- A completed key replays its original job (`200`, `replayed: true`), a running key returns 409
+  with `retry_after`, and a failed key may be retried. A job still `running` 30 minutes after it
+  started was abandoned (its Worker stopped): the next retry with that key marks it failed and runs
+  the import again, so a crash cannot hold a key forever. `reprocess: true` creates a new job linked
+  by `reprocess_of`; observation-level duplicate detection still applies.
 - Python CSV imports bind the file SHA-256, batch index and batch content into each key.
   `--reprocess` forces a linked re-run.
 - AGMARKNET daily batches use per-run keys, so only same-run retries replay. Replayed batches

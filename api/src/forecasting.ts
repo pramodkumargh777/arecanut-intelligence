@@ -208,6 +208,10 @@ export async function forecastPerformance(db: D1Database, limit = 20000) {
       LEFT JOIN forecast_predictions bp ON bp.experiment_id = p.experiment_id AND bp.series_id = p.series_id
         AND bp.horizon = p.horizon AND bp.model = e.baseline_model
       LEFT JOIN forecast_outcomes bo ON bo.prediction_id = bp.id
+      -- Re-running the engine for the same origin stores the same forecast again. Each target counts once per model,
+      -- from the first forecast made for it, so reruns can neither inflate the count nor replace a worse forecast.
+      WHERE p.id = (SELECT MIN(f.id) FROM forecast_predictions f WHERE f.series_id = p.series_id AND f.model = p.model
+        AND f.horizon = p.horizon AND f.target_period = p.target_period AND f.model_version = p.model_version)
       ORDER BY p.target_period, p.id LIMIT ?`).bind(limit + 1),
     db.prepare(`SELECT series_id, horizon, model, model_version, event, reason, created_at FROM (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY series_id, horizon, model, model_version ORDER BY id DESC) AS rn

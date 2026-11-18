@@ -1,15 +1,19 @@
 import { formatDate, type Language } from "./formatting";
+import type { CooperativeQuoteStatus, PermissionStatus } from "../../../shared/lifecycles";
 
+export type { PermissionStatus };
 export type CooperativeQuote = {
   id: string; source_key: string; branch: string; reporting_date: string; variety: string;
   minimum_price: number | null; maximum_price: number | null; average_price: number | null;
   price_type: "reported_average"; price_unit: string; source_url: string; fetched_at: string;
-  raw_record?: string; validation_message?: string | null; status: string;
+  raw_record?: string; validation_message?: string | null; status: CooperativeQuoteStatus;
   unit_status: "source_confirmed" | "assumed" | "source_conflict"; normal_price: number | null;
   commodity?: CooperativeCommodity; variety_reported?: number; source_unit_label?: string | null;
   lot_count?: number | null; bag_count?: number | null; reported_weight?: number | null; session_codes?: string | null;
   source_record_id?: string | null; source_published_at?: string | null; review_flags?: string | null; ingest_mode?: string | null;
   fetch_id?: string;
+  /** Review queue only: the "held" sub-state (shared/lifecycles.ts). Why automatic checks hold it, since when, and when it is auto-rejected. */
+  hold_reason?: string | null; held_at?: string | null; auto_reject_at?: string | null;
 };
 export type CooperativeSource = "mamcos" | "tss" | "tumcos" | "tms";
 export type CooperativeCommodity = "arecanut" | "black_pepper";
@@ -17,7 +21,6 @@ export type CooperativeCommodity = "arecanut" | "black_pepper";
 export const ASSUMED_UNIT_SOURCES: readonly CooperativeSource[] = ["tss", "tumcos"];
 /** Sources that publish tender averages (the mean of a day's tender lots) rather than branch averages. */
 export const TENDER_SOURCES: readonly CooperativeSource[] = ["tss", "tms"];
-export type PermissionStatus = "not_requested" | "requested" | "granted" | "denied";
 export type CooperativeData = {
   source: CooperativeSource; commodity: CooperativeCommodity;
   publication: { published: boolean; awaiting_review_count: number; blocked_reason: string | null; latest_archived_reporting_date: string | null };
@@ -60,7 +63,7 @@ export type CooperativeSourceStatus = {
   generated_at: string; market_calendar_today: string;
   sources: {
     source_key: CooperativeSource; display_name: string; operator: string; source_url: string; access_method: string; commodities: string;
-    availability: { state: "available" | "running" | "failing" | "never_fetched"; last_attempt_at: string | null; last_status: string | null; http_status: number | null; attempts: number | null };
+    availability: { state: "available" | "running" | "stalled" | "failing" | "never_fetched"; last_attempt_at: string | null; last_status: string | null; http_status: number | null; attempts: number | null };
     last_success_at: string | null;
     permission: { status: PermissionStatus; label: string; scheduled_collection_allowed: boolean; redistribution_allowed: boolean;
       permission_reference: string | null; robots_status: string; terms_status: string; terms_checked_at: string };

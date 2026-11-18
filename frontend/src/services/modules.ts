@@ -1,3 +1,4 @@
+import type { VolatilitySpec } from "../../../shared/volatility";
 export type Evidence = { capture_id: string; source_key: string; source_url: string; fetched_at: string; publication_period: string | null; content_hash: string };
 export type Production = Evidence & { geography: string; period: string; estimate_status: string; area_thousand_hectares: number | null; production_thousand_tonnes: number | null; yield_kg_hectare: number | null };
 export type Trade = Evidence & { partner: string; period: string; direction: "Import" | "Export"; quantity_tonnes: number | null; value_inr_lakh: number | null };
@@ -19,6 +20,10 @@ export type OutlookHorizon = {
 export type Outlook = {
   experiment_id: string; calibrated_at: string; level: number; last_month: string; last_price: number;
   volatility_percent: number; horizons: OutlookHorizon[]; point_rule: string;
+  /** How volatility_percent was measured (shared/volatility.ts); absent from APIs older than the field, which used rms. */
+  volatility?: VolatilitySpec;
+  /** Forecast origins whose errors set the range widths, when they come from the 2014+ APMC daily-price series. */
+  calibration_history?: { price_basis: string; from: string; to: string; series: number } | null;
 };
 export type ForecastData = {
   status: string; stale: boolean; stale_reasons: string[]; forecast: Forecast | null; outlook?: Outlook | null;

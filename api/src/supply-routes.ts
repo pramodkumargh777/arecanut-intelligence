@@ -11,6 +11,8 @@ import {
 import { bearerMatches } from "./auth";
 import { AGMARKNET_V2_ARRIVALS_SOURCE, AGMARKNET_V2_GO_LIVE, AGMARKNET_V2_SOURCE_ID, AGMARKNET_V2_SOURCE_NAME, AGMARKNET_V2_SOURCE_URL } from "./agmarknet-v2-arrivals";
 import { DAILY_SOURCE_KEYS, dailyArrivalBuckets } from "./daily-arrivals";
+import { LIFECYCLES, sqlStates, statesBefore, statesOf } from "../../shared/lifecycles";
+import { refusal } from "./lifecycle-guards";
 
 export const supplyRoutes = new Hono<Env>();
 const bearer = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
@@ -779,15 +781,16 @@ supplyRoutes.post("/admin/supply/risk/field-reports/:id/review", async (c) => {
   const parsed = z.object({ decision: z.enum(["verified", "rejected"]), reviewed_by: z.string().trim().min(3).max(200), note: z.string().trim().min(10).max(2000) })
     .strict().safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid review.", issues: issues(parsed.error) }, 400);
-  const result = await c.env.DB.prepare(`UPDATE crop_field_reports SET verification_status=?, reviewed_by=?, review_note=?, reviewed_at=? WHERE id=? AND verification_status='pending'`)
+  const result = await c.env.DB.prepare(`UPDATE crop_field_reports SET verification_status=?, reviewed_by=?, review_note=?, reviewed_at=?
+      WHERE id=? AND verification_status IN (${sqlStates(statesBefore(LIFECYCLES.cropFieldReport, parsed.data.decision, "reviewer"))})`)
     .bind(parsed.data.decision, parsed.data.reviewed_by, parsed.data.note, new Date().toISOString(), c.req.param("id")).run();
-  if (!Number(result.meta?.changes ?? 0)) return c.json({ error: "Report not found or already reviewed." }, 409);
+  if (!Number(result.meta?.changes ?? 0)) return c.json(await refusal(c.env.DB, LIFECYCLES.cropFieldReport, c.req.param("id"), "Report"), 409);
   return c.json({ status: parsed.data.decision, id: c.req.param("id") });
 });
 
 supplyRoutes.get("/supply/risk/field-reports", async (c) => {
   const status = c.req.query("status");
-  if (status && !["pending", "verified", "rejected"].includes(status)) return c.json({ error: "Unknown status." }, 400);
+  if (status && !(statesOf(LIFECYCLES.cropFieldReport) as string[]).includes(status)) return c.json({ error: "Unknown status." }, 400);
   const rows = await c.env.DB.prepare(`SELECT id, hazard_key, state, district, observed_on, reporter_role, symptoms_observed, palms_inspected, palms_affected,
     verification_status, reviewed_at FROM crop_field_reports ${status ? "WHERE verification_status=?" : ""} ORDER BY observed_on DESC LIMIT 200`)
     .bind(...(status ? [status] : [])).all();

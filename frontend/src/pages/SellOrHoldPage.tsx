@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { CalendarRange, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { calendarTodayIST, formatCalendarMonth, formatPeriodKannada, MONTH_NAMES_EN, MONTH_NAMES_KN, shiftCalendarMonth } from "../../../shared/dates";
-import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS, priceContext, type PriceContext, seasonalPattern } from "../../../shared/hold-history";
+import { HOLD_HORIZONS, holdBreakEvenPercent, holdHistory, MIN_HOLD_YEARS, priceContext, type PriceContext, seasonalPattern, stagedSelling } from "../../../shared/hold-history";
 import { ErrorState, LoadingState } from "../components/State";
 import { HoldOutcomeChart } from "../components/HoldOutcomeChart";
+import { SellingPlans, signedPercent } from "../components/SellingPlans";
 import { usePhone } from "../components/usePhone";
 import { api } from "../services/api";
 import { isLongBasis, LONG_HISTORY_FROM } from "../services/intelligence";
@@ -79,6 +80,13 @@ const COPY = defineCopy({
     analogue: (name: string, band: PriceContext["band"], months: number, higher: number, cases: number, change: string) =>
       `ಹಿಂದೆ ${name} ದರ ವರ್ಷದ ಸರಾಸರಿ${band === "near" ? "ಯ ಹತ್ತಿರ" : `ಗಿಂತ 5% ಕ್ಕೂ ಅಧಿಕ ${band === "below" ? "ಕಡಿಮೆ" : "ಹೆಚ್ಚು"}`} ಇದ್ದಾಗ, ${months} ತಿಂಗಳ ನಂತರ ${cases} ರಲ್ಲಿ ${higher} ಬಾರಿ ದರ ಹೆಚ್ಚಾಗಿತ್ತು (ಸಾಮಾನ್ಯವಾಗಿ ${change}).`,
     noSeasonMove: (name: string, move: number) => `ಯಾವುದೇ ತಿಂಗಳಲ್ಲಿ ${name} ದರ ನಿಯಮಿತವಾಗಿ ಹೆಚ್ಚು ಸಿಕ್ಕಿಲ್ಲ. 3 ತಿಂಗಳಲ್ಲಿ ದರ ಸಾಮಾನ್ಯವಾಗಿ ಸುಮಾರು ${move}% ಏರಿಳಿಯುತ್ತದೆ.`,
+    partsTitle: "ಹಂತ ಹಂತವಾಗಿ ಮಾರಿದ್ದರೆ",
+    partsNote: (month: string) => `${month} ತಿಂಗಳಲ್ಲೇ ಎಲ್ಲವನ್ನೂ ಮಾರಿದ್ದಕ್ಕೆ ಹೋಲಿಸಿದರೆ, ನಿಮ್ಮ ಖರ್ಚು ಕಳೆದು. ಎಲ್ಲಾ ರೀತಿಗಳನ್ನೂ ಅದೇ ಹಿಂದಿನ ವರ್ಷಗಳಲ್ಲಿ ಹೋಲಿಸಲಾಗಿದೆ.`,
+    plans: { parts: "ಈಗ ಕಾಲು ಭಾಗ, ನಂತರ ಪ್ರತಿ 2 ತಿಂಗಳಿಗೆ ಕಾಲು ಭಾಗ", halves: "ಅರ್ಧ ಈಗ, ಅರ್ಧ 6 ತಿಂಗಳ ನಂತರ", wait6: "6 ತಿಂಗಳು ಕಾದು ಎಲ್ಲವನ್ನೂ ಮಾರುವುದು" },
+    median: "ಮಧ್ಯಮ", worst: "ಅತಿ ಕೆಟ್ಟ ವರ್ಷ", best: "ಅತಿ ಉತ್ತಮ ವರ್ಷ", beat: (count: number, years: number) => `${years} ರಲ್ಲಿ ${count} ವರ್ಷ ಹೆಚ್ಚು ಸಿಕ್ಕಿತು`,
+    legendMedian: "ಮಧ್ಯಮ", legendRange: "ಅತಿ ಕೆಟ್ಟದರಿಂದ ಅತಿ ಉತ್ತಮ ವರ್ಷ", legendZero: (month: string) => `${month}ರಲ್ಲೇ ಎಲ್ಲವನ್ನೂ ಮಾರಿದ್ದರೆ (0%)`,
+    partsWorst: (parts: string, wait: string) => `ಅತಿ ಕೆಟ್ಟ ವರ್ಷದಲ್ಲಿ, ಹಂತವಾಗಿ ಮಾರಿದ್ದರೆ ${parts}; 6 ತಿಂಗಳು ಕಾದು ಎಲ್ಲವನ್ನೂ ಮಾರಿದ್ದರೆ ${wait}.`,
+    partsSkipped: (months: string) => `ದರ ಇಲ್ಲದ ಅಥವಾ ಬಿಟ್ಟಿರುವ ತಿಂಗಳು ಇದ್ದ ಕಾರಣ ಸೇರಿಸದ ವರ್ಷಗಳು: ${months}.`,
   },
   en: {
     title: "Sell now or wait?",
@@ -128,11 +136,18 @@ const COPY = defineCopy({
     analogue: (name: string, band: PriceContext["band"], months: number, higher: number, cases: number, change: string) =>
       `When ${name} was ${band === "near" ? "close to" : `more than 5% ${band}`} its yearly average before, it was higher ${months} months later in ${higher} of ${cases} cases (typically ${change}).`,
     noSeasonMove: (name: string, move: number) => `No month has reliably paid better for ${name}. Over 3 months its price typically moves about ${move}% either way.`,
+    partsTitle: "If you had sold in parts",
+    partsNote: (month: string) => `Compared with selling everything in ${month}, after your costs. Every way is compared on the same past years.`,
+    plans: { parts: "A quarter now, then a quarter every 2 months", halves: "Half now, half after 6 months", wait6: "Wait 6 months, then sell everything" },
+    median: "Median", worst: "Worst year", best: "Best year", beat: (count: number, years: number) => `Better in ${count} of ${years} years`,
+    legendMedian: "Median", legendRange: "Worst to best year", legendZero: (month: string) => `Selling everything in ${month} (0%)`,
+    partsWorst: (parts: string, wait: string) => `In the worst year, selling in parts came out ${parts}; waiting 6 months and selling everything came out ${wait}.`,
+    partsSkipped: (months: string) => `Years left out because a month had no price or was left out: ${months}.`,
   },
 });
 
 const monthText = (month: string, language: Language) => language === "kn" ? formatPeriodKannada(month) : formatCalendarMonth(month);
-const signed = (value: number | null) => value === null ? "—" : `${value > 0 ? "+" : ""}${value}%`;
+const signed = signedPercent;
 const tone = (value: number | null) => value === null || value === 0 ? "" : value > 0 ? "hold-up" : "hold-down";
 const rupees = (value: number) => `₹${Math.round(value).toLocaleString("en-IN")}`;
 
@@ -147,7 +162,10 @@ export function SellOrHoldPage() {
   const [weightLoss, setWeightLoss] = useState("0");
   const [storage, setStorage] = useState("0");
   // The longest history for each variety: from 2014 where the daily-price series tracks the report, else the report.
-  const query = useQuery({ queryKey: ["sell-or-hold", variety, lastCompleted, "long"], queryFn: () => api.monthlyHistory(LONG_HISTORY_FROM, lastCompleted, variety, "long") });
+  const query = useQuery({ queryKey: ["sell-or-hold", variety, lastCompleted, "long"], queryFn: () => api.monthlyHistory(LONG_HISTORY_FROM, lastCompleted, variety, "long"),
+    // The last variety's results stay on screen, dimmed, while the next loads, so the page never collapses to a loader.
+    placeholderData: keepPreviousData });
+  const swap = `fade-swap${query.isPlaceholderData ? " is-updating" : ""}`;
   const data = query.data;
   const long = isLongBasis(data);
   const history = data ? holdHistory(data.points, startMonth) : null;
@@ -155,6 +173,10 @@ export function SellOrHoldPage() {
   const latest = observed.at(-1);
   const costs = { annualInterestPercent: Number(interest || 0), weightLossPercent: Number(weightLoss || 0), storagePerQuintalPerMonth: Number(storage || 0) };
   const breakEven = (months: number) => latest?.weighted_price ? holdBreakEvenPercent(months, latest.weighted_price, costs) : null;
+  // The same past years under several ways of selling, after the reader's costs. Hidden until enough years are complete.
+  const staged = data ? stagedSelling(data.points, startMonth, costs) : null;
+  const stagedSummary = (plan: string) => staged?.summaries.find((item) => item.plan === plan);
+  const partsSummary = stagedSummary("parts"), waitSummary = stagedSummary("wait6");
   // Older API responses carry no coverage; then every variety is listed, as before.
   const listed = data?.variety_coverage ? data.variety_coverage.filter(hasHistory).map((item) => item.variety) : data?.varieties ?? [];
   const usable = listed.filter((name) => !NOT_NUT_GRADES.has(name) || name === variety);
@@ -207,7 +229,7 @@ export function SellOrHoldPage() {
     </section>
 
     {query.isLoading ? <LoadingState label={copy.loading} /> : query.error ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : !history?.years.length ? <p className="rate-empty">{copy.noData}</p> : <>
-      {context ? <div className="hold-insight-frame"><section className="hold-season hold-insight" aria-label={copy.insightTitle}>
+      {context ? <div className={`hold-insight-frame ${swap}`}><section className="hold-season hold-insight" aria-label={copy.insightTitle}>
         {context.band === "below" ? <TrendingDown size={18} aria-hidden="true" /> : context.band === "above" ? <TrendingUp size={18} aria-hidden="true" /> : <Minus size={18} aria-hidden="true" />}
         <div><div className="hold-insight-body">
           <strong>{copy.headline(varietyName, context.band, percent(context.vs_year_average))}</strong>
@@ -222,10 +244,10 @@ export function SellOrHoldPage() {
               : context.typical_move !== null && <li>{copy.noSeasonMove(varietyName, percent(context.typical_move))}</li>}
           </ul>
         </div></div>
-      </section></div> : season && <p className="hold-season"><CalendarRange size={18} aria-hidden="true" /><span>{season.high && season.low
+      </section></div> : season && <p className={`hold-season ${swap}`}><CalendarRange size={18} aria-hidden="true" /><span>{season.high && season.low
         ? copy.season(season.first_year, varietyName, monthPair(season.high), monthPair(season.low), season.spread_percent, season.consistent_years, season.years)
         : copy.noSeason(season.first_year, varietyName)}</span></p>}
-      <section className="rate-card hold-outcomes" aria-labelledby="hold-summary">
+      <section className={`rate-card hold-outcomes ${swap}`} aria-labelledby="hold-summary" aria-busy={query.isPlaceholderData}>
         <header><h2 id="hold-summary">{copy.summaryTitle(monthNames[startMonth - 1])}</h2></header>
         <p className="rate-caption"><span className="label-full">{copy.chartNote} {long ? copy.summaryNoteLong(since) : copy.summaryNote}</span>
           <span className="label-short" aria-hidden="true">{long ? copy.summaryNoteLongShort(since) : copy.summaryNote}</span></p>
@@ -243,6 +265,14 @@ export function SellOrHoldPage() {
           })} />
       </section>
 
+      {staged && partsSummary?.median_percent != null && <section className={`rate-card hold-parts ${swap}`} aria-labelledby="hold-parts" aria-busy={query.isPlaceholderData}>
+        <header><h2 id="hold-parts">{copy.partsTitle}</h2></header>
+        <p className="rate-caption">{copy.partsNote(monthNames[startMonth - 1])}</p>
+        <SellingPlans summaries={staged.summaries} copy={{ ...copy, legendZero: copy.legendZero(monthNames[startMonth - 1]) }} />
+        {waitSummary?.lowest_percent != null && <p className="rate-caption">{copy.partsWorst(signed(partsSummary.lowest_percent), signed(waitSummary.lowest_percent))}</p>}
+        {staged.skipped_years.length > 0 && <p className="rate-caption">{copy.partsSkipped(staged.skipped_years.map((month) => monthText(month, language)).join(", "))}</p>}
+      </section>}
+
       {(() => {
         const yearsBody = <>
         <p id="hold-years-scroll-hint" className="table-scroll-hint">{copy.scrollHint}</p>
@@ -256,7 +286,7 @@ export function SellOrHoldPage() {
         {history.excluded_months.length > 0 && <p className="rate-caption">* {copy.excluded(history.excluded_months.map((month) => monthText(month, language)).join(", "))}</p>}
         </>;
         // The year table is the full record behind the chart, folded under "Details" on every screen.
-        return <details className="rate-card hold-fold"><summary><span><strong id="hold-years">{copy.details}</strong><small>{copy.detailsHint}</small></span></summary>
+        return <details className={`rate-card hold-fold ${swap}`}><summary><span><strong id="hold-years">{copy.details}</strong><small>{copy.detailsHint}</small></span></summary>
           {/* "Median change" is said once above the cards rather than inside each, so a card is the period and its
               median on one line with the count of rising years under it. */}
           <p className="hold-medians-title">{copy.mediansTitle}</p>
@@ -268,7 +298,7 @@ export function SellOrHoldPage() {
           {yearsBody}</details>;
       })()}
 
-      <p className="home-note">{long ? copy.caveatLong(Number(lastCompleted.slice(0, 4)) - since + 1) : copy.caveat} {long ? copy.sourceLong : copy.source}.{phone && hiddenCount > 0 ? ` ${copy.hidden(hiddenCount)}` : ""}</p>
+      <p className={`home-note ${swap}`}>{long ? copy.caveatLong(Number(lastCompleted.slice(0, 4)) - since + 1) : copy.caveat} {long ? copy.sourceLong : copy.source}.{phone && hiddenCount > 0 ? ` ${copy.hidden(hiddenCount)}` : ""}</p>
     </>}
   </div>;
 }

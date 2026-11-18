@@ -79,6 +79,82 @@ export function holdBreakEvenPercent(months: number, price: number, costs: HoldC
   return round1((needed / price - 1) * 100);
 }
 
+/**
+ * Ways of selling a crop over time, each compared with selling all of it in the chosen month. Fixed before they were
+ * compared with any data. On the 2014+ series, selling in parts kept most of the typical result of waiting while
+ * roughly halving how bad the worst years were (docs/ANALYTICS_AND_TOOLS.md).
+ */
+export const SELLING_PLANS = [
+  { key: "parts", legs: [{ months: 0, share: 0.25 }, { months: 2, share: 0.25 }, { months: 4, share: 0.25 }, { months: 6, share: 0.25 }] },
+  { key: "halves", legs: [{ months: 0, share: 0.5 }, { months: 6, share: 0.5 }] },
+  { key: "wait6", legs: [{ months: 6, share: 1 }] },
+] as const;
+export type SellingPlanKey = (typeof SELLING_PLANS)[number]["key"];
+
+export type StagedYear = { start_month: string; start_price: number; results: Record<SellingPlanKey, number> };
+export type StagedSummary = {
+  plan: SellingPlanKey; years: number; median_percent: number | null; lowest_percent: number | null; highest_percent: number | null;
+  /** Years in which the plan brought more than selling everything in the start month. */
+  beat_selling_now: number;
+};
+export type StagedSelling = { years: StagedYear[]; summaries: StagedSummary[]; skipped_years: string[] };
+
+const NO_COSTS: HoldCosts = { annualInterestPercent: 0, weightLossPercent: 0, storagePerQuintalPerMonth: 0 };
+
+/**
+ * For each past year from `startMonth`: what each plan in `SELLING_PLANS` brought, as a percent more or less than
+ * selling everything that month, after the reader's costs. A share kept `m` months earns its later price less weight
+ * loss and `m` months of storage, and gives up `m` months of interest on the money (the same costs as
+ * `holdBreakEvenPercent`, so a share comes out ahead exactly when its rise beats that break-even).
+ *
+ * Every plan is scored on the same years: a year missing any month a plan needs, or touching a one-month spike, is
+ * skipped and named rather than scored by some plans only. Past years only; never a forecast.
+ */
+export function stagedSelling(points: HoldPoint[], startMonth: number, costs: HoldCosts = NO_COSTS): StagedSelling | null {
+  const { annualInterestPercent: interest, weightLossPercent: weightLoss, storagePerQuintalPerMonth: storage } = costs;
+  if (![interest, weightLoss, storage].every(Number.isFinite) || interest < 0 || storage < 0 || weightLoss < 0 || weightLoss >= 100) return null;
+  const byMonth = new Map(points.map((point) => [point.reporting_month, point]));
+  const priceAt = (month: string) => {
+    const point = byMonth.get(month);
+    return point && point.weighted_price !== null && point.weighted_price > 0 && !isIsolatedSpike(point) ? point.weighted_price : null;
+  };
+  const years: StagedYear[] = [];
+  const skipped: string[] = [];
+  for (const point of points) {
+    if (Number(point.reporting_month.slice(5)) !== startMonth || point.weighted_price === null || point.weighted_price <= 0) continue;
+    const start = priceAt(point.reporting_month);
+    const last = shiftCalendarMonth(point.reporting_month, 6);
+    // A year whose last selling month has not been reported yet is still running, not skipped.
+    if (!byMonth.has(last)) continue;
+    const results = {} as Record<SellingPlanKey, number>;
+    let complete = start !== null;
+    for (const plan of SELLING_PLANS) {
+      let received = 0;
+      for (const { months, share } of plan.legs) {
+        const later = months === 0 ? start : priceAt(shiftCalendarMonth(point.reporting_month, months));
+        if (start === null || later === null) { complete = false; break; }
+        const kept = months === 0 ? later / start
+          : (later * (1 - weightLoss / 100) - storage * months) / start - (interest / 100) * (months / 12);
+        received += share * kept;
+      }
+      if (!complete) break;
+      results[plan.key] = round1((received - 1) * 100);
+    }
+    if (complete) years.push({ start_month: point.reporting_month, start_price: start!, results });
+    else skipped.push(point.reporting_month);
+  }
+  const summaries = SELLING_PLANS.map(({ key }) => {
+    const values = years.map((year) => year.results[key]);
+    const enough = values.length >= MIN_HOLD_YEARS;
+    return {
+      plan: key, years: values.length, beat_selling_now: values.filter((value) => value > 0).length,
+      median_percent: enough ? round1(medianOf(values)) : null,
+      lowest_percent: enough ? Math.min(...values) : null, highest_percent: enough ? Math.max(...values) : null,
+    };
+  });
+  return { years, summaries, skipped_years: skipped };
+}
+
 export type SeasonalPattern = {
   first_year: number; last_year: number; years: number;
   /** Two neighbouring calendar months (1–12) with the highest and the lowest typical price, or null when no season stands out. */

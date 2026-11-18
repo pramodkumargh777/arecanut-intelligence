@@ -103,7 +103,7 @@ Town pages are search landing pages and are not linked from the app's menus. The
 `GET /cooperative/branch-latest?source=&branch=`, which returns a branch's latest verified rate per variety from the
 last 45 days. `/workspace` stores organization or role dashboard profiles (filters and sections) in browser localStorage only.
 
-`/` (latest rates) and `/sell-or-hold` are written for growers on phones, in Kannada by default with an English toggle that each browser remembers. Other pages have translated navigation but English content. Rates stay separate by cooperative and only rates from the same date are ranked. Sell-or-hold shows what the Karnataka monthly price did after a chosen month in past years, and how many years would have covered the reader's own costs. It gives no recommendation, and `shared/hold-history.ts` leaves out one-month spikes such as Rashi in January 2024, naming them on the page. Sections with no data (official daily feed, arrivals, advisories, quality inspections) stay hidden until they have some. The former home page is now at `/overview`.
+`/` (latest rates) and `/sell-or-hold` are written for growers on phones, in Kannada by default with an English toggle that each browser remembers. Other pages have translated navigation but English content. Rates stay separate by cooperative and only rates from the same date are ranked. Sell-or-hold shows what the Karnataka monthly price did after a chosen month in past years, and how many years would have covered the reader's own costs. It also compares selling in parts (a quarter every two months, or half now and half later) with selling everything at once on the same past years ([ANALYTICS_AND_TOOLS.md](docs/ANALYTICS_AND_TOOLS.md)). It gives no recommendation, and `shared/hold-history.ts` leaves out one-month spikes such as Rashi in January 2024, naming them on the page. Sections with no data (official daily feed, arrivals, advisories, quality inspections) stay hidden until they have some. The former home page is now at `/overview`.
 
 ## Tests and build
 
@@ -145,6 +145,7 @@ Deployment success has not been claimed or tested in a Cloudflare account.
 | Topic | Document |
 |---|---|
 | System design, storage and query bounds | [ARCHITECTURE.md](docs/ARCHITECTURE.md) ([visual map](docs/architecture/index.html)) |
+| Record lifecycles (status columns, review queues, runs) | [LIFECYCLES.md](docs/LIFECYCLES.md), generated from `shared/lifecycles.ts` |
 | Importing CSV and AGMARKNET data | [DATA_IMPORT.md](docs/DATA_IMPORT.md), [AGMARKNET_DAILY_CONNECTOR.md](docs/AGMARKNET_DAILY_CONNECTOR.md) |
 | MAMCOS, TSS, TMS Sirsi and TUMCOS cooperative feeds | [COOPERATIVE_SOURCES.md](docs/COOPERATIVE_SOURCES.md) |
 | Commodities, varieties and grades | [COMMODITY_MODEL.md](docs/COMMODITY_MODEL.md) |

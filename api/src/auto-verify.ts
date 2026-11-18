@@ -8,6 +8,8 @@
  *
  * Set-based: three statements per pass whatever the row count, so it fits the D1 query limit of Workers Free.
  */
+import { FLAGGED_OBSERVATION_AUTO_REJECT_DAYS } from "../../shared/lifecycles";
+
 export const AGMARKNET_DAILY_REVIEWER = "auto-validation-daily-v1";
 export const AGMARKNET_DAILY_SOURCE = "agmarknet";
 
@@ -55,7 +57,7 @@ export async function autoVerifyPendingDaily(db: D1Database): Promise<number> {
 }
 
 /** A flagged observation still unreviewed this many days after it was stored is rejected automatically. */
-export const OBSERVATION_AUTO_REJECT_DAYS = 14;
+export const OBSERVATION_AUTO_REJECT_DAYS = FLAGGED_OBSERVATION_AUTO_REJECT_DAYS;
 export const OBSERVATION_AUTO_REVIEWER = "auto-validation-flagged-v1";
 
 /**

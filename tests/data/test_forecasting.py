@@ -24,7 +24,7 @@ from forecasting.evaluate import evaluate  # noqa: E402
 from forecasting.features import ExogenousValue, series_features, supervised  # noqa: E402
 from forecasting.legacy import legacy_evaluate  # noqa: E402
 from forecasting.models import median_ensemble, run_models  # noqa: E402
-from forecasting.outlook import GRID, build_outlook, chance_higher, recent_volatility  # noqa: E402
+from forecasting.outlook import GRID, build_outlook, build_outlook_selected, chance_higher, recent_volatility  # noqa: E402
 from forecasting import covariates as cov  # noqa: E402
 from forecasting.publish import PublicationRefused, build_payload, build_track  # noqa: E402
 
@@ -266,6 +266,46 @@ class OutlookCalibrationTests(unittest.TestCase):
         values = monthly([100.0] * 12 + [200.0, 50.0], series_id="KA|X").values
         self.assertEqual(recent_volatility(values, values.index[11]), 0.01)  # flat history, floored
         self.assertGreater(recent_volatility(values, values.index[-1]), 0.3)
+        self.assertEqual(recent_volatility(values, values.index[11], method="ewma"), 0.01)
+
+    def test_ewma_volatility_matches_the_shared_typescript_definition(self):
+        # The same vector and values are pinned in api/src/outlook.test.ts (shared/volatility.ts).
+        values = monthly([100.0, 110, 99, 105, 120, 118, 125, 130, 128, 140], series_id="KA|P").values
+        self.assertAlmostEqual(recent_volatility(values, values.index[-1], method="ewma"), 0.07572084568692844, places=12)
+        self.assertAlmostEqual(recent_volatility(values, values.index[-1]), 0.07809558451813842, places=12)
+        self.assertIsNone(recent_volatility(values.iloc[:6], values.index[5], method="ewma"))  # 5 returns < 6
+
+    def test_ewma_volatility_fades_a_big_move_instead_of_dropping_it_after_twelve_months(self):
+        # One 30% step, then flat. Equal weights forget it all at once when it leaves the 12-month window; the
+        # weighted measure (effective memory about 17 months at 0.94) lets it fade by about sqrt(0.94) a month.
+        values = monthly([100.0] * 10 + [130.0] * 20, series_id="KA|S").values
+        twelve, thirteen = values.index[21], values.index[22]  # the step is the 12th, then the 13th most recent return
+        self.assertLess(recent_volatility(values, thirteen), recent_volatility(values, twelve) / 2)
+        self.assertEqual(recent_volatility(values, thirteen), 0.01)
+        ratio = recent_volatility(values, thirteen, method="ewma") / recent_volatility(values, twelve, method="ewma")
+        self.assertGreater(ratio, 0.95)
+
+    def test_volatility_method_is_chosen_on_the_held_out_score_and_recorded(self):
+        config = ExperimentConfig(horizons=(1, 3))
+        ds = self.random_walks()
+        _apply_rule(ds, config)
+        result = walk_forward(ds, config, models=("last_value", "seasonal_naive"))
+        evaluation = evaluate(result, config)
+        rms = build_outlook(result.rows, ds, evaluation, config.horizons, 80)
+        ewma = build_outlook(result.rows, ds, evaluation, config.horizons, 80, vol_method="ewma")
+        self.assertEqual((rms["vol_method"], "vol_lambda" in rms), ("rms", False))
+        self.assertEqual((ewma["vol_method"], ewma["vol_lambda"], ewma["vol_max_returns"]), ("ewma", 0.94, 60))
+        # Identical test points under both methods; only the volatility measure differs.
+        for a, b in zip(rms["horizons"], ewma["horizons"]):
+            self.assertEqual((a["test"]["n"], a["test"]["from"]), (b["test"]["n"], b["test"]["from"]))
+        chosen = build_outlook_selected(result.rows, ds, evaluation, config.horizons, 80)
+        scores = chosen["vol_selection"]["interval_score_pct"]
+        expected = "ewma" if scores["ewma"] < scores["rms"] else "rms"
+        self.assertEqual((chosen["vol_selection"]["chosen"], chosen["vol_method"]), (expected, expected))
+        self.assertEqual(chosen["vol_selection"]["horizons"], [1, 3])
+        self.assertAlmostEqual(scores["rms"], np.mean([e["test"]["interval_score_pct"] for e in rms["horizons"]]))
+        with self.assertRaises(ValueError):
+            build_outlook(result.rows, ds, evaluation, config.horizons, 80, vol_method="garch")
 
     def test_scaled_ranges_hold_out_of_sample_and_odds_are_sane(self):
         config = ExperimentConfig(horizons=(1, 3))
@@ -286,6 +326,33 @@ class OutlookCalibrationTests(unittest.TestCase):
         quantiles = list(np.linspace(-2, 2, len(GRID)))
         self.assertGreater(chance_higher(quantiles, 0.05, 0.03), 0.85)
         self.assertLess(chance_higher(quantiles, -0.05, 0.03), 0.15)
+
+    def test_longer_history_fits_the_ranges_centred_and_is_tested_on_the_evaluated_series(self):
+        config = ExperimentConfig(horizons=(1, 3))
+        short = self.random_walks(n=60, seed=3)
+        _apply_rule(short, config)
+        rng = np.random.default_rng(5)
+        # Twelve years rising 2% a month: a history that leans one way, as each era of areca prices has.
+        long = dataset([monthly(40000 * np.exp(np.cumsum(rng.normal(0.02, 0.03, 150))), start="2014-01", series_id=f"KA|L{i}")
+                        for i in range(6)], key="monthly_from_daily", basis="MONTHLY_APMC_MODAL_MEDIAN")
+        _apply_rule(long, config)
+        baselines = ("last_value", "seasonal_naive")
+        short_result, long_result = walk_forward(short, config, models=baselines), walk_forward(long, config, models=baselines)
+        short_eval = evaluate(short_result, config)
+        plain = build_outlook(short_result.rows, short, short_eval, config.horizons, 80)
+        longer = build_outlook(short_result.rows, short, short_eval, config.horizons, 80,
+                               calibration={"rows": long_result.rows, "dataset": long, "evaluation": evaluate(long_result, config)})
+        self.assertEqual({k: longer["calibration"][k] for k in ("dataset", "price_basis", "centred", "tested_on")},
+                         {"dataset": "monthly_from_daily", "price_basis": "MONTHLY_APMC_MODAL_MEDIAN", "centred": True,
+                          "tested_on": "synthetic_monthly"})
+        self.assertNotIn("calibration", plain)
+        for own, fitted in zip(plain["horizons"], longer["horizons"]):
+            self.assertGreater(fitted["n"], own["n"])
+            # Scored on the evaluated series' own latest origins, the series the API applies the ranges to.
+            self.assertEqual((fitted["test"]["n"], fitted["test"]["from"]), (own["test"]["n"], own["test"]["from"]))
+            self.assertAlmostEqual(fitted["quantiles"][GRID.index(0.5)], 0.0, places=9)
+        # Centred, the rising history does not turn into odds of a rise.
+        self.assertAlmostEqual(chance_higher(longer["horizons"][0]["quantiles"], 0.0, 0.03), 0.5, delta=0.05)
 
 
 class CovariateTests(unittest.TestCase):

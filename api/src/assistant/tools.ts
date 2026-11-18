@@ -6,8 +6,10 @@
 import { cardsFor } from "./knowledge-cards";
 import { z } from "zod";
 import { MONTH_NAMES_EN, MONTH_NAMES_KN } from "../../../shared/dates";
-import { holdHistory } from "../../../shared/hold-history";
+import { holdHistory, stagedSelling } from "../../../shared/hold-history";
 import { namesPlace, PLACES, placesIn } from "./places";
+import { addDays, IMD_SEASONS } from "../supply";
+import { LONG_BASIS } from "../history";
 import { searchDocuments, pageLabel, queryTerms } from "./retrieval";
 import type { EmbeddingProvider } from "./providers";
 import type { Language } from "./language";
@@ -48,7 +50,8 @@ export const TOOL_SCHEMAS = {
   get_historical_prices: z.object({ variety: text(80).optional(), market: text(80).optional(), from_month: month.optional(), to_month: month.optional() }).strict(),
   compare_markets: z.object({ variety: text(80).optional(), source: source.optional() }).strict(),
   get_market_index: z.object({ variety: text(80).optional() }).strict(),
-  get_market_arrivals: z.object({ district: text(80).optional(), granularity: z.enum(["daily", "weekly", "monthly", "seasonal"]).optional() }).strict(),
+  get_market_arrivals: z.object({ district: text(80).optional(), market: text(80).optional(), granularity: z.enum(["daily", "weekly", "monthly", "seasonal"]).optional(),
+    from_month: month.optional(), to_month: month.optional() }).strict(),
   get_price_forecast: z.object({ variety: text(80).optional() }).strict(),
   get_production_statistics: z.object({ geography: text(80).optional() }).strict(),
   get_trade_statistics: z.object({ direction: z.enum(["import", "export"]).optional() }).strict(),
@@ -77,7 +80,7 @@ export const TOOL_DESCRIPTIONS: Record<ToolName, string> = {
   get_historical_prices: "AGMARKNET Karnataka monthly arrival-weighted modal price history for one exact variety, with rolling and year-on-year statistics; for a named town, also that APMC market's month-by-month prices from AGMARKNET daily reports.",
   compare_markets: "Compare markets or cooperative branches for one variety, within one source only.",
   get_market_index: "Areca Pulse reference index: median verified AGMARKNET modal price across markets for one variety and date.",
-  get_market_arrivals: "Arrival and traded quantities from authorized imports (kept as separate measures).",
+  get_market_arrivals: "Arecanut arrival quantities (tonnes) at Karnataka markets, from KRAMA daily reports and AGMARKNET 2.0 monthly totals, plus any authorized file imports (traded quantities kept separate). Optional town market, district, period type and month range; the latest period is compared with the same period a year earlier.",
   get_price_forecast: "Monthly reference forecast with interval, evaluation results and limitations.",
   get_production_statistics: "DASD area, production and yield by reporting year and estimate stage.",
   get_trade_statistics: "India arecanut import/export quantities and values by partner (DASD/DGCIS).",
@@ -100,6 +103,9 @@ export function validateToolArgs(name: string, args: unknown): { ok: true; tool:
 // Helpers
 
 const MONTHLY_BASIS = "MONTHLY_STATE_WEIGHTED_AVERAGE";
+/** The monthly report starts in 2021-01; the daily-price median series (LONG_BASIS) reaches back to 2014-01. */
+const REPORT_FROM = "2021-01";
+const LONG_HISTORY_FROM = "2014-01";
 const DEFAULT_VARIETY = "Rashi";
 const AGMARKNET = "AGMARKNET (Directorate of Marketing and Inspection)";
 const STALE_DAYS = 7;
@@ -371,8 +377,14 @@ async function getHistoricalPrices(ctx: ToolContext, args: ToolArgs<"get_histori
   if (args.to_month && args.to_month > latest) target.missing.push(`Monthly data is published only through ${latest}; later months are not yet available.`);
   // A named town adds that APMC market's own months, from the daily reports, before the state-wide series.
   if (args.market) await marketHistory(ctx, target, args.market, variety, args.from_month, args.to_month);
-  const body = await getJson(ctx, `/history/monthly?${new URLSearchParams({ variety, from, to })}`);
+  // The monthly report starts in 2021; earlier months come from the 2014+ daily-price series where it tracks the report.
+  const early = from < REPORT_FROM;
+  const body = await getJson(ctx, `/history/monthly?${new URLSearchParams({ variety, from, to, ...(early ? { basis: "long" } : {}) })}`);
+  const long = body?.basis === LONG_BASIS;
   const points: Json[] = (body?.points ?? []).filter((point: Json) => point.weighted_price != null);
+  if (early && !long && points.length) {
+    target.missing.push(`${variety} has monthly prices from ${points[0].reporting_month} only; the series back to 2014 covers varieties whose daily-price median follows the monthly report closely.`);
+  }
   if (!points.length && target.facts.length) {
     target.missing.push(`No state-wide monthly ${variety} prices between ${from} and ${to}.`);
     return finalize(target);
@@ -384,14 +396,16 @@ async function getHistoricalPrices(ctx: ToolContext, args: ToolArgs<"get_histori
     return target;
   }
   const last = points.at(-1);
-  const key = addSource(target, {
-    key: `agmarknet-monthly-history:${variety}:${from}:${to}`, kind: "data",
-    label: `AGMARKNET monthly variety-wise prices, Karnataka, ${variety}, ${points[0].reporting_month} to ${last.reporting_month} (one report per month)`,
-    publisher: AGMARKNET, url: last.source_url ?? null, reporting_period: `${points[0].reporting_month} to ${last.reporting_month}`, retrieved_at: last.fetched_at ?? null,
-  });
+  const key = addSource(target, long
+    ? { key: `apmc-median-history:${variety}:${from}:${to}`, kind: "data",
+      label: `Median of Karnataka APMC monthly modal prices (AGMARKNET daily reports), ${variety}, ${points[0].reporting_month} to ${last.reporting_month}`,
+      publisher: AGMARKNET, url: last.source_url ?? null, reporting_period: `${points[0].reporting_month} to ${last.reporting_month}`, retrieved_at: body?.long_history?.imported_at ?? null }
+    : { key: `agmarknet-monthly-history:${variety}:${from}:${to}`, kind: "data",
+      label: `AGMARKNET monthly variety-wise prices, Karnataka, ${variety}, ${points[0].reporting_month} to ${last.reporting_month} (one report per month)`,
+      publisher: AGMARKNET, url: last.source_url ?? null, reporting_period: `${points[0].reporting_month} to ${last.reporting_month}`, retrieved_at: last.fetched_at ?? null });
   const unit = last.price_unit ?? "INR/quintal";
   const push = (label: string, value: number | null, period: string, note: string | null = null, factUnit: string | null = unit) => {
-    if (value != null && Number.isFinite(value)) target.facts.push({ label, value: round2(value), unit: factUnit, basis: factUnit === unit ? MONTHLY_BASIS : null, reporting_period: period, source_key: key, note });
+    if (value != null && Number.isFinite(value)) target.facts.push({ label, value: round2(value), unit: factUnit, basis: factUnit === unit ? (long ? LONG_BASIS : MONTHLY_BASIS) : null, reporting_period: period, source_key: key, note });
   };
   const max = points.reduce((best, point) => (point.weighted_price > best.weighted_price ? point : best));
   const min = points.reduce((best, point) => (point.weighted_price < best.weighted_price ? point : best));
@@ -413,7 +427,7 @@ async function getHistoricalPrices(ctx: ToolContext, args: ToolArgs<"get_histori
   return finalize(target);
 }
 
-/** Months of daily reports read for one market's history; the AGMARKNET daily backfill reaches back to 2021. */
+/** Months of daily reports read for one market's history by default; the daily archive reaches back to 2014. */
 const MARKET_HISTORY_MONTHS = 12;
 
 /**
@@ -581,7 +595,9 @@ async function getPriceForecast(ctx: ToolContext, args: ToolArgs<"get_price_fore
   target.limitations.push("Areca Pulse's monthly forecast is an experimental reference baseline without demonstrated predictive improvement. It does not predict whether prices will rise or fall.");
 
   const predictions = await getJson(ctx, `/forecasting/predictions?${new URLSearchParams({ series_id: `KA|${variety}` })}`).catch(() => null);
-  const rows: Json[] = (predictions?.data ?? []).filter((row: Json) => row.actual_value == null).slice(0, 3);
+  // Values from models that did not beat the baseline are never shown on the dashboard, so they are not quoted here.
+  const rows: Json[] = (predictions?.data ?? []).filter((row: Json) => row.actual_value == null && row.publication !== "not_published")
+    .sort((a: Json, b: Json) => a.horizon - b.horizon).slice(0, 3);
   if (rows.length) {
     const experiment = addSource(target, { key: `ani-forecasting-engine:${variety}`, kind: "data", label: `Areca Pulse forecasting engine experiment ${predictions.experiment_id ?? ""}`.trim(),
       publisher: "ArecaNut Intelligence forecasting engine", url: null, reporting_period: `origin ${rows[0].origin_period}`, retrieved_at: rows[0].forecast_created_at ?? null });
@@ -600,38 +616,164 @@ async function getPriceForecast(ctx: ToolContext, args: ToolArgs<"get_price_fore
 // ------------------------------------------------------------------------------------------------
 // Supply, trade, weather and advisory tools
 
+/** Market names the arrival reports spell differently from the town names in places.ts (KRAMA and AGMARKNET masters). */
+const ARRIVAL_MARKET_SPELLINGS: Record<string, RegExp> = {
+  Soraba: /\bsorabh?a\b/i, Bantwal: /\bbantwala?\b/i, Belthangady: /\bbelthang?a?d[iy]\b/i, Sullia: /\bsull?[iy]?a\b/i,
+};
+const ARRIVAL_MARKET_LIST_CAP = 50;
+
+/** The period type a question asks for, when it names one ("today", "this week", "ಈ ತಿಂಗಳು"). */
+function arrivalGranularity(question: string): ToolArgs<"get_market_arrivals">["granularity"] {
+  const text = question.toLowerCase();
+  if (/\b(daily|day[- ]?wise|per day|each day|today|yesterday)\b|ದೈನಂದಿನ|ಇಂದು|ಇಂದಿನ|ನಿನ್ನೆ/.test(text)) return "daily";
+  if (/\bweek|ವಾರ/.test(text)) return "weekly";
+  if (/\bmonth|ತಿಂಗಳ/.test(text)) return "monthly";
+  if (/\bseason|ಋತು|ಹಂಗಾಮ/.test(text)) return "seasonal";
+  if (/\byear|ವರ್ಷ/.test(text)) return "monthly";
+  return undefined;
+}
+
+const lastDayOfMonth = (value: string) => new Date(Date.UTC(Number(value.slice(0, 4)), Number(value.slice(5, 7)), 0)).toISOString().slice(0, 10);
+
+/** The calendar period a /supply/arrivals bucket label stands for (a bucket's first/last dates are only its reported days). */
+function arrivalPeriod(granularity: string, bucket: string): { from: string; to: string } | null {
+  if (granularity === "weekly") return { from: bucket, to: addDays(bucket, 6) };
+  if (granularity === "monthly") return { from: `${bucket}-01`, to: lastDayOfMonth(bucket) };
+  if (granularity === "seasonal") {
+    const season = IMD_SEASONS.find((item) => bucket.slice(5) === item.key);
+    if (!season) return null;
+    const year = bucket.slice(0, 4), first = String(season.months[0]).padStart(2, "0"), last = String(season.months.at(-1)).padStart(2, "0");
+    return { from: `${year}-${first}-01`, to: lastDayOfMonth(`${year}-${last}`) };
+  }
+  return null;
+}
+
+/** The same period a year earlier: 52 weeks back for a Monday week (still a Monday), the same calendar dates otherwise. */
+function yearEarlier(granularity: string, period: { from: string; to: string }) {
+  if (granularity === "weekly") return { from: addDays(period.from, -364), to: addDays(period.to, -364) };
+  // A month's last day maps to the earlier month's last day, so February ends right in leap and other years.
+  const back = (day: string) => {
+    const month = `${Number(day.slice(0, 4)) - 1}${day.slice(4, 7)}`;
+    return day === lastDayOfMonth(day.slice(0, 7)) ? lastDayOfMonth(month) : `${month}${day.slice(7)}`;
+  };
+  return { from: back(period.from), to: back(period.to) };
+}
+
 async function getMarketArrivals(ctx: ToolContext, args: ToolArgs<"get_market_arrivals">): Promise<ToolResult> {
   const target = result("get_market_arrivals", args, "Market arrivals");
-  const params = new URLSearchParams({ granularity: args.granularity ?? "weekly" });
+  const today = istToday(ctx.now ?? new Date());
+  const asked = args.granularity ?? arrivalGranularity(ctx.question);
+  const params = new URLSearchParams({ granularity: asked ?? "weekly" });
+  if (args.from_month || args.to_month) {
+    // Whole completed months only, at most twelve (the API's one-year limit), so no partial month reads as a fall.
+    const completed = shiftMonth(today.slice(0, 7), -1);
+    let to = args.to_month ?? args.from_month!, from = args.from_month ?? to;
+    if (from > to) [from, to] = [to, from];
+    if (from > completed) {
+      target.missing.push(`No completed month of arrivals lies in ${from} to ${to}; the latest completed month is ${completed}.`);
+      return finalize(target);
+    }
+    if (to > completed) { target.limitations.push(`Only completed months are given, up to ${completed}.`); to = completed; }
+    if (shiftMonth(from, 11) < to) { from = shiftMonth(to, -11); target.limitations.push(`Arrivals are given for at most 12 months at a time: ${from} to ${to}.`); }
+    params.set("from", `${from}-01`);
+    params.set("to", lastDayOfMonth(to));
+    if (!asked) params.set("granularity", "monthly");
+  }
   if (args.district) params.set("district", args.district);
   let body = await getJson(ctx, `/supply/arrivals?${params}`);
+  if (args.market) {
+    const place = PLACES.find((item) => item.name.toLowerCase() === args.market!.toLowerCase());
+    const spelling = ARRIVAL_MARKET_SPELLINGS[place?.name ?? args.market];
+    const matches = (name: string) => (place ? place.latin.test(name) : name.toLowerCase().includes(args.market!.toLowerCase())) || Boolean(spelling?.test(name));
+    let market: string | undefined = (body?.markets ?? []).map((row: Json) => String(row.market)).find(matches);
+    // The market list holds the 50 largest markets; a smaller one is looked up among the last month's reports.
+    if (!market && (body?.markets ?? []).length >= ARRIVAL_MARKET_LIST_CAP) {
+      const recent = await getJson(ctx, `/supply/arrival-days?from=${addDays(today, -30)}&to=${today}`).catch(() => null);
+      market = (recent?.rows ?? []).map((row: Json) => String(row.market)).find(matches);
+    }
+    if (market) {
+      params.delete("district");
+      params.set("market", market);
+      body = await getJson(ctx, `/supply/arrivals?${params}`);
+    } else {
+      target.missing.push(`No arrivals are reported for a market at ${args.market}, so the figures are for ${args.district ? `${args.district} district` : "Karnataka"}.`);
+    }
+  }
   // AGMARKNET 2.0 arrivals are monthly totals: when no period was asked for and the weekly view is empty, read monthly.
   const empty = (value: Json) => !(value?.measures?.arrival?.length || value?.measures?.traded?.length);
-  if (!args.granularity && empty(body)) {
+  if (!asked && !params.has("from") && empty(body)) {
     params.set("granularity", "monthly");
     const monthly = await getJson(ctx, `/supply/arrivals?${params}`);
     if (!empty(monthly)) body = monthly;
   }
   for (const batch of body?.sources ?? []) {
-    addSource(target, { key: `arrivals:${batch.id}`, kind: "data", label: `${batch.source_name ?? batch.source_key} arrivals import ${batch.file_name ?? ""}`.trim(),
+    addSource(target, { key: `arrivals:${batch.id}`, kind: "data", label: batch.file_name ? `${batch.source_name ?? batch.source_key} arrivals import ${batch.file_name}` : String(batch.source_name ?? batch.source_key),
       publisher: batch.source_name ?? batch.source_key, url: batch.source_url ?? null, reporting_period: null, retrieved_at: batch.imported_at ?? null });
   }
   const sourceKey = target.sources[0]?.key;
+  const place = body?.market ?? (body?.district ? `${body.district} district` : "Karnataka");
   for (const measure of ["arrival", "traded"] as const) {
     const rows: Json[] = body?.measures?.[measure] ?? [];
     for (const row of rows.slice(-4).reverse()) {
       if (!sourceKey) break;
-      target.facts.push({ label: `${measure === "arrival" ? "Arrivals" : "Traded quantity"} (${body.granularity} bucket ${row.bucket})`, value: row.quantity_tonnes,
+      target.facts.push({ label: `${measure === "arrival" ? "Arrivals" : "Traded quantity"}, ${place} (${body.granularity} bucket ${row.bucket})`, value: row.quantity_tonnes,
         unit: "tonnes", basis: measure === "arrival" ? "ARRIVAL_QUANTITY" : "TRADED_QUANTITY", reporting_period: `${row.first_date} to ${row.last_date}`,
         source_key: sourceKey, note: `${row.markets_reporting} market(s)${Number(row.reporting_days) > 0 ? `, ${row.reporting_days} reporting day(s)` : ""}` });
     }
   }
-  if (!target.facts.length) target.missing.push(body?.message ?? "No arrival records are available.");
+  await arrivalsYearEarlier(ctx, target, body, params);
+  const latestBucket = body?.measures?.arrival?.at(-1)?.bucket;
+  if (!params.has("from") && body?.granularity !== "daily" && latestBucket) {
+    target.limitations.push(`Only completed ${body.granularity === "seasonal" ? "seasons" : body.granularity === "monthly" ? "months" : "weeks"} are given, so the current one is not shown; the latest is ${latestBucket}.`);
+  }
+  if (!target.facts.length) target.missing.push(args.market || args.district || params.has("from") ? "No arrival records are stored for this market or period." : body?.message ?? "No arrival records are available.");
   if (body?.forecast?.reason) target.uncertainty.push(`Arrival forecast ${body.forecast.status}: ${body.forecast.reason}`);
   for (const note of body?.notes ?? []) target.limitations.push(note);
   target.reporting_period = body?.reporting_period ? `${body.reporting_period.from} to ${body.reporting_period.to}` : null;
-  target.summary = target.facts.length ? `Arrival and traded quantities for ${target.reporting_period}, kept as separate measures.` : target.missing.at(-1)!;
+  target.summary = target.facts.length ? `Arrival and traded quantities for ${place}, ${target.reporting_period}, kept as separate measures.` : target.missing.at(-1)!;
   return finalize(target);
+}
+
+/** The latest arrivals period beside the same period a year earlier, for the same market or district. Not for single days. */
+async function arrivalsYearEarlier(ctx: ToolContext, target: ToolResult, body: Json, params: URLSearchParams) {
+  const latest: Json = (body?.measures?.arrival ?? []).at(-1);
+  const bucket = latest && arrivalPeriod(String(body.granularity), String(latest.bucket));
+  if (!bucket || latest.quantity_tonnes == null || !target.sources.length) return;
+  // Only the part of the bucket inside the requested range was counted, so compare that same part a year earlier.
+  const requested = body?.requested_range ?? bucket;
+  const period = { from: bucket.from > requested.from ? bucket.from : requested.from, to: bucket.to < requested.to ? bucket.to : requested.to };
+  const before = yearEarlier(String(body.granularity), period);
+  const query = new URLSearchParams(params);
+  query.set("granularity", String(body.granularity));
+  query.set("from", before.from);
+  query.set("to", before.to);
+  const prior = await getJson(ctx, `/supply/arrivals?${query}`).catch(() => null);
+  const rows: Json[] = prior?.measures?.arrival ?? [];
+  const total = rows.reduce((sum, row) => sum + Number(row.quantity_tonnes ?? 0), 0);
+  if (!rows.length || !(total > 0)) {
+    target.missing.push(`No arrivals are stored for the same period a year earlier (${before.from} to ${before.to}).`);
+    return;
+  }
+  let key = target.sources[0]?.key;
+  for (const batch of prior?.sources ?? []) {
+    key = addSource(target, { key: `arrivals:${batch.id}`, kind: "data", label: batch.file_name ? `${batch.source_name ?? batch.source_key} arrivals import ${batch.file_name}` : String(batch.source_name ?? batch.source_key),
+      publisher: batch.source_name ?? batch.source_key, url: batch.source_url ?? null, reporting_period: null, retrieved_at: batch.imported_at ?? null });
+  }
+  const place = body?.market ?? (body?.district ? `${body.district} district` : "Karnataka");
+  const markets = Math.max(...rows.map((row) => Number(row.markets_reporting ?? 0)));
+  // Reporting days show when a change comes from market holidays (fewer trading days) rather than from supply.
+  const days = Math.max(...rows.map((row) => Number(row.reporting_days ?? 0)));
+  const coverage = (marketCount: number, dayCount: number) => `${marketCount} market(s)${dayCount > 0 ? `, ${dayCount} reporting day(s)` : ""}`;
+  target.facts.push({ label: `Arrivals, ${place}, same period a year earlier (${before.from} to ${before.to})`, value: round2(total), unit: "tonnes",
+    basis: "ARRIVAL_QUANTITY", reporting_period: `${before.from} to ${before.to}`, source_key: key!, note: coverage(markets, days) });
+  target.facts.push({ label: `Change in arrivals, ${place}, ${latest.bucket} against a year earlier`, value: round2((Number(latest.quantity_tonnes) / total - 1) * 100), unit: "%",
+    basis: "ARRIVAL_QUANTITY", reporting_period: `${period.from} to ${period.to}`, source_key: target.sources[0]!.key,
+    note: `${coverage(Number(latest.markets_reporting ?? 0), Number(latest.reporting_days ?? 0))} now; ${coverage(markets, days)} a year earlier` });
+  const sourcesNow = new Set((body?.sources ?? []).map((batch: Json) => batch.source_key)), sourcesThen = new Set((prior?.sources ?? []).map((batch: Json) => batch.source_key));
+  if ([...sourcesNow].some((source) => !sourcesThen.has(source)) || [...sourcesThen].some((source) => !sourcesNow.has(source))) {
+    target.limitations.push("The two periods come from different sources, so the change is not like for like.");
+  }
+  target.limitations.push("A year-on-year change counts the markets and trading days reported in each period; market holidays or a market missing from either period change the total.");
 }
 
 async function getProductionStatistics(ctx: ToolContext, args: ToolArgs<"get_production_statistics">): Promise<ToolResult> {
@@ -775,31 +917,50 @@ type CalculationArgs = ToolArgs<"calculate_sell_hold">;
 
 const signedPercent = (value: number) => `${value > 0 ? "+" : ""}${value}%`;
 
-/** What happened in past years after this calendar month, so a sell-or-hold question gets an answer before any costs are entered. */
+/** What happened in past years after this calendar month, so a sell-or-hold question gets an answer before any costs are entered.
+ * Reads the same series as the sell-or-hold page: from 2014 where the daily-price series tracks the report, else the report. */
 async function addHoldHistory(ctx: ToolContext, target: ToolResult, requested: string | undefined) {
   const now = ctx.now ?? new Date();
   const monthly = await monthlySnapshot(ctx);
   const variety = matchVariety(requested ?? DEFAULT_VARIETY, monthly.varieties);
   if (!variety) return;
-  const body = await getJson(ctx, `/history/monthly?${new URLSearchParams({ variety, from: "2021-01" })}`);
+  const body = await getJson(ctx, `/history/monthly?${new URLSearchParams({ variety, from: LONG_HISTORY_FROM, basis: "long" })}`);
+  const long = body?.basis === LONG_BASIS;
   const startMonth = Number(istToday(now).slice(5, 7));
   const history = holdHistory(body?.points ?? [], startMonth, [3, 6]);
   const summaries = history.summaries.filter((summary) => summary.median_percent !== null);
   if (!summaries.length || !history.first_month || !history.last_month) return;
   const period = `${history.first_month} to ${history.last_month}`;
-  const key = addSource(target, {
-    key: `agmarknet-hold-history:${variety}:${startMonth}`, kind: "data", label: `AGMARKNET monthly variety-wise prices, Karnataka, ${variety}, ${period}`,
-    publisher: AGMARKNET, url: "https://agmarknet.gov.in", reporting_period: period, retrieved_at: null,
-  });
+  const key = addSource(target, long
+    ? { key: `apmc-median-hold-history:${variety}:${startMonth}`, kind: "data", label: `Median of Karnataka APMC monthly modal prices (AGMARKNET daily reports), ${variety}, ${period}`,
+      publisher: AGMARKNET, url: body?.points?.at(-1)?.source_url ?? null, reporting_period: period, retrieved_at: body?.long_history?.imported_at ?? null }
+    : { key: `agmarknet-hold-history:${variety}:${startMonth}`, kind: "data", label: `AGMARKNET monthly variety-wise prices, Karnataka, ${variety}, ${period}`,
+      publisher: AGMARKNET, url: "https://agmarknet.gov.in", reporting_period: period, retrieved_at: null });
+  const measure = long ? "Karnataka monthly APMC median" : "Karnataka monthly average";
   const monthName = MONTH_NAMES_EN[startMonth - 1];
   for (const summary of summaries) {
-    target.facts.push({ label: `${variety} Karnataka monthly average: median change ${summary.months} months after ${monthName}`, value: summary.median_percent, unit: "%", basis: "PAST_YEARS_CHANGE",
+    target.facts.push({ label: `${variety} ${measure}: median change ${summary.months} months after ${monthName}`, value: summary.median_percent, unit: "%", basis: "PAST_YEARS_CHANGE",
       reporting_period: period, source_key: key, note: `higher in ${summary.rose} of ${summary.years} years; range ${summary.lowest_percent}% to ${summary.highest_percent}%` });
   }
   (target.highlights ??= []).push(ctx.language === "kn"
-    ? `${variety}, ಕರ್ನಾಟಕದ ತಿಂಗಳ ಸರಾಸರಿ, ${MONTH_NAMES_KN[startMonth - 1]} ತಿಂಗಳಿನಿಂದ: ${summaries.map((summary) => `${summary.months} ತಿಂಗಳ ನಂತರ ${summary.years} ವರ್ಷಗಳಲ್ಲಿ ${summary.rose} ಬಾರಿ ಬೆಲೆ ಹೆಚ್ಚಿತ್ತು (ಮಧ್ಯಮ ಬದಲಾವಣೆ ${signedPercent(summary.median_percent!)})`).join("; ")}. ಇದು ಸಂಗ್ರಹ, ಬಡ್ಡಿ ಮತ್ತು ತೂಕ ನಷ್ಟದ ಖರ್ಚಿಗೆ ಮೊದಲಿನ ಲೆಕ್ಕ.`
-    : `${variety}, Karnataka monthly average, from ${monthName}: ${summaries.map((summary) => `${summary.months} months later it was higher in ${summary.rose} of ${summary.years} years (median change ${signedPercent(summary.median_percent!)})`).join("; ")}. This is before storage, interest and weight loss.`);
-  target.uncertainty.push("Past years do not show what the price will do this year. These are state monthly averages, not a branch price, and the years shown are few.");
+    ? `${variety}, ${long ? "ಕರ್ನಾಟಕದ ಎಪಿಎಂಸಿ ತಿಂಗಳ ಮಧ್ಯಮ ದರ" : "ಕರ್ನಾಟಕದ ತಿಂಗಳ ಸರಾಸರಿ"}, ${MONTH_NAMES_KN[startMonth - 1]} ತಿಂಗಳಿನಿಂದ: ${summaries.map((summary) => `${summary.months} ತಿಂಗಳ ನಂತರ ${summary.years} ವರ್ಷಗಳಲ್ಲಿ ${summary.rose} ಬಾರಿ ಬೆಲೆ ಹೆಚ್ಚಿತ್ತು (ಮಧ್ಯಮ ಬದಲಾವಣೆ ${signedPercent(summary.median_percent!)})`).join("; ")}. ಇದು ಸಂಗ್ರಹ, ಬಡ್ಡಿ ಮತ್ತು ತೂಕ ನಷ್ಟದ ಖರ್ಚಿಗೆ ಮೊದಲಿನ ಲೆಕ್ಕ.`
+    : `${variety}, ${measure}, from ${monthName}: ${summaries.map((summary) => `${summary.months} months later it was higher in ${summary.rose} of ${summary.years} years (median change ${signedPercent(summary.median_percent!)})`).join("; ")}. This is before storage, interest and weight loss.`);
+  const years = Math.max(...summaries.map((summary) => summary.years));
+  // The same past years sold in parts: the user's costs here are totals, not per month, so this stays before costs.
+  const staged = stagedSelling(body?.points ?? [], startMonth);
+  const parts = staged?.summaries.find((summary) => summary.plan === "parts"), wait = staged?.summaries.find((summary) => summary.plan === "wait6");
+  if (parts?.median_percent != null && wait?.median_percent != null) {
+    for (const [summary, label] of [[parts, `selling a quarter every 2 months from ${monthName}`], [wait, `waiting 6 months from ${monthName}, then selling everything`]] as const) {
+      target.facts.push({ label: `${variety} ${measure}: ${label}, median against selling everything in ${monthName}`, value: summary.median_percent, unit: "%",
+        basis: "PAST_YEARS_CHANGE", reporting_period: period, source_key: key,
+        note: `worst year ${summary.lowest_percent}%, best year ${summary.highest_percent}%; more than selling everything at once in ${summary.beat_selling_now} of ${summary.years} years; before costs` });
+    }
+    target.highlights!.push(ctx.language === "kn"
+      ? `${MONTH_NAMES_KN[startMonth - 1]} ತಿಂಗಳಿನಿಂದ ಈಗ ಕಾಲು ಭಾಗ, ನಂತರ ಪ್ರತಿ 2 ತಿಂಗಳಿಗೆ ಕಾಲು ಭಾಗ ಮಾರಿದ್ದರೆ, ಆ ತಿಂಗಳಲ್ಲೇ ಎಲ್ಲವನ್ನೂ ಮಾರಿದ್ದಕ್ಕೆ ಹೋಲಿಸಿದರೆ ${signedPercent(parts.lowest_percent!)} ರಿಂದ ${signedPercent(parts.highest_percent!)} ವರೆಗೆ ಇತ್ತು; 6 ತಿಂಗಳು ಕಾದು ಎಲ್ಲವನ್ನೂ ಮಾರಿದ್ದರೆ ${signedPercent(wait.lowest_percent!)} ರಿಂದ ${signedPercent(wait.highest_percent!)} ವರೆಗೆ (${parts.years} ವರ್ಷಗಳು, ಖರ್ಚಿಗೆ ಮೊದಲು).`
+      : `Selling a quarter every 2 months from ${monthName} ranged from ${signedPercent(parts.lowest_percent!)} to ${signedPercent(parts.highest_percent!)} against selling everything then; waiting 6 months and selling everything ranged from ${signedPercent(wait.lowest_percent!)} to ${signedPercent(wait.highest_percent!)} (${parts.years} years, before costs).`);
+  }
+  target.uncertainty.push(`Past years do not show what the price will do this year. These are state monthly figures, not a branch price${years < 6 ? ", and the years shown are few" : ""}.`);
+  if (long) target.limitations.push(`From ${history.first_month}: the median across Karnataka APMCs of each market's mean daily modal price, a different measure from the arrival-weighted monthly report, used because it follows the report closely where both exist. The sell-or-hold page uses the same series.`);
   if (history.excluded_months.length) target.uncertainty.push(`Left out because the price moved more than 20% for one month and straight back, which may be a data problem: ${history.excluded_months.join(", ")}.`);
 }
 

@@ -3,6 +3,8 @@ import { z } from "zod";
 import type { Env } from "./index";
 import { DASD_SOURCES, SIRSI_WEATHER_URL, PIB_RELEASES, DASD_NEWS_URL, parseDasd, pdfItemSchema, parseWeather, parsePib, parsePibExport, parseDasdNews, validDay } from "./intelligence-sources";
 import { bearerMatches } from "./auth";
+import { LIFECYCLES, sqlStates, statesBefore } from "../../shared/lifecycles";
+import { refusal } from "./lifecycle-guards";
 
 const routes = new Hono<Env>();
 routes.use("/admin/intelligence/*", async (c, next) => {
@@ -178,9 +180,11 @@ routes.post("/admin/intelligence/quality", async (c) => {
 routes.post("/admin/intelligence/quality/:id/review", async (c) => {
   const input = z.object({ action: z.enum(["verify", "reject"]), note: z.string().trim().min(1).max(1000) }).strict().safeParse(await c.req.json().catch(() => null));
   if (!input.success) return c.json({ error: "Choose verify/reject and record the evidence review note." }, 400);
-  const result = await c.env.DB.prepare("UPDATE quality_inspections SET status=?,review_note=?,reviewed_at=? WHERE id=? AND status='pending'")
-    .bind(input.data.action === "verify" ? "verified" : "rejected", input.data.note, new Date().toISOString(), c.req.param("id")).run();
-  if (!result.meta.changes) return c.json({ error: "Pending report not found or already reviewed." }, 409);
+  const to = input.data.action === "verify" ? "verified" : "rejected";
+  const result = await c.env.DB.prepare(`UPDATE quality_inspections SET status=?,review_note=?,reviewed_at=?
+      WHERE id=? AND status IN (${sqlStates(statesBefore(LIFECYCLES.qualityInspection, to, "reviewer"))})`)
+    .bind(to, input.data.note, new Date().toISOString(), c.req.param("id")).run();
+  if (!result.meta.changes) return c.json(await refusal(c.env.DB, LIFECYCLES.qualityInspection, c.req.param("id"), "Inspection report"), 409);
   return c.json({ success: true });
 });
 export { routes as intelligenceRoutes };

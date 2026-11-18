@@ -118,7 +118,7 @@ Admin (`Authorization: Bearer <ADMIN_TOKEN>`):
 - `POST /admin/cooperative/import`
 - `POST /admin/cooperative/replay/:fetchId`
 - `POST /admin/cooperative/:id/review` with `{action}`
-- `GET /admin/cooperative/sources`: availability, freshness per commodity (stale after 7 days, by market reporting date), permission, robots/terms, unit evidence and recent failure reasons.
+- `GET /admin/cooperative/sources`: availability (`available`, `running`, `stalled` when a fetch has recorded no outcome for 30 minutes, `failing`, `never_fetched`), freshness per commodity (stale after 7 days, by market reporting date), permission, robots/terms, unit evidence and recent failure reasons.
 - `POST /admin/cooperative/sources/:key/permission`
 
 ## 7. Live verification (local D1, 2026-11-04 IST)
@@ -181,7 +181,7 @@ separate cooperative from TSS (Totagars), also in Sirsi; the two are never merge
 >   - The reference is the same branch's recent averages for that variety when there are at least 3 (branches differ: Yellapur kole sells well below Sirsi kole), else the variety across branches, else none (a new grade publishes on the other checks).
 >   - The allowed deviation starts at 20% and widens for grades whose prices naturally swing (3.5 scaled median absolute deviations of their recent prices), capped at 50%.
 >   - Each run judges up to 1,000 pending rows newest first and publishes at most 200, so today's rates go out first while a backfill spreads over runs.
->   - Why a row is held is stored in `hold_reason`, with `held_at` the first time it was held (migration 0024). A row still held 14 days later is rejected automatically (`cooperative_reviews`, reviewer `auto-validation-v1`, action `reject`), keeping its reason. Nothing doubtful is published and the queue empties itself.
+>   - Why a row is held is stored in `hold_reason`, with `held_at` the first time it was held (migration 0024). A row still held 14 days later is rejected automatically (`cooperative_reviews`, reviewer `auto-validation-v1`, action `reject`), keeping its reason. Nothing doubtful is published and the queue empties itself. The review queue (`GET /admin/cooperative/quality`) returns `hold_reason`, `held_at` and `auto_reject_at`, and Data quality shows them on each held row. Approving a held row clears its hold, as auto-publishing does; rejecting it keeps the reason.
 >   - On the October 2026 TSS backfill (513 rows), this published 494 and held 19 odd low-grade lots (e.g. SIPPE CHALI at ₹499 against a usual ₹9,000).
 >   - AGMARKNET rows the connector flagged (`review_required`) are likewise rejected after 14 days (`autoRejectStaleFlagged`, reviewer `auto-validation-flagged-v1`).
 > - **Attention alert:** `.github/workflows/attention-alert.yml` runs daily at 09:45 IST and reports only what needs a person: a cooperative source with no successful collection for 36 hours, AGMARKNET ingestion not completed for 48 hours, or 30+ rates from one source held in two days (a format or unit change). While a problem lasts, an issue labelled `needs-attention` gets a daily comment, which GitHub emails to the owner; it closes when healthy. Checks are in `scripts/attention-alert.mjs`. Read only.

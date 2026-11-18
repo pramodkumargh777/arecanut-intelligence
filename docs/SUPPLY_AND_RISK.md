@@ -73,7 +73,8 @@ that spans different estimate stages is flagged `mixed_estimate_types`.
 - `arrival`: the quantity arriving at the market.
 - `traded`: the quantity transacted.
 
-The two measures are **never summed together**.
+The two measures are **never summed together**. The Supply page shows the traded columns only when a period in view
+has a traded quantity; the daily-report sources (KRAMA, AGMARKNET) publish arrivals only.
 
 **Units.** Tonnes, quintals and kilograms are converted to tonnes. Rows with any other unit are kept with
 `unit_status = unknown_unit` and excluded from totals; the count of such rows is shown.

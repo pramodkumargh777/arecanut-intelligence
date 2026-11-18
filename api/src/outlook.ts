@@ -1,4 +1,5 @@
 import { shiftMonth } from "./forecast";
+import { monthlyVolatility, type VolatilitySpec } from "../../shared/volatility";
 
 /**
  * Live price outlook for one variety, 1–6 months ahead. The forecasting engine publishes, per horizon, the quantiles of
@@ -9,10 +10,12 @@ import { shiftMonth } from "./forecast";
  * comes from the engine, the outlook stays current as each month's official price arrives.
  */
 
-export type OutlookCalibration = {
-  level: number; grid: number[]; vol_window: number; point_rule: string;
+export type OutlookCalibration = VolatilitySpec & {
+  level: number; grid: number[]; point_rule: string;
   horizons: { horizon: number; quantiles: number[]; n: number; series: number;
     test?: { n: number; from: string; coverage: number; direction_brier: number; climatology_brier: number; median_width_pct: number } }[];
+  /** Present when the quantiles were fitted on a longer series' errors (data-platform/forecasting/outlook.py). */
+  calibration?: { dataset: string; price_basis: string; centred: boolean; origins: [string, string] | null; series: number; tested_on: string };
 };
 
 export type OutlookHorizon = {
@@ -25,18 +28,15 @@ export type OutlookHorizon = {
 export type Outlook = {
   experiment_id: string; calibrated_at: string; level: number; last_month: string; last_price: number;
   volatility_percent: number; horizons: OutlookHorizon[]; point_rule: string;
+  /** How `volatility_percent` was measured: the method the engine fitted the ranges with (shared/volatility.ts). */
+  volatility: Required<Pick<VolatilitySpec, "vol_window" | "vol_method">> & Pick<VolatilitySpec, "vol_lambda" | "vol_max_returns">;
+  /** The forecast origins whose errors set the range widths, when they come from a longer series than the official prices. */
+  calibration_history?: { price_basis: string; from: string; to: string; series: number } | null;
 };
 
-const MIN_VOL = 0.01;
-
-/**
- * Root-mean-square of the last `window` monthly log returns; null with fewer than half that many. Measured around zero,
- * not the average move, because the point carries the price forward and a steady trend is a move it misses.
- */
+/** Equal-weight volatility of the last `window` monthly log returns (the `rms` method of shared/volatility.ts). */
 export function recentVolatility(prices: number[], window = 12): number | null {
-  const returns = prices.slice(1).map((value, i) => Math.log(value / prices[i])).slice(-window);
-  if (returns.length < window / 2) return null;
-  return Math.max(Math.sqrt(returns.reduce((sum, value) => sum + value ** 2, 0) / returns.length), MIN_VOL);
+  return monthlyVolatility(prices, { vol_window: window });
 }
 
 /** Linear interpolation of the quantile function; the outer tails hold half the remaining probability. */
@@ -63,7 +63,7 @@ export function buildOutlook({ prices, calibration, experimentId, calibratedAt, 
   const observed = prices.filter((row): row is { reporting_month: string; weighted_price: number } => row.weighted_price != null && row.weighted_price > 0)
     .sort((a, b) => a.reporting_month.localeCompare(b.reporting_month));
   const last = observed.at(-1);
-  const vol = recentVolatility(observed.map((row) => row.weighted_price), calibration.vol_window);
+  const vol = monthlyVolatility(observed.map((row) => row.weighted_price), calibration);
   if (!last || vol === null) return null;
   const byMonth = new Map(observed.map((row) => [row.reporting_month, row.weighted_price]));
   const tail = (100 - calibration.level) / 200;
@@ -87,8 +87,13 @@ export function buildOutlook({ prices, calibration, experimentId, calibratedAt, 
         direction_skill: test.climatology_brier > 0 ? 1 - test.direction_brier / test.climatology_brier : null } : null,
     });
   }
+  const history = calibration.calibration;
   return { experiment_id: experimentId, calibrated_at: calibratedAt, level: calibration.level, last_month: last.reporting_month,
-    last_price: last.weighted_price, volatility_percent: vol * 100, horizons, point_rule: calibration.point_rule };
+    last_price: last.weighted_price, volatility_percent: vol * 100, horizons, point_rule: calibration.point_rule,
+    volatility: calibration.vol_method === "ewma"
+      ? { vol_window: calibration.vol_window, vol_method: "ewma", vol_lambda: calibration.vol_lambda, vol_max_returns: calibration.vol_max_returns }
+      : { vol_window: calibration.vol_window, vol_method: "rms" },
+    calibration_history: history?.origins ? { price_basis: history.price_basis, from: history.origins[0], to: history.origins[1], series: history.series } : null };
 }
 
 /** Reads the latest engine calibration and this variety's baselines and validated models, then builds the outlook. */
@@ -102,12 +107,16 @@ export async function loadOutlook(db: D1Database, variety: string, prices: { rep
   const [baselineRows, validatedRows] = await db.batch([
     db.prepare(`SELECT horizon, MIN(baseline_model) AS baseline_model FROM forecast_model_evaluations
       WHERE experiment_id=? AND variety=? GROUP BY horizon`).bind(experiment.id, variety),
-    // A model counts only while its latest event is 'validated', and only with a forecast saved from the latest month.
+    // A model counts only while its latest event is 'validated', and only with a forecast saved from the latest month on
+    // the official monthly basis. Reruns for the same month repeat the forecast; the first one made is used.
     db.prepare(`SELECT p.horizon, p.model, p.median FROM forecast_predictions p
-      JOIN (SELECT series_id, horizon, model, MAX(id) AS id FROM forecast_model_events GROUP BY series_id, horizon, model) e
-        ON e.series_id=p.series_id AND e.horizon=p.horizon AND e.model=p.model
+      JOIN (SELECT series_id, horizon, model, model_version, MAX(id) AS id FROM forecast_model_events
+        GROUP BY series_id, horizon, model, model_version) e
+        ON e.series_id=p.series_id AND e.horizon=p.horizon AND e.model=p.model AND e.model_version=p.model_version
       JOIN forecast_model_events latest ON latest.id=e.id AND latest.event='validated'
-      WHERE p.variety=? AND p.origin_period=?`).bind(variety, last ?? ""),
+      WHERE p.variety=? AND p.origin_period=? AND p.price_basis='MONTHLY_STATE_WEIGHTED_AVERAGE'
+        AND p.id = (SELECT MIN(f.id) FROM forecast_predictions f WHERE f.series_id=p.series_id AND f.horizon=p.horizon
+          AND f.model=p.model AND f.model_version=p.model_version AND f.origin_period=p.origin_period)`).bind(variety, last ?? ""),
   ]) as [D1Result<{ horizon: number; baseline_model: string }>, D1Result<{ horizon: number; model: string; median: number }>];
   return buildOutlook({
     prices, calibration, experimentId: experiment.id, calibratedAt: experiment.created_at,

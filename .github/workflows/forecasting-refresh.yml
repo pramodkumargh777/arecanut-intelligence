@@ -10,6 +10,9 @@ name: Forecasting refresh
 #    ensemble and the market-data models) and publishes it. Publication is safe by design: a model is only ever shown as
 #    better than "last month's price" if it passes the engine's significance gate, and the live outlook's ranges come
 #    from the recalibrated errors.
+# The outlook's range widths are fitted on the 2014+ APMC daily-price series' baseline errors (committed archive in
+# data-platform/forecasting/daily_archive, topped up by long-history-topup.yml), centred on zero, and tested on the
+# official monthly report; forecasts, evaluations and validation stay on the official report (docs/FORECASTING.md).
 # The 20th leaves time for AGMARKNET's monthly report for the previous month to be loaded by the app.
 on:
   schedule:
@@ -99,7 +102,7 @@ jobs:
         run: |
           publish=""
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.publish }}" = "true" ]; then publish="--publish"; fi
-          python -m forecasting run --with-pretrained --with-covariates --sql-export "${{ steps.export.outputs.dump }}" $publish \
+          python -m forecasting run --with-pretrained --with-covariates --outlook-history daily --sql-export "${{ steps.export.outputs.dump }}" $publish \
             | tee "$RUNNER_TEMP/summary.json"
         env:
           ANI_API_URL: ${{ vars.ANI_API_URL }}

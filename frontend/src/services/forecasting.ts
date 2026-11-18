@@ -32,6 +32,8 @@ export type ExperimentMetadata = {
   config?: { horizons: number[]; interval_level?: number };
   /** One-step backtest record per series for the strongest pooled model (absent on experiments before 2026-11-09). */
   track?: { model: string; horizon: number; series: TrackSeries[] };
+  /** Present when the outlook's range widths come from a longer series than the evaluated one (from 2026-11-18). */
+  outlook?: { calibration?: { dataset: string; price_basis: string; origins: [string, string] | null; series: number } };
 };
 
 export type TrackSeries = {
