@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "./index";
+import { referenceState, type Env } from "./env";
 import { bearerMatches } from "./auth";
 
 const nonnegative = z.number().finite().min(0).max(1e12);
@@ -82,13 +82,13 @@ decisionRoutes.get("/decisions/prices", async (c) => {
     FROM cooperative_quotes WHERE status='verified' AND commodity='arecanut' AND average_price>0 ORDER BY source_key,reporting_date DESC,branch,variety`).all();
   const monthly = await c.env.DB.prepare(`SELECT reporting_month,variety_name,weighted_price,refresh_run_id,fetched_at
     FROM monthly_variety_prices WHERE state=? AND reporting_month=(SELECT MAX(reporting_month) FROM monthly_variety_prices WHERE state=?)
-    AND weighted_price>0 ORDER BY variety_name`).bind(c.env.REFERENCE_STATE ?? "Karnataka", c.env.REFERENCE_STATE ?? "Karnataka").all();
+    AND weighted_price>0 ORDER BY variety_name`).bind(referenceState(c.env), referenceState(c.env)).all();
   return c.json({ cooperative: cooperative.results, monthly: monthly.results });
 });
 decisionRoutes.post("/decisions/calculate", async (c) => {
   const input = calculationSchema.safeParse(await c.req.json().catch(() => null));
   if (!input.success) return c.json({ error: "Provide every required input as a finite number in the stated units. Quantities/area/prices must be positive; costs cannot be negative." }, 400);
-  const snapshot = await resolvePrice(c.env.DB, input.data.price, c.env.REFERENCE_STATE ?? "Karnataka");
+  const snapshot = await resolvePrice(c.env.DB, input.data.price, referenceState(c.env));
   if (!snapshot) return c.json({ error: "Selected price was corrected or is no longer published. Reload source prices and select again." }, 409);
   return c.json({ inputs: input.data, price: snapshot, results: calculateDecision(input.data, snapshot), formula_version: FORMULA_VERSION });
 });
@@ -96,7 +96,7 @@ decisionRoutes.post("/admin/decisions", async (c) => {
   if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid reviewer token is required to store private inputs." }, 401);
   const input = calculationSchema.safeParse(await c.req.json().catch(() => null));
   if (!input.success) return c.json({ error: "Invalid calculation inputs." }, 400);
-  const snapshot = await resolvePrice(c.env.DB, input.data.price, c.env.REFERENCE_STATE ?? "Karnataka");
+  const snapshot = await resolvePrice(c.env.DB, input.data.price, referenceState(c.env));
   if (!snapshot) return c.json({ error: "Source price changed. Reload source prices before saving." }, 409);
   const id = crypto.randomUUID(), created = new Date().toISOString(), results = calculateDecision(input.data, snapshot);
   await c.env.DB.prepare(`INSERT INTO decision_calculations

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCalendarDate } from "../../shared/dates";
 
 // Pure supply/production/weather/risk logic. Route handlers live in supply-routes.ts.
 
@@ -103,11 +104,7 @@ export function growthSeries(points: SeriesPoint[]) {
 // ---------------------------------------------------------------------------------------------
 // Dates (market calendar dates are IST date-only values)
 export const istDate = (instant: Date) => new Date(instant.getTime() + 330 * 60_000).toISOString().slice(0, 10);
-export function isCalendarDate(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
-}
+export { isCalendarDate };
 export const addDays = (day: string, days: number) => new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 export const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 export function weekStart(day: string) {

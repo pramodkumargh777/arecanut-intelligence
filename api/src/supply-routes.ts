@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "./index";
+import type { Env } from "./env";
 import { hashText } from "./intelligence-routes";
 import {
   ESTIMATE_TYPES, HAZARDS, IMD_SEASONS, addDays, approvalProblems, bucketSql, collapseVintages, conditionSchema, currentSeries,
@@ -15,7 +15,6 @@ import { LIFECYCLES, sqlStates, statesBefore, statesOf } from "../../shared/life
 import { refusal } from "./lifecycle-guards";
 
 export const supplyRoutes = new Hono<Env>();
-const bearer = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
 const COMMODITY = "arecanut";
 const sha256 = z.string().regex(/^[0-9a-f]{64}$/);
 const https = z.string().url().max(500).refine((value) => value.startsWith("https://"), "Must be an https URL.");
@@ -134,7 +133,7 @@ const productionDocumentSchema = z.object({
 }).strict().refine((value) => (value.publication_date === undefined) === (value.publication_precision === undefined), "publication_date and publication_precision go together.");
 
 supplyRoutes.post("/admin/supply/production/documents", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
   const parsed = productionDocumentSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid production document.", issues: issues(parsed.error) }, 400);
   const doc = parsed.data;
@@ -204,7 +203,7 @@ const arrivalImportSchema = z.object({
 }).strict();
 
 supplyRoutes.post("/ingest/arrivals", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) return c.json({ error: "A valid ingestion token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) return c.json({ error: "A valid ingestion token is required." }, 401);
   const parsed = arrivalImportSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid arrivals import.", issues: issues(parsed.error) }, 400);
   const body = parsed.data, db = c.env.DB;
@@ -565,7 +564,7 @@ const weatherImportSchema = z.object({
 }, "Provide exactly the record list matching the dataset (history, forecasts or warnings).");
 
 supplyRoutes.post("/admin/supply/weather/imports", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
   const parsed = weatherImportSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid weather import.", issues: issues(parsed.error) }, 400);
   const body = parsed.data, db = c.env.DB;
@@ -631,7 +630,7 @@ export function parseArchive(json: unknown, from: string, to: string) {
 }
 
 supplyRoutes.post("/admin/supply/weather/open-meteo-archive", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
   if (c.env.OPEN_METEO_ENABLED === "false") return c.json({ error: "Open-Meteo is disabled for this deployment (OPEN_METEO_ENABLED=false)." }, 409);
   const body = z.object({ from: day, to: day }).strict().safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: "Provide from and to as YYYY-MM-DD.", issues: issues(body.error) }, 400);
@@ -709,7 +708,7 @@ const ruleVersionSchema = z.object({
   .refine((value) => value.citation_status === "unverified" || value.citations.length > 0, "Verified rules need at least one citation.");
 
 supplyRoutes.post("/admin/supply/risk/rules", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
   const parsed = ruleVersionSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid rule version.", issues: issues(parsed.error) }, 400);
   const body = parsed.data, db = c.env.DB;
@@ -734,7 +733,7 @@ const reviewSchema = z.object({
 }).strict();
 
 supplyRoutes.post("/admin/supply/risk/rules/:id/review", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
   const parsed = reviewSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid review.", issues: issues(parsed.error) }, 400);
   const db = c.env.DB, rule = await db.prepare("SELECT * FROM crop_risk_rules WHERE id=?").bind(c.req.param("id")).first<RuleRow>();
@@ -762,7 +761,7 @@ const fieldReportSchema = z.object({
   "palms_affected cannot exceed palms_inspected.");
 
 supplyRoutes.post("/ingest/risk/field-reports", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) return c.json({ error: "A valid ingestion token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) return c.json({ error: "A valid ingestion token is required." }, 401);
   const parsed = fieldReportSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid field report.", issues: issues(parsed.error) }, 400);
   const body = parsed.data;
@@ -777,7 +776,7 @@ supplyRoutes.post("/ingest/risk/field-reports", async (c) => {
 });
 
 supplyRoutes.post("/admin/supply/risk/field-reports/:id/review", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN)) return c.json({ error: "A valid admin token is required." }, 401);
   const parsed = z.object({ decision: z.enum(["verified", "rejected"]), reviewed_by: z.string().trim().min(3).max(200), note: z.string().trim().min(10).max(2000) })
     .strict().safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid review.", issues: issues(parsed.error) }, 400);

@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
 import { isLongBasis, LONG_HISTORY_FROM, MONTHLY_REPORT_FROM } from "../services/intelligence";
-import { toCsv } from "../services/csv";
+import { downloadCsv } from "../services/csvDownload";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { LazyBarChart } from "../components/LazyCharts";
 import { useChartPalette } from "../components/chartPalette";
@@ -20,10 +20,6 @@ const PriceChart = lazy(() => import("../components/PriceChart").then((module) =
 const wholeRupees = (value: number | null) => value === null ? "—" : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 const completed = completedMonthIST;
-function download(rows: (string | number | null)[][], name: string) {
-  const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
-}
 
 const COPY = defineCopy({
   en: {
@@ -257,7 +253,7 @@ export function HistoricalAnalyticsPage() {
         </div>
         <p className="anomaly-rule">{t.anomalyRule(data.anomaly_threshold_percent)} <span className="phone-hide">{t.flagsNote}</span></p>
       </section>
-      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.calendar}</h2><p>{t.calendarHint}</p></div><ExportButton label={t.exportHistory} onClick={() => download([
+      <section className="panel table-panel"><div className="panel-heading"><div><h2>{t.calendar}</h2><p>{t.calendarHint}</p></div><ExportButton label={t.exportHistory} onClick={() => downloadCsv([
         ["month", "weighted_price", "price_unit", "status", "review_flags", "review_explanations", "rolling_3", "rolling_12", "yoy_percent", "volatility_percent", "source_url", "fetched_at", "refresh_run_id"],
         ...data.points.map((row) => [row.reporting_month, row.weighted_price, row.price_unit, row.status, row.review_flags.map((flag) => flag.code).join("; "), row.review_flags.map((flag) => flag.explanation).join("; "), row.rolling_3, row.rolling_12, row.yoy_percent, row.volatility_percent, row.source_url, row.fetched_at, row.refresh_run_id]),
       ], "areca-pulse-monthly-history.csv")} /></div>
@@ -375,7 +371,7 @@ function DailyAggregation() {
     </div>
     <div className="data-disclosure">{t.dailyUnit(source.toUpperCase(), source === "mamcos")}</div>
     {!from || !to ? <ErrorState error={new Error(t.bothDates)} /> : quotes.error ? <ErrorState error={quotes.error} /> : !selectedBranch ? <EmptyState title={t.noCaptured} /> : query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} /> : data && <>
-      <button className="button-secondary" style={{ margin: "12px 0" }} onClick={() => download([["period", "from", "to", "source", "branch", "variety", "mean_average_price", "price_unit", "reporting_days", "calendar_days", "unit_status", "fetched_at"],
+      <button className="button-secondary" style={{ margin: "12px 0" }} onClick={() => downloadCsv([["period", "from", "to", "source", "branch", "variety", "mean_average_price", "price_unit", "reporting_days", "calendar_days", "unit_status", "fetched_at"],
         ...data.data.map((row) => [row.period, row.from, row.to, source, selectedBranch, variety, row.mean_average_price, "INR/quintal", row.reporting_days, row.calendar_days, row.unit_status, row.fetched_at])], "areca-pulse-captured-aggregates.csv")}>{t.exportAggregates}</button>
       {!shown.length ? <EmptyState title={t.noCaptured} /> : <>
       {shown.length < data.data.length && data.observations[0] && <p className="data-disclosure">{t.collectedFrom(format.date(data.observations[0].reporting_date))}</p>}

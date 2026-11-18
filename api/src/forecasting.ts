@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "./index";
+import type { Env } from "./env";
 import { bearerMatches } from "./auth";
 
 // Experimental forecasting engine (data-platform/forecasting). The monthly-baselines-v1 snapshots in
@@ -287,10 +287,8 @@ export async function reconcileForecastOutcomes(db: D1Database) {
 // ---------- Routes ----------
 
 export const forecastingRoutes = new Hono<Env>();
-const bearer = (header: string | undefined, token: string | undefined) => bearerMatches(header, token);
-
 forecastingRoutes.post("/admin/forecasting/experiments", async (c) => {
-  if (!bearer(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) return c.json({ error: "A valid ingestion token is required." }, 401);
+  if (!bearerMatches(c.req.header("Authorization"), c.env.INGESTION_TOKEN)) return c.json({ error: "A valid ingestion token is required." }, 401);
   const parsed = experimentPayloadSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
     return c.json({ error: "Invalid experiment payload.", issues: parsed.error.issues.slice(0, 10).map((i) => `${i.path.join(".")}: ${i.message}`) }, 400);
@@ -406,7 +404,7 @@ forecastingRoutes.get("/forecasting/performance", async (c) => {
 });
 
 const adminOnly = (c: { env: Env["Bindings"]; req: { header: (name: string) => string | undefined } }) =>
-  bearer(c.req.header("Authorization"), c.env.ADMIN_TOKEN);
+  bearerMatches(c.req.header("Authorization"), c.env.ADMIN_TOKEN);
 
 forecastingRoutes.post("/admin/forecasting/reconcile", async (c) => {
   if (!adminOnly(c)) return c.json({ error: "A valid reviewer token is required." }, 401);

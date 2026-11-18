@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCalendarDate } from "../../shared/dates";
 
 export const DASD_SOURCES = {
   production_history: {
@@ -99,9 +100,7 @@ export const weatherSchema = z.object({
   daily_units: z.object({ time: z.literal("iso8601"), temperature_2m_max: z.literal("°C"), temperature_2m_min: z.literal("°C"), precipitation_sum: z.literal("mm"), relative_humidity_2m_mean: z.literal("%").optional() }),
   daily: z.object({ time: z.array(z.string()), temperature_2m_max: z.array(measurement), temperature_2m_min: z.array(measurement), precipitation_sum: z.array(measurement), relative_humidity_2m_mean: z.array(measurement).optional() }),
 });
-export function validDay(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
-}
+export const validDay = isCalendarDate;
 export function parseWeather(body: unknown, fetchedAt: string) {
   const value = weatherSchema.parse(body), daily = value.daily;
   const today = new Date(Date.parse(fetchedAt) + 330 * 60_000).toISOString().slice(0, 10);

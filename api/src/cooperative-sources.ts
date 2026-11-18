@@ -3,8 +3,6 @@ import { calendarTodayIST, calendarDateToTime, DAY_MS } from "../../shared/dates
 import type { CooperativeSource } from "./cooperative";
 import { isStale, LIFECYCLES } from "../../shared/lifecycles";
 
-export const COOPERATIVE_SOURCES = ["mamcos", "tss", "tumcos", "tms"] as const;
-
 export type CooperativeSourceRecord = {
   source_key: CooperativeSource; display_name: string; operator: string; source_url: string; access_method: string;
   commodities: string; robots_status: string; terms_status: string;

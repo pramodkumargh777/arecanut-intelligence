@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../services/api";
-import { toCsv } from "../services/csv";
+import { downloadCsv } from "../services/csvDownload";
 import type { Production, Trade, Weather, Bulletin, Evidence, ModuleDomain } from "../services/modules";
 import { EmptyState, ErrorState, LoadingState } from "../components/State";
 import { defaultGeography } from "../services/intelligence";
@@ -103,10 +103,6 @@ export function IntelligenceNavigation({ current }: { current: string }) {
   return <nav className="module-navigation" aria-label={t.modules}>{visible.map((domain) => <Link key={domain} to={`/intelligence/${domain}`} aria-current={current === domain ? "page" : undefined}>{t.tabs[domain]}</Link>)}</nav>;
 }
 const number = (value: number | null, missing: string) => value === null ? missing : value.toLocaleString("en-IN", { maximumFractionDigits: 3 });
-export function exportModule(rows: (string | number | null)[][], name: string) {
-  const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" }));
-  const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url);
-}
 function EvidenceCell({ row }: { row: Evidence }) {
   const t = useCopy(COPY);
   const format = useFormat();
@@ -140,7 +136,7 @@ export function IntelligencePage() {
     const header = domain === "production" ? ["period", "geography", "estimate_status", "area_thousand_hectares", "production_thousand_tonnes", "yield_kg_hectare"]
       : domain === "trade" ? ["period", "partner", "direction", "quantity_tonnes", "value_inr_lakh"] : domain === "weather" ? ["date", "kind_at_capture", "maximum_c", "minimum_c", "precipitation_mm", "grid_latitude", "grid_longitude"]
       : ["release_id", "title", "published_on"];
-    exportModule([[...header, "source_url", "publication_period", "fetched_at", "capture_id", "content_hash"],
+    downloadCsv([[...header, "source_url", "publication_period", "fetched_at", "capture_id", "content_hash"],
       ...filtered.map((row) => {
         const values = "geography" in row ? [row.period, row.geography, row.estimate_status, row.area_thousand_hectares, row.production_thousand_tonnes, row.yield_kg_hectare]
           : "partner" in row ? [row.period, row.partner, row.direction, row.quantity_tonnes, row.value_inr_lakh]

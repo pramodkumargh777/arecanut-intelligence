@@ -13,7 +13,7 @@ import { LONG_BASIS } from "../history";
 import { searchDocuments, pageLabel, queryTerms } from "./retrieval";
 import type { EmbeddingProvider } from "./providers";
 import type { Language } from "./language";
-import { TOOL_NAMES, type Fact, type SourceRef, type ToolName, type ToolResult } from "./types";
+import { TOOL_NAMES, type SourceRef, type ToolName, type ToolResult } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = any;

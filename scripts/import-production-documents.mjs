@@ -18,10 +18,18 @@ function askHidden(prompt) {
 if (!process.stdin.isTTY) throw new Error("Run this in a terminal so it can ask for the admin token.");
 const token = await askHidden("Admin token: ");
 if (!token) throw new Error("No token entered.");
+let failed = false;
 for (const file of readdirSync(folder).filter((name) => name.endsWith(".json")).sort()) {
-  const response = await fetch(`${base}/admin/supply/production/documents`, {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: readFileSync(new URL(file, folder), "utf8"),
-  });
-  console.log(file, response.status, await response.text());
+  try {
+    const response = await fetch(`${base}/admin/supply/production/documents`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: readFileSync(new URL(file, folder), "utf8"), signal: AbortSignal.timeout(120_000),
+    });
+    console.log(file, response.status, await response.text());
+  } catch (error) {
+    // Safe to rerun: the API answers "already_imported" for a document whose content it has stored.
+    failed = true;
+    console.error(`${file}: FAILED: ${error.message}`);
+  }
 }
+if (failed) process.exitCode = 1;

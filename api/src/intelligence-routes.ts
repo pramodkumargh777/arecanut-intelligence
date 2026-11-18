@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "./index";
+import type { Env } from "./env";
 import { DASD_SOURCES, SIRSI_WEATHER_URL, PIB_RELEASES, DASD_NEWS_URL, parseDasd, pdfItemSchema, parseWeather, parsePib, parsePibExport, parseDasdNews, validDay } from "./intelligence-sources";
 import { bearerMatches } from "./auth";
 import { LIFECYCLES, sqlStates, statesBefore } from "../../shared/lifecycles";
