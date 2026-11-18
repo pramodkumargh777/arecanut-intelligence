@@ -22,6 +22,7 @@ import hashlib
 import html
 import http.cookiejar
 import json
+import os
 import re
 import socket
 import ssl
@@ -58,6 +59,19 @@ class SourceError(RuntimeError):
     """KRAMA could not be reached or answered with a page this connector does not recognise."""
 
 
+def load_env_file(path: Path) -> dict[str, str]:
+    """KEY=VALUE lines from ``path``; variables already set in the environment win. The same rule as the AGMARKNET
+    connectors, kept here so this package needs nothing outside the standard library."""
+    values: dict[str, str] = {}
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                values[key.strip()] = value.strip().strip('"').strip("'")
+    return {**values, **os.environ}
+
+
 def today_ist() -> date:
     return datetime.now(IST).date()
 
@@ -81,7 +95,7 @@ class Session:
                  opener: Any = None, sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
                  relay_token: str | None = None):
         self.base_url = base_url.rstrip("/") + "/"
-        # Only ANI's own relay (api/src/agmarknet-relay.ts) gets the token; KRAMA itself never sees it.
+        # Only a proxy in front of KRAMA (KRAMA_BASE_URL) gets the token; KRAMA itself never sees it.
         self.relay_token = relay_token if urllib.parse.urlsplit(self.base_url).hostname != urllib.parse.urlsplit(BASE_URL).hostname else None
         self.opener = opener or urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         self.min_interval, self.timeout, self.retries = min_interval, timeout, retries
@@ -128,6 +142,10 @@ class Session:
         try:
             with self.opener.open(urllib.request.Request(self.base_url + "Reports/Main_rep", headers=headers), timeout=timeout) as response:
                 page = response.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as error:
+            detail = error.read().decode("utf-8", "replace")[:120].strip()
+            hint = " (the relay could not connect to KRAMA)" if error.code in (502, 504, 522, 523, 524) else ""
+            raise SourceError(f"KRAMA is not reachable at {self.base_url}: HTTP {error.code} {detail}{hint}") from None
         except Exception as error:  # noqa: BLE001 - any failure means the run cannot proceed
             raise SourceError(f"KRAMA is not reachable at {self.base_url}: {getattr(error, 'reason', error)}") from None
         if "__VIEWSTATE" not in page:

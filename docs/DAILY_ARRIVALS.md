@@ -4,7 +4,7 @@ Connectors: [`data-platform/connectors/krama/`](../data-platform/connectors/kram
 [`agmarknet_v2/run_daily_arrivals.py`](../data-platform/connectors/agmarknet_v2/run_daily_arrivals.py).
 API: [`api/src/daily-arrivals.ts`](../api/src/daily-arrivals.ts).
 Schema: [`0027_daily_arrivals.sql`](../api/migrations/0027_daily_arrivals.sql).
-Schedule: [`.github/workflows/krama-arrivals.yml`](../.github/workflows/krama-arrivals.yml).
+Workflow (twice daily, on a self-hosted runner in India): [`.github/workflows/krama-arrivals.yml`](../.github/workflows/krama-arrivals.yml).
 
 This adds market, day, variety and grade arrival quantities. It is additive only:
 
@@ -22,7 +22,7 @@ This adds market, day, variety and grade arrival quantities. It is additive only
 | Access | Public, no login or CAPTCHA | Needs an AGMARKNET login token (guest login lasts about 1 hour and cannot be renewed) or a solved CAPTCHA |
 | Content | Market, variety, grade, arrivals, **unit (Quintal)**, min/max/modal price, for one date | Market, date, variety, arrivals (Metric Tonnes), min/max/modal price, for one month; no grade or district |
 | History | At least 2014 | 2021 onward (saved for January 2021 to October 2026) |
-| Automation | Scheduled (unattended) | Manual, during an operator's logged-in session |
+| Automation | Twice daily on a self-hosted runner in India (KRAMA only answers Indian IP addresses) | Manual, during an operator's logged-in session |
 
 KRAMA is the state system the APMCs report into, and AGMARKNET's Karnataka figures come from it. The two sources were
 checked against each other and against AGMARKNET's monthly totals:
@@ -90,21 +90,42 @@ Both need `ANI_API_URL` and `INGESTION_TOKEN`; apply migration 0027 first.
 - **Saved AGMARKNET months.** They are in `data/raw/agmarknet-v2-daily/` (git-ignored), with a `manifest.json` holding
   each file's SHA-256. The importer refuses a file whose hash differs.
 
-**Schedule.** `krama-arrivals.yml` runs at 21:30 and 09:30 IST. Each run re-reads the last 7 days, then backfills older
-dates, up to `KRAMA_BACKFILL_REQUESTS` (default 900, about 300 dates).
+### Where it can run
 
-- **Backfill length:** going back to 2014 takes about two weeks of runs.
-- **Requirements:** `ANI_API_URL` and `INGESTION_TOKEN`.
-- **Stopping it:** set `KRAMA_ARRIVALS_ENABLED=false`.
-- **Relay:** KRAMA does not answer GitHub's runners (checked 2026-11-18), so the workflow goes through the Mumbai relay
-  Worker that already serves data.gov.in ([`agmarknet-relay.ts`](../api/src/agmarknet-relay.ts), deployed with the API).
-  - **Where it points:** unless `KRAMA_BASE_URL` is set, the workflow checks KRAMA directly and, if it does not answer,
-    uses `AGMARKNET_API_BASE_URL` with `/resource` replaced by `/krama/`.
-  - **What it allows:** only KRAMA's report pages, with the ingestion token in `X-ANI-Relay-Token` (never sent to KRAMA).
-    The session cookie and redirects pass through, so the pages come back exactly as KRAMA serves them.
-  - **Provenance:** documents always name KRAMA's own URL, not the relay's.
-- **Fail fast:** each run first makes one quick request to KRAMA, and stops after 3 dates in a row fail, so an
-  unreachable KRAMA fails in seconds rather than at the job's time limit. Progress is logged per date.
+KRAMA only answers Indian IP addresses. On 2026-11-18, probes from data centres in Mumbai and Rajpura got HTTP 200 in
+0.3 s. Probes from Germany, Singapore and the US timed out, as did GitHub's runners (20 s) and Cloudflare Workers (HTTP
+522). The workflow therefore runs on a self-hosted GitHub runner in India:
+
+- **Runner.** `krama-oracle`, label `krama-india`, on an Oracle Cloud Always Free VM in India West (Mumbai):
+  VM.Standard.E2.1.Micro, Ubuntu 24.04, 1 GB RAM plus a 2 GB swap file.
+  - It runs as the systemd service `actions.runner.pramodkumargh777-arecanut-intelligence.krama-oracle`, under the user
+    `ghrunner`, which has no sudo rights.
+  - The VM holds nothing else.
+- **Workflow.** `krama-arrivals.yml` runs at 21:30 and 09:30 IST, and on request, on the runner named by the repository
+  variable `KRAMA_RUNNER` (`krama-india`).
+  - Scheduled runs are skipped while `KRAMA_RUNNER` is unset.
+  - `KRAMA_BASE_URL` can point at a proxy instead. The connector then sends the ingestion token to that proxy only, and
+    documents always name KRAMA's own URL.
+- **Public repository.** Fork pull requests from any outside contributor need approval before their workflows run
+  (`fork-pr-contributor-approval` = `all_external_contributors`). Only `krama-arrivals.yml` uses the `krama-india`
+  label.
+- **Fail fast.** Each run first makes one quick request to KRAMA, and stops after 3 dates in a row fail. Progress is
+  logged per date.
+- **If the runner is down,** the daily rows end at the last successful run. Monthly and weekly figures still come from
+  AGMARKNET 2.0 on GitHub's own runners, for every closed month without daily rows.
+
+**Looking after the VM:**
+
+- **Idle reclamation.** Oracle may stop idle Always Free VMs (95th-percentile CPU below 20% over 7 days). Upgrading the
+  account to Pay As You Go prevents this; Always Free resources stay free. If the VM is stopped, start it again in the
+  Oracle console; the runner service starts with it.
+- **Access.** `ssh -i ~/.ssh/krama-oracle.key ubuntu@<public IP>`
+- **Runner status:** run `sudo systemctl status 'actions.runner.*'`, or check GitHub → Settings → Actions → Runners.
+- **Replacing the VM:**
+  1. Create a new VM in an Indian region and check that `curl https://krama.karnataka.gov.in/Reports/Main_rep` returns
+     200.
+  2. Register a runner with the label `krama-india`.
+  3. Remove the old runner in GitHub.
 
 ## Reading
 
@@ -162,8 +183,8 @@ The page should never show a mix of sources while history is still loading. Do i
 4. **Check the stored data before readers see it.** Use `GET /api/v1/supply/arrival-days?from=…&to=…` and
    `GET /api/v1/supply/arrival-periods`.
 5. **Switch the page on.** Set both `*_IN_SUPPLY` flags to `"true"` in `api/wrangler.toml` and deploy again.
-6. **Leave the rest to the schedules.** `krama-arrivals.yml` keeps the recent days current and fills older history back
-   to 2014 over the following days, a month at a time.
+6. **Keep KRAMA current.** `krama-arrivals.yml` runs twice a day on the Indian runner (see "Where it can run"). Each run
+   keeps the recent days current and fills older history back to 2014, a month at a time.
 7. **Optional:** import the saved AGMARKNET date-wise months (`run_daily_arrivals.py --from-dir …`) once the KRAMA
    backfill has passed 2021. They only fill dates KRAMA does not cover.
 
@@ -172,7 +193,7 @@ For local development, `api/.dev.vars` (git-ignored) sets both flags to `true`.
 ## Rollback
 
 1. Set `DAILY_ARRIVALS_IN_SUPPLY = "false"`.
-2. Stop imports with `DAILY_ARRIVALS_IMPORT_ENABLED = "false"` or `KRAMA_ARRIVALS_ENABLED=false`.
+2. Stop imports with `DAILY_ARRIVALS_IMPORT_ENABLED = "false"`.
 3. To remove everything, use the statements at the top of migration 0027.
 
 ## Limitations

@@ -1,11 +1,11 @@
 name: KRAMA daily arrivals
 
-# Daily arecanut arrivals from KRAMA, the Karnataka Department of Agricultural Marketing's public market information
-# system (docs/DAILY_ARRIVALS.md). No login or CAPTCHA. Each run:
-# 1. re-reads the last 7 days (3 page requests per day, 2 s apart), so late uploads and corrections are picked up;
-# 2. backfills dates not stored yet, newest first, back to 2014-01-01, within KRAMA_BACKFILL_REQUESTS requests per run
-#    (default 900, about 300 dates and 30 minutes); once everything is stored it does nothing more.
-# Set the repository variable KRAMA_ARRIVALS_ENABLED to "false" to stop it.
+# KRAMA (the Karnataka Department of Agricultural Marketing's market information system) only answers Indian IP addresses:
+# GitHub's runners and Cloudflare time out (checked 2026-11-18). So the job runs on the self-hosted runner named by the
+# KRAMA_RUNNER repository variable (the "krama-india" runner on an Oracle Always Free VM in Mumbai; docs/DAILY_ARRIVALS.md).
+# Scheduled runs are skipped while KRAMA_RUNNER is unset. Each run re-reads the last 7 days, then backfills dates not
+# stored yet back to 2014-01-01 within KRAMA_BACKFILL_REQUESTS requests (default 900). It checks KRAMA first and stops at
+# once if KRAMA does not answer. Set KRAMA_ARRIVALS_ENABLED to "false" to stop it.
 on:
   schedule:
     - cron: "0 16 * * *"  # 21:30 IST, after the day's markets have reported
@@ -26,8 +26,8 @@ concurrency:
 
 jobs:
   arrivals:
-    if: ${{ vars.ANI_API_URL != '' && vars.KRAMA_ARRIVALS_ENABLED != 'false' }}
-    runs-on: ubuntu-latest
+    if: ${{ vars.ANI_API_URL != '' && vars.KRAMA_ARRIVALS_ENABLED != 'false' && (github.event_name != 'schedule' || vars.KRAMA_RUNNER != '') }}
+    runs-on: ${{ vars.KRAMA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -48,19 +48,6 @@ jobs:
       - name: Import Karnataka arecanut daily arrivals (KRAMA)
         if: steps.credentials.outputs.configured == 'true'
         run: |
-          # KRAMA does not answer GitHub's runners (checked 2026-11-18), so unless KRAMA_BASE_URL is set the run goes
-          # through the Mumbai relay that already serves data.gov.in (AGMARKNET_API_BASE_URL .../resource -> .../krama/).
-          if [ -z "$KRAMA_BASE_URL" ]; then
-            if curl -sS -m 20 -o /dev/null https://krama.karnataka.gov.in/Reports/Main_rep; then
-              echo "KRAMA answers this runner directly."
-            elif [ -n "$AGMARKNET_API_BASE_URL" ]; then
-              export KRAMA_BASE_URL="${AGMARKNET_API_BASE_URL%/resource}/krama/"
-              echo "KRAMA does not answer this runner; using the relay."
-            else
-              echo "::error::KRAMA does not answer this runner and no relay is set (KRAMA_BASE_URL or AGMARKNET_API_BASE_URL)."
-              exit 1
-            fi
-          fi
           args=(--env-file /dev/null --report-dir "$RUNNER_TEMP/krama-arrivals" --recent-days 7 --backfill-from 2014-01-01
                 --backfill-requests "${KRAMA_BACKFILL_REQUESTS:-900}")
           if [ "${{ inputs.dry_run }}" = "true" ]; then args+=(--dry-run); fi
@@ -68,7 +55,6 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
           KRAMA_BASE_URL: ${{ vars.KRAMA_BASE_URL }}
-          AGMARKNET_API_BASE_URL: ${{ vars.AGMARKNET_API_BASE_URL }}
           KRAMA_BACKFILL_REQUESTS: ${{ vars.KRAMA_BACKFILL_REQUESTS }}
           INGESTION_TOKEN: ${{ secrets.INGESTION_TOKEN }}
           ANI_API_URL: ${{ vars.ANI_API_URL }}

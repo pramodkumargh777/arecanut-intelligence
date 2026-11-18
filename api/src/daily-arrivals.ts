@@ -1,7 +1,7 @@
 /**
  * Daily arecanut arrivals (docs/DAILY_ARRIVALS.md), from two sources:
  * - krama_arrivals: KRAMA's public Commoditywise Daily Report (Department of Agricultural Marketing, Karnataka), fetched
- *   by data-platform/connectors/krama. The unattended daily source.
+ *   by data-platform/connectors/krama. The primary daily source; it must run from a network KRAMA accepts.
  * - agmarknet_v2_daily: AGMARKNET 2.0's date-wise report, fetched in an operator's logged-in session
  *   (data-platform/connectors/agmarknet_v2/run_daily_arrivals.py). Secondary.
  *

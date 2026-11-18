@@ -97,7 +97,7 @@ Backfills also write `backfill_summary.json`. Exit code 2 means the run failed.
 - The relay serves GET requests for this one resource only and needs `INGESTION_TOKEN` in the `X-ANI-Relay-Token` header, so that secret must match on the relay, the main API and GitHub. The token is never sent to data.gov.in.
 - Deploy it with `npx wrangler deploy --config api/wrangler.relay.toml`. Keep its logging off, because the data.gov.in key is in the request URL.
 - The entry module is `api/src/relay-worker.ts`, which exports only the handler. The Workers runtime treats every named export of an entry module as an entrypoint, and current `wrangler dev` refuses plain constants.
-- The same relay also serves KRAMA's report pages under `/krama/` ([DAILY_ARRIVALS.md](DAILY_ARRIVALS.md)).
+- KRAMA is not relayed: it refuses Cloudflare's connections too (HTTP 522); see [DAILY_ARRIVALS.md](DAILY_ARRIVALS.md).
 
 **Status.** `GET /api/v1/admin/source-status` (ADMIN_TOKEN) and the
 *Data-source status* panel in Data quality show the latest Karnataka market

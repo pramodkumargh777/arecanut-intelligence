@@ -4,7 +4,7 @@
 and prices, but only with a logged-in AGMARKNET session or a solved CAPTCHA. It is therefore a secondary source: the
 connector imports responses saved during an operator session (``--from-dir``), or fetches while
 ``AGMARKNET_V2_ACCESS_TOKEN`` holds a live session token (``--fetch``). The token is never stored or logged. KRAMA
-(connectors/krama) is the unattended daily source.
+(connectors/krama) is the primary daily source.
 
 Examples:
   .venv/bin/python data-platform/connectors/agmarknet_v2/run_daily_arrivals.py --from-dir data/raw/agmarknet-v2-daily
