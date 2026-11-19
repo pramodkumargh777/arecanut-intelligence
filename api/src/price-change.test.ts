@@ -35,10 +35,10 @@ describe("change from a branch's previous report", () => {
 describe("market breadth", () => {
   const change = (amount: number, percent: number) => ({ amount, percent, previous_date: "2026-11-02", previous_price: 46000 });
   it("counts rises and falls and takes the middle change, leaving out branches with no earlier report", () => {
-    expect(marketBreadth([change(100, 1), change(200, 3), change(-50, -0.5), null])).toEqual({ up: 2, down: 1, flat: 0, median_percent: 1 });
-    expect(marketBreadth([change(100, 1), change(0, 0)])).toEqual({ up: 1, down: 0, flat: 1, median_percent: 0.5 });
+    expect(marketBreadth([change(100, 1), change(200, 3), change(-50, -0.5), null])).toEqual({ up: 2, down: 1, flat: 0, median_percent: 1, median_amount: 100 });
+    expect(marketBreadth([change(100, 1), change(0, 0)])).toEqual({ up: 1, down: 0, flat: 1, median_percent: 0.5, median_amount: 50 });
   });
   it("has no median when nothing can be compared", () => {
-    expect(marketBreadth([null, null])).toEqual({ up: 0, down: 0, flat: 0, median_percent: null });
+    expect(marketBreadth([null, null])).toEqual({ up: 0, down: 0, flat: 0, median_percent: null, median_amount: null });
   });
 });

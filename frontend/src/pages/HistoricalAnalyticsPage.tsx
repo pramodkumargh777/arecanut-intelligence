@@ -77,13 +77,13 @@ const COPY = defineCopy({
     daily: "Weekly / monthly captured daily quotations", dailyHint: "Partial captured history only. Never converts official monthly reports into daily observations.",
     dailySource: "Daily source", dailyVariety: "Daily exact variety", noRecords: "No records", aggregation: "Aggregation", weekly: "Weekly (Monday start)", monthly: "Monthly",
     fromDay: "From day", throughDay: "Through day",
-    dailyUnit: (source: string, confirmed: boolean) => `${source} · INR/quintal${confirmed ? " — source-confirmed" : " — operator assumption"} · Coverage is captured reporting days / calendar days, not complete trading days.`,
+    dailyUnit: (source: string) => `${source} · INR/quintal · Coverage is captured reporting days / calendar days, not complete trading days.`,
     bothDates: "Select both daily aggregation dates.", noCaptured: "No captured quotations for this selection", exportAggregates: "Export aggregates CSV",
     aggregatesAria: "Captured daily aggregates", aggregatesCaption: "Equal-weight average of captured daily branch averages; empty periods remain empty",
     collectedFrom: (date: string) => `Rates from ${date}, when collection began. Earlier periods have no captured rates.`,
     meanShort: "Mean ₹/qtl", minShort: "Min", maxShort: "Max", reportedMissingShort: "Days / missing",
     period: "Period", mean: "Mean · INR/qtl", minDaily: "Min daily average", maxDaily: "Max daily average", reportedMissing: "Reported / missing dates", noCapturedRecord: "No captured record",
-    dailyMethodology: (assumed: boolean) => `Equal-weight arithmetic mean of captured daily reported averages for one exact variety and branch. Coverage is observed days / calendar days in the selected range, not a claim about trading-day completeness. No interpolation or volume weighting.${assumed ? " TSS and TUMCOS INR/quintal is an operator assumption." : ""} Not the official monthly arrival-weighted report.`,
+    dailyMethodology: `Equal-weight arithmetic mean of captured daily reported averages for one exact variety and branch. Coverage is observed days / calendar days in the selected range, not a claim about trading-day completeness. No interpolation or volume weighting. Not the official monthly arrival-weighted report.`,
     underlying: (n: number) => `Underlying source observations (${n})`,
   },
   kn: {
@@ -149,13 +149,13 @@ const COPY = defineCopy({
     daily: "ಸಂಗ್ರಹಿಸಿದ ದೈನಂದಿನ ದರಗಳ ವಾರ / ತಿಂಗಳ ಸರಾಸರಿ", dailyHint: "ಸಂಗ್ರಹಿಸಿದ ಭಾಗಶಃ ಇತಿಹಾಸ ಮಾತ್ರ. ಅಧಿಕೃತ ತಿಂಗಳ ವರದಿಗಳನ್ನು ದೈನಂದಿನ ದಾಖಲೆಗಳಾಗಿ ಎಂದೂ ಪರಿವರ್ತಿಸುವುದಿಲ್ಲ.",
     dailySource: "ದೈನಂದಿನ ಮೂಲ", dailyVariety: "ದೈನಂದಿನ ನಿಖರ ತಳಿ", noRecords: "ದಾಖಲೆಗಳಿಲ್ಲ", aggregation: "ಸರಾಸರಿಯ ಅವಧಿ", weekly: "ವಾರಕ್ಕೊಮ್ಮೆ (ಸೋಮವಾರದಿಂದ)", monthly: "ತಿಂಗಳಿಗೊಮ್ಮೆ",
     fromDay: "ಇಂದ (ದಿನ)", throughDay: "ವರೆಗೆ (ದಿನ)",
-    dailyUnit: (source: string, confirmed: boolean) => `${source} · ₹/ಕ್ವಿಂಟಾಲ್${confirmed ? " — ಮೂಲದಿಂದ ದೃಢಪಟ್ಟಿದೆ" : " — ನಿರ್ವಾಹಕರ ಊಹೆ"} · ವ್ಯಾಪ್ತಿ = ಸಂಗ್ರಹಿಸಿದ ವರದಿ ದಿನಗಳು / ಕ್ಯಾಲೆಂಡರ್ ದಿನಗಳು, ಸಂಪೂರ್ಣ ವಹಿವಾಟು ದಿನಗಳಲ್ಲ.`,
+    dailyUnit: (source: string) => `${source} · ₹/ಕ್ವಿಂಟಾಲ್ · ವ್ಯಾಪ್ತಿ = ಸಂಗ್ರಹಿಸಿದ ವರದಿ ದಿನಗಳು / ಕ್ಯಾಲೆಂಡರ್ ದಿನಗಳು, ಸಂಪೂರ್ಣ ವಹಿವಾಟು ದಿನಗಳಲ್ಲ.`,
     bothDates: "ಎರಡೂ ದಿನಾಂಕಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ.", noCaptured: "ಈ ಆಯ್ಕೆಗೆ ಸಂಗ್ರಹಿಸಿದ ದರಗಳಿಲ್ಲ", exportAggregates: "ಸರಾಸರಿಗಳ CSV ಡೌನ್‌ಲೋಡ್",
     aggregatesAria: "ಸಂಗ್ರಹಿಸಿದ ದೈನಂದಿನ ಸರಾಸರಿಗಳು", aggregatesCaption: "ಸಂಗ್ರಹಿಸಿದ ದೈನಂದಿನ ಶಾಖೆ ಸರಾಸರಿಗಳ ಸಮಾನ ತೂಕದ ಸರಾಸರಿ; ಖಾಲಿ ಅವಧಿಗಳು ಖಾಲಿಯಾಗಿಯೇ ಇರುತ್ತವೆ",
     collectedFrom: (date: string) => `${date}ರಿಂದ ದರಗಳು, ಸಂಗ್ರಹ ಆರಂಭವಾದಾಗಿನಿಂದ. ಹಿಂದಿನ ಅವಧಿಗಳಿಗೆ ಸಂಗ್ರಹಿಸಿದ ದರಗಳಿಲ್ಲ.`,
     meanShort: "ಸರಾಸರಿ ₹/ಕ್ವಿಂ", minShort: "ಕನಿಷ್ಠ", maxShort: "ಗರಿಷ್ಠ", reportedMissingShort: "ದಿನ / ಇಲ್ಲದ",
     period: "ಅವಧಿ", mean: "ಸರಾಸರಿ · ₹/ಕ್ವಿಂ", minDaily: "ಕನಿಷ್ಠ ದೈನಂದಿನ ಸರಾಸರಿ", maxDaily: "ಗರಿಷ್ಠ ದೈನಂದಿನ ಸರಾಸರಿ", reportedMissing: "ವರದಿಯಾದ / ಇಲ್ಲದ ದಿನಗಳು", noCapturedRecord: "ಸಂಗ್ರಹಿಸಿದ ದಾಖಲೆ ಇಲ್ಲ",
-    dailyMethodology: (assumed: boolean) => `ಒಂದು ನಿಖರ ತಳಿ ಮತ್ತು ಶಾಖೆಗೆ ಸಂಗ್ರಹಿಸಿದ ದೈನಂದಿನ ವರದಿಯಾದ ಸರಾಸರಿಗಳ ಸಮಾನ ತೂಕದ ಸರಾಸರಿ. ವ್ಯಾಪ್ತಿ = ದಾಖಲಾದ ದಿನಗಳು / ಆಯ್ದ ಅವಧಿಯ ಕ್ಯಾಲೆಂಡರ್ ದಿನಗಳು. ಖಾಲಿ ಜಾಗ ತುಂಬುವುದಿಲ್ಲ, ಪ್ರಮಾಣದ ತೂಕ ಇಲ್ಲ.${assumed ? " TSS ಮತ್ತು TUMCOS ₹/ಕ್ವಿಂಟಾಲ್ ನಿರ್ವಾಹಕರ ಊಹೆ." : ""} ಇದು ಅಧಿಕೃತ ತಿಂಗಳ ಆವಕ ಆಧಾರಿತ ವರದಿಯಲ್ಲ.`,
+    dailyMethodology: `ಒಂದು ನಿಖರ ತಳಿ ಮತ್ತು ಶಾಖೆಗೆ ಸಂಗ್ರಹಿಸಿದ ದೈನಂದಿನ ವರದಿಯಾದ ಸರಾಸರಿಗಳ ಸಮಾನ ತೂಕದ ಸರಾಸರಿ. ವ್ಯಾಪ್ತಿ = ದಾಖಲಾದ ದಿನಗಳು / ಆಯ್ದ ಅವಧಿಯ ಕ್ಯಾಲೆಂಡರ್ ದಿನಗಳು. ಖಾಲಿ ಜಾಗ ತುಂಬುವುದಿಲ್ಲ, ಪ್ರಮಾಣದ ತೂಕ ಇಲ್ಲ. ಇದು ಅಧಿಕೃತ ತಿಂಗಳ ಆವಕ ಆಧಾರಿತ ವರದಿಯಲ್ಲ.`,
     underlying: (n: number) => `ಮೂಲ ದಾಖಲೆಗಳು (${n})`,
   },
 });
@@ -369,14 +369,14 @@ function DailyAggregation() {
       <label className="filter-control"><span>{t.fromDay}</span><input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label>
       <label className="filter-control"><span>{t.throughDay}</span><input type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label>
     </div>
-    <div className="data-disclosure">{t.dailyUnit(source.toUpperCase(), source === "mamcos")}</div>
+    <div className="data-disclosure">{t.dailyUnit(source.toUpperCase())}</div>
     {!from || !to ? <ErrorState error={new Error(t.bothDates)} /> : quotes.error ? <ErrorState error={quotes.error} /> : !selectedBranch ? <EmptyState title={t.noCaptured} /> : query.isLoading ? <LoadingState /> : query.error ? <ErrorState error={query.error} /> : data && <>
       <button className="button-secondary" style={{ margin: "12px 0" }} onClick={() => downloadCsv([["period", "from", "to", "source", "branch", "variety", "mean_average_price", "price_unit", "reporting_days", "calendar_days", "unit_status", "fetched_at"],
         ...data.data.map((row) => [row.period, row.from, row.to, source, selectedBranch, variety, row.mean_average_price, "INR/quintal", row.reporting_days, row.calendar_days, row.unit_status, row.fetched_at])], "areca-pulse-captured-aggregates.csv")}>{t.exportAggregates}</button>
       {!shown.length ? <EmptyState title={t.noCaptured} /> : <>
       {shown.length < data.data.length && data.observations[0] && <p className="data-disclosure">{t.collectedFrom(format.date(data.observations[0].reporting_date))}</p>}
       <div className="table-scroll" tabIndex={0} role="region" aria-label={t.aggregatesAria}><table className="aggregate-table"><caption>{t.aggregatesCaption}</caption><thead><tr><th>{t.period}</th><th className="numeric">{dual(t.mean, t.meanShort)}</th><th className="numeric">{dual(t.minDaily, t.minShort)}</th><th className="numeric">{dual(t.maxDaily, t.maxShort)}</th><th className="numeric">{dual(t.reportedMissing, t.reportedMissingShort)}</th><th>{t.fetchedAt}</th></tr></thead><tbody>{shown.map((row) => <tr key={row.period}><td>{dual(`${format.date(row.from)} – ${format.date(row.to)}`, shortPeriod(row.from, row.to, t.months, interval === "monthly"))}</td><td className="numeric">{number(row.mean_average_price)}</td><td className="numeric">{number(row.minimum_average)}</td><td className="numeric">{number(row.maximum_average)}</td><td className="numeric">{row.reporting_days} / {row.calendar_days - row.reporting_days}</td><td>{row.fetched_at ? format.timestamp(row.fetched_at) : t.noCapturedRecord}</td></tr>)}</tbody></table></div></>}
-      <div className="monthly-details"><p className="phone-hide">{t.dailyMethodology(source !== "mamcos")}</p><details><summary>{t.underlying(data.observations.length)}</summary>{data.observations.map((row) => <p key={row.reporting_date}>{format.date(row.reporting_date)} · {number(row.average_price)} · <a href={row.source_url} target="_blank" rel="noreferrer">{c.source}</a> · {t.platformFetched(format.timestamp(row.fetched_at))}</p>)}</details></div>
+      <div className="monthly-details"><p className="phone-hide">{t.dailyMethodology}</p><details><summary>{t.underlying(data.observations.length)}</summary>{data.observations.map((row) => <p key={row.reporting_date}>{format.date(row.reporting_date)} · {number(row.average_price)} · <a href={row.source_url} target="_blank" rel="noreferrer">{c.source}</a> · {t.platformFetched(format.timestamp(row.fetched_at))}</p>)}</details></div>
     </>}
   </section>;
 }

@@ -48,6 +48,9 @@ export const MARKET_PLACES: MarketPlace[] = [
   { slug: "honnavar", en: "Honnavar", kn: "ಹೊನ್ನಾವರ", district: UTTARA_KANNADA, branches: {}, apmc: "Honnavar APMC" },
 ];
 
+/** Varieties a source's card lists before "Show all": the three most growers sell come first in catalogue order. */
+export const CARD_VARIETIES = 3;
+
 export const MARKETS_PATH = "/market";
 export const marketPath = (slug: string) => `${MARKETS_PATH}/${slug}`;
 export const marketFromPath = (path: string) => path.startsWith(`${MARKETS_PATH}/`) ? MARKET_PLACES.find((place) => marketPath(place.slug) === path) : undefined;

@@ -41,12 +41,12 @@ const COPY = defineCopy({
       farm: { title: "Farm profitability", hint: "Use total costs and area attributable to the supplied saleable harvest. Do not double-count selling costs." },
       hold: { title: "Hold scenario", hint: "Future price, shrinkage and carrying rate are your assumptions. Selling fees/transport are held unchanged. No probability is assigned." },
     } as Record<Section, { title: string; hint: string }>,
-    cooperativeOption: (source: string, branch: string, variety: string, date: string, price: string, assumed: boolean) => `${source} · ${branch} · ${variety} · ${date} · ${price} / qtl${assumed ? " — unit by operator assumption" : ""}`,
+    cooperativeOption: (source: string, branch: string, variety: string, date: string, price: string) => `${source} · ${branch} · ${variety} · ${date} · ${price} / qtl`,
     monthlyOption: (variety: string, month: string, price: string) => `AGMARKNET monthly · ${variety} · ${month} · ${price} / qtl — state aggregate`,
     selectPrice: "Select an available source price or enter your own price.", everyInput: "Enter every cost and scenario input; use 0 only when the cost genuinely does not apply.",
     finite: "Inputs must be finite numbers.", invalid: "Invalid inputs.",
     title: "Realization & farm profitability", intro: "Your quantities and costs, a traceable source price, and explicit hold scenarios. No predictive recommendation.",
-    before: "Before you calculate", beforeText: "No costs or yields are prefilled. Match your exact product grade and reporting date. Published prices are indicative, not a buyer's executable offer. Monthly state averages are not local daily quotations; TSS units remain assumed.",
+    before: "Before you calculate", beforeText: "No costs or yields are prefilled. Match your exact product grade and reporting date. Published prices are indicative, not a buyer's executable offer. Monthly state averages are not local daily quotations.",
     priceTitle: "Price reference and scenario", priceHint: "All sale prices are INR/quintal. Enter actual costs for the same harvest and currency.",
     scenarioName: "Scenario name", sourcePrice: "Source price", selectOption: "Select a price — no automatic substitution",
     savedGone: "Saved price no longer current — choose another before recalculating", manualOption: "My own price — user-entered, not sourced", yourPrice: "Your price (INR/quintal)",
@@ -58,7 +58,6 @@ const COPY = defineCopy({
     reportingPeriod: (period: string) => `Market reporting period: ${period}`, userEntered: "User entered; no reporting date",
     platformFetched: (time: string) => `Platform fetched: ${time}`, notSourced: "Not sourced", evidence: "Source evidence", reportingState: (state: string) => `Source reporting state: ${state}`,
     archived: "Download the archived report used for this calculation", archivedNote: "(unchanged by later source refreshes).",
-    assumedNote: "INR/quintal is an operator assumption for this source. All monetary results inherit it.",
     outputsAria: "Decision calculation outputs", outputsCaption: "Scenario arithmetic, not forecasts or personalized investment advice", measure: "Measure", value: "Value",
     measures: {
       gross_realization: "Gross realization", selling_costs: "Selling costs", net_realization: "Net realization now", net_per_quintal: "Net per quintal",
@@ -90,12 +89,12 @@ const COPY = defineCopy({
       farm: { title: "ತೋಟದ ಲಾಭ", hint: "ಈ ಮಾರಾಟದ ಕೊಯ್ಲಿಗೆ ಸಂಬಂಧಿಸಿದ ಒಟ್ಟು ವೆಚ್ಚ ಮತ್ತು ವಿಸ್ತೀರ್ಣ ಬಳಸಿ. ಮಾರಾಟ ವೆಚ್ಚವನ್ನು ಎರಡು ಬಾರಿ ಸೇರಿಸಬೇಡಿ." },
       hold: { title: "ಕಾಯುವ ಸಂದರ್ಭ", hint: "ಮುಂದಿನ ದರ, ತೂಕ ನಷ್ಟ ಮತ್ತು ಬಡ್ಡಿ ದರ ನಿಮ್ಮ ಊಹೆಗಳು. ಮಾರಾಟ ಶುಲ್ಕ/ಸಾಗಣೆ ಬದಲಾಗುವುದಿಲ್ಲ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ. ಯಾವುದೇ ಸಂಭವನೀಯತೆ ನೀಡುವುದಿಲ್ಲ." },
     },
-    cooperativeOption: (source: string, branch: string, variety: string, date: string, price: string, assumed: boolean) => `${source} · ${branch} · ${variety} · ${date} · ${price} / ಕ್ವಿಂ${assumed ? " — ಘಟಕ ಊಹಿಸಲಾಗಿದೆ" : ""}`,
+    cooperativeOption: (source: string, branch: string, variety: string, date: string, price: string) => `${source} · ${branch} · ${variety} · ${date} · ${price} / ಕ್ವಿಂ`,
     monthlyOption: (variety: string, month: string, price: string) => `AGMARKNET ತಿಂಗಳ ವರದಿ · ${variety} · ${month} · ${price} / ಕ್ವಿಂ — ರಾಜ್ಯ ಸರಾಸರಿ`,
     selectPrice: "ಲಭ್ಯವಿರುವ ಮೂಲ ದರವನ್ನು ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ನಿಮ್ಮ ದರ ನಮೂದಿಸಿ.", everyInput: "ಎಲ್ಲಾ ವೆಚ್ಚ ಮತ್ತು ಸಂದರ್ಭದ ಅಂಕಿಗಳನ್ನು ನಮೂದಿಸಿ; ವೆಚ್ಚ ನಿಜವಾಗಿಯೂ ಇಲ್ಲದಿದ್ದಾಗ ಮಾತ್ರ 0 ಬಳಸಿ.",
     finite: "ಅಂಕಿಗಳು ಸರಿಯಾದ ಸಂಖ್ಯೆಗಳಾಗಿರಬೇಕು.", invalid: "ಅಮಾನ್ಯ ಅಂಕಿಗಳು.",
     title: "ನಿವ್ವಳ ಆದಾಯ ಮತ್ತು ತೋಟದ ಲಾಭ", intro: "ನಿಮ್ಮ ಪ್ರಮಾಣ ಮತ್ತು ವೆಚ್ಚಗಳು, ಪತ್ತೆಹಚ್ಚಬಹುದಾದ ಮೂಲ ದರ ಮತ್ತು ಸ್ಪಷ್ಟ ಕಾಯುವ ಸಂದರ್ಭಗಳು. ಯಾವುದೇ ಮುನ್ಸೂಚನೆ ಸಲಹೆ ಇಲ್ಲ.",
-    before: "ಲೆಕ್ಕ ಹಾಕುವ ಮೊದಲು", beforeText: "ಯಾವುದೇ ವೆಚ್ಚ ಅಥವಾ ಇಳುವರಿ ಮೊದಲೇ ತುಂಬಿಲ್ಲ. ನಿಮ್ಮ ನಿಖರ ದರ್ಜೆ ಮತ್ತು ವರದಿ ದಿನಾಂಕಕ್ಕೆ ಹೊಂದಿಸಿ. ಪ್ರಕಟಿತ ದರಗಳು ಸೂಚಕ ಮಾತ್ರ, ಖರೀದಿದಾರರ ಖಚಿತ ಕೊಡುಗೆ ಅಲ್ಲ. ತಿಂಗಳ ರಾಜ್ಯ ಸರಾಸರಿಗಳು ಸ್ಥಳೀಯ ದೈನಂದಿನ ದರಗಳಲ್ಲ; TSS ಘಟಕ ಊಹಿಸಿದ್ದು.",
+    before: "ಲೆಕ್ಕ ಹಾಕುವ ಮೊದಲು", beforeText: "ಯಾವುದೇ ವೆಚ್ಚ ಅಥವಾ ಇಳುವರಿ ಮೊದಲೇ ತುಂಬಿಲ್ಲ. ನಿಮ್ಮ ನಿಖರ ದರ್ಜೆ ಮತ್ತು ವರದಿ ದಿನಾಂಕಕ್ಕೆ ಹೊಂದಿಸಿ. ಪ್ರಕಟಿತ ದರಗಳು ಸೂಚಕ ಮಾತ್ರ, ಖರೀದಿದಾರರ ಖಚಿತ ಕೊಡುಗೆ ಅಲ್ಲ. ತಿಂಗಳ ರಾಜ್ಯ ಸರಾಸರಿಗಳು ಸ್ಥಳೀಯ ದೈನಂದಿನ ದರಗಳಲ್ಲ.",
     priceTitle: "ದರದ ಆಧಾರ ಮತ್ತು ಸಂದರ್ಭ", priceHint: "ಎಲ್ಲಾ ಮಾರಾಟ ದರಗಳು ₹/ಕ್ವಿಂಟಾಲ್. ಅದೇ ಕೊಯ್ಲಿನ ನಿಜವಾದ ವೆಚ್ಚಗಳನ್ನು ನಮೂದಿಸಿ.",
     scenarioName: "ಸಂದರ್ಭದ ಹೆಸರು", sourcePrice: "ಮೂಲ ದರ", selectOption: "ದರ ಆಯ್ಕೆಮಾಡಿ — ತಾನಾಗಿ ಬದಲಿಸುವುದಿಲ್ಲ",
     savedGone: "ಉಳಿಸಿದ ದರ ಈಗ ಲಭ್ಯವಿಲ್ಲ — ಮತ್ತೆ ಲೆಕ್ಕ ಹಾಕುವ ಮೊದಲು ಬೇರೆ ಆಯ್ಕೆಮಾಡಿ", manualOption: "ನನ್ನ ಸ್ವಂತ ದರ — ನಾನು ನಮೂದಿಸಿದ್ದು, ಮೂಲವಿಲ್ಲ", yourPrice: "ನಿಮ್ಮ ದರ (₹/ಕ್ವಿಂಟಾಲ್)",
@@ -107,7 +106,6 @@ const COPY = defineCopy({
     reportingPeriod: (period: string) => `ಮಾರುಕಟ್ಟೆ ವರದಿ ಅವಧಿ: ${period}`, userEntered: "ನೀವು ನಮೂದಿಸಿದ್ದು; ವರದಿ ದಿನಾಂಕವಿಲ್ಲ",
     platformFetched: (time: string) => `ತಂದ ಸಮಯ: ${time}`, notSourced: "ಮೂಲವಿಲ್ಲ", evidence: "ಮೂಲದ ಆಧಾರ", reportingState: (state: string) => `ಮೂಲದ ವರದಿ ರಾಜ್ಯ: ${state}`,
     archived: "ಈ ಲೆಕ್ಕಕ್ಕೆ ಬಳಸಿದ ಸಂಗ್ರಹಿತ ವರದಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ", archivedNote: "(ನಂತರದ ನವೀಕರಣಗಳಿಂದ ಬದಲಾಗುವುದಿಲ್ಲ).",
-    assumedNote: "ಈ ಮೂಲಕ್ಕೆ ₹/ಕ್ವಿಂಟಾಲ್ ನಿರ್ವಾಹಕರ ಊಹೆ. ಎಲ್ಲಾ ಹಣದ ಫಲಿತಾಂಶಗಳಿಗೂ ಇದು ಅನ್ವಯಿಸುತ್ತದೆ.",
     outputsAria: "ಲೆಕ್ಕದ ಫಲಿತಾಂಶಗಳು", outputsCaption: "ಸಂದರ್ಭದ ಲೆಕ್ಕಾಚಾರ ಮಾತ್ರ, ಮುನ್ಸೂಚನೆ ಅಥವಾ ವೈಯಕ್ತಿಕ ಹೂಡಿಕೆ ಸಲಹೆ ಅಲ್ಲ", measure: "ಅಳತೆ", value: "ಮೌಲ್ಯ",
     measures: {
       gross_realization: "ಒಟ್ಟು ಆದಾಯ", selling_costs: "ಮಾರಾಟ ವೆಚ್ಚ", net_realization: "ಈಗ ಮಾರಿದರೆ ನಿವ್ವಳ ಆದಾಯ", net_per_quintal: "ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ನಿವ್ವಳ",
@@ -143,7 +141,7 @@ export function DecisionToolsPage() {
   const options = [
     ...(prices.data?.cooperative.map((row) => ({ key: `cooperative:${row.id}`,
       reference: { kind: "cooperative", id: row.id } satisfies PriceReference,
-      label: t.cooperativeOption(row.source_key.toUpperCase(), row.branch, row.variety, format.date(row.reporting_date), money(row.average_price), row.unit_status === "assumed") })) ?? []),
+      label: t.cooperativeOption(row.source_key.toUpperCase(), row.branch, row.variety, format.date(row.reporting_date), money(row.average_price)) })) ?? []),
     ...(prices.data?.monthly.map((row) => ({ key: `monthly:${row.refresh_run_id}:${row.variety_name}`,
       reference: { kind: "monthly", month: row.reporting_month, variety: row.variety_name, refresh_run_id: row.refresh_run_id } satisfies PriceReference,
       label: t.monthlyOption(row.variety_name, format.month(row.reporting_month), money(row.weighted_price)) })) ?? []),
@@ -212,7 +210,6 @@ export function DecisionToolsPage() {
         <p>{result.price.branch} · {result.price.variety} · {t.reportingPeriod(result.price.reporting_period ?? t.userEntered)} · {t.platformFetched(result.price.fetched_at ? format.timestamp(result.price.fetched_at) : t.notSourced)} · {result.price.price_type.replace(/_/g, " ")} {result.price.source_url && <a href={result.price.source_url} target="_blank" rel="noreferrer">{t.evidence}</a>}</p>
         {result.price.state && <p>{t.reportingState(result.price.state)}</p>}
         {result.price.price_type === "monthly_weighted_modal" && result.price.reference_id && <p><a href={api.monthlySnapshotUrl(result.price.reference_id)} target="_blank" rel="noreferrer">{t.archived}</a> {t.archivedNote}</p>}
-        {result.price.unit_status === "assumed" && <p role="note">{t.assumedNote}</p>}
         <div className="table-scroll" tabIndex={0} role="region" aria-label={t.outputsAria}><table><caption>{t.outputsCaption}</caption><thead><tr><th>{t.measure}</th><th className="numeric">{t.value}</th></tr></thead><tbody>
           {measureRows.map(([label, value]) => <tr key={label}><td>{label}</td><td className="numeric">{money(value)}</td></tr>)}
           <tr><td>{t.roi}</td><td className="numeric">{result.results.roi_percent === null ? t.roiUnavailable : `${result.results.roi_percent.toFixed(2)}%`}</td></tr>

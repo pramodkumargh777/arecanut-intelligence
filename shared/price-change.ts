@@ -4,7 +4,8 @@ import { calendarDateToTime, DAY_MS } from "./dates";
 
 export type DatedPrice = { branch: string; variety: string; reporting_date: string; average_price: number | null };
 export type PriceChange = { amount: number; percent: number; previous_date: string; previous_price: number };
-export type MarketBreadth = { up: number; down: number; flat: number; median_percent: number | null };
+/** `median_amount` is the middle branch's change in rupees, for readers who think in rupees rather than percent. */
+export type MarketBreadth = { up: number; down: number; flat: number; median_percent: number | null; median_amount: number | null };
 
 /** A report older than this says little about the current move, so no change is shown. */
 export const MAX_CHANGE_GAP_DAYS = 30;
@@ -29,13 +30,17 @@ export function priceChange(latest: DatedPrice, history: DatedPrice[], maxGapDay
 /** How many branches rose and fell, and the middle branch's change. Branches with no earlier report are not counted. */
 export function marketBreadth(changes: (PriceChange | null)[]): MarketBreadth {
   const known = changes.filter((change): change is PriceChange => change !== null);
-  const percents = known.map((change) => change.percent).sort((a, b) => a - b);
-  const middle = Math.floor(percents.length / 2);
-  const median = !percents.length ? null : percents.length % 2 ? percents[middle] : (percents[middle - 1] + percents[middle]) / 2;
+  const middleOf = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
+    return !sorted.length ? null : sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  };
+  const median = middleOf(known.map((change) => change.percent));
+  const amount = middleOf(known.map((change) => change.amount));
   return {
     up: known.filter((change) => change.amount > 0).length,
     down: known.filter((change) => change.amount < 0).length,
     flat: known.filter((change) => change.amount === 0).length,
     median_percent: median === null ? null : Math.round(median * 10) / 10,
+    median_amount: amount === null ? null : Math.round(amount),
   };
 }

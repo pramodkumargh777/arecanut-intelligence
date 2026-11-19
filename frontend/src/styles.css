@@ -161,6 +161,8 @@ small { font-size: 11px; color: var(--muted); }
 .breadcrumb { display: flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; font-size: 13px; color: var(--muted); }
 .breadcrumb strong { color: var(--ink); font-weight: 550; }
 .breadcrumb-sep { color: var(--line-strong); }
+.breadcrumb-link { color: var(--muted); text-decoration: none; white-space: nowrap; }
+.breadcrumb-link:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
 .topbar-tools { display: flex; align-items: center; gap: 12px; }
 .topbar .market-tools-toggle { display: none; }
 .topbar-preferences { display: flex; align-items: center; gap: 12px; flex: none; }
@@ -796,14 +798,21 @@ th.numeric .sort-button span { order: -1; }
 .home-price-section, .market-page { container: rate-cards / inline-size; }
 .rate-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; }
 .rate-grid-even { align-items: stretch; }
+/* Town page: once a card is expanded ("Show all varieties"), its neighbours keep their own height rather than
+   stretching into a tall empty box beside it. */
+.market-page .rate-grid-even:has(.rate-more-toggle[aria-expanded="true"]) { align-items: start; }
 @container rate-cards (min-width: 640px) {
   .rate-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .rate-grid > .rate-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .rate-grid:not(.rate-grid-expanded) > .rate-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* An expanded card takes a row of its own; the compact cards share theirs, one column each (--rate-others), filled
+     in densely so none is left alone beside an empty slot. */
+  .rate-grid-expanded { grid-template-columns: repeat(var(--rate-others, 2), minmax(0, 1fr)); grid-auto-flow: row dense; }
+  .rate-grid-expanded > .rate-card-wide { grid-column: 1 / -1; }
 }
 @container rate-cards (min-width: 960px) {
   /* Three across. Collapsed cards (.rate-grid-even) stretch to one height so they sit level; an expanded card leaves
      the others at their own height. */
-  .rate-grid:has(> .rate-card:nth-child(3)):not(:has(> .rate-card:nth-child(4))) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rate-grid:not(.rate-grid-expanded):has(> .rate-card:nth-child(3)):not(:has(> .rate-card:nth-child(4))) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .rate-grid:has(> .rate-card:nth-child(3)):not(:has(> .rate-card:nth-child(4))) > .rate-card:last-child { grid-column: auto; }
 }
 /* At-a-glance strip: one stat tile per cooperative, above the full cards. */
@@ -1399,8 +1408,6 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 @media (prefers-reduced-motion: reduce) { .home-date-pill.is-fresh .home-date-dot { animation: none; } }
 
 /* Town pages (/market, /market/:slug): the home page's rate cards, one per source, plus links to nearby towns. */
-/* Scoped to .home-heading so it outranks ".home-heading p" without !important. */
-.home-heading .market-kicker { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); }
 .market-card-title { margin: 0; font-size: 16px; font-weight: 650; color: var(--ink); }
 .market-variety-link { color: inherit; text-decoration: none; }
 .market-variety-link:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
@@ -1408,13 +1415,10 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .market-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .market-chips a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 14px; font-weight: 550; text-decoration: none; transition: border-color .12s ease, color .12s ease; }
 .market-chips a:hover { border-color: var(--brand); color: var(--brand); }
-.market-chips .market-chip-all { border-style: dashed; }
-.market-index { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.market-index a { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; transition: border-color .12s ease; }
-.market-index a:hover { border-color: var(--brand); }
-.market-index strong { font-size: 16.5px; font-weight: 600; }
-.market-index span { grid-column: 1; font-size: 12.5px; color: var(--muted); letter-spacing: .02em; }
-.market-index svg { grid-column: 2; grid-row: 1 / span 2; color: var(--muted); }
+.market-nearby-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.market-nearby-head h2 { min-width: 0; margin: 0; font-size: var(--text-section-title); font-weight: 600; line-height: 1.4; }
+.market-nearby-all { display: inline-flex; flex: none; align-items: center; gap: 4px; min-height: 40px; color: var(--brand); font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.market-nearby-all:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 
 /* Assistant (/assistant): a conversation. The question on the right, the answer as a card with its rates, sources and
@@ -1743,3 +1747,139 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
    shows them on phones. */
 .label-short { display: none; }
 .coverage-date-sub { display: none; }
+
+/* Town filter (home page): a pill beside the variety pills, filled like a chosen variety once a town is picked. The
+   dropdown itself sits invisibly over the pill, so the face can carry an icon and a chevron and still open natively. */
+.home-filters { display: grid; gap: 12px; }
+.town-pill { position: relative; display: inline-flex; min-width: 0; }
+.town-pill-face { display: inline-flex; align-items: center; gap: 7px; min-width: 0; height: 34px; padding: 0 12px 0 11px; border: 1px solid var(--line-strong); border-radius: 999px;
+  background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 500; line-height: 1.3; white-space: nowrap; transition: border-color .12s ease, background-color .12s ease; }
+.town-pill-face svg { flex: none; }
+.town-pill-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.town-controls { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.town-pill-face svg:first-child { color: var(--brand); }
+.town-pill-face svg:last-child { color: var(--muted); }
+.town-pill select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.town-pill:hover:not(.town-pill-active) .town-pill-face { border-color: var(--brand-leaf); background: var(--brand-tint); }
+.town-pill:focus-within .town-pill-face { outline: 2px solid var(--ink); outline-offset: 2px; }
+.town-pill-active .town-pill-face { border-color: var(--brand); background: var(--brand); color: #fff; font-weight: 600; }
+.town-pill-active .town-pill-face svg { color: inherit; }
+:root[data-theme="dark"] .town-pill-active .town-pill-face { color: #10251a; }
+.town-clear { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 8px; border: 0; border-radius: 999px; background: none;
+  color: var(--muted); font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.town-clear:hover { color: var(--brand); background: var(--brand-tint); }
+.town-clear:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* A town's rate that is well behind today: the figure is muted and the line under it says how old it is. */
+.glance-tile-stale .glance-range { color: var(--muted); }
+.glance-trend.glance-trend-stale { color: var(--bad-ink); background: color-mix(in srgb, currentColor 10%, transparent); }
+/* "Your town's branch has not reported" sits above the other branches, on every screen size. */
+.rate-card .rate-card-note-top { display: block; margin: 0; padding: 10px 20px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+/* Town page: "This is my town" beside Share. */
+.market-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.market-actions .market-share { margin-top: 0; }
+/* "Set as my town" and "Share" are one pair of pills: same height, border and type. */
+.my-town-save, .market-actions .rate-share { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin: 0; padding: 0 16px; border: 1px solid var(--line-strong); border-radius: 999px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; transition: border-color .12s ease, background-color .12s ease; }
+.market-actions .rate-share { color: var(--brand); }
+.market-actions .rate-share:hover, .my-town-save:not(.is-saved):hover { border-color: var(--brand-leaf); background: var(--brand-tint); text-decoration: none; }
+.my-town-save.is-saved { border-color: var(--brand); background: var(--brand); color: var(--surface); }
+.my-town-save:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* Bottom bar: phones only (responsive.css shows it). */
+.tab-bar { display: none; }
+
+/* Prices and ranges in lists line up digit for digit. */
+.rate-range, .rate-sub, .rate-change, .glance-trend { font-variant-numeric: tabular-nums; }
+/* An old rate's age is a soft amber pill ("17 days ago"), so a stale quote stands out before anyone acts on it. */
+.rate-date-old .rate-age, .rate-date-old.rate-age { display: inline-block; padding: 0 7px; border-radius: 999px; background: var(--warn-bg); box-shadow: inset 0 0 0 1px var(--warn-line); color: var(--warn-ink); font-weight: 600; line-height: 1.6; }
+/* Town directory (/market): district cards set in columns, one compact row per town. */
+.market-directory-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.market-directory-head > div { min-width: 0; }
+.market-mine { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 12px; border: 1px solid var(--brand); border-radius: 999px;
+  background: var(--brand-tint); color: var(--ink); font-size: 14px; text-decoration: none; white-space: nowrap; transition: background-color .12s ease; }
+.market-mine svg { flex: none; color: var(--brand); }
+.market-mine span { color: var(--muted); }
+.market-mine strong { font-weight: 650; }
+.market-mine:hover { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); }
+.market-mine:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.market-districts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 16px; }
+.market-column { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.market-column > .market-district:last-child { flex: 1 1 auto; }
+/* Under 760px of page width (a tablet, or a small laptop with the menu open) two columns are too narrow for a town
+   with three sources: one column, nothing stretched. Measured on the page itself, not the window, so the menu counts. */
+@container rate-cards (max-width: 759px) {
+  .market-districts { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .market-column { gap: 12px; }
+  .market-column > .market-district:last-child { flex: none; }
+}
+.market-district { margin: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; box-shadow: 0 1px 2px rgb(0 0 0 / 4%); }
+.market-district-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 16px 10px; border-bottom: 1px solid var(--line); }
+.market-district h2 { min-width: 0; margin: 0; color: var(--subtle); font-size: 12.5px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
+.market-district-count { flex: none; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.market-district h2:lang(kn) { letter-spacing: 0; font-size: 13.5px; }
+.market-rows { margin: 0; padding: 0; list-style: none; }
+.market-rows li + li a { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--line) 65%, transparent); }
+.market-rows a { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px 0 16px;
+  color: var(--ink); text-decoration: none; transition: background-color .12s ease; }
+.market-rows a > svg { color: var(--subtle); transition: transform .12s ease, color .12s ease; }
+.market-rows a:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+@media (hover: hover) {
+  .market-rows a:hover { background: var(--brand-tint); }
+  .market-rows a:hover > svg { color: var(--brand); transform: translateX(2px); }
+}
+.market-row-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.market-row-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; }
+.market-row-mine { flex: none; padding: 1px 7px; border-radius: 999px; background: var(--brand); color: var(--surface); font-size: 11px; font-weight: 700; }
+.market-rows a.is-mine { background: color-mix(in srgb, var(--brand-tint) 70%, transparent); }
+.market-row-sources { display: inline-flex; gap: 4px; }
+.market-row-sources span { padding: 1px 6px; border-radius: 6px; background: var(--surface-2); color: var(--muted); font-size: 10.5px; font-weight: 650; letter-spacing: .04em; line-height: 1.6; }
+
+/* Town page: "← All towns" above the title. Muted like the eyebrow it replaces, with a full-size tap target. */
+.home-heading .market-back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -10px 0 0 -2px; padding: 0 2px; color: var(--muted); font-size: 14.5px; font-weight: 600; text-decoration: none; }
+.home-heading .market-back:hover { color: var(--brand); }
+.home-heading .market-back:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 6px; }
+
+/* The old-rate pill separates itself from the date, so it carries no "·" and sits a little apart instead. */
+.rate-date-old .rate-age::before, .rate-date-old.rate-age::before { content: none; }
+.rate-date-old .rate-age { margin-left: 6px; }
+
+/* Source colours. Every price says where it comes from, and each source keeps one colour wherever it appears: a stripe
+   along the top of its card or tile, its card title, and its badge. Green and red are left out, since they mean up and
+   down here. Each pair reads at 4.5:1 or better as text on its own tint, in both themes. */
+:root {
+  --src-mamcos: #2b5aa3;   /* blue */
+  --src-tss: #94570a;      /* amber */
+  --src-tms: #7a3fa6;      /* purple */
+  --src-tumcos: #0e6f68;   /* teal */
+  --src-apmc: #4a5565;     /* slate: the government yard */
+}
+:root[data-theme="dark"] {
+  --src-mamcos: #93b6f0;
+  --src-tss: #efb768;
+  --src-tms: #cba6ec;
+  --src-tumcos: #74d0c5;
+  --src-apmc: #b7c0cc;
+}
+[data-source="mamcos"] { --src: var(--src-mamcos); }
+[data-source="tss"] { --src: var(--src-tss); }
+[data-source="tms"] { --src: var(--src-tms); }
+[data-source="tumcos"] { --src: var(--src-tumcos); }
+[data-source="apmc"] { --src: var(--src-apmc); }
+.rate-card[data-source] { box-shadow: inset 0 3px 0 var(--src), var(--shadow); }
+.rate-card[data-source] .rate-card-head :is(h2, h3) { color: var(--src); }
+.glance-tile[data-source] { box-shadow: -1px 0 0 var(--line), 0 -1px 0 var(--line), inset 0 3px 0 var(--src); }
+:is(.glance-tile, .rate-card)[data-source] :is(.glance-source, .rate-source-tag), .market-row-sources span[data-source] {
+  background: color-mix(in srgb, var(--src) 11%, var(--surface)); color: var(--src); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--src) 30%, transparent); }
+.glance-tile[data-source] .glance-source:hover { box-shadow: inset 0 0 0 1px var(--src); }
+
+/* An expanded (full-width) card lists its branches in columns, reading across: two on a medium screen, three on a wide
+   one, so a dozen branches take four rows instead of a long single column. The rows of the first line drop their top rule. */
+@container rate-card (min-width: 620px) {
+  .rate-card-wide .rate-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 36px; }
+  .rate-card-wide .rate-list > .rate-row:nth-child(-n+2) { border-top: 0; }
+}
+@container rate-card (min-width: 920px) {
+  .rate-card-wide .rate-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rate-card-wide .rate-list > .rate-row:nth-child(-n+3) { border-top: 0; }
+}

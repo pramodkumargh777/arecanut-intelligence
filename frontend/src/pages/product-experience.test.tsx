@@ -45,7 +45,7 @@ import { stagedSelling } from "../../../shared/hold-history";
 import { runInNewContext } from "node:vm";
 import { ImportsPanel } from "../components/ImportsPanel";
 import { eventsBetween, MARKET_EVENTS } from "../services/market-events";
-import { MarketIndexPage, MarketPage } from "./MarketPage";
+import { balancedColumns, MarketIndexPage, MarketPage } from "./MarketPage";
 import { MARKET_PLACES } from "../services/markets";
 import { isDatedTitle, marketSeo, seoPage, snippetFrom, withSnippet } from "../services/seo-pages";
 
@@ -60,6 +60,8 @@ const state = vi.hoisted(() => ({
   branch: [] as object[],
   monthly: {} as Record<string, object>,
   sellOrHold: undefined as object | undefined,
+  markets: { data: undefined } as object,
+  townApmc: { data: undefined } as object,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -72,6 +74,8 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
     if (queryKey[0] === "home-official-prices" || queryKey[0] === "market-apmc") return state.official;
     if (queryKey[0] === "varieties") return { data: ["Rashi"], isLoading: false };
+    if (queryKey[0] === "markets") return state.markets;
+    if (queryKey[0] === "home-town-apmc") return state.townApmc;
     if (queryKey[0] === "market-comparison") return { data: { data: state.comparison }, isLoading: false };
     if (queryKey[0] === "cooperative") return state.cooperativePage;
     if (queryKey[0] === "intelligence") return state.intelligence;
@@ -337,7 +341,8 @@ describe("market experience", () => {
     expect(html).toContain("ಇತರ ಮಾರುಕಟ್ಟೆ ದರಗಳು");
     expect(html).toContain("ಇತ್ತೀಚಿನ ಸಹಕಾರಿ ವರದಿ");
     expect(html).toContain("RASHI EDI");
-    expect(html).toContain("ಘಟಕ ಊಹಿಸಲಾಗಿದೆ");
+    // Units are not caveated: TSS and TUMCOS rates are shown per quintal like every other source.
+    expect(html).not.toContain("ಘಟಕ ಊಹಿಸಲಾಗಿದೆ");
     expect(html).toContain("AGMARKNET");
     expect(html.indexOf('id="rates-tumcos"')).toBeGreaterThan(html.indexOf('id="other-prices-heading"'));
     expect(html.indexOf('id="rates-official"')).toBeGreaterThan(html.indexOf('id="other-prices-heading"'));
@@ -450,7 +455,7 @@ describe("market experience", () => {
 
   it("offers a menu collapse button that starts expanded", () => {
     const html = render(<AppShell />);
-    expect(html).toContain('class="app-shell"');
+    expect(html).toMatch(/class="app-shell( app-shell-tabs)?"/);
     expect(html).toContain('class="icon-button sidebar-collapse"');
     expect(html).toContain('aria-label="Collapse menu"');
     expect(html).toContain('class="brand-collapsed-icon"');
@@ -569,7 +574,8 @@ describe("market experience", () => {
   it("keeps methodology collapsed and drops repeated banner text on cooperative pages", () => {
     const html = render(<MarketDataPage official={<p>Official</p>} />, "/analytics?feed=tss");
     expect(html).toContain('<details class="about-data">');
-    expect(html).toContain("TSS tender averages · ₹/quintal (unit assumed)");
+    expect(html).toContain("TSS tender averages · ₹/quintal · not APMC modal prices");
+    expect(html).not.toContain("unit assumed");
     expect(html).not.toContain('class="eyebrow"');
     expect(html).not.toContain("Supported sources are listed even when no prices are published");
     expect(html).not.toContain("No variety aliases are merged.");
@@ -663,7 +669,8 @@ describe("market experience", () => {
     expect(strip).toContain("₹47,000");
     expect(strip).toContain("₹48,500");
     expect(strip).toContain("/ quintal");
-    expect(strip).toMatch(/class="glance-trend hold-down">.*Down −/);
+    // In rupees, which growers read at a glance: the middle branch fell ₹750 (Sagara −₹1,000, Koppa −₹500).
+    expect(strip).toMatch(/class="glance-trend hold-down">.*Down ₹750/);
     expect(strip).not.toContain("median");
     expect(strip).toContain("2 branches");
     expect(strip).toContain("1 Oct 2026");
@@ -828,15 +835,133 @@ describe("rolling price", () => {
   });
 });
 
+describe("my town", () => {
+  const dayBefore = (days: number) => new Date(Date.now() + 5.5 * 3_600_000 - days * 86_400_000).toISOString().slice(0, 10);
+
+  const mamcos = (branch: string, days: number, price: number) => ({ ...cooperativeQuote("mamcos", branch, "RASHI EDI"), id: `m-${branch}-${days}`, reporting_date: dayBefore(days), average_price: price });
+  const apmcRow = (variety: string, days: number, price: number) => ({ ...quote, id: `a-${variety}-${days}`, market_id: "thir", market_name: "APMC THIRTHAHALLI", variety_name: variety, grade: null, reporting_date: dayBefore(days), modal_price: price });
+  const homeAt = (path: string) => render(<Routes><Route path="/" element={<HomePage />} /></Routes>, path);
+  const rashiSources = (mamcosLatest: object[], mamcosHistory: object[] = []) => [
+    ready({ latest_by_branch: mamcosLatest, data: mamcosHistory }),
+    ready({ latest_by_branch: [{ ...cooperativeQuote("tss", "Sirsi", "RASHI"), reporting_date: dayBefore(0) }], data: [] }),
+    ready({ latest_by_branch: [], data: [] }), ready({ latest_by_branch: [], data: [] }),
+  ];
+  beforeEach(() => {
+    state.markets = ready([{ id: "thir", name: "APMC THIRTHAHALLI", district: "Shivamogga", state: "Karnataka" }]);
+    state.townApmc = ready({ data: [] });
+  });
+
+  it("offers a town filter that starts on all towns, leaving the page as it was", () => {
+    state.cooperative = rashiSources([mamcos("SHIVAMOGGA", 0, 46000)]);
+    state.official = ready({ data: [siddapur] });
+    const html = homeAt("/");
+    expect(html).toContain('<option value="" selected="">All towns</option>');
+    expect(html).toContain('<optgroup label="Uttara Kannada">');
+    expect(html).toContain("Rashi at a glance");
+    expect(html).toContain('id="rates-tss"');
+    expect(html).toContain("Siddapur APMC");
+    expect(html).not.toContain("town-pill-active");
+    expect(html).not.toContain('class="town-clear"');
+  });
+
+  it("narrows every card to the chosen town: its branch, its APMC under the same variety, and plain-word changes", () => {
+    state.cooperative = rashiSources([mamcos("SHIVAMOGGA", 0, 46000), mamcos("THIRTHAHALLI", 0, 48369)], [mamcos("THIRTHAHALLI", 1, 48169)]);
+    state.townApmc = ready({ data: [apmcRow("Rashi", 0, 47500), apmcRow("New Variety", 0, 33000), apmcRow("Rashi", 1, 47000)] });
+    const html = homeAt("/?town=thirthahalli");
+    expect(html).toContain("town-pill-active");
+    expect(html).toContain('<option value="thirthahalli" selected="">Thirthahalli</option>');
+    expect(html).toContain('aria-label="Clear Thirthahalli and show all towns"');
+    const strip = html.slice(html.indexOf('class="glance"'), html.indexOf("</section>", html.indexOf('class="glance"')));
+    expect(strip).toContain("Rashi in Thirthahalli");
+    expect(strip).toContain("Thirthahalli branch");
+    expect(strip).toContain("₹200 more than yesterday");
+    expect(strip).toContain("APMC modal price");
+    expect(strip).toContain("₹500 more than yesterday");
+    // TSS has no branch in Thirthahalli, so its card goes; MAMCOS leads with the Thirthahalli branch.
+    expect(html).not.toContain('id="rates-tss"');
+    expect(html).toContain("Thirthahalli: cooperative branch rates");
+    const card = html.slice(html.indexOf('id="rates-mamcos"'));
+    expect(card.indexOf("Thirthahalli")).toBeLessThan(card.indexOf("Shivamogga") < 0 ? Infinity : card.indexOf("Shivamogga"));
+    // Its APMC lists the same variety only, not "New Variety".
+    const apmc = html.slice(html.indexOf('id="rates-official"'));
+    expect(apmc).toContain("Thirthahalli APMC");
+    expect(apmc).not.toContain("New Variety");
+    expect(html).not.toContain("Siddapur APMC");
+  });
+
+  it("calls an old town rate old in words, and lists every APMC variety when none matches by name", () => {
+    state.cooperative = rashiSources([mamcos("THIRTHAHALLI", 19, 48369), mamcos("SHIVAMOGGA", 0, 46000)]);
+    state.townApmc = ready({ data: [apmcRow("New Variety", 0, 33000)] });
+    const html = homeAt("/?town=thirthahalli");
+    expect(html).toContain("glance-tile-stale");
+    expect(html).toContain("No new rate for 19 days");
+    const apmc = html.slice(html.indexOf('id="rates-official"'));
+    expect(apmc).toContain("No rate under this variety&#x27;s name · all varieties at this APMC");
+    expect(apmc).toContain("New Variety");
+  });
+
+  it("says when the town's branch has not reported, and when a town has no cooperative at all", () => {
+    state.cooperative = rashiSources([mamcos("SHIVAMOGGA", 0, 46000)]);
+    expect(homeAt("/?town=sagara")).toContain("The Sagara branch has not published this variety recently.");
+    expect(homeAt("/?town=puttur")).toContain("No cooperative publishes branch rates in Puttur.");
+  });
+
+  it("gives phones a bottom bar with rates, my town, compare and the full menu, but not on the assistant", () => {
+    const html = render(<AppShell />);
+    const bar = html.slice(html.indexOf('class="tab-bar"'));
+    expect(bar).toContain('href="/"');
+    expect(bar).toContain('href="/market"');
+    expect(bar).toContain(">My town<");
+    expect(bar).toContain(">Compare<");
+    expect(bar).toContain('aria-controls="main-navigation"');
+    expect(render(<AppShell />, "/assistant")).not.toContain('class="tab-bar"');
+  });
+
+  it("lists rates by town in the menu, and keeps market intelligence under more tools", () => {
+    const html = render(<AppShell />);
+    const nav = html.slice(html.indexOf('class="main-nav"'), html.indexOf("</nav>", html.indexOf('class="main-nav"')));
+    expect(nav.indexOf("Rates by town")).toBeLessThan(nav.indexOf("Explore prices"));
+    expect(nav.indexOf("Market intelligence")).toBeGreaterThan(nav.indexOf("nav-advanced"));
+  });
+});
+
 describe("town pages", () => {
   const renderTown = (slug: string) => render(<Routes><Route path="/market/:slug" element={<MarketPage />} /></Routes>, `/market/${slug}`);
+
+  it("lists three varieties per source in catalogue order, the rest under show all", () => {
+    const labels = ["KOKA", "CHALI", "BETTE", "RASHI", "SIPPE GOTU"];
+    state.branch = [ready({ data: labels.map((label) => ({ ...cooperativeQuote(`tss-${label}`, "Sirsi", label), id: `tss-${label}` })) }), ready({ data: [] })];
+    state.official = ready({ data: ["Cqca", "Chali", "Rashi", "Bilegotu"].map((variety, index) => ({ ...quote, id: `apmc-${index}`, market_name: "Sirsi APMC", variety_name: variety, grade: null })) });
+    const html = render(<Routes><Route path="/market/:slug" element={<MarketPage />} /></Routes>, "/market/sirsi");
+    const tss = html.slice(html.indexOf('id="market-tss"'), html.indexOf("</section>", html.indexOf('id="market-tss"')));
+    expect(tss.match(/class="rate-row"/g)).toHaveLength(3);
+    expect(tss.indexOf(">Rashi<")).toBeLessThan(tss.indexOf(">Chali<"));
+    expect(tss.indexOf(">Chali<")).toBeLessThan(tss.indexOf(">Sippe gotu<"));
+    expect(tss).not.toContain(">Koka<");
+    expect(tss).toContain("Show all 5 varieties");
+    const apmc = html.slice(html.indexOf('id="market-apmc"'), html.indexOf("</section>", html.indexOf('id="market-apmc"')));
+    expect(apmc.match(/class="rate-row"/g)).toHaveLength(3);
+    expect(apmc.indexOf(">Rashi<")).toBeLessThan(apmc.indexOf(">Chali<"));
+    expect(apmc).not.toContain(">Cqca<");
+    expect(apmc).toContain("Show all 4 varieties");
+  });
 
   it("shows each source at the town in its own card, with the grower's variety names linked to their pages", () => {
     state.branch = [ready({ data: [{ ...cooperativeQuote("tss-chali", "Sirsi", "CHALI"), id: "tss-chali" }, { ...cooperativeQuote("tss-rashi", "Sirsi", "RASHI"), id: "tss-rashi", average_price: 45024 }] })];
     state.official = ready({ data: [{ ...quote, id: "sirsi-apmc", market_name: "Sirsi APMC", modal_price: 44100 }, siddapur] });
     const html = renderTown("sirsi");
     expect(html).toContain("<h1>Sirsi arecanut rates</h1>");
+    expect(html).toContain('aria-pressed="false"');
+    expect(html).toContain("Set as my town");
+    // The way back to the town list sits above the title, and the top bar names the step in between.
+    expect(html).toContain('class="market-back" href="/market"');
+    const shell = render(<Routes><Route path="/market/:slug" element={<AppShell />} /></Routes>, "/market/sirsi");
+    const crumb = shell.slice(shell.indexOf('class="breadcrumb"'), shell.indexOf("</div>", shell.indexOf('class="breadcrumb"')));
+    expect(crumb).toMatch(/<a class="breadcrumb-link" href="\/market"[^>]*>Rates by town<\/a>/);
+    expect(crumb).toContain("<strong>Sirsi</strong>");
     expect(html).toContain("TSS · Sirsi branch");
+    // The source header must show on phones too: town-page cards never use the phone-hidden cooperative header.
+    expect(html).not.toContain("rate-card-coop");
     // Catalogue order (Rashi before Chali), whatever order the API used.
     expect(html.indexOf('href="/variety/rashi"')).toBeLessThan(html.indexOf('href="/variety/chali"'));
     expect(html).toContain("₹45,024");
@@ -855,6 +980,16 @@ describe("town pages", () => {
 
   it("treats an unknown town as a missing page", () => {
     expect(renderTown("atlantis")).toContain("Page not found");
+  });
+
+  it("splits districts into two columns of near equal height, keeping their order", () => {
+    const [left, right] = balancedColumns([{ n: "Shivamogga", t: 7 }, { n: "Uttara Kannada", t: 5 }, { n: "Dakshina Kannada", t: 5 }, { n: "Chikkamagaluru", t: 4 }, { n: "Davanagere", t: 1 }], (item) => 1.25 + item.t);
+    expect(left.map((item) => item.n)).toEqual(["Shivamogga", "Uttara Kannada"]);
+    expect(right.map((item) => item.n)).toEqual(["Dakshina Kannada", "Chikkamagaluru", "Davanagere"]);
+    const html = render(<MarketIndexPage />, "/market");
+    expect(html.match(/class="market-column"/g)).toHaveLength(2);
+    expect(html).toContain('<span class="market-district-count">7 towns</span>');
+    expect(html).toContain('<span class="market-district-count">1 town</span>');
   });
 
   it("lists every town under its district, in Kannada too", () => {
