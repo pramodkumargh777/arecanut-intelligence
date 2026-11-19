@@ -2,7 +2,8 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { MARKETS_SEO, marketSeo, SEO_PAGES, varietyNames, varietySeo, type SeoPage } from "./src/services/seo-pages";
+import { MARKETS_SEO, marketSeo, SEO_PAGES, snippetFrom, varietyNames, varietySeo, withSnippet, type SeoPage } from "./src/services/seo-pages";
+import { agmarknetVarietyName } from "./src/services/agmarknetVarieties";
 import { COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKET_PLACES, sortByCatalogue, varietyForLabel, type MarketPlace } from "./src/services/markets";
 import { VARIETIES, type GrowerVariety } from "./src/services/varieties";
 import { PLACE_NAMES_KN } from "./src/services/places";
@@ -113,7 +114,8 @@ function homeHtml(page: SeoPage, rates: Map<string, Rate[]>) {
     + (sections ? `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. Rates as each cooperative publishes them, per quintal.</p>` : "") + `</main>`;
 }
 
-type PlaceRate = { source: string; name: string; date: string; price: number | null; minimum: number | null; maximum: number | null };
+/** `short` is the Kannada variety name a search snippet quotes; empty when there is no established one to quote. */
+type PlaceRate = { source: string; name: string; short: string; date: string; price: number | null; minimum: number | null; maximum: number | null };
 
 /**
  * Each town's latest rates from every source it has, read from the public API when the site is built. A town whose
@@ -131,7 +133,7 @@ async function placeRates(apiUrl: string, place: MarketPlace) {
     for (const row of sortByCatalogue(source, body.data.filter((item) => item.reporting_date >= oldest))) {
       const variety = varietyForLabel(source, row.variety);
       rows.push({ source: `${COOPERATIVE_NAMES[source].kn} · ${COOPERATIVE_NAMES[source].en}`, name: source === "tumcos" ? "ಅಡಿಕೆ · Arecanut" : variety ? `${variety.kn} · ${variety.en}` : row.variety,
-        date: row.reporting_date, price: row.average_price, minimum: row.minimum_price, maximum: row.maximum_price });
+        short: source === "tumcos" ? "ಅಡಿಕೆ" : variety?.kn ?? "", date: row.reporting_date, price: row.average_price, minimum: row.minimum_price, maximum: row.maximum_price });
     }
   }
   const apmcId = place.apmc ? await marketId(apiUrl, place.apmc) : null;
@@ -144,7 +146,7 @@ async function placeRates(apiUrl: string, place: MarketPlace) {
       const key = `${row.variety_name}|${row.grade ?? ""}`;
       if (row.market_name !== place.apmc || seen.has(key)) continue;
       seen.add(key);
-      rows.push({ source: "ಎಪಿಎಂಸಿ · APMC", name: row.grade ? `${row.variety_name} (${row.grade})` : row.variety_name, date: row.reporting_date, price: row.modal_price, minimum: row.minimum_price, maximum: row.maximum_price });
+      rows.push({ source: "ಎಪಿಎಂಸಿ · APMC", name: row.grade ? `${row.variety_name} (${row.grade})` : row.variety_name, short: apmcSnippetName(row.variety_name), date: row.reporting_date, price: row.modal_price, minimum: row.minimum_price, maximum: row.maximum_price });
     }
   }
   return rows;
@@ -235,6 +237,16 @@ function placeHtml(place: MarketPlace, rows: PlaceRate[], history: PlaceHistory 
     + (history ? historyHtml(place, history) : "") + `</main>`;
 }
 
+/**
+ * The Kannada name a search snippet gives an APMC variety label, or "" to leave it out. Dakshina Kannada APMCs report
+ * "New Variety" and "Old Variety", which growers and papers there call ಹೊಸ ಅಡಿಕೆ and ಹಳೆ ಅಡಿಕೆ.
+ */
+function apmcSnippetName(label: string) {
+  const local: Record<string, string> = { "New Variety": "ಹೊಸ ಅಡಿಕೆ", "Old Variety": "ಹಳೆ ಅಡಿಕೆ" };
+  const kn = local[label] ?? agmarknetVarietyName(label, "kn");
+  return kn !== label ? kn : "";
+}
+
 /** Public contact address. Also in src/services/brand.tsx (footer) and index.html (structured data). */
 const CONTACT_EMAIL = "contact@adikenaadi.com";
 
@@ -270,26 +282,36 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
         catch (error) { console.warn(`Latest rates were not written into the variety pages: ${error instanceof Error ? error.message : error}`); }
       }
       const varieties = VARIETIES.filter((variety) => rates.has(variety.key));
-      const varietyPages = varieties.map(varietySeo);
+      // Search listings use the dated pages; the links between pages keep their plain labels either way.
+      const varietyPages = varieties.map((variety) => withSnippet(varietySeo(variety),
+        snippetFrom(rates.get(variety.key)!.map((row) => ({ name: "", date: row.reporting_date, price: row.average_price })), 1)));
+      const homeSnippet = snippetFrom(VARIETIES.filter((variety) => variety.everyday && rates.has(variety.key))
+        .flatMap((variety) => rates.get(variety.key)!.map((row) => ({ name: variety.kn, date: row.reporting_date, price: row.average_price }))));
       const write = (page: SeoPage, content = "") => {
         const file = resolve(outDir, page.path === "/" ? "index.html" : `${page.path.slice(1)}.html`);
         mkdirSync(dirname(file), { recursive: true });
         writeFileSync(file, pageHtml(home, siteUrl, page, [...varietyPages, ...MARKET_PAGES], content));
       };
-      for (const page of SEO_PAGES) write(page, page.path === "/" ? homeHtml(page, rates) : "");
+      for (const page of SEO_PAGES) {
+        if (page.path === "/") write(withSnippet(page, homeSnippet), homeHtml(page, rates));
+        else write(page);
+      }
       write(MARKETS_SEO);
       for (const [index, place] of MARKET_PLACES.entries()) {
         let content = "";
+        let rows: PlaceRate[] = [];
         if (apiUrl?.startsWith("https://")) {
           const api = apiUrl.replace(/\/+$/, "");
           // The year of history is extra: if it cannot be read, the page still gets its latest rates.
           let history: PlaceHistory | null = null;
           try { history = await placeHistory(api, place); }
           catch (error) { console.warn(`History was not written into ${place.en}'s page: ${error instanceof Error ? error.message : error}`); }
-          try { const rows = await placeRates(api, place); if (rows.length || history) content = placeHtml(place, rows, history); }
+          try { rows = await placeRates(api, place); if (rows.length || history) content = placeHtml(place, rows, history); }
           catch (error) { console.warn(`Rates were not written into ${place.en}'s page: ${error instanceof Error ? error.message : error}`); }
         }
-        write(MARKET_PAGES[index + 1], content);
+        // A town's cooperative rates lead its snippet when fresh; its APMC's named varieties stand in when they are not.
+        const quoted = rows.filter((row) => row.short).map((row) => ({ name: row.short, date: row.date, price: row.price, apmc: row.source.startsWith("ಎಪಿಎಂಸಿ") }));
+        write(withSnippet(MARKET_PAGES[index + 1], snippetFrom(quoted.filter((row) => !row.apmc)) ?? snippetFrom(quoted)), content);
       }
       varieties.forEach((variety, index) => write(varietyPages[index], ratesHtml(variety, rates.get(variety.key)!)));
       if (varietyPages.length) {

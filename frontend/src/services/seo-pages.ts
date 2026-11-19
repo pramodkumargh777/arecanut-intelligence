@@ -226,6 +226,62 @@ export function marketSeo(place: MarketPlace): SeoPage {
   };
 }
 
+/*
+ * Dated search snippets. A grower searching "ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ" picks the result that shows today's date and price, so the
+ * build (refreshed after each morning and evening collection) writes the newest rate date into the Kannada title and
+ * leads the description with those rates. The visible page is unchanged; only the head of the written HTML differs.
+ */
+
+const KN_MONTHS = ["ಜನವರಿ", "ಫೆಬ್ರವರಿ", "ಮಾರ್ಚ್", "ಏಪ್ರಿಲ್", "ಮೇ", "ಜೂನ್", "ಜುಲೈ", "ಆಗಸ್ಟ್", "ಸೆಪ್ಟೆಂಬರ್", "ಅಕ್ಟೋಬರ್", "ನವೆಂಬರ್", "ಡಿಸೆಂಬರ್"];
+/** "19 ನವೆಂಬರ್" for 2026-11-19, as Kannada papers date their rate columns. */
+export const knDate = (date: string) => `${Number(date.slice(8, 10))} ${KN_MONTHS[Number(date.slice(5, 7)) - 1]}`;
+
+/** Rates quoted together must be at most this many days older than the newest, so one date honestly covers them. */
+const SNIPPET_WINDOW_DAYS = 2;
+/** A snippet is written only when its date is this recent at build time; otherwise the page keeps its plain title. */
+const SNIPPET_MAX_AGE_DAYS = 4;
+
+export type SnippetRow = { name: string; date: string; price: number | null };
+export type Snippet = { date: string; prices: { name: string; low: number; high: number }[] };
+
+const daysBefore = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * The newest date among the rows and, for up to `limit` names in the rows' order, the range of prices reported near it.
+ * Rows with an empty name give one unnamed range (a variety page, where the name is already in the title).
+ */
+export function snippetFrom(rows: SnippetRow[], limit = 2, today = new Date().toISOString().slice(0, 10)): Snippet | null {
+  const priced = rows.filter((row): row is SnippetRow & { price: number } => row.price !== null && row.price > 0);
+  if (!priced.length) return null;
+  const date = priced.reduce((newest, row) => row.date > newest ? row.date : newest, priced[0].date);
+  if (date < daysBefore(today, SNIPPET_MAX_AGE_DAYS)) return null;
+  const since = daysBefore(date, SNIPPET_WINDOW_DAYS);
+  const byName = new Map<string, number[]>();
+  for (const row of priced) if (row.date >= since) byName.set(row.name, [...(byName.get(row.name) ?? []), Math.round(row.price)]);
+  const prices = [...byName].slice(0, limit).map(([name, values]) => ({ name, low: Math.min(...values), high: Math.max(...values) }));
+  return { date, prices };
+}
+
+const rupee = (value: number) => `₹${value.toLocaleString("en-IN")}`;
+
+/** The page with the snippet's date in its Kannada title and its rates leading the Kannada description. */
+export function withSnippet(page: SeoPage, snippet: Snippet | null): SeoPage {
+  if (!snippet?.prices.length) return page;
+  const date = knDate(snippet.date);
+  const split = page.kn.title.indexOf(" · ");
+  const title = split < 0 ? `${page.kn.title} ${date}` : `${page.kn.title.slice(0, split)} ${date}${page.kn.title.slice(split)}`;
+  const rates = snippet.prices.map(({ name, low, high }) => `${name ? `${name} ` : ""}${rupee(low)}${high > low ? `–${rupee(high)}` : ""}`).join(", ");
+  return { ...page, kn: { title, description: `${date} ಧಾರಣೆ: ${rates}. ${page.kn.description}` } };
+}
+
+/** Whether a title is the dated form of a page's Kannada title, as withSnippet writes it. */
+export function isDatedTitle(title: string, kn: SeoText) {
+  const split = kn.title.indexOf(" · ");
+  const [head, rest] = split < 0 ? [kn.title, ""] : [kn.title.slice(0, split), kn.title.slice(split)];
+  return title !== kn.title && title.startsWith(`${head} `) && title.endsWith(rest)
+    && KN_MONTHS.some((month) => title.slice(head.length, title.length - rest.length).endsWith(` ${month}`));
+}
+
 export function seoPage(path: string): SeoPage | undefined {
   const variety = varietyFromPath(path);
   if (variety) return varietySeo(variety);
