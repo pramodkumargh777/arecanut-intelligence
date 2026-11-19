@@ -43,7 +43,7 @@ const COPY = defineCopy({
     sourceBar: "Market data source", selectSource: "Select a supported source", unpublished: "unpublished",
     unsupported: (name: string, options: string) => `Unsupported market-data source for ${name}. Select one of: ${options}.`,
     selectedCommodity: "the selected commodity",
-    meta: (source: string, assumed: boolean, tender: boolean) => `${source} ${tender ? "tender" : "branch"} averages · ₹/quintal${assumed ? " (unit assumed)" : ""} · not APMC modal prices`,
+    meta: (source: string, tender: boolean) => `${source} ${tender ? "tender" : "branch"} averages · ₹/quintal · not APMC modal prices`,
     exactReportedVariety: "Exact reported variety", noVarieties: "No published varieties",
     loadingQuotes: "Loading cooperative quotations", emptyTitle: "No reviewed cooperative quotations in this selection",
     awaiting: (count: number) => `${count} quotation${count === 1 ? " is" : "s are"} waiting for reviewer approval in Data quality.`,
@@ -77,37 +77,37 @@ const COPY = defineCopy({
     historySingleHint: "One location and exact variety. Not a benchmark or forecast.",
     historyHint: (dates: number, coverage: number) => `${dates} qualifying reporting date${dates === 1 ? "" : "s"} · At least ${coverage} branches per date · Constituent coverage varies`,
     chartLocation: "Chart location", chartSingleLabel: (source: string, branch: string, variety: string) => `${source} · ${branch} · ${variety} · Reported average`,
-    chartBenchmarkLabel: (source: string) => `${source} average benchmark`, operatorAssumption: " — operator assumption",
+    chartBenchmarkLabel: (source: string) => `${source} average benchmark`,
     insufficientCoverage: "Insufficient same-date branch coverage", constituents: "Constituent branches by date",
     spreadTitle: "Cross-branch spread", spreadHint: "Highest minus lowest reported average among branches on the same date · dates with ≥2 branches",
     noSpread: "No date has two or more reporting branches", spreadName: "Branch spread", spreadDescription: (source: string) => `${source} cross-branch average spread by reporting date`,
-    reportedAveragesLabel: "reported averages", assumedUnitLabel: " · INR/quintal by operator assumption",
+    reportedAveragesLabel: "reported averages",
     distributionTitle: "Price distribution", distributionHint: (count: number) => `${count} published branch averages in the current window · not a forecast range`,
     noAverages: "No published averages", observationsName: "Observations", distributionDescription: (source: string) => `${source} distribution of branch averages`,
     iqr: "Interquartile range", cv: "Coefficient of variation", currentWindow: "current window",
     seasonalNote: "Seasonal and year-on-year analysis needs multi-year history: see", historyLink: "Monthly trends", seasonalBasis: "(AGMARKNET monthly series, a different price basis).",
     searchBranch: "Search branch or variety", searchExample: "e.g. Sagara",
     sameDate: "Same reporting date", rankedNote: (compared: number, total: number) => `Ranked by average, highest first. Other reporting dates are excluded. ${compared} of ${total} branches reported on this date.`,
-    rankedTitle: "Ranked branch range", rankedHint: (date: string, variety: string, assumed: boolean) => `${date} · ${variety} · Bar shows minimum–maximum, marker shows the reported average${assumed ? " · INR/quintal by operator assumption" : ""}`,
+    rankedTitle: "Ranked branch range", rankedHint: (date: string, variety: string) => `${date} · ${variety} · Bar shows minimum–maximum, marker shows the reported average`,
     noRanked: "No branch averages on this date", rankedDescription: (source: string, variety: string, date: string) => `${source} branch ranges for ${variety} on ${date}`,
     cooperativeAverages: "cooperative reported averages",
     comparisonTitle: "Same-date branch comparison", observationsTitle: "Published branch observations",
     matching: (count: number) => `${count} matching observation${count === 1 ? "" : "s"}`, notModal: "Reported averages, not modal prices",
     window: (from: string, to: string) => `Reporting window ${from} – ${to}`, truncated: (limit: string) => ` (latest ${limit} rows only; narrow the date range to see the rest)`,
     noMatches: "No quotations match these filters",
-    quotations: "Cooperative quotations", tableCaption: (source: string, unit: string, assumed: boolean) => `${source} published quotations · ${unit}${assumed ? " — operator assumption" : ""} · Average is not modal price`,
+    quotations: "Cooperative quotations", tableCaption: (source: string, unit: string) => `${source} published quotations · ${unit} · Average is not modal price`,
     normalRate: "Normal rate", sourceFetched: "Source / fetched at", platformFetched: (time: string) => `Platform fetched: ${time}`,
-    rangeIncomplete: "Range incomplete", rangeOk: "Min ≤ avg ≤ max", rangeInconsistent: "Range inconsistent", unitConfirmed: "Unit confirmed", unitAssumed: "Unit assumed",
+    rangeIncomplete: "Range incomplete", rangeOk: "Min ≤ avg ≤ max", rangeInconsistent: "Range inconsistent", 
     methodology: (source: CooperativeSource, coverage: number) => source === "tms"
       ? "TMS Sirsi general tender rates: the average is the plain mean of the day's tender lot rates, and the minimum and maximum are the lowest and highest lot. The portal states \"Rates in ₹/quintal\". Each variety keeps its exact TMS label. Not APMC modal prices and not merged with TSS, MAMCOS, TUMCOS or AGMARKNET."
       : source === "tumcos"
-      ? "TUMCOS (Channagiri) publishes low, average and high values per date without a variety. Its page labels values \"kg\"; they are treated as INR/quintal by operator decision because their size is only plausible per quintal. Source records are kept unchanged. They are not APMC modal prices and are not merged with MAMCOS, TSS or AGMARKNET."
+      ? "TUMCOS (Channagiri) publishes low, average and high values per date without a variety. They are not APMC modal prices and are not merged with MAMCOS, TSS or AGMARKNET."
       : source === "tss"
-      ? `TSS reported averages (avgrate), with normal rates (norrate) kept separately. TSS publishes no unit; INR/quintal is an operator assumption. The benchmark is the median across locations for one exact variety and date, with at least ${coverage} locations. Only the arecanut grades on the TSS list are included, each under its exact TSS label.`
+      ? `TSS reported averages (avgrate), with normal rates (norrate) kept separately. The benchmark is the median across locations for one exact variety and date, with at least ${coverage} locations. Only the arecanut grades on the TSS list are included, each under its exact TSS label.`
       : `Median of published cooperative branch averages for one exact variety and reporting date, with at least ${coverage} branches. Not the official APMC modal-price index. Branch constituents can differ between dates; changes do not imply a like-for-like market movement.`,
     conflicts: (list: string) => `Left out of the benchmark because verified prices disagree: ${list}.`, conflictOn: (branch: string, date: string, prices: string) => `${branch} on ${date} (${prices})`,
     priceType: "Price type", priceTypeValue: "Cooperative reported average (not APMC modal)",
-    unitValue: (assumed: boolean) => assumed ? "INR/quintal (operator assumption)" : "INR/quintal (source-confirmed)",
+    unitValue: "INR/quintal",
     coverageRule: "Coverage rule", coverageRuleValue: (coverage: number) => `At least ${coverage} branches on the same reporting date`,
     latestConstituents: "Latest constituents", noQualifying: "No qualifying date", marketReportingDate: "Market reporting date",
     publicationTime: "Source publication time", notSupplied: "Not supplied by this source", lastFetch: "Last platform fetch",
@@ -137,7 +137,7 @@ const COPY = defineCopy({
     sourceBar: "ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶದ ಮೂಲ", selectSource: "ಬೆಂಬಲಿತ ಮೂಲವನ್ನು ಆಯ್ಕೆಮಾಡಿ", unpublished: "ಪ್ರಕಟವಾಗಿಲ್ಲ",
     unsupported: (name: string, options: string) => `${name} ಗೆ ಈ ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶ ಮೂಲ ಬೆಂಬಲಿತವಲ್ಲ. ಇವುಗಳಲ್ಲಿ ಒಂದನ್ನು ಆಯ್ಕೆಮಾಡಿ: ${options}.`,
     selectedCommodity: "ಆಯ್ದ ಬೆಳೆ",
-    meta: (source: string, assumed: boolean, tender: boolean) => `${source} ${tender ? "ಟೆಂಡರ್" : "ಶಾಖೆ"} ಸರಾಸರಿಗಳು · ₹/ಕ್ವಿಂಟಾಲ್${assumed ? " (ಘಟಕ ಊಹಿಸಲಾಗಿದೆ)" : ""} · ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ`,
+    meta: (source: string, tender: boolean) => `${source} ${tender ? "ಟೆಂಡರ್" : "ಶಾಖೆ"} ಸರಾಸರಿಗಳು · ₹/ಕ್ವಿಂಟಾಲ್ · ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ`,
     exactReportedVariety: "ವರದಿಯಾದ ನಿಖರ ತಳಿ", noVarieties: "ಪ್ರಕಟಿತ ತಳಿಗಳಿಲ್ಲ",
     loadingQuotes: "ಸಹಕಾರಿ ದರಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ", emptyTitle: "ಈ ಆಯ್ಕೆಯಲ್ಲಿ ಪರಿಶೀಲಿಸಿದ ಸಹಕಾರಿ ದರಗಳಿಲ್ಲ",
     awaiting: (count: number) => `${count} ದರ ವರದಿಗಳು ದತ್ತಾಂಶ ಗುಣಮಟ್ಟ ಪುಟದಲ್ಲಿ ಪರಿಶೀಲಕರ ಅನುಮೋದನೆಗೆ ಕಾಯುತ್ತಿವೆ.`,
@@ -171,37 +171,37 @@ const COPY = defineCopy({
     historySingleHint: "ಒಂದು ಸ್ಥಳ ಮತ್ತು ನಿಖರ ತಳಿ. ಮಾನದಂಡ ಅಥವಾ ಮುನ್ಸೂಚನೆ ಅಲ್ಲ.",
     historyHint: (dates: number, coverage: number) => `${dates} ಅರ್ಹ ವರದಿ ದಿನಾಂಕಗಳು · ಪ್ರತಿ ದಿನಾಂಕಕ್ಕೆ ಕನಿಷ್ಠ ${coverage} ಶಾಖೆಗಳು · ಒಳಗೊಂಡ ಶಾಖೆಗಳು ಬದಲಾಗಬಹುದು`,
     chartLocation: "ಚಾರ್ಟ್ ಸ್ಥಳ", chartSingleLabel: (source: string, branch: string, variety: string) => `${source} · ${branch} · ${variety} · ವರದಿಯಾದ ಸರಾಸರಿ`,
-    chartBenchmarkLabel: (source: string) => `${source} ಸರಾಸರಿ ಮಾನದಂಡ ದರ`, operatorAssumption: " — ಘಟಕ ಊಹಿಸಲಾಗಿದೆ",
+    chartBenchmarkLabel: (source: string) => `${source} ಸರಾಸರಿ ಮಾನದಂಡ ದರ`,
     insufficientCoverage: "ಒಂದೇ ದಿನಾಂಕದಲ್ಲಿ ಸಾಕಷ್ಟು ಶಾಖೆಗಳಿಲ್ಲ", constituents: "ದಿನಾಂಕವಾರು ಒಳಗೊಂಡ ಶಾಖೆಗಳು",
     spreadTitle: "ಶಾಖೆಗಳ ನಡುವಿನ ಅಂತರ", spreadHint: "ಒಂದೇ ದಿನಾಂಕದಲ್ಲಿ ಶಾಖೆಗಳ ಅತಿ ಹೆಚ್ಚು ಮತ್ತು ಅತಿ ಕಡಿಮೆ ಸರಾಸರಿಯ ವ್ಯತ್ಯಾಸ · ಕನಿಷ್ಠ 2 ಶಾಖೆಗಳಿರುವ ದಿನಾಂಕಗಳು",
     noSpread: "ಯಾವ ದಿನಾಂಕದಲ್ಲೂ ಎರಡು ಅಥವಾ ಹೆಚ್ಚು ಶಾಖೆಗಳು ವರದಿ ಮಾಡಿಲ್ಲ", spreadName: "ಶಾಖೆ ಅಂತರ", spreadDescription: (source: string) => `ವರದಿ ದಿನಾಂಕವಾರು ${source} ಶಾಖೆಗಳ ಸರಾಸರಿ ಅಂತರ`,
-    reportedAveragesLabel: "ವರದಿಯಾದ ಸರಾಸರಿಗಳು", assumedUnitLabel: " · ₹/ಕ್ವಿಂಟಾಲ್ ಘಟಕ ಊಹಿಸಲಾಗಿದೆ",
+    reportedAveragesLabel: "ವರದಿಯಾದ ಸರಾಸರಿಗಳು",
     distributionTitle: "ದರಗಳ ಹಂಚಿಕೆ", distributionHint: (count: number) => `ಈ ಅವಧಿಯಲ್ಲಿ ${count} ಪ್ರಕಟಿತ ಶಾಖೆ ಸರಾಸರಿಗಳು · ಮುನ್ಸೂಚನೆ ಶ್ರೇಣಿ ಅಲ್ಲ`,
     noAverages: "ಪ್ರಕಟಿತ ಸರಾಸರಿಗಳಿಲ್ಲ", observationsName: "ದಾಖಲೆಗಳು", distributionDescription: (source: string) => `${source} ಶಾಖೆ ಸರಾಸರಿಗಳ ಹಂಚಿಕೆ`,
     iqr: "ಮಧ್ಯದ ಅರ್ಧ ಶ್ರೇಣಿ", cv: "ಏರಿಳಿತದ ಗುಣಾಂಕ", currentWindow: "ಈಗಿನ ಅವಧಿ",
     seasonalNote: "ಋತುಮಾನ ಮತ್ತು ವರ್ಷದಿಂದ ವರ್ಷದ ವಿಶ್ಲೇಷಣೆಗೆ ಹಲವು ವರ್ಷಗಳ ದತ್ತಾಂಶ ಬೇಕು: ನೋಡಿ", historyLink: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", seasonalBasis: "(AGMARKNET ತಿಂಗಳ ಸರಣಿ, ಬೇರೆ ದರದ ಆಧಾರ).",
     searchBranch: "ಶಾಖೆ ಅಥವಾ ತಳಿ ಹುಡುಕಿ", searchExample: "ಉದಾ. Sagara",
     sameDate: "ಅದೇ ವರದಿ ದಿನಾಂಕ", rankedNote: (compared: number, total: number) => `ಸರಾಸರಿ ದರದ ಪ್ರಕಾರ, ಹೆಚ್ಚಿನದು ಮೊದಲು. ಬೇರೆ ವರದಿ ದಿನಾಂಕಗಳನ್ನು ಬಿಡಲಾಗಿದೆ. ಈ ದಿನಾಂಕದಂದು ${total} ರಲ್ಲಿ ${compared} ಶಾಖೆಗಳು ವರದಿ ಮಾಡಿವೆ.`,
-    rankedTitle: "ಶಾಖೆಗಳ ದರ ಶ್ರೇಣಿ", rankedHint: (date: string, variety: string, assumed: boolean) => `${date} · ${variety} · ಪಟ್ಟಿ ಕನಿಷ್ಠ–ಗರಿಷ್ಠ, ಚುಕ್ಕೆ ವರದಿಯಾದ ಸರಾಸರಿ${assumed ? " · ₹/ಕ್ವಿಂಟಾಲ್ ಘಟಕ ಊಹಿಸಲಾಗಿದೆ" : ""}`,
+    rankedTitle: "ಶಾಖೆಗಳ ದರ ಶ್ರೇಣಿ", rankedHint: (date: string, variety: string) => `${date} · ${variety} · ಪಟ್ಟಿ ಕನಿಷ್ಠ–ಗರಿಷ್ಠ, ಚುಕ್ಕೆ ವರದಿಯಾದ ಸರಾಸರಿ`,
     noRanked: "ಈ ದಿನಾಂಕದಂದು ಶಾಖೆ ಸರಾಸರಿಗಳಿಲ್ಲ", rankedDescription: (source: string, variety: string, date: string) => `${date} ರಂದು ${variety} ಗೆ ${source} ಶಾಖೆಗಳ ದರ ಶ್ರೇಣಿ`,
     cooperativeAverages: "ಸಹಕಾರಿ ವರದಿಯಾದ ಸರಾಸರಿಗಳು",
     comparisonTitle: "ಅದೇ ದಿನಾಂಕದ ಶಾಖೆ ಹೋಲಿಕೆ", observationsTitle: "ಪ್ರಕಟಿತ ಶಾಖೆ ದಾಖಲೆಗಳು",
     matching: (count: number) => `ಹೊಂದುವ ${count} ದಾಖಲೆಗಳು`, notModal: "ವರದಿಯಾದ ಸರಾಸರಿಗಳು, ಮಾದರಿ ದರಗಳಲ್ಲ",
     window: (from: string, to: string) => `ವರದಿ ಅವಧಿ ${from} – ${to}`, truncated: (limit: string) => ` (ಇತ್ತೀಚಿನ ${limit} ಸಾಲುಗಳು ಮಾತ್ರ; ಉಳಿದವನ್ನು ನೋಡಲು ದಿನಾಂಕ ಅವಧಿಯನ್ನು ಕಡಿಮೆ ಮಾಡಿ)`,
     noMatches: "ಈ ಫಿಲ್ಟರ್‌ಗಳಿಗೆ ಹೊಂದುವ ದರಗಳಿಲ್ಲ",
-    quotations: "ಸಹಕಾರಿ ದರ ವರದಿಗಳು", tableCaption: (source: string, unit: string, assumed: boolean) => `${source} ಪ್ರಕಟಿತ ದರಗಳು · ${unit}${assumed ? " — ಘಟಕ ಊಹಿಸಲಾಗಿದೆ" : ""} · ಸರಾಸರಿ ದರ ಮಾದರಿ ದರವಲ್ಲ`,
+    quotations: "ಸಹಕಾರಿ ದರ ವರದಿಗಳು", tableCaption: (source: string, unit: string) => `${source} ಪ್ರಕಟಿತ ದರಗಳು · ${unit} · ಸರಾಸರಿ ದರ ಮಾದರಿ ದರವಲ್ಲ`,
     normalRate: "ಸಾಮಾನ್ಯ ದರ", sourceFetched: "ಮೂಲ / ತಂದ ಸಮಯ", platformFetched: (time: string) => `ತಂದ ಸಮಯ: ${time}`,
-    rangeIncomplete: "ಶ್ರೇಣಿ ಅಪೂರ್ಣ", rangeOk: "ಕನಿಷ್ಠ ≤ ಸರಾಸರಿ ≤ ಗರಿಷ್ಠ", rangeInconsistent: "ಶ್ರೇಣಿ ಹೊಂದುತ್ತಿಲ್ಲ", unitConfirmed: "ಘಟಕ ದೃಢಪಟ್ಟಿದೆ", unitAssumed: "ಘಟಕ ಊಹಿಸಲಾಗಿದೆ",
+    rangeIncomplete: "ಶ್ರೇಣಿ ಅಪೂರ್ಣ", rangeOk: "ಕನಿಷ್ಠ ≤ ಸರಾಸರಿ ≤ ಗರಿಷ್ಠ", rangeInconsistent: "ಶ್ರೇಣಿ ಹೊಂದುತ್ತಿಲ್ಲ", 
     methodology: (source: CooperativeSource, coverage: number) => source === "tms"
       ? "TMS ಶಿರಸಿ ಸಾಮಾನ್ಯ ಟೆಂಡರ್ ದರಗಳು: ಸರಾಸರಿಯು ಆ ದಿನದ ಟೆಂಡರ್ ಲಾಟ್ ದರಗಳ ಸರಳ ಸರಾಸರಿ; ಕನಿಷ್ಠ ಮತ್ತು ಗರಿಷ್ಠವು ಅತಿ ಕಡಿಮೆ ಮತ್ತು ಅತಿ ಹೆಚ್ಚಿನ ಲಾಟ್ ದರ. ಪೋರ್ಟಲ್ \"₹/ಕ್ವಿಂಟಾಲ್\" ಎಂದು ತಿಳಿಸುತ್ತದೆ. ಪ್ರತಿ ತಳಿಯನ್ನು ಅದರ ನಿಖರ TMS ಹೆಸರಿನಲ್ಲಿ ಇಡಲಾಗಿದೆ. ಇವು ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ ಮತ್ತು TSS, MAMCOS, TUMCOS ಅಥವಾ AGMARKNET ಜೊತೆ ಬೆರೆಸುವುದಿಲ್ಲ."
       : source === "tumcos"
-      ? "TUMCOS (ಚನ್ನಗಿರಿ) ಪ್ರತಿ ದಿನಾಂಕಕ್ಕೆ ತಳಿ ತಿಳಿಸದೆ ಕನಿಷ್ಠ, ಸರಾಸರಿ ಮತ್ತು ಗರಿಷ್ಠ ದರ ಪ್ರಕಟಿಸುತ್ತದೆ. ಅದರ ಪುಟದಲ್ಲಿ \"kg\" ಎಂದಿದೆ; ದರಗಳ ಗಾತ್ರ ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ಮಾತ್ರ ಹೊಂದುವುದರಿಂದ ನಿರ್ವಾಹಕರ ನಿರ್ಧಾರದಂತೆ ₹/ಕ್ವಿಂಟಾಲ್ ಎಂದು ಪರಿಗಣಿಸಲಾಗಿದೆ. ಮೂಲ ದಾಖಲೆಗಳನ್ನು ಬದಲಿಸುವುದಿಲ್ಲ. ಇವು ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ ಮತ್ತು MAMCOS, TSS ಅಥವಾ AGMARKNET ಜೊತೆ ಬೆರೆಸುವುದಿಲ್ಲ."
+      ? "TUMCOS (ಚನ್ನಗಿರಿ) ಪ್ರತಿ ದಿನಾಂಕಕ್ಕೆ ತಳಿ ತಿಳಿಸದೆ ಕನಿಷ್ಠ, ಸರಾಸರಿ ಮತ್ತು ಗರಿಷ್ಠ ದರ ಪ್ರಕಟಿಸುತ್ತದೆ. ಇವು ಎಪಿಎಂಸಿ ಮಾದರಿ ದರಗಳಲ್ಲ ಮತ್ತು MAMCOS, TSS ಅಥವಾ AGMARKNET ಜೊತೆ ಬೆರೆಸುವುದಿಲ್ಲ."
       : source === "tss"
-      ? `TSS ವರದಿಯಾದ ಸರಾಸರಿ ದರಗಳು (avgrate); ಸಾಮಾನ್ಯ ದರಗಳನ್ನು (norrate) ಪ್ರತ್ಯೇಕವಾಗಿ ಇಡಲಾಗಿದೆ. TSS ಘಟಕವನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ; ₹/ಕ್ವಿಂಟಾಲ್ ನಿರ್ವಾಹಕರ ಊಹೆ. ಮಾನದಂಡ ದರವು ಒಂದು ನಿಖರ ತಳಿ ಮತ್ತು ದಿನಾಂಕಕ್ಕೆ ಕನಿಷ್ಠ ${coverage} ಸ್ಥಳಗಳ ಮಧ್ಯಮ. TSS ಪಟ್ಟಿಯಲ್ಲಿರುವ ಅಡಿಕೆ ದರ್ಜೆಗಳನ್ನು ಮಾತ್ರ, ಅವುಗಳ ನಿಖರ TSS ಹೆಸರಿನಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ.`
+      ? `TSS ವರದಿಯಾದ ಸರಾಸರಿ ದರಗಳು (avgrate); ಸಾಮಾನ್ಯ ದರಗಳನ್ನು (norrate) ಪ್ರತ್ಯೇಕವಾಗಿ ಇಡಲಾಗಿದೆ. ಮಾನದಂಡ ದರವು ಒಂದು ನಿಖರ ತಳಿ ಮತ್ತು ದಿನಾಂಕಕ್ಕೆ ಕನಿಷ್ಠ ${coverage} ಸ್ಥಳಗಳ ಮಧ್ಯಮ. TSS ಪಟ್ಟಿಯಲ್ಲಿರುವ ಅಡಿಕೆ ದರ್ಜೆಗಳನ್ನು ಮಾತ್ರ, ಅವುಗಳ ನಿಖರ TSS ಹೆಸರಿನಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ.`
       : `ಒಂದು ನಿಖರ ತಳಿ ಮತ್ತು ವರದಿ ದಿನಾಂಕಕ್ಕೆ, ಕನಿಷ್ಠ ${coverage} ಶಾಖೆಗಳ ಪ್ರಕಟಿತ ಸರಾಸರಿಗಳ ಮಧ್ಯಮ. ಇದು ಅಧಿಕೃತ ಎಪಿಎಂಸಿ ಮಾದರಿ ದರದ ಸೂಚ್ಯಂಕವಲ್ಲ. ದಿನಾಂಕಗಳ ನಡುವೆ ಒಳಗೊಂಡ ಶಾಖೆಗಳು ಬದಲಾಗಬಹುದು; ಬದಲಾವಣೆಯು ಸಮಾನ ಹೋಲಿಕೆಯ ಮಾರುಕಟ್ಟೆ ಚಲನೆ ಎಂದರ್ಥವಲ್ಲ.`,
     conflicts: (list: string) => `ಪರಿಶೀಲಿಸಿದ ದರಗಳು ಹೊಂದದ ಕಾರಣ ಮಾನದಂಡದಿಂದ ಬಿಡಲಾಗಿದೆ: ${list}.`, conflictOn: (branch: string, date: string, prices: string) => `${branch}, ${date} (${prices})`,
     priceType: "ದರದ ವಿಧ", priceTypeValue: "ಸಹಕಾರಿ ವರದಿಯಾದ ಸರಾಸರಿ (ಎಪಿಎಂಸಿ ಮಾದರಿ ದರವಲ್ಲ)",
-    unitValue: (assumed: boolean) => assumed ? "₹/ಕ್ವಿಂಟಾಲ್ (ನಿರ್ವಾಹಕರ ಊಹೆ)" : "₹/ಕ್ವಿಂಟಾಲ್ (ಮೂಲದಿಂದ ದೃಢಪಟ್ಟಿದೆ)",
+    unitValue: "₹/ಕ್ವಿಂಟಾಲ್",
     coverageRule: "ವ್ಯಾಪ್ತಿ ನಿಯಮ", coverageRuleValue: (coverage: number) => `ಅದೇ ವರದಿ ದಿನಾಂಕದಲ್ಲಿ ಕನಿಷ್ಠ ${coverage} ಶಾಖೆಗಳು`,
     latestConstituents: "ಇತ್ತೀಚಿನ ಒಳಗೊಂಡ ಶಾಖೆಗಳು", noQualifying: "ಅರ್ಹ ದಿನಾಂಕವಿಲ್ಲ", marketReportingDate: "ಮಾರುಕಟ್ಟೆ ವರದಿ ದಿನಾಂಕ",
     publicationTime: "ಮೂಲದ ಪ್ರಕಟಣೆ ಸಮಯ", notSupplied: "ಈ ಮೂಲ ನೀಡುವುದಿಲ್ಲ", lastFetch: "ಕೊನೆಯ ಬಾರಿ ತಂದದ್ದು",
@@ -259,7 +259,6 @@ function quoteQuality(row: CooperativeQuote, t: typeof COPY.en): { label: string
     : row.minimum_price <= row.average_price && row.average_price <= row.maximum_price;
   return [
     { label: ordered === null ? t.rangeIncomplete : ordered ? t.rangeOk : t.rangeInconsistent, ok: ordered },
-    { label: row.unit_status === "source_confirmed" ? t.unitConfirmed : t.unitAssumed, ok: row.unit_status === "source_confirmed" ? true : null },
   ];
 }
 
@@ -286,7 +285,7 @@ function QuoteTable({ rows, sort, onSort }: { rows: CooperativeQuote[]; sort?: Q
     : [<SortHeader key="min" label={c.minimum} column="minimum_price" sort={sort} onSort={onSort} numeric />, <SortHeader key="avg" label={c.average} column="average_price" sort={sort} onSort={onSort} numeric />, <SortHeader key="max" label={c.maximum} column="maximum_price" sort={sort} onSort={onSort} numeric />];
   const normalHead = tss ? [<th key="normal" scope="col" className="numeric">{t.normalRate}</th>] : [];
   return <div className="table-scroll" tabIndex={0} role="region" aria-label={t.quotations}><table>
-    <caption className="sr-only">{t.tableCaption(sourceName, c.inrQuintal, rows[0]?.unit_status === "assumed")}</caption>
+    <caption className="sr-only">{t.tableCaption(sourceName, c.inrQuintal)}</caption>
     <thead><tr><SortHeader label={c.branch} column="branch" sort={sort} onSort={onSort} />
       {phone ? [...priceHeads, ...normalHead, dateHead, varietyHead] : [dateHead, varietyHead, ...priceHeads, ...normalHead]}
       <th scope="col" className="col-quality">{c.quality}</th><th scope="col" className="col-source">{t.sourceFetched}</th></tr></thead>
@@ -321,7 +320,7 @@ function CooperativeAbout({ source, data, coverage, awaitingReview, hasRows }: {
     {(data?.benchmark_conflicts?.length ?? 0) > 0 && <p role="note">{t.conflicts(data!.benchmark_conflicts.map((conflict) => t.conflictOn(conflict.branch, format.date(conflict.reporting_date), conflict.prices.join(", "))).join("; "))}</p>}
     <dl className="fact-list">
       <div><dt>{t.priceType}</dt><dd>{t.priceTypeValue}</dd></div>
-      <div><dt>{c.unit}</dt><dd>{t.unitValue(assumedUnit)}</dd></div>
+      <div><dt>{c.unit}</dt><dd>{t.unitValue}</dd></div>
       <div><dt>{t.coverageRule}</dt><dd>{t.coverageRuleValue(coverage)}</dd></div>
       <div><dt>{t.latestConstituents}</dt><dd>{benchmark ? `${benchmark.branches.join(", ")} (${format.date(benchmark.reporting_date)})` : t.noQualifying}</dd></div>
       <div><dt>{t.marketReportingDate}</dt><dd>{format.date(data?.latest_reporting_date)}</dd></div>
@@ -347,7 +346,6 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   const dateText = (value: string | null | undefined) => format.date(value);
   const cash = (value: number | null | undefined) => money(value, c.notReported);
   const sourceName = source.toUpperCase();
-  const assumedUnit = ASSUMED_UNIT_SOURCES.includes(source);
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const { code, commodity: commodityDef } = useCommodity();
@@ -428,7 +426,6 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   const missingBranches = (data?.branches ?? []).filter((name) => !(data?.latest_by_branch ?? []).some((row) => row.branch === name));
   const periodMean = benchmarkValues.length ? benchmarkValues.reduce((sum, value) => sum + value, 0) / benchmarkValues.length : null;
   const dispersion = periodMean === null ? null : Math.sqrt(benchmarkValues.reduce((sum, value) => sum + (value - periodMean) ** 2, 0) / benchmarkValues.length);
-  const unitNote = assumedUnit ? t.operatorAssumption : undefined;
   const isCompare = location.pathname === "/compare";
   const tableRows = isCompare ? comparison : filtered;
   function exportRows() {
@@ -437,7 +434,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
   }
   return <div className="page-stack">
     <section className="page-heading"><div><h1>{mode.title(commodityDef ? commodityName(code, commodityDef, language) : t.marketFallback)}</h1><p className="page-intro">{mode.description}</p>
-      <p className="page-meta">{t.meta(sourceName, assumedUnit, TENDER_SOURCES.includes(source))}</p></div>
+      <p className="page-meta">{t.meta(sourceName, TENDER_SOURCES.includes(source))}</p></div>
       <div className="heading-controls"><SourceSlot />
       <label className="filter-control"><span>{t.exactReportedVariety}</span><select value={data?.variety ?? ""} disabled={!data?.varieties.length} onChange={(event) => {
         update({ variety: event.target.value, date: null });
@@ -486,14 +483,14 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
       </section>}
       {(location.pathname === "/overview" || location.pathname === "/analytics") && <section className="panel"><div className="panel-heading"><div><h2>{t.historyTitle(sourceName, singleLocation)}</h2><p className="phone-hide">{singleLocation ? t.historySingleHint : t.historyHint(series.length, coverage)}</p></div>
         {singleLocation && <label className="filter-control"><span>{t.chartLocation}</span><select value={selectedChartBranch} onChange={(event) => setChartBranch(event.target.value)}>{branches.map((value) => <option key={value}>{value}</option>)}</select></label>}</div>
-        {singleLocation ? <div className="monthly-details"><Suspense fallback={<LoadingState />}><PriceChart label={t.chartSingleLabel(sourceName, selectedChartBranch, data?.variety ?? "")} quotePoints={quotePoints} unitNote={unitNote} /></Suspense></div>
-          : !series.length ? <EmptyState title={t.insufficientCoverage} /> : <div className="monthly-details"><Suspense fallback={<LoadingState />}><PriceChart label={t.chartBenchmarkLabel(sourceName)} averagePoints={series} showStats={location.pathname !== "/analytics"} unitNote={unitNote} /></Suspense>
+        {singleLocation ? <div className="monthly-details"><Suspense fallback={<LoadingState />}><PriceChart label={t.chartSingleLabel(sourceName, selectedChartBranch, data?.variety ?? "")} quotePoints={quotePoints} /></Suspense></div>
+          : !series.length ? <EmptyState title={t.insufficientCoverage} /> : <div className="monthly-details"><Suspense fallback={<LoadingState />}><PriceChart label={t.chartBenchmarkLabel(sourceName)} averagePoints={series} showStats={location.pathname !== "/analytics"} /></Suspense>
           <details><summary>{t.constituents}</summary>{series.map((point) => <p key={point.reporting_date}>{dateText(point.reporting_date)}: {point.branches.join(", ")}</p>)}</details></div>}
       </section>}
       {location.pathname === "/analytics" && <section className="chart-grid">
         <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.spreadTitle}</h2><p className="phone-hide">{t.spreadHint}</p></div></div>
           {!spreadByDate.length ? <EmptyState title={t.noSpread} /> : <LazyBarChart categories={spreadByDate.map((point) => format.date(point.date))} values={spreadByDate.map((point) => point.spread)} name={t.spreadName} description={t.spreadDescription(sourceName)} />}
-          <div className="chart-foot"><SourceLabel>{sourceName} · {t.reportedAveragesLabel}{assumedUnit ? t.assumedUnitLabel : ""}</SourceLabel></div></article>
+          <div className="chart-foot"><SourceLabel>{sourceName} · {t.reportedAveragesLabel}</SourceLabel></div></article>
         <article className="panel chart-panel"><div className="panel-heading"><div><h2>{t.distributionTitle}</h2><p className="phone-hide">{t.distributionHint(averageDistribution.count)}</p></div></div>
           {!averageBins.length ? <EmptyState title={t.noAverages} /> : <LazyBarChart categories={averageBins.map((bin) => `₹${(bin.from / 1000).toFixed(1)}k`)} tooltipLabels={averageBins.map((bin) => `${rupees(bin.from)} – ${rupees(bin.to)}`)} values={averageBins.map((bin) => bin.count)} name={t.observationsName} valueFormat="count" description={t.distributionDescription(sourceName)} />}
           <dl className="fact-list compact"><div><dt>{c.median}</dt><dd>{rupees(averageDistribution.median)}</dd></div><div><dt>{t.iqr}</dt><dd>{rupees(averageDistribution.q1)} – {rupees(averageDistribution.q3)}</dd></div><div><dt>{t.cv}</dt><dd>{averageDistribution.cvPercent === null ? "—" : `${averageDistribution.cvPercent.toFixed(1)}%`}</dd></div></dl>
@@ -514,7 +511,7 @@ function CooperativeMarketPage({ source }: { source: CooperativeSource }) {
         </div></details>
       </section>}
       {isCompare && <section className="filter-bar"><label className="filter-control"><span>{t.sameDate}</span><select value={selectedDate} onChange={(event) => update({ date: event.target.value })}>{dates.map((date) => <option key={date} value={date}>{format.date(date)}</option>)}</select></label><span>{t.rankedNote(comparedBranches, data?.branches.length ?? 0)}</span></section>}
-      {isCompare && <section className="panel chart-panel"><div className="panel-heading"><div><h2>{t.rankedTitle}</h2><p>{t.rankedHint(format.date(selectedDate), data?.variety ?? "", assumedUnit)}</p></div></div>
+      {isCompare && <section className="panel chart-panel"><div className="panel-heading"><div><h2>{t.rankedTitle}</h2><p>{t.rankedHint(format.date(selectedDate), data?.variety ?? "")}</p></div></div>
         {!ranked.length ? <EmptyState title={t.noRanked} /> : <LazyRangeChart rows={ranked.map((row) => ({ label: row.label, detail: row.detail, minimum: row.minimum, central: row.central, maximum: row.maximum }))} centralLabel={c.reportedAverage} description={t.rankedDescription(sourceName, data?.variety ?? "", format.date(selectedDate))} />}
         <div className="chart-foot"><SourceLabel>{sourceName} · {t.cooperativeAverages} · {format.date(selectedDate)}</SourceLabel></div>
       </section>}

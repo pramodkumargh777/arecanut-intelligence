@@ -254,7 +254,7 @@ historyRoutes.get("/history/aggregates", async (c) => {
     WHERE source_key=? AND commodity='arecanut' AND variety=? AND branch=? AND status='verified' AND reporting_date BETWEEN ? AND ? ORDER BY reporting_date`)
     .bind(source, variety, branch, from, to).all<DailyQuote>();
   return c.json({ data: aggregateDaily(rows.results, from, to, interval), observations: rows.results, ...input.data,
-    methodology: "Equal-weight arithmetic mean of captured daily reported averages for one exact variety and branch. Coverage is observed days / calendar days in the selected range, not a claim about trading-day completeness. No interpolation or volume weighting. TSS and TUMCOS INR/quintal is an operator assumption. Not the official monthly arrival-weighted report." });
+    methodology: "Equal-weight arithmetic mean of captured daily reported averages for one exact variety and branch. Coverage is observed days / calendar days in the selected range, not a claim about trading-day completeness. No interpolation or volume weighting. Not the official monthly arrival-weighted report." });
 });
 
 /** Inline report, or its verified R2 copy when the inline column was offloaded. */

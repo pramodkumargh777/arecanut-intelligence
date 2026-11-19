@@ -5,6 +5,8 @@ import { commodityName, useCommodity } from "../services/commodity";
 import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
 import { BRAND, brandLabel, BrandName } from "../services/brand";
 import { isDatedTitle, seoPage, varietyFromPath } from "../services/seo-pages";
+import { MARKETS_PATH, marketFromPath, marketPath } from "../services/markets";
+import { useMyTown } from "../services/myTown";
 import { CommodityGate } from "./CommodityGate";
 import { MarketSearch } from "./MarketSearch";
 import { SiteFooter } from "./SiteFooter";
@@ -22,17 +24,22 @@ const WRITTEN_HEAD = typeof document === "undefined" ? null : {
   description: document.querySelector('meta[name="description"]')?.getAttribute("content") ?? "",
 };
 
+/**
+ * Grower questions first (today's rate, my town's rate, where it is higher, sell or wait, ask), then the two tables
+ * long-time readers use daily. Market intelligence moved under "More tools"; every page keeps its address.
+ */
 const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
-    { to: "/prices", label: "Explore prices", kn: "ಮಾರುಕಟ್ಟೆ ದರಗಳು", icon: TableProperties },
-    { to: "/analytics", label: "Price trends", kn: "ದರ ಪ್ರವೃತ್ತಿ", icon: ChartNoAxesCombined },
+    { to: "/market", label: "Rates by town", kn: "ಊರಿನ ಧಾರಣೆ", icon: MapPin },
     { to: "/compare", label: "Compare markets", kn: "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ", icon: ArrowLeftRight },
-    { to: "/intelligence", label: "Market intelligence", kn: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ", icon: BookOpenText },
     { to: "/sell-or-hold", label: "Sell or wait", kn: "ಮಾರಬೇಕೇ, ಕಾಯಬೇಕೇ", icon: Hourglass },
     { to: "/assistant", label: "Ask a question", kn: "ಪ್ರಶ್ನೆ ಕೇಳಿ", icon: MessageSquareText },
+    { to: "/prices", label: "Explore prices", kn: "ಮಾರುಕಟ್ಟೆ ದರಗಳು", icon: TableProperties },
+    { to: "/analytics", label: "Price trends", kn: "ದರ ಪ್ರವೃತ್ತಿ", icon: ChartNoAxesCombined },
 ];
 const advancedGroups = [
   { label: "Market detail", kn: "ಮಾರುಕಟ್ಟೆ ವಿವರ", items: [
+    { to: "/intelligence", label: "Market intelligence", kn: "ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ", icon: BookOpenText },
     { to: "/overview", label: "Market overview", kn: "ಸಮಗ್ರ ನೋಟ", icon: Activity },
     { to: "/monthly-trends", label: "Monthly trends", kn: "ತಿಂಗಳ ಪ್ರವೃತ್ತಿ", icon: CalendarRange },
     { to: "/supply", label: "Supply & weather", kn: "ಉತ್ಪಾದನೆ ಮತ್ತು ಹವಾಮಾನ", icon: MapPin },
@@ -49,6 +56,8 @@ const advancedGroups = [
     // { to: "/data-quality", label: "Data quality", kn: "ದತ್ತಾಂಶ ಗುಣಮಟ್ಟ", icon: ClipboardCheck },
   ] },
 ];
+/** The town list's name, as the menu shows it, for the breadcrumb above each town page. */
+const TOWNS_CRUMB = primaryNavigation.find((item) => item.to === MARKETS_PATH)!;
 const navigation: { to: string; label: string; kn: string; icon: typeof Activity; end?: boolean }[] = [...primaryNavigation, ...advancedGroups.flatMap((group) => group.items)];
 const COLLAPSE_KEY = "areca-pulse-sidebar-collapsed";
 
@@ -73,6 +82,12 @@ export function searchablePath(pathname: string) {
   if (seoPage(pathname)) return true;
   return navigation.some((item) => item.to === pathname || (item.to === "/intelligence" && pathname.startsWith("/intelligence/")));
 }
+
+/** Bottom bar on phones: short words that fit four across on a 360px screen. */
+const TAB_COPY = defineCopy({
+  en: { label: "Main sections", rates: "Rates", town: "My town", compare: "Compare", more: "More" },
+  kn: { label: "ಮುಖ್ಯ ವಿಭಾಗಗಳು", rates: "ಧಾರಣೆ", town: "ನನ್ನ ಊರು", compare: "ಹೋಲಿಸಿ", more: "ಇನ್ನಷ್ಟು" },
+});
 
 const SHELL_COPY = defineCopy({
   en: {
@@ -108,7 +123,10 @@ export function AppShell() {
     try { localStorage.setItem(COLLAPSE_KEY, String(next)); } catch { /* The choice still applies until the page is closed. */ }
   }
   const [marketToolsOpen, setMarketToolsOpen] = useState(false);
+  const myTown = useMyTown();
   const location = useLocation();
+  // The assistant's question box sits at the bottom of the screen, where the bar would cover it.
+  const showTabBar = location.pathname !== "/assistant";
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const sidebar = useRef<HTMLElement>(null);
@@ -116,6 +134,7 @@ export function AppShell() {
   const menuButton = useRef<HTMLButtonElement>(null);
   // A variety page (/variety/rashi) is the rates page at another address.
   const ratesPage = location.pathname === "/" || Boolean(varietyFromPath(location.pathname));
+  const townPlace = marketFromPath(location.pathname);
   const currentItem = navigation.find((item) => (item.to === "/" ? ratesPage : item.to === location.pathname) || (item.to === "/intelligence" && location.pathname.startsWith("/intelligence/")));
   // Pages outside the menu (town pages reached from search) are named from their search-engine label.
   const currentPage = currentItem ? (language === "kn" ? currentItem.kn : currentItem.label) : seoPage(location.pathname)?.label[language] ?? copy.notFound;
@@ -226,7 +245,7 @@ export function AppShell() {
   }, [menuOpen]);
 
   return (
-    <div className={`app-shell${collapsed ? " app-shell-collapsed" : ""}`}>
+    <div className={`app-shell${collapsed ? " app-shell-collapsed" : ""}${showTabBar ? " app-shell-tabs" : ""}`}>
       <a className="skip-link" href="#main-content">{copy.skip}</a>
       {menuOpen && <button className="mobile-scrim" tabIndex={-1} aria-label={copy.closeNavigation} onClick={() => setMenuOpen(false)} />}
       <aside ref={sidebar} id="main-navigation" aria-label={copy.navigation} role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen || undefined} className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
@@ -273,7 +292,10 @@ export function AppShell() {
           {/* Phones and tablets only. The bare palm mark, not the tiled app icon, so it reads as the logo beside outlined buttons; the dark logo is cropped to its mark. */}
           <Link to="/" className="topbar-brand" aria-label={brandLabel(language)}><img className={`topbar-brand-mark${theme === "dark" ? " topbar-brand-mark-dark" : ""}`} src={theme === "dark" ? darkLogo : brandIcon} alt="" />
             <span className="topbar-brand-name" aria-hidden="true" lang={language}><BrandName /></span></Link>
-          <div className="breadcrumb"><span>{currentCommodity}</span><span className="breadcrumb-sep">/</span><strong>{currentPage}</strong></div>
+          {/* A town page sits under the town list: Arecanut / Rates by town / Shivamogga, with the middle step a link back. */}
+          <div className="breadcrumb"><span>{currentCommodity}</span><span className="breadcrumb-sep">/</span>
+            {townPlace && <><Link className="breadcrumb-link" to={MARKETS_PATH}>{language === "kn" ? TOWNS_CRUMB.kn : TOWNS_CRUMB.label}</Link><span className="breadcrumb-sep breadcrumb-link-sep">/</span></>}
+            <strong>{townPlace ? (language === "kn" ? townPlace.kn : townPlace.en) : currentPage}</strong></div>
           {!growerPage && <button type="button" className="button-secondary market-tools-toggle" aria-expanded={marketToolsOpen} aria-controls="header-market-tools" aria-label={copy.marketTools} onClick={() => setMarketToolsOpen((open) => !open)}><SlidersHorizontal size={16} aria-hidden="true" />{copy.tools}<ChevronDown className="market-tools-chevron" size={16} aria-hidden="true" /></button>}
           {!growerPage && <div id="header-market-tools" className={`topbar-tools${marketToolsOpen ? " topbar-tools-open" : ""}`}>
             <label className="commodity-select"><span>{copy.commodity}</span><select aria-label={copy.commodity} value={commodity ? commodityCode : ""} onChange={(event) => selectCommodity(event.target.value)}>
@@ -297,6 +319,13 @@ export function AppShell() {
         <main id="main-content" tabIndex={-1} className="page-content"><CommodityGate><div key={location.pathname} className="page-enter"><Outlet /></div></CommodityGate></main>
         <SiteFooter />
       </div>
+      {/* Phones only (CSS): the four places growers go most, always one tap away. The ☰ menu still lists everything. */}
+      {showTabBar && <nav className="tab-bar" aria-label={TAB_COPY[language].label}>
+        <NavLink to="/" end className={() => `tab-bar-item${ratesPage ? " active" : ""}`} aria-current={ratesPage ? "page" : undefined}><House size={24} aria-hidden="true" /><span>{TAB_COPY[language].rates}</span></NavLink>
+        <NavLink to={myTown ? marketPath(myTown.slug) : MARKETS_PATH} className={() => `tab-bar-item${location.pathname.startsWith(MARKETS_PATH) ? " active" : ""}`}><MapPin size={24} aria-hidden="true" /><span>{TAB_COPY[language].town}</span></NavLink>
+        <NavLink to={`/compare${marketSearch}`} className={({ isActive }) => `tab-bar-item${isActive ? " active" : ""}`}><ArrowLeftRight size={24} aria-hidden="true" /><span>{TAB_COPY[language].compare}</span></NavLink>
+        <button type="button" className={`tab-bar-item${menuOpen ? " active" : ""}`} aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen(true)}><Menu size={24} aria-hidden="true" /><span>{TAB_COPY[language].more}</span></button>
+      </nav>}
     </div>
   );
 }

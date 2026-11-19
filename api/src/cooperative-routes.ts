@@ -115,11 +115,11 @@ cooperativeRoutes.get("/cooperative/prices", async (c) => {
       terms_checked_at: registry.terms_checked_at,
     } : null,
     methodology: source.data === "tumcos"
-      ? "TUMCOS (Channagiri) publishes low, average and high values per date without a variety. Its page labels values \"kg\"; they are treated as INR/quintal by operator decision because their size is only plausible per quintal. Source records are kept unchanged. They are not APMC modal prices and are not merged with MAMCOS, TSS or AGMARKNET."
+      ? "TUMCOS (Channagiri) publishes low, average and high values per date without a variety. They are not APMC modal prices and are not merged with MAMCOS, TSS or AGMARKNET."
       : source.data === "tms"
       ? "TMS Sirsi general tender rates: the average is the plain mean of the day's tender lot rates, and the minimum and maximum are the lowest and highest lot. The portal states \"Rates in ₹/quintal\". One rate per variety per tender day, each under its exact TMS label. Lot, bag and quantity totals come from the same day's lots; the quantity unit is not stated. Not APMC modal prices and not merged with TSS, MAMCOS, TUMCOS or AGMARKNET."
       : source.data === "tss"
-      ? `TSS reported averages (avgrate), with normal rates (norrate) preserved separately. TSS publishes no unit; INR/quintal is an operator assumption. The benchmark is the median across locations for one exact variety and date, with at least ${coverage} locations. Only the arecanut grades on the TSS list are included, each under its exact TSS label; pepper, coconut and by-products are archived but not published.`
+      ? `TSS reported averages (avgrate), with normal rates (norrate) preserved separately. The benchmark is the median across locations for one exact variety and date, with at least ${coverage} locations. Only the arecanut grades on the TSS list are included, each under its exact TSS label; pepper, coconut and by-products are archived but not published.`
       : `Median of published cooperative branch averages for one exact variety and reporting date, with at least ${coverage} branches. Not the official APMC modal-price index. Branch constituents can differ between dates; changes do not imply a like-for-like market movement.`,
     availability: source.data === "tss" ? "INR/quintal — operator assumption; TSS publishes no unit."
       : source.data === "tumcos" ? "INR/quintal — operator assumption; the source page labels values \"kg\"." : null,

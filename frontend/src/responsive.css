@@ -103,10 +103,17 @@
   .home-hero { align-items: center; padding-bottom: 0; }
   .home-hero h1 { margin-bottom: 2px; }
   .home-variety { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; }
+  /* Variety and town on one row: the variety label and pills, then the town pill, which names itself with its pin
+     icon (the label stays for screen readers). The row wraps only when the screen is too narrow for both. */
+  .home-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
+  .home-filters > .home-variety { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+  .home-filters > .home-town { gap: 4px; }
+  .home-town .home-variety-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .home-price-section { gap: 10px; }
   .rate-card-head { align-items: center; padding: 11px 18px 10px; }
   .rate-card-head > div { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0; }
-  .rate-card-head h3 { flex: 1 1 100%; }
+  /* Town pages title their cards with h2, the home page with h3: either way the title gets a line of its own. */
+  .rate-card-head h2, .rate-card-head h3 { flex: 1 1 100%; }
   .rate-card-head .rate-card-basis, .rate-card-head .rate-card-sub { margin-top: 2px; }
   /* The "·" sits in the gap after the basis line. When the report date wraps to a line of its own, its dot falls
      outside the left edge and is clipped, instead of starting the line. */
@@ -226,7 +233,7 @@
   .topbar-brand-mark { width: 30px; height: 24px; }
   .topbar .market-tools-toggle { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
   .topbar-home .breadcrumb { display: none; }
-  .page-content { padding: 18px 16px 24px; }
+  .page-content { padding: 18px 16px 16px; }
 
   /* Menu: full-size rows that are easy to tap. */
   .nav-link { min-height: 44px; padding: 8px 10px; font-size: 15px; gap: 12px; }
@@ -415,7 +422,7 @@
   .rate-key { display: block; color: var(--subtle); font-size: 11.5px; line-height: 1.35; white-space: nowrap; }
   .rate-card-note { display: block; margin: 0; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.45; }
   .rate-card-foot .rate-foot-source { display: inline-flex; color: var(--muted); font-weight: 500; }
-  /* TUMCOS's own line already says per quintal and unit assumed. */
+  /* TUMCOS's own line already says per quintal. */
   #rates-tumcos ~ .rate-card-basis { display: none; }
 
   /* Shortcuts below the rates, one per row. */
@@ -428,7 +435,7 @@
   /* Footer: one compact block. The menu already lists every page, so the link columns go. The WhatsApp button carries
      its own icon, so the badge goes, and it is the card's only button, full width: growers report on WhatsApp, and the
      email address is spelled out under the brand. The social icons share the logo's row. */
-  .site-footer { margin-top: 24px; }
+  .site-footer { margin-top: 16px; }
   .site-footer-inner { padding: 18px 0 18px; }
   .footer-report { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px; border-radius: 14px; }
   .footer-report-badge { display: none; }
@@ -514,4 +521,50 @@
   .breadcrumb { gap: 7px; }
   /* Four social icons do not fit beside the logo, so they take their own row under the contact lines. */
   .footer-brand > .footer-social { grid-column: 1 / -1; grid-row: auto; margin-top: 12px; }
+}
+
+/* Phones: a bottom bar with the four places growers go most. It sits under the menu drawer and its backdrop, and the
+   page gets room at the bottom so the footer is never hidden behind it. */
+@media (max-width: 640px) {
+  .tab-bar { position: fixed; inset: auto 0 0 0; z-index: 25; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); box-shadow: 0 -4px 16px -12px rgb(0 0 0 / 35%); }
+  .tab-bar-item { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 56px; padding: 4px 2px; border: 0; border-radius: 12px; background: none;
+    color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.3; text-decoration: none; cursor: pointer; }
+  .tab-bar-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tab-bar-item.active { color: var(--brand); background: var(--brand-tint); }
+  .tab-bar-item:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .app-shell-tabs .main-column { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+
+  /* Phones: variety and town are two rows of one grid, so both labels share a column and both dropdowns start on the
+     same line. The town pill is a full-width dropdown like the variety one; once a town is chosen, a square ✕ beside it
+     clears it (its full name stays on the button for screen readers). */
+  .home-filters { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px 12px; }
+  .home-filters > .home-variety { display: contents; }
+  .town-controls { display: flex; gap: 8px; width: 100%; }
+  .town-pill { display: flex; flex: 1 1 auto; min-width: 0; }
+  .town-pill-face { width: 100%; height: 46px; padding: 0 14px; border-color: var(--control-line); border-radius: 12px; font-size: 16px; font-weight: 600; }
+  .town-pill-face svg:last-child { margin-left: auto; }
+  .town-clear { flex: none; justify-content: center; width: 46px; height: 46px; padding: 0; border: 1px solid var(--control-line); border-radius: 12px; color: var(--ink); }
+  /* Finger-sized: the town page's pair of pills and the saved-town chip. */
+  .my-town-save, .market-actions .rate-share, .market-mine { min-height: 44px; }
+  .town-clear-text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* Phones: the top bar keeps to "Arecanut / Shivamogga"; the page's own "← All towns" link is the way back. */
+  .breadcrumb-link, .breadcrumb-link-sep { display: none; }
+  /* Town page, nearby towns: a smaller heading with "All towns" at its right, and the town chips in one row that
+     scrolls sideways edge to edge, instead of wrapping into rows. */
+  .market-nearby { gap: 6px; }
+  .market-nearby-head h2 { font-size: 16px; }
+  .market-nearby .market-chips { flex-wrap: nowrap; margin: 0 -16px; padding: 2px 16px 4px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .market-nearby .market-chips::-webkit-scrollbar { display: none; }
+  .market-nearby .market-chips li { flex: none; scroll-snap-align: start; }
+  .market-nearby .market-chips a { white-space: nowrap; }
+  /* The rate row already spaces the date and its old-rate pill. */
+  .rate-date-old .rate-age { margin-left: 0; }
+  .rate-card .rate-card-note-top { padding: 10px 14px; border-top: 0; }
+}
+
+/* Touch screens wider than a phone (tablets, touch laptops): the filter pills and the way back get a finger-sized
+   height; mouse users keep the compact 34px pills. */
+@media (pointer: coarse) and (min-width: 641px) {
+  .variety-card, .variety-more-face, .town-pill-face, .town-clear { height: 42px; }
 }

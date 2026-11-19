@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { ArrowRight, ExternalLink, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ExternalLink, MapPin } from "lucide-react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { calendarDateToTime, calendarTodayIST, DAY_MS, formatCalendarDate, formatPeriodKannada } from "../../../shared/dates";
 import { DEFAULT_COMMODITY } from "../../../shared/commodities";
@@ -9,8 +10,10 @@ import { ErrorState, SkeletonRows } from "../components/State";
 import { api } from "../services/api";
 import type { CooperativeQuote, CooperativeSource } from "../services/cooperative";
 import { ageText, defineCopy, type Language, useLanguage } from "../services/language";
-import { COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKET_PLACES, MARKETS_PATH, marketBySlug, marketPath, sortByCatalogue, varietyForLabel, type MarketPlace } from "../services/markets";
+import { CARD_VARIETIES, COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKET_PLACES, MARKETS_PATH, marketBySlug, marketPath, sortByCatalogue, varietyForLabel, type MarketPlace } from "../services/markets";
 import { varietyPath } from "../services/seo-pages";
+import { setMyTown, useMyTown } from "../services/myTown";
+import { apmcCatalogueOrder } from "../services/agmarknetVarieties";
 import { shareMessage } from "../services/share";
 import type { PriceObservation } from "../types";
 import { NotFoundPage } from "./NotFoundPage";
@@ -40,10 +43,13 @@ const COPY = defineCopy({
     shareNote: "ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ದರ, ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆ. ನಿಮ್ಮ ಸರಕಿನ ದರ ಬೇರೆಯಾಗಬಹುದು.",
     about: "ಈ ದರಗಳ ಬಗ್ಗೆ",
     aboutText: "ಸಹಕಾರಿ ಸಂಘದ ಶಾಖೆಯ ಸರಾಸರಿ, ಟಿಎಸ್‌ಎಸ್ ಟೆಂಡರ್ ಸರಾಸರಿ ಮತ್ತು ಎಪಿಎಂಸಿ ಮೋಡಲ್ ದರ ಬೇರೆ ಬೇರೆ ಬೆಲೆಗಳು. ಅವುಗಳನ್ನು ಪಕ್ಕಪಕ್ಕ ತೋರಿಸಲಾಗಿದೆ, ಒಟ್ಟುಗೂಡಿಸಿಲ್ಲ.",
-    aboutUnit: "ಟಿಎಸ್‌ಎಸ್ ಮತ್ತು ಟಮ್ಕೋಸ್ ಘಟಕವನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ; ಅವುಗಳ ದರಗಳನ್ನು ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ಎಂದು ಓದಲಾಗಿದೆ.",
     indexTitle: "ಊರಿನ ಅಡಿಕೆ ಧಾರಣೆ",
     indexIntro: "ನಿಮ್ಮ ಊರನ್ನು ಆರಿಸಿ. ಪ್ರತಿ ಪುಟದಲ್ಲಿ ಅಲ್ಲಿನ ಸಹಕಾರಿ ಸಂಘ ಮತ್ತು ಎಪಿಎಂಸಿ ದರಗಳು ಇವೆ.",
+    mine: "ನಿಮ್ಮ ಊರು",
+    townCount: (count: number) => `${count} ಊರು${count === 1 ? "" : "ಗಳು"}`,
     district: (name: string) => `${name} ಜಿಲ್ಲೆ`,
+    showAll: (count: number) => `ಎಲ್ಲ ${count} ತಳಿಗಳನ್ನು ತೋರಿಸಿ`, showFewer: "ಕಡಿಮೆ ತೋರಿಸಿ",
+    saveTown: "ಇದು ನನ್ನ ಊರು", savedTown: "ನನ್ನ ಊರು", savedTownHint: "ಮುಖಪುಟದಲ್ಲಿ ಈ ಊರಿನ ದರ ಮೊದಲು ಕಾಣುತ್ತದೆ. ಮತ್ತೆ ಒತ್ತಿದರೆ ತೆಗೆಯುತ್ತದೆ.",
   },
   en: {
     title: (place: string) => `${place} arecanut rates`,
@@ -66,10 +72,13 @@ const COPY = defineCopy({
     shareNote: "Per quintal, as each source publishes it. The rate for your lot can differ.",
     about: "About these rates",
     aboutText: "A cooperative branch average, a TSS tender average and an APMC modal price are different prices. They are shown side by side, never combined.",
-    aboutUnit: "TSS and TUMCOS do not state a unit; their rates are read as per quintal.",
     indexTitle: "Arecanut rates by town",
     indexIntro: "Choose your town. Each page has that town's cooperative and APMC rates.",
+    mine: "Your town",
+    townCount: (count: number) => `${count} town${count === 1 ? "" : "s"}`,
     district: (name: string) => `${name} district`,
+    showAll: (count: number) => `Show all ${count} varieties`, showFewer: "Show fewer",
+    saveTown: "Set as my town", savedTown: "My town", savedTownHint: "The home page shows this town's rate first. Tap again to remove.",
   },
 });
 
@@ -91,7 +100,20 @@ function latestApmcRows(rows: PriceObservation[], market: string) {
 
 type Line = { key: string; name: string; to?: string; label?: string; date: string; price: number | null; minimum: number | null; maximum: number | null };
 
+/**
+ * A source's rates: the first three varieties in catalogue order (Rashi, Chali, Sippe gotu, …), the rest one tap away
+ * under "Show all", so every card opens the same short height whichever source it is.
+ */
 function RateLines({ lines, today, language }: { lines: Line[]; today: string; language: Language }) {
+  const [open, setOpen] = useState(false);
+  const copy = COPY[language];
+  const shown = open ? lines : lines.slice(0, CARD_VARIETIES);
+  return <>{rateList(shown, today, language)}
+    {lines.length > CARD_VARIETIES && <button type="button" className="rate-more-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+      {open ? copy.showFewer : copy.showAll(lines.length)}<ChevronDown size={16} aria-hidden="true" /></button>}</>;
+}
+
+function rateList(lines: Line[], today: string, language: Language) {
   return <ul className="rate-list">{lines.map((line) => {
     const age = ageDays(line.date, today);
     return <li className="rate-row" key={line.key}>
@@ -118,6 +140,7 @@ function coopLines(source: CooperativeSource, rows: CooperativeQuote[], language
 export function MarketPage() {
   const { slug } = useParams();
   const place = marketBySlug(slug);
+  const myTown = useMyTown();
   const { language } = useLanguage();
   const copy = COPY[language];
   const today = calendarTodayIST();
@@ -140,7 +163,7 @@ export function MarketPage() {
   const district = language === "kn" ? place.district.kn : place.district.en;
   const neighbours = MARKET_PLACES.filter((other) => other.district.en === place.district.en && other.slug !== place.slug);
   const shareLabels = { share: copy.share, opening: copy.shareOpening, shared: copy.shareDone, whatsapp: copy.shareWhatsapp };
-  const apmcLines: Line[] = place.apmc ? latestApmcRows(apmc.data?.data ?? [], place.apmc).map((row) => ({
+  const apmcLines: Line[] = place.apmc ? apmcCatalogueOrder(latestApmcRows(apmc.data?.data ?? [], place.apmc)).map((row) => ({
     key: row.id, name: row.variety_name, label: row.grade ? `${copy.grade}: ${row.grade}` : undefined,
     date: row.reporting_date, price: row.modal_price, minimum: row.minimum_price, maximum: row.maximum_price,
   })) : [];
@@ -152,23 +175,33 @@ export function MarketPage() {
 
   return <div className="page-stack home market-page" lang={language}>
     <section className="home-heading">
-      <p className="market-kicker"><MapPin size={16} aria-hidden="true" />{district}</p>
+      {/* The way back to the town list, where the eyebrow sat; the district is in the line under the title. */}
+      <Link className="market-back" to={MARKETS_PATH}><ArrowLeft size={16} aria-hidden="true" />{copy.allTowns}</Link>
       <h1>{copy.title(name)}</h1>
       <p>{copy.intro(district)}</p>
+      <div className="market-actions">
+      <button type="button" className={`my-town-save${myTown?.slug === place.slug ? " is-saved" : ""}`} aria-pressed={myTown?.slug === place.slug}
+        title={copy.savedTownHint} onClick={() => setMyTown(myTown?.slug === place.slug ? null : place.slug)}>
+        {myTown?.slug === place.slug ? <Check size={16} aria-hidden="true" /> : <MapPin size={16} aria-hidden="true" />}
+        {myTown?.slug === place.slug ? copy.savedTown : copy.saveTown}</button>
       {allLines.length > 0 && <div className="market-share"><ShareButton labels={shareLabels} ariaLabel={copy.shareAria(name)} title={copy.title(name)} message={() => shareMessage({
         title: copy.title(name), date: newest ? dateText(newest, language) : undefined,
         lines: allLines.map((line) => ({ place: `${line.source} · ${line.name}`, price: rupees(line.price), date: line.date !== newest ? dateText(line.date, language) : undefined })),
         more: copy.shareMore, note: copy.shareNote, url: `${window.location.origin}${marketPath(place.slug)}`,
       })} /></div>}
+      </div>
     </section>
 
-    <div className="rate-grid">
+    {/* Cards stretch to one height, so their "All rates" footers sit on one line however many varieties each lists. */}
+    <div className="rate-grid rate-grid-even">
       {sources.map((source, index) => {
         const query = coop[index];
         const names = COOPERATIVE_NAMES[source];
         const rows = query?.data?.data ?? [];
         const basis = source === "tss" || source === "tms" ? copy.tssBasis : source === "tumcos" ? copy.tumcosBasis : copy.coopBasis;
-        return <section className="rate-card rate-card-coop" key={source} aria-labelledby={`market-${source}`}>
+        // Not .rate-card-coop: that hides the card header on phones, where home-page rows name their source instead.
+        // Rows here do not, so the header ("MAMCOS · Sagara branch") is the source and must show on every screen.
+        return <section className="rate-card" data-source={source} key={source} aria-labelledby={`market-${source}`}>
           <header className="rate-card-head">
             <div><h2 id={`market-${source}`} className="market-card-title">{copy.branch(language === "kn" ? names.kn : names.en, name)}</h2><span className="rate-card-basis">{basis}</span></div>
             {rows[0] && <a className="rate-source" href={rows[0].source_url} target="_blank" rel="noreferrer">{copy.source}<ExternalLink size={14} aria-hidden="true" /></a>}
@@ -178,7 +211,7 @@ export function MarketPage() {
           <footer className="rate-card-foot"><Link to={`/prices?feed=${source}`}>{copy.allRates} <ArrowRight size={14} aria-hidden="true" /></Link></footer>
         </section>;
       })}
-      {place.apmc && <section className="rate-card" aria-labelledby="market-apmc">
+      {place.apmc && <section className="rate-card" data-source="apmc" aria-labelledby="market-apmc">
         <header className="rate-card-head"><div><h2 id="market-apmc" className="market-card-title">{copy.apmc(name)}</h2><span className="rate-card-basis">{copy.apmcBasis}</span></div></header>
         {apmc.isPending ? <SkeletonRows label={copy.loading} rows={2} /> : apmc.isError ? <ErrorState error={new Error(copy.failed)} retryLabel={copy.retry} onRetry={() => void apmc.refetch()} />
           : apmcLines.length ? <RateLines lines={apmcLines} today={today} language={language} /> : <p className="rate-empty">{copy.noRates(WINDOW_DAYS)}</p>}
@@ -186,39 +219,80 @@ export function MarketPage() {
       </section>}
     </div>
 
-    <nav className="home-price-section" aria-labelledby="market-nearby">
-      <div className="home-section-heading"><h2 id="market-nearby">{neighbours.length ? copy.nearby(district) : copy.allTowns}</h2></div>
-      <ul className="market-chips">
+    {/* Nearby towns: the heading carries "All towns" at its right, so the chips stay one row (scrolling sideways on phones). */}
+    <nav className="home-price-section market-nearby" aria-labelledby="market-nearby">
+      <div className="market-nearby-head">
+        <h2 id="market-nearby">{neighbours.length ? copy.nearby(district) : copy.allTowns}</h2>
+        <Link to={MARKETS_PATH} className="market-nearby-all">{copy.allTowns} <ArrowRight size={14} aria-hidden="true" /></Link>
+      </div>
+      {neighbours.length > 0 && <ul className="market-chips">
         {neighbours.map((other) => <li key={other.slug}><Link to={marketPath(other.slug)}>{placeLabel(other, language)}</Link></li>)}
-        <li><Link to={MARKETS_PATH} className="market-chip-all">{copy.allTowns} <ArrowRight size={14} aria-hidden="true" /></Link></li>
-      </ul>
+      </ul>}
     </nav>
 
-    <AboutData title={copy.about}><p>{copy.aboutText}</p><p>{copy.aboutUnit}</p></AboutData>
+    <AboutData title={copy.about}><p>{copy.aboutText}</p></AboutData>
   </div>;
 }
 
-/** Every town, grouped by district, so a grower finds their own market in one look. */
+/**
+ * Every town, grouped by district, as a compact directory: one card per district, one row per town naming its sources,
+ * the cards set in columns so the whole list fits in about one screen on a computer. The saved town leads, beside the
+ * heading, and is marked in its district.
+ */
+/**
+ * Districts split into two columns of as near equal height as possible (a district is its heading plus one row per
+ * town), each keeping the catalogue's order. The last card in each column stretches, so both columns end level.
+ */
+export function balancedColumns<T>(items: T[], size: (item: T) => number): [T[], T[]] {
+  let best: [T[], T[]] = [items, []];
+  let bestGap = Infinity, bestOrder = Infinity;
+  for (let mask = 0; mask < 1 << items.length; mask += 1) {
+    const left = items.filter((_, index) => !(mask & (1 << index)));
+    const right = items.filter((_, index) => mask & (1 << index));
+    if (!left.length || !right.length) continue;
+    const gap = Math.abs(left.reduce((sum, item) => sum + size(item), 0) - right.reduce((sum, item) => sum + size(item), 0));
+    // The first district always leads the left column; between equally even splits, the one keeping more of the
+    // catalogue's order on the left wins, so the columns read top to bottom as the list does.
+    const order = left.reduce((sum, item) => sum + items.indexOf(item), 0);
+    if (items.indexOf(left[0]) === 0 && (gap < bestGap - 1e-9 || (Math.abs(gap - bestGap) < 1e-9 && order < bestOrder))) { best = [left, right]; bestGap = gap; bestOrder = order; }
+  }
+  return best;
+}
+
 export function MarketIndexPage() {
   const { language } = useLanguage();
   const copy = COPY[language];
+  const myTown = useMyTown();
   const districts = [...new Map(MARKET_PLACES.map((place) => [place.district.en, place.district])).values()];
   return <div className="page-stack home market-page" lang={language}>
-    <section className="home-heading"><h1>{copy.indexTitle}</h1><p>{copy.indexIntro}</p></section>
-    {districts.map((district) => {
-      const places = MARKET_PLACES.filter((place) => place.district.en === district.en);
-      const id = `district-${district.en.toLowerCase().replace(/\s+/g, "-")}`;
-      return <section className="home-price-section" key={district.en} aria-labelledby={id}>
-        <div className="home-section-heading"><h2 id={id}>{copy.district(language === "kn" ? district.kn : district.en)}</h2></div>
-        <ul className="market-index">{places.map((place) => {
-          const sources = [...COOPERATIVE_ORDER.filter((source) => place.branches[source]).map((source) => COOPERATIVE_NAMES[source].en), ...(place.apmc ? ["APMC"] : [])];
-          return <li key={place.slug}><Link to={marketPath(place.slug)}>
-            <strong>{placeLabel(place, language)}</strong>
-            <span lang="en">{sources.join(" · ")}</span>
-            <ArrowRight size={16} aria-hidden="true" />
-          </Link></li>;
-        })}</ul>
-      </section>;
-    })}
+    <section className="home-heading market-directory-head">
+      <div><h1>{copy.indexTitle}</h1><p>{copy.indexIntro}</p></div>
+      {myTown && <Link className="market-mine" to={marketPath(myTown.slug)}>
+        <MapPin size={16} aria-hidden="true" /><span>{copy.mine}</span><strong>{placeLabel(myTown, language)}</strong><ArrowRight size={16} aria-hidden="true" />
+      </Link>}
+    </section>
+    <div className="market-districts">
+      {balancedColumns(districts, (district) => 1.25 + MARKET_PLACES.filter((place) => place.district.en === district.en).length).map((column, index) => <div className="market-column" key={index}>
+      {column.map((district) => {
+        const places = MARKET_PLACES.filter((place) => place.district.en === district.en);
+        const id = `district-${district.en.toLowerCase().replace(/\s+/g, "-")}`;
+        return <section className="market-district" key={district.en} aria-labelledby={id}>
+          <header className="market-district-head">
+            <h2 id={id}>{copy.district(language === "kn" ? district.kn : district.en)}</h2>
+            <span className="market-district-count">{copy.townCount(places.length)}</span>
+          </header>
+          <ul className="market-rows">{places.map((place) => {
+            const sources = [...COOPERATIVE_ORDER.filter((source) => place.branches[source]).map((source) => COOPERATIVE_NAMES[source].en), ...(place.apmc ? ["APMC"] : [])];
+            const mine = myTown?.slug === place.slug;
+            return <li key={place.slug}><Link to={marketPath(place.slug)} className={mine ? "is-mine" : undefined} aria-current={mine ? "true" : undefined}>
+              <span className="market-row-name"><strong>{placeLabel(place, language)}</strong>{mine && <span className="market-row-mine">{copy.mine}</span>}</span>
+              <span className="market-row-sources" lang="en">{sources.map((source) => <span key={source} data-source={source.toLowerCase()}>{source}</span>)}</span>
+              <ArrowRight size={16} aria-hidden="true" />
+            </Link></li>;
+          })}</ul>
+        </section>;
+      })}
+      </div>)}
+    </div>
   </div>;
 }
