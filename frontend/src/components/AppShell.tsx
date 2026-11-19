@@ -4,7 +4,7 @@ import { marketFeeds, routeAvailable } from "../../../shared/commodities";
 import { commodityName, useCommodity } from "../services/commodity";
 import { defineCopy, LanguageToggle, useLanguage } from "../services/language";
 import { BRAND, brandLabel, BrandName } from "../services/brand";
-import { seoPage, varietyFromPath } from "../services/seo-pages";
+import { isDatedTitle, seoPage, varietyFromPath } from "../services/seo-pages";
 import { CommodityGate } from "./CommodityGate";
 import { MarketSearch } from "./MarketSearch";
 import { SiteFooter } from "./SiteFooter";
@@ -14,6 +14,13 @@ import darkLogo from "../assets/areca-pulse-logo-dark.svg";
 import appIcon from "../assets/areca-pulse-app-icon.svg";
 import { setTheme, useTheme } from "../services/theme";
 import { Activity, ArrowLeftRight, BookOpenText, Calculator, CalendarRange, ChartNoAxesCombined, ChevronDown, Ellipsis, FlaskConical, Gauge, Hourglass, House, MapPin, Menu, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, Search, SlidersHorizontal, Sun, TableProperties, X } from "lucide-react";
+
+/** The title and description the loaded HTML arrived with, before the app changes them (the build may date them). */
+const WRITTEN_HEAD = typeof document === "undefined" ? null : {
+  path: window.location.pathname,
+  title: document.title,
+  description: document.querySelector('meta[name="description"]')?.getAttribute("content") ?? "",
+};
 
 const primaryNavigation = [
     { to: "/", label: "Latest rates", kn: "ಇತ್ತೀಚಿನ ಧಾರಣೆ", icon: House, end: true },
@@ -148,10 +155,12 @@ export function AppShell() {
 
   // Search engines read the page after scripts run, so the title, description and canonical address follow the page
   // and the language. Pages without their own search text keep the plain "page · site" title.
+  // The written page's own dated title and description (the day's rates) are kept while the reader is on that page.
   useEffect(() => {
     const seo = seoPage(location.pathname)?.[language];
-    document.title = seo?.title ?? `${currentPage} · ${BRAND[language].name}`;
-    if (seo) document.querySelector('meta[name="description"]')?.setAttribute("content", seo.description);
+    const dated = language === "kn" && seo && WRITTEN_HEAD?.path === location.pathname && isDatedTitle(WRITTEN_HEAD.title, seo) ? WRITTEN_HEAD : null;
+    document.title = dated?.title ?? seo?.title ?? `${currentPage} · ${BRAND[language].name}`;
+    if (seo) document.querySelector('meta[name="description"]')?.setAttribute("content", dated?.description ?? seo.description);
     const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (canonical) canonical.href = `${new URL(canonical.href).origin}${location.pathname}`;
   }, [currentPage, language, location.pathname]);

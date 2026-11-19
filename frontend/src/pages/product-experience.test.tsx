@@ -47,7 +47,7 @@ import { ImportsPanel } from "../components/ImportsPanel";
 import { eventsBetween, MARKET_EVENTS } from "../services/market-events";
 import { MarketIndexPage, MarketPage } from "./MarketPage";
 import { MARKET_PLACES } from "../services/markets";
-import { marketSeo, seoPage } from "../services/seo-pages";
+import { isDatedTitle, marketSeo, seoPage, snippetFrom, withSnippet } from "../services/seo-pages";
 
 const state = vi.hoisted(() => ({
   cooperative: [] as object[],
@@ -875,6 +875,29 @@ describe("town pages", () => {
     expect(seoPage("/variety/rashi")?.kn.description).toContain("ಕೆಂಪು ಅಡಿಕೆ");
     expect(seoPage("/market")?.path).toBe("/market");
     expect(new Set(MARKET_PLACES.map((place) => place.slug)).size).toBe(MARKET_PLACES.length);
+  });
+
+  it("dates search snippets with the newest rates, and only when they are fresh", () => {
+    const home = seoPage("/")!;
+    const rows = [
+      { name: "ರಾಶಿ", date: "2026-11-19", price: 52400 }, { name: "ರಾಶಿ", date: "2026-11-18", price: 51000 },
+      { name: "ರಾಶಿ", date: "2026-11-01", price: 40000 }, // too old to share the 19 Nov date
+      { name: "ಚಾಲಿ", date: "2026-11-19", price: 46000 }, { name: "ಬೆಟ್ಟೆ", date: "2026-11-19", price: 50000 },
+    ];
+    const dated = withSnippet(home, snippetFrom(rows, 2, "2026-11-19"));
+    expect(dated.kn.title).toBe("ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ 19 ನವೆಂಬರ್ · Arecanut price today | ಅಡಿಕೆ ನಾಡಿ");
+    expect(dated.kn.description).toMatch(/^19 ನವೆಂಬರ್ ಧಾರಣೆ: ರಾಶಿ ₹51,000–₹52,400, ಚಾಲಿ ₹46,000\. ಇಂದಿನ/);
+    expect(dated.en).toEqual(home.en);
+    expect(isDatedTitle(dated.kn.title, home.kn)).toBe(true);
+    expect(isDatedTitle(home.kn.title, home.kn)).toBe(false);
+    expect(isDatedTitle(seoPage("/prices")!.kn.title, home.kn)).toBe(false);
+    // Rates a week old keep the plain title rather than a stale date.
+    expect(withSnippet(home, snippetFrom(rows, 2, "2026-11-27"))).toBe(home);
+    expect(withSnippet(home, snippetFrom([], 2, "2026-11-19"))).toBe(home);
+    const rashi = seoPage("/variety/rashi")!;
+    const variety = withSnippet(rashi, snippetFrom(rows.slice(0, 2).map((row) => ({ ...row, name: "" })), 1, "2026-11-20"));
+    expect(variety.kn.description.startsWith("19 ನವೆಂಬರ್ ಧಾರಣೆ: ₹51,000–₹52,400. ")).toBe(true);
+    expect(isDatedTitle(variety.kn.title, rashi.kn)).toBe(true);
   });
 });
 
