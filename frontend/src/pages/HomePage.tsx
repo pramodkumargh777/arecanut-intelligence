@@ -2,6 +2,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowRight, ArrowUp, ChevronDown, ExternalLink, MapPin, Minus, X } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AboutData } from "../components/AboutData";
+import { PageFaq } from "../components/PageFaq";
 import { ShareButton } from "../components/ShareButton";
 import { useChangeFlash } from "../components/useChangeFlash";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -789,5 +790,6 @@ export function HomePage() {
       <p>{copy.changeNote}</p>
       <p>{copy.tumcosNote}</p>
     </AboutData>
+    <PageFaq path="/" />
   </div>;
 }

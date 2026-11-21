@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { calendarDateToTime, calendarTodayIST, DAY_MS, formatCalendarDate, formatPeriodKannada } from "../../../shared/dates";
 import { DEFAULT_COMMODITY } from "../../../shared/commodities";
 import { AboutData } from "../components/AboutData";
+import { PageFaq } from "../components/PageFaq";
 import { ShareButton } from "../components/ShareButton";
 import { ErrorState, SkeletonRows } from "../components/State";
 import { api } from "../services/api";
@@ -231,6 +232,7 @@ export function MarketPage() {
     </nav>
 
     <AboutData title={copy.about}><p>{copy.aboutText}</p></AboutData>
+    <PageFaq path={marketPath(place.slug)} />
   </div>;
 }
 
