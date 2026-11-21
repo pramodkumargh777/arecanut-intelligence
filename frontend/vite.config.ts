@@ -8,6 +8,8 @@ import { COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKET_PLACES, sortByCatalogue, v
 import { VARIETIES, type GrowerVariety } from "./src/services/varieties";
 import { PLACE_NAMES_KN } from "./src/services/places";
 import type { CooperativeQuote } from "./src/services/cooperative";
+import { FAQ_FILE, faqJsonLd, UPDATE_QUESTION, type FaqFile, type FaqItem } from "./src/services/faq";
+import { MONTH_NAMES_KN } from "../shared/dates";
 
 /** Where the site is served. Link previews and the sitemap need absolute addresses. */
 const DEFAULT_SITE_URL = "https://adikenaadi.com";
@@ -30,7 +32,7 @@ const STATIC_STYLE = `<style>html[data-js] .static-page{display:none}.static-pag
  * public page. Crawlers and checkers that do not run scripts read this; the app replaces it when it starts. The
  * markers let the built home page be rewritten for each other page.
  */
-function pageHtml(html: string, siteUrl: string, page: SeoPage, linked: SeoPage[] = [], content = "") {
+function pageHtml(html: string, siteUrl: string, page: SeoPage, linked: SeoPage[] = [], content = "", structured: object[] = []) {
   const url = `${siteUrl}${page.path}`;
   // One language per meta description keeps it near the 160 characters a results page shows; the title carries both.
   const description = page.kn.description;
@@ -49,6 +51,10 @@ function pageHtml(html: string, siteUrl: string, page: SeoPage, linked: SeoPage[
   meta(/(<link rel="canonical" href=")[^"]*(")/, url);
   // The old no-script copy is no longer used: the same content now sits in the root, where every reader finds it.
   html = html.replace(/<!--seo-fallback-->|<noscript><main>[\s\S]*?<\/main><\/noscript>/, "");
+  // Page-specific structured data (breadcrumbs, questions): data blocks, which the CSP does not run. "<" is escaped so
+  // no text inside can close the script element.
+  const data = structured.map((item) => `<script type="application/ld+json">${JSON.stringify(item).replace(/</g, "\\u003c")}</script>`).join("");
+  html = html.replace(/<!--page-ld-->[\s\S]*?<!--\/page-ld-->|<\/head>/, (match) => `<!--page-ld-->${data}<!--/page-ld-->${match === "</head>" ? "</head>" : ""}`);
   const block = `<div id="root"><!--static-->${STATIC_STYLE}${body}<!--/static--></div>`;
   return html.replace(/<div id="root">(?:<!--static-->[\s\S]*?<!--\/static-->)?<\/div>/, () => block);
 }
@@ -80,6 +86,7 @@ async function latestRates(apiUrl: string) {
 
 const SOURCE_NAMES = { mamcos: "ಮ್ಯಾಮ್ಕೋಸ್ · MAMCOS", tss: "ಟಿಎಸ್‌ಎಸ್ · TSS" };
 const rupees = (value: number | null) => value === null ? "" : `₹${value.toLocaleString("en-IN")}`;
+const dayText = (date: string) => day(date);
 const day = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 /** A table of rates: cooperative, branch, date, average and range, as the rates screen shows them once it loads. */
@@ -237,6 +244,77 @@ function placeHtml(place: MarketPlace, rows: PlaceRate[], history: PlaceHistory 
     + (history ? historyHtml(place, history) : "") + `</main>`;
 }
 
+/* ---------- "today's rates" questions, sitemap dates and breadcrumbs ---------- */
+
+/** Answers quote whole rupees; TMS publishes paise (₹41,797.17), which reads oddly in a sentence. */
+const whole = (value: number | null) => rupees(value === null ? null : Math.round(value));
+const newestOf = (dates: string[]) => dates.reduce((a, b) => (b > a ? b : a), "");
+const knDay = (date: string) => { const [, month, d] = date.split("-").map(Number); return `${d} ${MONTH_NAMES_KN[month - 1]}`; };
+const branchNames = (branch: string) => {
+  const en = branch === branch.toUpperCase() ? branch.toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase()) : branch;
+  return { kn: PLACE_NAMES_KN[branch.toUpperCase()] ?? en, en };
+};
+
+/** Home page questions: the latest MAMCOS and TSS Rashi and Chali rates, from the rates written into the page. */
+function homeFaq(rates: Map<string, Rate[]>): FaqItem[] {
+  const items: FaqItem[] = [];
+  for (const variety of VARIETIES.filter((item) => item.key === "rashi" || item.key === "chali")) {
+    for (const source of ["mamcos", "tss"] as const) {
+      const rows = (rates.get(variety.key) ?? []).filter((row) => row.source === source && row.average_price !== null);
+      if (!rows.length) continue;
+      const date = newestOf(rows.map((row) => row.reporting_date));
+      const day = rows.filter((row) => row.reporting_date === date).sort((a, b) => b.average_price! - a.average_price!);
+      const src = COOPERATIVE_NAMES[source], top = day[0], low = day.at(-1)!, top_ = branchNames(top.branch);
+      const one = day.length === 1 || top.average_price === low.average_price;
+      items.push({
+        q: { kn: `ಇಂದಿನ ${src.kn} ${variety.kn} ಧಾರಣೆ ಎಷ್ಟು?`, en: `What is today's ${src.en} ${variety.en} rate?` },
+        a: one ? {
+          kn: `${src.kn} ${top_.kn} ಶಾಖೆಯಲ್ಲಿ ${variety.kn} ಸರಾಸರಿ ದರ ${whole(top.average_price)}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. ವರದಿ ದಿನಾಂಕ: ${knDay(date)}.`,
+          en: `${src.en} ${top_.en}: ${variety.en} averaged ${whole(top.average_price)} per quintal in the ${dayText(date)} report.`,
+        } : {
+          kn: `${src.kn} ${variety.kn}: ${day.length} ಶಾಖೆಗಳ ಸರಾಸರಿ ದರ ${whole(low.average_price)} ರಿಂದ ${whole(top.average_price)}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. ಅತಿ ಹೆಚ್ಚು: ${top_.kn} ${whole(top.average_price)}. ವರದಿ ದಿನಾಂಕ: ${knDay(date)}.`,
+          en: `${src.en} ${variety.en}: branch averages from ${whole(low.average_price)} to ${whole(top.average_price)} per quintal across ${day.length} branches in the ${dayText(date)} report; highest at ${top_.en}.`,
+        },
+      });
+    }
+  }
+  return items.length ? [...items, UPDATE_QUESTION] : [];
+}
+
+/** A town's questions: one per variety it reports (up to three), answered with each source's latest rate and date. */
+function townFaq(place: MarketPlace, rows: PlaceRate[]): FaqItem[] {
+  const groups = new Map<string, PlaceRate[]>();
+  for (const row of rows) if (row.short && row.price !== null) groups.set(row.short, [...(groups.get(row.short) ?? []), row]);
+  const items = [...groups].slice(0, 3).map(([short, group]): FaqItem => {
+    const en = group[0].name.split(" · ")[1] ?? group[0].name.replace(/\s*\(.*\)$/, "");
+    const apmc = group.some((row) => row.source.startsWith("ಎಪಿಎಂಸಿ"));
+    const part = (row: PlaceRate, language: 0 | 1) => `${row.source.split(" · ")[language]} ${whole(row.price)} (${language ? dayText(row.date) : knDay(row.date)})`;
+    return {
+      q: { kn: `${place.kn} ಇಂದಿನ ${short} ಧಾರಣೆ ಎಷ್ಟು?`, en: `What is today's ${en} rate in ${place.en}?` },
+      a: {
+        kn: `${group.map((row) => part(row, 0)).join("; ")}. ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್ ದರ${apmc ? "; ಎಪಿಎಂಸಿಯದು ಮಾದರಿ ದರ" : ""}.`,
+        en: `${group.map((row) => part(row, 1)).join("; ")}. Per quintal${apmc ? "; the APMC figure is the modal rate" : ""}.`,
+      },
+    };
+  });
+  return items.length ? [...items, UPDATE_QUESTION] : [];
+}
+
+/** The questions as plain text in the page, for readers without scripts; the app shows them in a collapsed section. */
+function faqHtml(items: FaqItem[]) {
+  return `<h2>ಸಾಮಾನ್ಯ ಪ್ರಶ್ನೆಗಳು · Common questions</h2>` + items.map((item) =>
+    `<h3>${escapeHtml(item.q.kn)}</h3><p lang="kn">${escapeHtml(item.a.kn)}</p><p lang="en"><strong>${escapeHtml(item.q.en)}</strong> ${escapeHtml(item.a.en)}</p>`).join("");
+}
+
+/** schema.org BreadcrumbList: ಅಡಿಕೆ ನಾಡಿ › … › this page. */
+function breadcrumbs(siteUrl: string, trail: [string, string][]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [["ಅಡಿಕೆ ನಾಡಿ", "/"], ...trail].map(([name, path], index) => ({ "@type": "ListItem", position: index + 1, name, item: `${siteUrl}${path === "/" ? "/" : path}` })),
+  };
+}
+
 /**
  * The Kannada name a search snippet gives an APMC variety label, or "" to leave it out. Dakshina Kannada APMCs report
  * "New Variety" and "Old Variety", which growers and papers there call ಹೊಸ ಅಡಿಕೆ and ಹಳೆ ಅಡಿಕೆ.
@@ -287,16 +365,29 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
         snippetFrom(rates.get(variety.key)!.map((row) => ({ name: "", date: row.reporting_date, price: row.average_price })), 1)));
       const homeSnippet = snippetFrom(VARIETIES.filter((variety) => variety.everyday && rates.has(variety.key))
         .flatMap((variety) => rates.get(variety.key)!.map((row) => ({ name: variety.kn, date: row.reporting_date, price: row.average_price }))));
-      const write = (page: SeoPage, content = "") => {
+      // Each page's newest report date (the sitemap's <lastmod>) and its "today's rates" questions.
+      const lastmod = new Map<string, string>();
+      const faq: FaqFile = {};
+      const write = (page: SeoPage, content = "", structured: object[] = []) => {
         const file = resolve(outDir, page.path === "/" ? "index.html" : `${page.path.slice(1)}.html`);
+        const questions = faq[page.path];
+        if (questions?.length) {
+          content = content.replace(/<\/main>\s*$/, `${faqHtml(questions)}</main>`);
+          structured = [...structured, faqJsonLd(questions)];
+        }
         mkdirSync(dirname(file), { recursive: true });
-        writeFileSync(file, pageHtml(home, siteUrl, page, [...varietyPages, ...MARKET_PAGES], content));
+        writeFileSync(file, pageHtml(home, siteUrl, page, [...varietyPages, ...MARKET_PAGES], content, structured));
       };
+      const allDates = [...rates.values()].flat().map((row) => row.reporting_date);
+      const homeDates = VARIETIES.filter((variety) => variety.everyday).flatMap((variety) => (rates.get(variety.key) ?? []).map((row) => row.reporting_date));
+      if (homeDates.length) lastmod.set("/", newestOf(homeDates));
+      if (allDates.length) lastmod.set("/prices", newestOf(allDates));
+      faq["/"] = homeFaq(rates);
       for (const page of SEO_PAGES) {
         if (page.path === "/") write(withSnippet(page, homeSnippet), homeHtml(page, rates));
         else write(page);
       }
-      write(MARKETS_SEO);
+      const townDates: string[] = [];
       for (const [index, place] of MARKET_PLACES.entries()) {
         let content = "";
         let rows: PlaceRate[] = [];
@@ -309,14 +400,25 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
           try { rows = await placeRates(api, place); if (rows.length || history) content = placeHtml(place, rows, history); }
           catch (error) { console.warn(`Rates were not written into ${place.en}'s page: ${error instanceof Error ? error.message : error}`); }
         }
+        const path = MARKET_PAGES[index + 1].path;
+        if (rows.length) { lastmod.set(path, newestOf(rows.map((row) => row.date))); townDates.push(lastmod.get(path)!); }
+        faq[path] = townFaq(place, rows);
         // A town's cooperative rates lead its snippet when fresh; its APMC's named varieties stand in when they are not.
         const quoted = rows.filter((row) => row.short).map((row) => ({ name: row.short, date: row.date, price: row.price, apmc: row.source.startsWith("ಎಪಿಎಂಸಿ") }));
-        write(withSnippet(MARKET_PAGES[index + 1], snippetFrom(quoted.filter((row) => !row.apmc)) ?? snippetFrom(quoted)), content);
+        write(withSnippet(MARKET_PAGES[index + 1], snippetFrom(quoted.filter((row) => !row.apmc)) ?? snippetFrom(quoted)), content,
+          [breadcrumbs(siteUrl, [["ಮಾರುಕಟ್ಟೆ", MARKETS_SEO.path], [place.kn, path]])]);
       }
-      varieties.forEach((variety, index) => write(varietyPages[index], ratesHtml(variety, rates.get(variety.key)!)));
-      if (varietyPages.length) {
-        const today = new Date().toISOString().slice(0, 10);
-        const entries = [...SITEMAP_PATHS.map((path) => `  <url><loc>${siteUrl}${path}</loc></url>`), ...varietyPages.map((page) => `  <url><loc>${siteUrl}${page.path}</loc><lastmod>${today}</lastmod></url>`)];
+      if (townDates.length) lastmod.set(MARKETS_SEO.path, newestOf(townDates));
+      write(MARKETS_SEO, "", [breadcrumbs(siteUrl, [["ಮಾರುಕಟ್ಟೆ", MARKETS_SEO.path]])]);
+      varieties.forEach((variety, index) => {
+        lastmod.set(varietyPages[index].path, newestOf(rates.get(variety.key)!.map((row) => row.reporting_date)));
+        write(varietyPages[index], ratesHtml(variety, rates.get(variety.key)!), [breadcrumbs(siteUrl, [[`${variety.kn} ಧಾರಣೆ`, varietyPages[index].path]])]);
+      });
+      writeFileSync(resolve(outDir, FAQ_FILE.slice(1)), JSON.stringify(Object.fromEntries(Object.entries(faq).filter(([, items]) => items.length))));
+      // <lastmod> is the newest report date each page shows, not the build date: a rebuild with no new rates changes nothing.
+      if (lastmod.size) {
+        const entry = (path: string) => `  <url><loc>${siteUrl}${path}</loc>${lastmod.has(path) ? `<lastmod>${lastmod.get(path)}</lastmod>` : ""}</url>`;
+        const entries = [...SITEMAP_PATHS, ...varietyPages.map((page) => page.path)].map(entry);
         writeFileSync(resolve(outDir, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.join("\n")}\n</urlset>\n`);
       }
     },
