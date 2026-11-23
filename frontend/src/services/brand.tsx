@@ -18,7 +18,7 @@ export const CONTACT = {
   domain: "adikenaadi.com",
   /** Official social accounts: shown in the footer and listed as sameAs in index.html's structured data. */
   social: {
-    instagram: { handle: "adike_naadi", url: "https://www.instagram.com/adike_naadi/" },
+    instagram: { handle: "naadiadike", url: "https://www.instagram.com/naadiadike/" },
     x: { handle: "adikenaadi", url: "https://x.com/adikenaadi" },
     youtube: { handle: "adikenaadi", url: "https://www.youtube.com/@adikenaadi" },
     facebook: { handle: "adikenaadi", url: "https://www.facebook.com/adikenaadi" },

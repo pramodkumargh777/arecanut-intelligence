@@ -37,6 +37,7 @@ jobs:
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
           VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
           VITE_CF_ANALYTICS_TOKEN: ${{ vars.VITE_CF_ANALYTICS_TOKEN }}
+          VITE_GOOGLE_TAG_ID: ${{ vars.VITE_GOOGLE_TAG_ID }}
       - name: Check the rates were written
         run: test -f frontend/dist/variety/rashi.html || { echo "No variety pages were built; keeping the pages already live."; exit 1; }
       - run: npx wrangler pages deploy frontend/dist --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" --branch=main

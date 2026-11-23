@@ -451,11 +451,25 @@ function analytics(token: string | undefined): Plugin {
   };
 }
 
+/**
+ * Google Analytics through the site's Google tag (public/google-tag.js), at the top of <head> (after the charset, as Google asks). Added
+ * only when a tag ID is configured, so local builds and tests send nothing. _headers allows Google's script and its
+ * report addresses; privacy.html says the site uses Google Analytics cookies.
+ */
+function googleTag(id: string | undefined): Plugin {
+  if (id && !/^(GTM|G|GT)-[A-Z0-9]+$/.test(id)) throw new Error("VITE_GOOGLE_TAG_ID must be a Google tag ID such as GTM-XXXXXXX or G-XXXXXXXXXX.");
+  return {
+    name: "areca-pulse-google-tag",
+    apply: "build",
+    transformIndexHtml: (html) => id ? html.replace(/(<meta charset="UTF-8" \/>\n)/, `$1    <script src="/google-tag.js" data-id="${id}"></script>\n`) : html,
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, "../", "VITE_");
   const siteUrl = (env.VITE_SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, "");
   return {
-    plugins: [react(), seo(siteUrl, env.VITE_API_BASE_URL || undefined), analytics(env.VITE_CF_ANALYTICS_TOKEN || undefined)],
+    plugins: [react(), seo(siteUrl, env.VITE_API_BASE_URL || undefined), analytics(env.VITE_CF_ANALYTICS_TOKEN || undefined), googleTag(env.VITE_GOOGLE_TAG_ID || undefined)],
     envDir: "../",
   };
 });
