@@ -26,6 +26,8 @@ import chaliImage from "../assets/varieties/chali.webp";
 import rashiImage from "../assets/varieties/rashi.webp";
 import sippeGotuImage from "../assets/varieties/sippe-gotu.webp";
 import { RollingNumber } from "../components/RollingNumber";
+import { WhatsAppIcon } from "../components/WhatsAppIcon";
+import { CONTACT } from "../services/brand";
 
 /** The three varieties most growers sell are picture cards; every other variety is in the "More varieties" list. */
 const HOME_VARIETIES = VARIETIES.filter((item) => item.everyday);
@@ -71,6 +73,10 @@ const COPY = defineCopy({
     officialOthers: "ಇತರ ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳ ದರ ನೋಡಿ",
     grade: "ದರ್ಜೆ",
     otherTools: "ಇನ್ನಷ್ಟು ಮಾಹಿತಿ",
+    followTitle: "ಪ್ರತಿದಿನ ಬೆಳಿಗ್ಗೆ ಇಂದಿನ ಧಾರಣೆ ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ",
+    followText: "ಎಲ್ಲಾ ಸಂಘಗಳ ದರ, ಮೂಲ ಮತ್ತು ದಿನಾಂಕದ ಜೊತೆ. ಗ್ರೂಪ್ ಅಲ್ಲ, ನಿಮ್ಮ ನಂಬರ್ ಯಾರಿಗೂ ಕಾಣುವುದಿಲ್ಲ.",
+    followButton: "ಚಾನೆಲ್ ಫಾಲೋ ಮಾಡಿ",
+    followAria: "ಅಡಿಕೆ ನಾಡಿ ವಾಟ್ಸಾಪ್ ಚಾನೆಲ್ ಫಾಲೋ ಮಾಡಿ (ವಾಟ್ಸಾಪ್ ತೆರೆಯುತ್ತದೆ)",
     moreFrom: (source: string) => `${source} ದರಗಳನ್ನು ನೋಡಿ`,
     tumcosEmpty: "ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
     subtitle: "ಸಹಕಾರಿ ಸಂಘ ಮತ್ತು ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳ ಪ್ರಕಟಿತ ದರಗಳು, ಪ್ರತಿ ದರದ ದಿನಾಂಕದೊಂದಿಗೆ.",
@@ -160,6 +166,10 @@ const COPY = defineCopy({
     officialOthers: "See rates from more APMC markets",
     grade: "Grade",
     otherTools: "Explore further",
+    followTitle: "Today's rates on WhatsApp, every morning",
+    followText: "Every cooperative's rate, with its source and date. It's a channel, not a group: nobody sees your number.",
+    followButton: "Follow the channel",
+    followAria: "Follow the Adike Naadi WhatsApp channel (opens WhatsApp)",
     moreFrom: (source: string) => `Explore ${source} prices`,
     tumcosEmpty: "No published rates available.",
     subtitle: "Published cooperative and APMC market rates, each with its reporting date.",
@@ -775,6 +785,13 @@ export function HomePage() {
     </section>}
     </div>
     </section>}
+
+    <aside className="home-follow" aria-labelledby="home-follow-title">
+      <span className="home-follow-badge" aria-hidden="true"><WhatsAppIcon size={24} /></span>
+      <div className="home-follow-text"><h2 id="home-follow-title">{copy.followTitle}</h2><p>{copy.followText}</p></div>
+      <a className="home-follow-button" href={CONTACT.whatsappChannel} target="_blank" rel="noopener noreferrer" aria-label={copy.followAria}>
+        <WhatsAppIcon /><strong>{copy.followButton}</strong></a>
+    </aside>
 
     <section className="home-price-section" aria-labelledby="home-tools-heading">
     <div className="home-section-heading"><h2 id="home-tools-heading">{copy.otherTools}</h2></div>

@@ -1170,7 +1170,7 @@ describe("social links", () => {
   });
 
   it("names the same accounts in the structured data search engines read", () => {
-    expect(readFileSync("frontend/index.html", "utf8")).toContain('"sameAs": ["https://www.instagram.com/naadiadike/", "https://x.com/adikenaadi", "https://www.youtube.com/@adikenaadi", "https://www.facebook.com/adikenaadi"]');
+    expect(readFileSync("frontend/index.html", "utf8")).toContain('"sameAs": ["https://www.instagram.com/naadiadike/", "https://x.com/adikenaadi", "https://www.youtube.com/@adikenaadi", "https://www.facebook.com/adikenaadi", "https://whatsapp.com/channel/0029Vb9PA3A3gvWfbmNc7M0q"]');
   });
 });
 
