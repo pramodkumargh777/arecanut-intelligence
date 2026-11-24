@@ -23,6 +23,8 @@ export const CONTACT = {
     youtube: { handle: "adikenaadi", url: "https://www.youtube.com/@adikenaadi" },
     facebook: { handle: "adikenaadi", url: "https://www.facebook.com/adikenaadi" },
   },
+  /** The WhatsApp Channel: the daily rate card every morning. Linked from the home page and the footer. */
+  whatsappChannel: "https://whatsapp.com/channel/0029Vb9PA3A3gvWfbmNc7M0q",
 } as const;
 
 export const brandLabel =(language: Language) => `${BRAND[language].name} · ${BRAND[language].descriptor}`;

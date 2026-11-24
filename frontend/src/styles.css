@@ -679,6 +679,20 @@ th.numeric .sort-button span { order: -1; }
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23525f57' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 15px center; }
 .variety-phone select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* Price cards share the width instead of one narrow centred column. */
+/* WhatsApp Channel invitation, below the rates: the footer's report panel in miniature, with WhatsApp's green button. */
+.home-follow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--brand-tint); }
+.home-follow-badge { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #1f8f4e; color: #fff; }
+.home-follow-text h2 { margin: 0; font-size: 17px; font-weight: 650; color: var(--ink); }
+.home-follow-text p { margin: 3px 0 0; font-size: 14px; color: var(--muted); line-height: 1.45; }
+.home-follow-button { display: inline-flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 20px 0 16px; border-radius: 12px; background: #1f8f4e; color: #fff; text-decoration: none; }
+.home-follow-button:hover { background: #1a7d44; }
+.home-follow-button:active { transform: scale(.98); }
+.home-follow-button strong { font-size: 14px; font-weight: 650; white-space: nowrap; }
+@media (max-width: 700px) {
+  .home-follow { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .home-follow-badge { display: none; }
+  .home-follow-button { justify-content: center; }
+}
 .home-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 /* Titles sit at the top of each card, so cards in one row line up when a title wraps (tablet width); the arrow stays centred. */
 .home-actions a { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr; column-gap: 12px; align-items: start; padding: 11px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; }
