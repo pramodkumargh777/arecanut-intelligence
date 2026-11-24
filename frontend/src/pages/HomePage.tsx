@@ -28,6 +28,7 @@ import sippeGotuImage from "../assets/varieties/sippe-gotu.webp";
 import { RollingNumber } from "../components/RollingNumber";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { CONTACT } from "../services/brand";
+import { ArrivalsLeaders } from "../components/MarketArrivals";
 
 /** The three varieties most growers sell are picture cards; every other variety is in the "More varieties" list. */
 const HOME_VARIETIES = VARIETIES.filter((item) => item.everyday);
@@ -55,7 +56,6 @@ const COPY = defineCopy({
     source: "ಮೂಲ",
     noRows: "ಈ ತಳಿಗೆ ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
     notPublished: (names: string) => `${names} ಈ ತಳಿಯ ದರವನ್ನು ಪ್ರಕಟಿಸುವುದಿಲ್ಲ.`,
-    tumcosNote: "ತುಮ್ಕೋಸ್ ತಳಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ, ಆದ್ದರಿಂದ ಇದು ಯಾವ ತಳಿಯ ದರ ಎಂದು ಹೇಳಲಾಗದು.",
     notComparable: "ಪ್ರತಿ ಸಂಸ್ಥೆಯ ದರವನ್ನು ಬೇರೆ ರೀತಿಯಲ್ಲಿ ಲೆಕ್ಕ ಮಾಡಲಾಗುತ್ತದೆ, ಆದ್ದರಿಂದ ಬೇರೆ ಬೇರೆ ಸಂಸ್ಥೆಗಳ ದರಗಳನ್ನು ನೇರವಾಗಿ ಹೋಲಿಸಬೇಡಿ. ಇವು ಸರಾಸರಿ ದರಗಳು; ನಿಮ್ಮ ಮಾಲಿಗೆ ಸಿಗುವ ದರ ಬೇರೆ ಇರಬಹುದು.",
     loading: "ದರಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ",
     failed: "ದರಗಳನ್ನು ತರಲು ಆಗಲಿಲ್ಲ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಪ್ರಯತ್ನಿಸಿ.",
@@ -83,7 +83,7 @@ const COPY = defineCopy({
     cooperativeTitle: "ಸಹಕಾರಿ ಶಾಖೆಗಳ ದರಗಳು",
     cooperativeHint: "ಆಯ್ದ ತಳಿಯ ದರಗಳು · ಪ್ರತಿ ಶಾಖೆಯ ದಿನಾಂಕ ಪರಿಶೀಲಿಸಿ",
     otherMarketsTitle: "ಇತರ ಮಾರುಕಟ್ಟೆ ದರಗಳು",
-    otherMarketsHint: "ಎಪಿಎಂಸಿ ದರಗಳು ಎಲ್ಲಾ ತಳಿಗಳನ್ನು ಒಳಗೊಂಡಿವೆ; ತುಮ್ಕೋಸ್ ತಳಿಯನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ.",
+    otherMarketsHint: "ಎಪಿಎಂಸಿ ದರಗಳು ಎಲ್ಲಾ ತಳಿಗಳನ್ನು ಒಳಗೊಂಡಿವೆ.",
     topMark: "ಅತಿ ಹೆಚ್ಚು",
     vs: (when: string) => `${when} ವರದಿಗೆ ಹೋಲಿಸಿ`,
     showAll: (count: number) => `ಎಲ್ಲಾ ${count} ಶಾಖೆಗಳನ್ನು ತೋರಿಸಿ`,
@@ -146,7 +146,6 @@ const COPY = defineCopy({
     source: "Source",
     noRows: "No published rate for this variety.",
     notPublished: (names: string) => `${names} ${names.includes(" and ") ? "do" : "does"} not publish this variety.`,
-    tumcosNote: "TUMCOS does not state the variety, so this cannot be matched to a grade.",
     notComparable: "Each cooperative works out its rate differently, so don't compare rates directly between cooperatives. These are averages; the rate for your lot can differ.",
     loading: "Loading rates",
     failed: "Could not load the rates. Please try again shortly.",
@@ -174,7 +173,7 @@ const COPY = defineCopy({
     cooperativeTitle: "Cooperative branch prices",
     cooperativeHint: "Selected variety · check each branch's reporting date",
     otherMarketsTitle: "Other market quotations",
-    otherMarketsHint: "APMC prices include all varieties; TUMCOS does not state a variety.",
+    otherMarketsHint: "APMC prices include all varieties.",
     topMark: "Highest",
     vs: (when: string) => `compared with the ${when} report`,
     showAll: (count: number) => `Show all ${count} branches`,
@@ -687,6 +686,11 @@ export function HomePage() {
       })}</ul>
     </section>}
 
+    {/* Phones: the WhatsApp Channel invitation follows the first prices, where daily updates are most wanted. Wider
+        screens keep it beside the report date. */}
+    <a className="home-follow-inline" href={CONTACT.whatsappChannel} target="_blank" rel="noopener noreferrer" aria-label={copy.followAria}>
+      <WhatsAppIcon size={16} /><span>{copy.followShort}</span><ArrowRight size={16} aria-hidden="true" /></a>
+
     <nav className="home-sections" aria-label={language === "kn" ? "ದರಗಳ ವಿಭಾಗಗಳು" : "Price sections"}>
       {shownSources.map((source) => <a key={source.key} href={`#rates-${source.key}`}>{source.en}</a>)}
       {showTumcosCard && <a href="#rates-tumcos">TUMCOS</a>}
@@ -788,6 +792,8 @@ export function HomePage() {
     </div>
     </section>}
 
+    <ArrivalsLeaders town={town} />
+
     <section className="home-price-section" aria-labelledby="home-tools-heading">
     <div className="home-section-heading"><h2 id="home-tools-heading">{copy.otherTools}</h2></div>
     <nav className="home-actions" aria-label={copy.otherTools}>
@@ -800,7 +806,6 @@ export function HomePage() {
     <AboutData title={copy.about}>
       <p>{copy.notComparable}</p>
       <p>{copy.changeNote}</p>
-      <p>{copy.tumcosNote}</p>
     </AboutData>
     <PageFaq path="/" />
   </div>;

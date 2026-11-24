@@ -12,6 +12,17 @@
 
 /* ---- Narrowing desktop and tablet ---------------------------------------------------------------------------- */
 
+/* One-row desktop bar on laptop screens (1280-1599, and 125-150% Windows scaling): drop the extras that repeat
+   what is already shown, the "Commodity" caption (the breadcrumb names the commodity) and then the region note. */
+@media (min-width: 1201px) and (max-width: 1599px) {
+  .commodity-select > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .commodity-select select { width: 156px; }
+}
+@media (min-width: 1201px) and (max-width: 1439px) {
+  .region-pill { display: none; }
+  .topbar { gap: 14px; }
+}
+
 @media (max-width: 1200px) {
   .sidebar { width: 216px; }
   .main-column { margin-left: 216px; }
@@ -21,6 +32,7 @@
   .topbar-tools { order: 1; flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
   .topbar-tools form { flex: 1 1 180px; min-width: 0; }
   .search-field { width: 100%; }
+  .commodity-select select { width: 200px; }
   .site-footer-inner { width: calc(100% - 52px); }
   .footer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .footer-brand { grid-column: 1 / -1; }
@@ -519,8 +531,12 @@
   .comparison-row { grid-template-columns: 20px minmax(0, 1fr) 86px; gap: 8px; }
   .comparison-price { font-size: 15px; }
   .breadcrumb { gap: 7px; }
-  /* Four social icons do not fit beside the logo, so they take their own row under the contact lines. */
-  .footer-brand > .footer-social { grid-column: 1 / -1; grid-row: auto; margin-top: 12px; }
+}
+
+/* Five social icons beside the logo squeeze the name into three lines on most phones, so below 460px they take their
+   own row under the contact lines and the logo keeps the full width. */
+@media (max-width: 459px) {
+  .footer-brand > .footer-social { grid-column: 1 / -1; grid-row: auto; margin-top: 14px; }
 }
 
 /* Phones: a bottom bar with the four places growers go most. It sits under the menu drawer and its backdrop, and the
@@ -567,4 +583,32 @@
    height; mouse users keep the compact 34px pills. */
 @media (pointer: coarse) and (min-width: 641px) {
   .variety-card, .variety-more-face, .town-pill-face, .town-clear { height: 42px; }
+}
+
+/* ---- Phone home, first screen ------------------------------------------------------------------------------------
+   Title, report date, the two filters and the first prices before anything else: the brand name sits beside the palm
+   in the top bar, the theme switch moves into the menu, the report date is a soft tag, variety and town share one row
+   (their values name them; the labels stay for screen readers), and the WhatsApp invitation follows the first prices. */
+@media (max-width: 640px) {
+  .topbar .theme-toggle { display: none; }
+  .drawer-theme { display: flex; }
+  .topbar-brand-name { display: inline; font-size: 15.5px; }
+  .topbar .language-toggle { height: 34px; }
+  .topbar .language-toggle button { padding-inline: 10px; font-size: 12.5px; }
+
+  .home-hero { gap: 8px; }
+  .home-hero .home-date-pill { align-self: flex-start; max-width: 100%; padding: 3px 10px 3px 8px; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface); font-size: 12px; line-height: 1.7; }
+  .home-hero .home-follow-link { display: none; }
+  .home-follow-inline { display: flex; }
+
+  .home-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .home-filters .home-variety-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .variety-phone select, .town-pill-face, .town-clear { height: 44px; }
+  .variety-phone select { padding-left: 12px; font-size: 15px; }
+  .town-pill-face { padding: 0 10px 0 12px; font-size: 15px; }
+  .town-clear { width: 44px; }
+  /* A chosen town needs the room for its name beside the ✕; the filled pill reads as a choice without its arrow. */
+  .home-filters:has(.town-pill-active) { grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); }
+  .town-pill-active .town-pill-face svg:last-child { display: none; }
 }

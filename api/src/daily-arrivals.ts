@@ -13,7 +13,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "./env";
 import { bearerMatches } from "./auth";
-import { bucketSql, isCalendarDate, istDate, toTonnes, daysBetween } from "./supply";
+import { addDays, bucketSql, isCalendarDate, istDate, toTonnes, daysBetween } from "./supply";
 
 export const DAILY_SOURCES = {
   krama_arrivals: { id: "source-krama-arrivals", name: "KRAMA daily arrivals (Karnataka Agricultural Marketing Department)",
@@ -264,6 +264,11 @@ dailyArrivalRoutes.post("/admin/arrivals/daily/import", async (c) => {
         FROM json_each(?)`).bind(id, sourceKey, STATE, JSON.stringify(chunk)));
     }
   }
+  // The monthly totals the season pattern reads are refreshed in the same batch, for every month a new document covers.
+  if (statements.length) {
+    const months = new Set(results.flatMap(({ input }) => monthsBetween(input.period_start, input.period_end)));
+    for (const month of months) statements.push(...monthTotalStatements(db, month, now));
+  }
   // D1 batches are atomic: every new document of this request is stored with all its rows, or nothing is.
   if (statements.length) await db.batch(statements);
   return c.json({ source_key: sourceKey, received_documents: documents.length, ...totals, rejected }, 201);
@@ -340,7 +345,14 @@ dailyArrivalRoutes.post("/admin/arrivals/market-aliases", async (c) => {
   await c.env.DB.prepare(`INSERT INTO arrival_market_aliases (source_key, source_market_name, district, market, mapping_status, evidence, version, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(alias.source_key, alias.source_market_name, district.district, alias.market, alias.mapping_status,
     alias.evidence, version, new Date().toISOString()).run();
-  return c.json({ ...alias, district: district.district, version }, 201);
+  // The market's months move to the new name in the monthly totals, a year of months per batch.
+  const months = (await c.env.DB.prepare(`SELECT DISTINCT substr(observation_date, 1, 7) AS month FROM market_arrival_days
+    WHERE source_key = ? AND source_market_name = ? ORDER BY month`).bind(alias.source_key, alias.source_market_name).all<{ month: string }>()).results;
+  const now = new Date().toISOString();
+  for (let offset = 0; offset < months.length; offset += 12) {
+    await c.env.DB.batch(months.slice(offset, offset + 12).flatMap(({ month }) => monthTotalStatements(c.env.DB, month, now)));
+  }
+  return c.json({ ...alias, district: district.district, version, months_refreshed: months.length }, 201);
 });
 
 /**
@@ -406,4 +418,193 @@ dailyArrivalRoutes.get("/supply/arrival-days", async (c) => {
     notes: ["KRAMA is used for every date it reports; AGMARKNET 2.0 daily rows fill only dates KRAMA does not cover.",
       "Prices here are the arrival reports' own figures; they are not part of the reference index.",
       "mapping_status unmapped means the source market name has no district mapping yet; it still counts in state totals."] });
+});
+
+// ------------------------------------------------------------------------------------------------
+// Monthly totals, recent market activity and the season pattern (town pages, home page, Sell or wait)
+
+const daysInMonth = (month: string) => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
+const nextMonth = (month: string) => {
+  const year = Number(month.slice(0, 4)), index = Number(month.slice(5, 7));
+  return index === 12 ? `${year + 1}-01` : `${year}-${String(index + 1).padStart(2, "0")}`;
+};
+/** Every YYYY-MM from the month of `from` to the month of `to`. */
+export function monthsBetween(from: string, to: string) {
+  const months: string[] = [];
+  for (let month = from.slice(0, 7); month <= to.slice(0, 7); month = nextMonth(month)) months.push(month);
+  return months;
+}
+
+/** Recomputes arrival_month_totals for one month, with the /supply/arrivals precedence (migration 0028 did every month once). */
+export function monthTotalStatements(db: D1Database, month: string, refreshedAt: string): D1PreparedStatement[] {
+  const { sql, args } = pickedDailySql({ state: STATE, from: `${month}-01`, to: `${month}-${String(daysInMonth(month)).padStart(2, "0")}` });
+  return [
+    db.prepare("DELETE FROM arrival_month_totals WHERE state = ? AND month = ?").bind(STATE, month),
+    db.prepare(`${sql} INSERT INTO arrival_month_totals (state, scope, market, district, month, quantity_tonnes, reporting_days, records, refreshed_at)
+      SELECT ?, 'market', market, MAX(district), ?, ROUND(SUM(quantity_tonnes), 3), COUNT(DISTINCT observation_date), COUNT(*), ? FROM picked GROUP BY market
+      UNION ALL
+      SELECT state, scope, market, district, month, quantity_tonnes, reporting_days, records, refreshed_at FROM (
+        SELECT ? AS state, 'state' AS scope, '' AS market, NULL AS district, ? AS month, ROUND(SUM(quantity_tonnes), 3) AS quantity_tonnes,
+          COUNT(DISTINCT observation_date) AS reporting_days, COUNT(*) AS records, ? AS refreshed_at FROM picked) WHERE records > 0`)
+      .bind(...args, STATE, month, refreshedAt, STATE, month, refreshedAt),
+  ];
+}
+
+const KRAMA_SOURCE = { name: DAILY_SOURCES.krama_arrivals.name, url: DAILY_SOURCES.krama_arrivals.url, publisher: DAILY_SOURCES.krama_arrivals.publisher };
+const quintals = (tonnes: number) => Math.round(tonnes * 10);
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+export type MarketDay = { market: string; district: string | null; observation_date: string; tonnes: number };
+export type RecentMarket = {
+  market: string; district: string | null; last_date: string; last_quintals: number; latest_quintals: number | null;
+  week_quintals: number; week_days: number; usual_quintals: number | null; usual_days: number; days: { date: string; quintals: number }[];
+};
+const RECENT_WINDOW = 35, WEEK = 7, USUAL_MIN_DAYS = 5;
+
+/**
+ * Each market's arrivals over the 7 days ending on the latest report date, its latest day, and its usual day: the mean of
+ * its reporting days in the 28 days before that week (only with at least 5 of them, so a quiet stretch is not "usual").
+ */
+export function recentArrivals(days: MarketDay[], latest: string) {
+  const weekFrom = addDays(latest, -(WEEK - 1)), usualFrom = addDays(latest, -(RECENT_WINDOW - 1));
+  const byMarket = new Map<string, MarketDay[]>();
+  for (const day of days) {
+    if (day.observation_date < usualFrom || day.observation_date > latest || !(day.tonnes > 0)) continue;
+    byMarket.set(day.market, [...(byMarket.get(day.market) ?? []), day]);
+  }
+  const markets: RecentMarket[] = [];
+  for (const [market, rows] of byMarket) {
+    const sorted = [...rows].sort((a, b) => a.observation_date.localeCompare(b.observation_date));
+    const week = sorted.filter((row) => row.observation_date >= weekFrom);
+    const before = sorted.filter((row) => row.observation_date < weekFrom);
+    const last = sorted.at(-1)!;
+    markets.push({
+      market, district: last.district, last_date: last.observation_date, last_quintals: quintals(last.tonnes),
+      latest_quintals: last.observation_date === latest ? quintals(last.tonnes) : null,
+      week_quintals: quintals(week.reduce((sum, row) => sum + row.tonnes, 0)), week_days: week.length,
+      usual_quintals: before.length >= USUAL_MIN_DAYS ? quintals(before.reduce((sum, row) => sum + row.tonnes, 0) / before.length) : null,
+      usual_days: before.length, days: week.map((row) => ({ date: row.observation_date, quintals: quintals(row.tonnes) })),
+    });
+  }
+  markets.sort((a, b) => b.week_quintals - a.week_quintals || a.market.localeCompare(b.market));
+  const total = (from: string, to: string) => quintals(days.filter((row) => row.observation_date >= from && row.observation_date <= to)
+    .reduce((sum, row) => sum + (row.tonnes > 0 ? row.tonnes : 0), 0));
+  return {
+    latest_date: latest, week: { from: weekFrom, to: latest },
+    state: { latest_quintals: total(latest, latest), week_quintals: total(weekFrom, latest),
+      previous_week_quintals: total(addDays(weekFrom, -WEEK), addDays(weekFrom, -1)),
+      markets_reporting_latest: markets.filter((row) => row.latest_quintals !== null).length },
+    markets,
+  };
+}
+
+/** Market activity for town pages and the home page: the latest report date and the 5 weeks before it, in quintals. */
+dailyArrivalRoutes.get("/supply/arrivals/recent", async (c) => {
+  const db = c.env.DB, today = istDate(new Date());
+  const found = await db.prepare(`SELECT MAX(observation_date) AS latest FROM market_arrival_days
+    WHERE commodity_code = 'arecanut' AND state = ? AND observation_date BETWEEN ? AND ?`).bind(STATE, addDays(today, -60), today).first<{ latest: string | null }>();
+  const latest = found?.latest ?? null;
+  const base = { commodity: "arecanut", state: STATE, unit: "quintal", source: KRAMA_SOURCE,
+    notes: ["Arrivals as the APMCs report them to KRAMA, all varieties together, in quintals.",
+      "usual_quintals is the mean of a market's reporting days in the 28 days before the week shown."] };
+  if (!latest) return c.json({ ...base, latest_date: null, week: null, state: null, markets: [] });
+  const { sql, args } = pickedDailySql({ state: STATE, from: addDays(latest, -(RECENT_WINDOW - 1)), to: latest });
+  const rows = (await db.prepare(`${sql} SELECT market, MAX(district) AS district, observation_date, SUM(quantity_tonnes) AS tonnes FROM picked
+    WHERE unit_status = 'converted' GROUP BY market, observation_date`).bind(...args).all<MarketDay>()).results;
+  c.header("Cache-Control", "public, max-age=900");
+  return c.json({ ...base, ...recentArrivals(rows, latest) });
+});
+
+export type MonthTotal = { month: string; quantity_tonnes: number | null; reporting_days: number };
+export type MarketMonth = { market: string; month: string; quantity_tonnes: number | null };
+
+const percent = (value: number) => Math.round(value * 1000) / 10;
+/** The values without the single highest and lowest when there are at least 5, so one odd year does not set the range. */
+const trimmed = (values: number[]) => values.length >= 5 ? [...values].sort((a, b) => a - b).slice(1, -1) : values;
+
+/**
+ * The season pattern as each month's share of its year's arrivals, over every complete past year (all 12 months reported
+ * on at least 80% of their days). Shares, not tonnes: more markets report each year, which raises totals without
+ * changing when the crop comes in. This year is compared like for like instead: the same markets and the same finished
+ * months as last year.
+ */
+export function seasonPattern(stateMonths: MonthTotal[], scopeMonths: MonthTotal[], latestDate: string | null, marketMonths?: MarketMonth[]) {
+  // The month of the latest report is still running until its last day is in, however many of its days have reported.
+  const running = latestDate && Number(latestDate.slice(8, 10)) < daysInMonth(latestDate.slice(0, 7)) ? latestDate.slice(0, 7) : null;
+  const complete = new Set(stateMonths.filter((row) => row.month !== running && row.reporting_days >= Math.ceil(daysInMonth(row.month) * 0.8)).map((row) => row.month));
+  const latestMonth = stateMonths.at(-1)?.month ?? null;
+  const currentYear = latestMonth ? Number(latestMonth.slice(0, 4)) : null;
+  const key = (year: number, month: number) => `${year}-${String(month).padStart(2, "0")}`;
+  const twelve = Array.from({ length: 12 }, (_, index) => index + 1);
+  const value = new Map(scopeMonths.filter((row) => row.quantity_tonnes !== null).map((row) => [row.month, row.quantity_tonnes as number]));
+  const years = [...new Set(stateMonths.map((row) => Number(row.month.slice(0, 4))))]
+    .filter((year) => year !== currentYear && twelve.every((month) => complete.has(key(year, month))) && twelve.every((month) => value.has(key(year, month))));
+  const yearShares = new Map(years.map((year) => {
+    const total = twelve.reduce((sum, month) => sum + value.get(key(year, month))!, 0);
+    return [year, twelve.map((month) => total > 0 ? value.get(key(year, month))! / total : 0)];
+  }));
+  const share = twelve.map((month) => {
+    const values = years.map((year) => yearShares.get(year)![month - 1]);
+    if (values.length < 3) return { month, median: null, low: null, high: null };
+    const range = trimmed(values);
+    return { month, median: percent(median(values)), low: percent(range[0]), high: percent(range.at(-1)!) };
+  });
+  const ranked = share.flatMap((item) => item.median === null ? [] : [{ month: item.month, median: item.median }]).sort((a, b) => b.median - a.median);
+  const lastYear = currentYear !== null && years.includes(currentYear - 1) ? currentYear - 1 : null;
+
+  // Like for like: this year's finished months against the same months last year, counting a market only in the months
+  // it reported in both years.
+  let likeForLike = null;
+  if (currentYear !== null) {
+    const finished = twelve.filter((month) => complete.has(key(currentYear, month)) && complete.has(key(currentYear - 1, month)));
+    const through = finished.length && finished.every((month, index) => month === index + 1) ? finished.at(-1)! : 0;
+    if (through) {
+      const rows = marketMonths ?? scopeMonths.map((row) => ({ market: "", month: row.month, quantity_tonnes: row.quantity_tonnes }));
+      const amount = new Map(rows.filter((row) => (row.quantity_tonnes ?? 0) > 0).map((row) => [`${row.market}\u0000${row.month}`, row.quantity_tonnes as number]));
+      let current = 0, previous = 0;
+      const markets = new Set<string>();
+      for (const name of new Set(rows.map((row) => row.market))) for (let month = 1; month <= through; month += 1) {
+        const now = amount.get(`${name}\u0000${key(currentYear, month)}`), before = amount.get(`${name}\u0000${key(currentYear - 1, month)}`);
+        if (now !== undefined && before !== undefined) { current += now; previous += before; markets.add(name); }
+      }
+      if (previous > 0) likeForLike = { year: currentYear, previous_year: currentYear - 1, through_month: through, current_tonnes: Math.round(current),
+        previous_tonnes: Math.round(previous), change_percent: percent(current / previous - 1), markets: markets.size };
+    }
+  }
+  const progress = latestMonth && !complete.has(latestMonth) ? stateMonths.at(-1)! : null;
+  return {
+    years_used: years, share, peak_month: ranked[0]?.month ?? null, quiet_month: ranked.at(-1)?.month ?? null,
+    previous_share: lastYear === null ? null : { year: lastYear, values: yearShares.get(lastYear)!.map(percent) },
+    like_for_like: likeForLike,
+    in_progress: progress ? { month: progress.month, quantity_tonnes: value.has(progress.month) ? Math.round(value.get(progress.month)!) : null,
+      reporting_days: progress.reporting_days, days_in_month: daysInMonth(progress.month) } : null,
+  };
+}
+
+/** Monthly arrivals by year for the whole state, or one market (?market=, the AGMARKNET market name), from the monthly totals. */
+dailyArrivalRoutes.get("/supply/arrivals/season", async (c) => {
+  const market = c.req.query("market")?.trim() || undefined;
+  const db = c.env.DB;
+  const latest = await db.prepare(`SELECT MAX(observation_date) AS latest FROM market_arrival_days WHERE commodity_code = 'arecanut' AND state = ?`)
+    .bind(STATE).first<{ latest: string | null }>();
+  const year = Number((latest?.latest ?? istDate(new Date())).slice(0, 4));
+  const [stateRows, marketRows, compareRows] = await db.batch([
+    db.prepare("SELECT month, quantity_tonnes, reporting_days FROM arrival_month_totals WHERE state = ? AND scope = 'state' ORDER BY month").bind(STATE),
+    db.prepare("SELECT month, quantity_tonnes, reporting_days FROM arrival_month_totals WHERE state = ? AND scope = 'market' AND market = ? ORDER BY month")
+      .bind(STATE, market ?? ""),
+    // Last year and this year by market, for the like-for-like comparison of the whole state.
+    db.prepare("SELECT market, month, quantity_tonnes FROM arrival_month_totals WHERE state = ? AND scope = 'market' AND month BETWEEN ? AND ?")
+      .bind(STATE, `${year - 1}-01`, `${year}-12`),
+  ]);
+  c.header("Cache-Control", "public, max-age=1800");
+  return c.json({ commodity: "arecanut", state: STATE, scope: market ? "market" : "state", market: market ?? null, unit: "percent of the year's arrivals (like_for_like in tonnes)", source: KRAMA_SOURCE,
+    latest_date: latest?.latest ?? null, ...seasonPattern(stateRows.results as MonthTotal[], (market ? marketRows.results : stateRows.results) as MonthTotal[],
+      latest?.latest ?? null, market ? undefined : compareRows.results as MarketMonth[]),
+    notes: ["Monthly totals of the daily arrival reports, all varieties together. KRAMA is used for every date it reports.",
+      "share is each month's part of its year's arrivals: the median over complete past years (all 12 months reported on at least 80% of their days), with the range leaving out the highest and lowest year.",
+      "like_for_like compares this year's finished months with the same months last year, counting a market only in months it reported in both.",
+      "Arrivals show how much reached the markets, not the size of the crop."] });
 });

@@ -162,6 +162,29 @@ every document to one date or one calendar month, so that lookup stays correct.
 - the source and the request URL of the source document;
 - the same precedence as the Supply page.
 
+**`GET /api/v1/supply/arrivals/recent`** (town pages and the home page) returns every market's arrivals in quintals for
+the 7 days ending on the latest report date, its latest day (`latest_quintals`, null if it has not reported that date
+yet), and its usual day: the mean of its reporting days in the 28 days before that week, given only with at least 5 such
+days. Town pages call a day busier or quieter than usual at ±25%. Cached by browsers for 15 minutes.
+
+**`GET /api/v1/supply/arrivals/season[?market=]`** (Sell or wait) returns the season pattern for the state or one market
+(the AGMARKNET market name, e.g. `Shimoga APMC`):
+
+- `share`: each month's part of its year's arrivals, the median over complete past years (all 12 months reported on at
+  least 80% of their days; the month of the latest report is never complete until its last day is in), with a range that
+  leaves out the highest and lowest year. Shares, not tonnes: more markets report each year, which raises totals without
+  changing when the crop comes in (2025 had about twice 2021's tonnes).
+- `peak_month` / `quiet_month`, and `previous_share` (last complete year).
+- `like_for_like`: this year's finished months against the same months last year, a market counting only in months it
+  reported in both years.
+
+It reads **`arrival_month_totals`** (migration 0028): one row per month for the state and per market and month, with the
+same precedence as `/supply/arrivals`. The migration fills it once (about 2 million row reads); after that each daily
+import refreshes, in the same atomic batch, only the months its documents cover, and a new market alias refreshes that
+market's months. A daily *file* import into `market_arrivals` does not refresh it; such imports are rare, and the next
+KRAMA import of that month corrects it. The AGMARKNET 2.0 monthly totals are not used here: some of their months are far
+off (Kadur's 2015 total reads 196,614 t).
+
 **Unchanged:** the arrival forecast gate (it still counts `market_arrivals` weeks) and
 `/supply/arrivals/price-comparison`.
 
@@ -195,7 +218,7 @@ For local development, `api/.dev.vars` (git-ignored) sets both flags to `true`.
 
 1. Set `DAILY_ARRIVALS_IN_SUPPLY = "false"`.
 2. Stop imports with `DAILY_ARRIVALS_IMPORT_ENABLED = "false"`.
-3. To remove everything, use the statements at the top of migration 0027.
+3. To remove everything, use the statements at the top of migrations 0028 and 0027 (0028 first).
 
 ## Limitations
 

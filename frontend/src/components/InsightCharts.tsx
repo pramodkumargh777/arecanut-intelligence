@@ -31,9 +31,11 @@ export type ChartRegion = { from: string; to: string; label: string };
  * gaps; a value with no neighbour on either side keeps a visible dot, since a line cannot draw it.
  * A band draws the lower–upper interval as a whisker, so an interval is not mistaken for an observation.
  */
-export function LineSeriesChart({ categories, series, band, valueFormat = "inr", description, height = 320, referenceLine, regions = [], endLabel = false }: {
+export function LineSeriesChart({ categories, series, band, valueFormat = "inr", description, height = 320, referenceLine, regions = [], endLabel = false, zeroBased = false }: {
   categories: string[]; series: LineSeries[]; band?: { name: string; lower: (number | null)[]; upper: (number | null)[] };
   valueFormat?: "inr" | "percent" | "index"; description: string; height?: number; referenceLine?: { value: number; label: string }; regions?: ChartRegion[]; endLabel?: boolean;
+  /** Start the value axis at zero (shares and quantities), instead of fitting it to the data. */
+  zeroBased?: boolean;
 }) {
   const t = useCopy(CHART);
   const onChartReady = useResponsiveChart();
@@ -71,7 +73,7 @@ export function LineSeriesChart({ categories, series, band, valueFormat = "inr",
       },
     },
     xAxis: { type: "category", data: categories, boundaryGap: false, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, hideOverlap: true, interval: monthAxisInterval(categories) }, axisLine: AXIS_LINE },
-    yAxis: { type: "value", scale: true, splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: valueFormat === "inr" ? axisInr : valueFormat === "percent" ? (value: number) => `${value}%` : undefined }, splitLine: GRID_LINE },
+    yAxis: { type: "value", scale: !zeroBased, ...(zeroBased ? { min: 0 } : {}), splitNumber: 4, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: valueFormat === "inr" ? axisInr : valueFormat === "percent" ? (value: number) => `${value}%` : undefined }, splitLine: GRID_LINE },
     series: [
       ...series.map((item, index) => {
         const color = colorOf(item, index);

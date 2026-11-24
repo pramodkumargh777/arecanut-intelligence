@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyMigrations, LocalDatabase } from "./test-support/local-d1";
 import { app, type Env } from "./index";
-import { parseAgmarknetDatewise, parseKrama } from "./daily-arrivals";
+import { parseAgmarknetDatewise, parseKrama, recentArrivals, seasonPattern, type MonthTotal } from "./daily-arrivals";
 import { defaultArrivalWindow } from "./supply-routes";
 import { arrivalRows } from "../../frontend/src/services/supply";
 
@@ -315,5 +315,89 @@ describe("GET /supply/arrival-days", () => {
       quantity_original: 4, unit_original: "Quintal", quantity_tonnes: 0.4, source_key: "krama_arrivals",
       source_request_url: "https://krama.karnataka.gov.in/reports/CommadityRep" });
     expect((await app.request("/api/v1/supply/arrival-days?from=2026-01-01&to=2026-11-13", {}, env)).status).toBe(400);
+  });
+});
+
+describe("monthly arrival totals", () => {
+  const sirsi = (date: string, quintals: string) => kramaDoc(date, table([["SIRSI", "Bette", "Average", quintals, "Quintal", "100", "200", "150"],
+    ["SHIVAMOGGA", "Rashi", "Average", "30", "Quintal", "100", "200", "150"]]));
+  const totals = () => db.sqlite.prepare("SELECT scope, market, month, quantity_tonnes, reporting_days, records FROM arrival_month_totals ORDER BY month, scope, market").all();
+
+  it("refreshes the months each import touches, the latest document of a date winning", async () => {
+    await post("/admin/arrivals/daily/import", { source_key: "krama_arrivals", documents: [sirsi("2026-10-30", "40"), sirsi("2026-11-02", "10")] });
+    expect(totals()).toEqual([
+      { scope: "market", market: "Shimoga APMC", month: "2026-10", quantity_tonnes: 3, reporting_days: 1, records: 1 },
+      { scope: "market", market: "Sirsi APMC", month: "2026-10", quantity_tonnes: 4, reporting_days: 1, records: 1 },
+      { scope: "state", market: "", month: "2026-10", quantity_tonnes: 7, reporting_days: 1, records: 2 },
+      { scope: "market", market: "Shimoga APMC", month: "2026-11", quantity_tonnes: 3, reporting_days: 1, records: 1 },
+      { scope: "market", market: "Sirsi APMC", month: "2026-11", quantity_tonnes: 1, reporting_days: 1, records: 1 },
+      { scope: "state", market: "", month: "2026-11", quantity_tonnes: 4, reporting_days: 1, records: 2 },
+    ]);
+    // A later re-read of 2 Nov with a corrected figure replaces that day's contribution, not adds to it.
+    await post("/admin/arrivals/daily/import", { source_key: "krama_arrivals", documents: [{ ...sirsi("2026-11-02", "25"), fetched_at: "2026-11-17T05:30:00Z" }] });
+    expect(totals().filter((row: any) => row.month === "2026-11" && row.scope === "state")).toEqual([
+      { scope: "state", market: "", month: "2026-11", quantity_tonnes: 5.5, reporting_days: 1, records: 2 }]);
+    expect(totals().filter((row: any) => row.month === "2026-10")).toHaveLength(3);
+  });
+
+  it("serves the season pattern and recent activity from the stored days", async () => {
+    await post("/admin/arrivals/daily/import", { source_key: "krama_arrivals", documents: [sirsi("2026-11-16", "40"), sirsi("2026-11-17", "60")] });
+    const recent = await get("/supply/arrivals/recent");
+    expect(recent).toMatchObject({ latest_date: "2026-11-17", unit: "quintal", week: { from: "2026-11-11", to: "2026-11-17" },
+      state: { latest_quintals: 90, week_quintals: 160, markets_reporting_latest: 2 } });
+    expect(recent.markets[0]).toMatchObject({ market: "Sirsi APMC", district: "Uttara Kannada", latest_quintals: 60, week_quintals: 100, week_days: 2,
+      usual_quintals: null, days: [{ date: "2026-11-16", quintals: 40 }, { date: "2026-11-17", quintals: 60 }] });
+    const season = await get("/supply/arrivals/season?market=Sirsi%20APMC");
+    expect(season).toMatchObject({ scope: "market", market: "Sirsi APMC", years_used: [], peak_month: null, like_for_like: null,
+      in_progress: { month: "2026-11", quantity_tonnes: 10, reporting_days: 2, days_in_month: 30 } });
+  });
+});
+
+describe("recentArrivals", () => {
+  const day = (market: string, date: string, tonnes: number) => ({ market, district: "D", observation_date: date, tonnes });
+  it("compares the latest day with the market's usual reporting day before the week", () => {
+    const baseline = ["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-27"].map((date) => day("A", date, 20));
+    const result = recentArrivals([...baseline, day("A", "2026-11-16", 30), day("A", "2026-11-17", 41.2), day("B", "2026-11-15", 50), day("B", "2026-10-01", 99)], "2026-11-17");
+    expect(result.markets.map((row) => row.market)).toEqual(["A", "B"]);
+    expect(result.markets[0]).toMatchObject({ latest_quintals: 412, last_date: "2026-11-17", week_quintals: 712, week_days: 2, usual_quintals: 200, usual_days: 6 });
+    // B reported this week but not on the latest day, and has too few earlier days for a usual level (1 Oct is outside the window).
+    expect(result.markets[1]).toMatchObject({ latest_quintals: null, last_date: "2026-11-15", last_quintals: 500, usual_quintals: null, usual_days: 0 });
+    expect(result.state).toEqual({ latest_quintals: 412, week_quintals: 1212, previous_week_quintals: 0, markets_reporting_latest: 1 });
+  });
+});
+
+describe("seasonPattern", () => {
+  const monthsOf = (year: number, last = 12) => Array.from({ length: last }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
+  // A peak in March, a trough in August, years growing in size (more markets reporting) without changing the shape.
+  const shape = [10, 12, 16, 14, 9, 6, 5, 4, 6, 8, 9, 11];
+  const full = (year: number, scale: number): MonthTotal[] => monthsOf(year).map((month, index) => ({ month, quantity_tonnes: shape[index] * scale, reporting_days: 28 }));
+
+  it("uses only complete past years, as shares of each year, and compares this year like for like", () => {
+    const partialYear = monthsOf(2020).map((month, index) => ({ month, quantity_tonnes: 999, reporting_days: index === 5 ? 10 : 28 }));
+    const current = [...monthsOf(2026, 10).map((month, index) => ({ month, quantity_tonnes: shape[index] * 3000, reporting_days: 30 })),
+      { month: "2026-11", quantity_tonnes: 7000, reporting_days: 24 }];
+    const rows = [...partialYear, ...full(2021, 1000), ...full(2022, 1200), ...full(2023, 900), ...full(2024, 2000), ...full(2025, 2400), ...current];
+    // Last year one market reported; this year a second joined. Only the first counts in the comparison.
+    const markets = [...full(2025, 2400).map((row) => ({ market: "A", ...row })), ...current.slice(0, 10).map((row) => ({ market: "A", month: row.month, quantity_tonnes: row.quantity_tonnes! / 2 })),
+      ...current.slice(0, 10).map((row) => ({ market: "B", month: row.month, quantity_tonnes: row.quantity_tonnes! / 2 }))];
+    const result = seasonPattern(rows, rows, "2026-11-24", markets);
+    expect(result.years_used).toEqual([2021, 2022, 2023, 2024, 2025]);
+    // Every year has the same shape, so March is 16 of 110 parts in every year.
+    expect(result.share[2]).toEqual({ month: 3, median: 14.5, low: 14.5, high: 14.5 });
+    expect(result.peak_month).toBe(3);
+    expect(result.quiet_month).toBe(8);
+    expect(result.previous_share?.year).toBe(2025);
+    expect(result.like_for_like).toEqual({ year: 2026, previous_year: 2025, through_month: 10, current_tonnes: 135000, previous_tonnes: 216000,
+      change_percent: -37.5, markets: 1 });
+    // November 2026 is still in progress on 24 Nov (even with 80% of its days in), so it is not counted as a finished month.
+    expect(result.in_progress).toEqual({ month: "2026-11", quantity_tonnes: 7000, reporting_days: 24, days_in_month: 30 });
+  });
+
+  it("keeps one odd year out of the range", () => {
+    const rows = [...full(2021, 1000), ...full(2022, 1000), ...full(2023, 1000), ...full(2024, 1000),
+      ...full(2025, 1000).map((row) => row.month === "2025-10" ? { ...row, quantity_tonnes: 200000 } : row), { month: "2026-01", quantity_tonnes: 1, reporting_days: 5 }];
+    const october = seasonPattern(rows, rows, "2026-01-05").share[9];
+    expect(october.median).toBe(7.3);
+    expect(october.high).toBe(7.3);
   });
 });

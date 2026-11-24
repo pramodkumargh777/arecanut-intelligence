@@ -10,6 +10,7 @@ import { usePhone } from "../components/usePhone";
 import { api } from "../services/api";
 import { isLongBasis, LONG_HISTORY_FROM } from "../services/intelligence";
 import { defineCopy, type Language, useLanguage } from "../services/language";
+import { ArrivalSeasonCard } from "../components/MarketArrivals";
 
 /** Common trade names first. Everything else the source reports follows, under its own name. */
 const COMMON_VARIETIES: { name: string; kn: string }[] = [
@@ -300,5 +301,8 @@ export function SellOrHoldPage() {
 
       <p className={`home-note ${swap}`}>{long ? copy.caveatLong(Number(lastCompleted.slice(0, 4)) - since + 1) : copy.caveat} {long ? copy.sourceLong : copy.source}.{phone && hiddenCount > 0 ? ` ${copy.hidden(hiddenCount)}` : ""}</p>
     </>}
+
+    {/* Supply beside the price record: when arecanut usually reaches the yards (KRAMA daily arrivals). */}
+    <ArrivalSeasonCard />
   </div>;
 }

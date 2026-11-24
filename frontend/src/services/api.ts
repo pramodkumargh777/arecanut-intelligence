@@ -2,7 +2,7 @@ import type { CommodityCatalog } from "../../../shared/commodities";
 import type { Market, Overview, PriceObservation, QualityRecord, ReferencePoint, SourceStatus } from "../types";
 import type { CooperativeCommodity, CooperativeData, CooperativeQuote, CooperativeSource, CooperativeSourceStatus, CsvImportRequest, CsvImportSummary, PermissionStatus, RefreshSummary, ReplaySummary, ReviewResult, TssBackfillSummary, TumcosRefreshSummary, TmsRefreshSummary, TmsBackfillSummary } from "./cooperative";
 import type { MonthlyHistory, MonthlyEvidence, Aggregates, CalculationInputs, Calculation, DecisionPrices } from "./intelligence";
-import type { ArrivalPriceComparison, DistrictProduction, SupplyAdvisories, SupplyArrivals, SupplyProduction, SupplyWeather, RiskRule } from "./supply";
+import type { ArrivalPriceComparison, ArrivalSeason, DistrictProduction, RecentArrivals, SupplyAdvisories, SupplyArrivals, SupplyProduction, SupplyWeather, RiskRule } from "./supply";
 import type { ForecastingOverview, ForecastingPerformance, ModelEvaluation, Page, StoredPrediction } from "./forecasting";
 import type { AssistantAnswer, AssistantQuery, AssistantStatus } from "./assistant";
 import type { ModuleDomain, ModuleData, Production, Trade, Weather, Bulletin, QualityInput, QualityInspection, ForecastData } from "./modules";
@@ -70,6 +70,8 @@ export const api = {
   supplyProduction: (geography: string, compare: string) => request<SupplyProduction>(`/supply/production${queryString({ geography, compare })}`),
   supplyDistricts: (state: string) => request<DistrictProduction>(`/supply/production/districts${queryString({ state })}`),
   supplyArrivals: (params: Record<string, string | undefined>) => request<SupplyArrivals>(`/supply/arrivals${queryString(params)}`),
+  recentArrivals: () => request<RecentArrivals>("/supply/arrivals/recent"),
+  arrivalSeason: (market?: string) => request<ArrivalSeason>(`/supply/arrivals/season${queryString({ market })}`),
   arrivalPriceComparison: (params: Record<string, string | undefined>) => request<ArrivalPriceComparison>(`/supply/arrivals/price-comparison${queryString(params)}`),
   supplyWeather: (params: Record<string, string | undefined>) => request<SupplyWeather>(`/supply/weather${queryString(params)}`),
   supplyRiskRules: () => request<{ rules: RiskRule[]; policy: string }>("/supply/risk/rules"),

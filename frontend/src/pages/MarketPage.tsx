@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { calendarDateToTime, calendarTodayIST, DAY_MS, formatCalendarDate, formatPeriodKannada } from "../../../shared/dates";
 import { DEFAULT_COMMODITY } from "../../../shared/commodities";
 import { AboutData } from "../components/AboutData";
+import { TownArrivals } from "../components/MarketArrivals";
 import { PageFaq } from "../components/PageFaq";
 import { ShareButton } from "../components/ShareButton";
 import { ErrorState, SkeletonRows } from "../components/State";
@@ -192,6 +193,9 @@ export function MarketPage() {
       })} /></div>}
       </div>
     </section>
+
+    {/* How busy the town's APMC is: the latest day's arrivals, before the rates a grower checks next. */}
+    <TownArrivals place={place} />
 
     {/* Cards stretch to one height, so their "All rates" footers sit on one line however many varieties each lists. */}
     <div className="rate-grid rate-grid-even">
