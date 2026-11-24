@@ -73,9 +73,7 @@ const COPY = defineCopy({
     officialOthers: "ಇತರ ಎಪಿಎಂಸಿ ಮಾರುಕಟ್ಟೆಗಳ ದರ ನೋಡಿ",
     grade: "ದರ್ಜೆ",
     otherTools: "ಇನ್ನಷ್ಟು ಮಾಹಿತಿ",
-    followTitle: "ಪ್ರತಿದಿನ ಬೆಳಿಗ್ಗೆ ಇಂದಿನ ಧಾರಣೆ ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ",
-    followText: "ಎಲ್ಲಾ ಸಂಘಗಳ ದರ, ಮೂಲ ಮತ್ತು ದಿನಾಂಕದ ಜೊತೆ. ಗ್ರೂಪ್ ಅಲ್ಲ, ನಿಮ್ಮ ನಂಬರ್ ಯಾರಿಗೂ ಕಾಣುವುದಿಲ್ಲ.",
-    followButton: "ಚಾನೆಲ್ ಫಾಲೋ ಮಾಡಿ",
+    followShort: "ಪ್ರತಿದಿನ ದರ ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ",
     followAria: "ಅಡಿಕೆ ನಾಡಿ ವಾಟ್ಸಾಪ್ ಚಾನೆಲ್ ಫಾಲೋ ಮಾಡಿ (ವಾಟ್ಸಾಪ್ ತೆರೆಯುತ್ತದೆ)",
     moreFrom: (source: string) => `${source} ದರಗಳನ್ನು ನೋಡಿ`,
     tumcosEmpty: "ಪ್ರಕಟಿತ ದರ ಇಲ್ಲ.",
@@ -166,9 +164,7 @@ const COPY = defineCopy({
     officialOthers: "See rates from more APMC markets",
     grade: "Grade",
     otherTools: "Explore further",
-    followTitle: "Today's rates on WhatsApp, every morning",
-    followText: "Every cooperative's rate, with its source and date. It's a channel, not a group: nobody sees your number.",
-    followButton: "Follow the channel",
+    followShort: "Daily rates on WhatsApp",
     followAria: "Follow the Adike Naadi WhatsApp channel (opens WhatsApp)",
     moreFrom: (source: string) => `Explore ${source} prices`,
     tumcosEmpty: "No published rates available.",
@@ -588,8 +584,14 @@ export function HomePage() {
   return <div className="page-stack home" lang={language}>
     <section className="home-hero">
       <div><h1>{copy.title}</h1><p>{copy.subtitle}</p></div>
-      {newest && <ReportDatePill newest={newest} old={newestAge !== null && newestAge > 2}>
-        <span>{copy.latestPill}: <strong>{dateText(newest, language)}</strong> · {ageText(newestAge ?? 0, language)}</span></ReportDatePill>}
+      {/* The report date, and beside it the WhatsApp Channel that brings these rates every morning. The footer's
+          WhatsApp panel is for reporting a wrong rate, so the invitation lives up here, small, where it reads differently. */}
+      <div className="home-hero-side">
+        {newest && <ReportDatePill newest={newest} old={newestAge !== null && newestAge > 2}>
+          <span>{copy.latestPill}: <strong>{dateText(newest, language)}</strong> · {ageText(newestAge ?? 0, language)}</span></ReportDatePill>}
+        <a className="home-follow-link" href={CONTACT.whatsappChannel} target="_blank" rel="noopener noreferrer" aria-label={copy.followAria}>
+          <WhatsAppIcon size={16} /><span>{copy.followShort}</span></a>
+      </div>
     </section>
 
     {/* Variety and town share one row on wider screens and stack on phones. */}
@@ -785,13 +787,6 @@ export function HomePage() {
     </section>}
     </div>
     </section>}
-
-    <aside className="home-follow" aria-labelledby="home-follow-title">
-      <span className="home-follow-badge" aria-hidden="true"><WhatsAppIcon size={24} /></span>
-      <div className="home-follow-text"><h2 id="home-follow-title">{copy.followTitle}</h2><p>{copy.followText}</p></div>
-      <a className="home-follow-button" href={CONTACT.whatsappChannel} target="_blank" rel="noopener noreferrer" aria-label={copy.followAria}>
-        <WhatsAppIcon /><strong>{copy.followButton}</strong></a>
-    </aside>
 
     <section className="home-price-section" aria-labelledby="home-tools-heading">
     <div className="home-section-heading"><h2 id="home-tools-heading">{copy.otherTools}</h2></div>
