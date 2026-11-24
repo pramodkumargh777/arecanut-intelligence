@@ -279,6 +279,9 @@ export function AppShell() {
           })()}
         </nav>
         <div className="sidebar-bottom">
+          {/* Phones: the theme switch lives here, so the top bar keeps to the menu, the name and the language. */}
+          <button type="button" className="drawer-theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+            {theme === "dark" ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}<span>{theme === "dark" ? copy.switchLight : copy.switchDark}</span></button>
           <div className="sidebar-caption"><p>{copy.tagline}</p><small>{copy.taglineHint}</small></div>
         </div>
       </aside>

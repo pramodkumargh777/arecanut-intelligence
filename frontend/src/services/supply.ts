@@ -75,3 +75,25 @@ export function arrivalRows(measures: SupplyArrivals["measures"]) {
     [row.arrival?.first_date, row.traded?.first_date].filter(Boolean).sort()[0] ?? "";
   return [...map.values()].sort((a, b) => start(a).localeCompare(start(b)) || a.bucket.localeCompare(b.bucket));
 }
+
+/** GET /supply/arrivals/recent: each market's arrivals over the week ending on the latest report date, in quintals. */
+export type RecentMarketArrivals = {
+  market: string; district: string | null; last_date: string; last_quintals: number; latest_quintals: number | null;
+  week_quintals: number; week_days: number; usual_quintals: number | null; usual_days: number; days: { date: string; quintals: number }[];
+};
+export type RecentArrivals = {
+  latest_date: string | null; week: { from: string; to: string } | null; unit: "quintal";
+  state: { latest_quintals: number; week_quintals: number; previous_week_quintals: number; markets_reporting_latest: number } | null;
+  markets: RecentMarketArrivals[]; source: { name: string; url: string; publisher: string };
+};
+
+/** GET /supply/arrivals/season: each month's share of a year's arrivals, and this year like for like. */
+export type ArrivalSeason = {
+  scope: "state" | "market"; market: string | null; latest_date: string | null; years_used: number[];
+  share: { month: number; median: number | null; low: number | null; high: number | null }[];
+  peak_month: number | null; quiet_month: number | null;
+  previous_share: { year: number; values: number[] } | null;
+  like_for_like: { year: number; previous_year: number; through_month: number; current_tonnes: number; previous_tonnes: number; change_percent: number; markets: number } | null;
+  in_progress: { month: string; quantity_tonnes: number | null; reporting_days: number; days_in_month: number } | null;
+  source: { name: string; url: string; publisher: string };
+};

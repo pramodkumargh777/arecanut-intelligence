@@ -158,18 +158,21 @@ small { font-size: 11px; color: var(--muted); }
 .sidebar-caption small { display: block; font-size: 12px; line-height: 1.6; }
 .main-column { margin-left: 232px; min-height: 100vh; display: flex; flex-direction: column; min-width: 0; }
 .topbar { position: sticky; top: 0; z-index: 20; min-height: 56px; padding: 8px 32px; border-bottom: 1px solid var(--line); background: rgba(250, 250, 250, .86); backdrop-filter: saturate(180%) blur(10px); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.breadcrumb { display: flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; font-size: 13px; color: var(--muted); }
-.breadcrumb strong { color: var(--ink); font-weight: 550; }
+/* One line at every width: the steps never wrap into the tools beside them; only the page name gives way, with an ellipsis. */
+.breadcrumb { display: flex; flex: 1 1 auto; align-items: center; gap: 8px; min-width: 0; margin-right: auto; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.breadcrumb > * { flex: none; }
+.breadcrumb strong { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 550; }
 .breadcrumb-sep { color: var(--line-strong); }
 .breadcrumb-link { color: var(--muted); text-decoration: none; white-space: nowrap; }
 .breadcrumb-link:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
-.topbar-tools { display: flex; align-items: center; gap: 12px; }
+.topbar-tools { display: flex; flex: 0 1 auto; align-items: center; gap: 12px; min-width: 0; }
 .topbar .market-tools-toggle { display: none; }
 .topbar-preferences { display: flex; align-items: center; gap: 12px; flex: none; }
 .theme-toggle { flex: none; }
-.commodity-select { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
-.commodity-select select { height: 34px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 8px; font-size: 13px; }
-.search-field { display: flex; align-items: center; gap: 8px; width: 220px; height: 34px; color: var(--muted); padding: 0 10px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); }
+.commodity-select { display: flex; flex: none; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+/* A fixed width: a select otherwise grows to its longest option, which differs by browser and font. */
+.commodity-select select { width: 172px; max-width: 100%; text-overflow: ellipsis; height: 34px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); color: var(--ink); padding: 0 8px; font-size: 13px; }
+.search-field { display: flex; flex: 0 1 auto; align-items: center; gap: 8px; width: clamp(190px, 17vw, 280px); min-width: 0; height: 34px; color: var(--muted); padding: 0 10px; border: 1px solid var(--control-line); background: var(--surface); border-radius: var(--radius-sm); }
 .search-field:focus-within { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .search-field input { border: 0; outline: 0; width: 100%; background: transparent; font-size: 13px; color: var(--ink); }
 /* Market suggestions under a search box. */
@@ -690,7 +693,21 @@ th.numeric .sort-button span { order: -1; }
 .home-follow-link:hover { border-color: var(--brand-leaf); background: var(--brand-tint); color: var(--ink); }
 .home-follow-link:active { transform: scale(.98); }
 .home-follow-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.home-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+/* Phones only (responsive.css): the invitation as a quiet row under the first prices. */
+.home-follow-inline { display: none; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface); color: var(--ink-2); font-size: 14px; font-weight: 600; text-decoration: none; }
+.home-follow-inline > svg:first-child { flex: none; color: #1f8f4e; }
+:root[data-theme="dark"] .home-follow-inline > svg:first-child { color: #4fc27f; }
+.home-follow-inline > span { flex: 1 1 auto; min-width: 0; }
+.home-follow-inline > svg:last-child { flex: none; color: var(--muted); }
+.home-follow-inline:active { background: var(--brand-tint); }
+.home-follow-inline:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* The theme switch in the menu drawer, for phones (the top bar's button is hidden there). */
+.drawer-theme { display: none; align-items: center; gap: 10px; width: 100%; min-height: 44px; margin: 0 0 8px; padding: 0 12px; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.drawer-theme:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* Three cards: one row of three whenever 200px each fits (never two and a lone third); phones stack them. */
+.home-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 10px; }
 /* Titles sit at the top of each card, so cards in one row line up when a title wraps (tablet width); the arrow stays centred. */
 .home-actions a { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr; column-gap: 12px; align-items: start; padding: 11px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; }
 .home-actions a:hover { border-color: var(--ink); }
@@ -1131,14 +1148,15 @@ td.month-source details[open] { white-space: normal; min-width: 320px; }
 .fx-hbar b { color: var(--ink); font-size: 12.5px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Live scorecard: same column grid for the labels and each forecast. */
-.fx-live-row { display: grid; grid-template-columns: minmax(120px, 1fr) 110px minmax(150px, 1.2fr) minmax(120px, 1fr) minmax(140px, 1.1fr); align-items: center; column-gap: 16px; min-height: 52px; padding: 0 8px; border-top: 1px solid var(--line); }
+/* Flexible tracks: the fixed minimums used to add up wider than the card on tablets, pushing the result chip past its edge. */
+.fx-live-row { display: grid; grid-template-columns: minmax(104px, 1fr) minmax(76px, auto) minmax(128px, 1.2fr) minmax(0, .8fr) minmax(0, 1.3fr); align-items: center; column-gap: clamp(10px, 1.6vw, 16px); min-height: 52px; padding: 0 8px; border-top: 1px solid var(--line); }
 .fx-live-labels { min-height: 30px; border-top: 0; color: var(--subtle); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; }
 .fx-live-labels + .fx-live-row { border-top: 0; }
 .fx-live-row strong { color: var(--ink); font-size: 14.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .fx-live-month { display: grid; }
 .fx-live-month small { color: var(--muted); font-size: 12px; }
 .fx-live-row .fx-muted { font-size: 13px; }
-.fx-result { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.fx-result { display: inline-flex; align-items: center; max-width: 100%; min-height: 24px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; line-height: 1.35; }
 .fx-result.is-pending { background: var(--surface-2); color: var(--muted); }
 .fx-result.is-hit { background: var(--brand-tint); color: var(--brand); }
 .fx-result.is-miss { background: var(--bad-bg); color: var(--bad-ink); }
@@ -1893,4 +1911,127 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
 @container rate-card (min-width: 920px) {
   .rate-card-wide .rate-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .rate-card-wide .rate-list > .rate-row:nth-child(-n+3) { border-top: 0; }
+}
+
+/* ---- Market arrivals (KRAMA daily reports): town strip, home leaders, Sell or wait season card ---------------------- */
+.arrivals-strip { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px 18px; }
+.arrivals-main { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.arrivals-icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 10px; background: var(--brand-tint); color: var(--brand); }
+.arrivals-copy { min-width: 0; }
+.arrivals-copy h2 { margin: 0; font-size: 13.5px; font-weight: 600; line-height: 1.4; color: var(--muted); }
+.arrivals-figure { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.arrivals-figure strong { color: var(--ink); font-size: 28px; font-weight: 700; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.arrivals-when { padding: 2px 9px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 12.5px; font-weight: 600; }
+.arrivals-note { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+.arrivals-pace { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
+.arrivals-chip { position: relative; display: inline-flex; align-items: center; min-height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 650; white-space: nowrap; }
+.arrivals-chip.is-busy { background: var(--brand-tint); color: var(--brand); }
+.arrivals-chip.is-quiet { background: var(--warn-bg); color: var(--warn-ink); box-shadow: inset 0 0 0 1px var(--warn-line); }
+.arrivals-chip.is-usual { background: var(--surface-2); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
+.arrivals-usual { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.arrivals-week { margin: 0; min-width: 0; }
+.arrivals-week figcaption { margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.arrivals-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.arrivals-bars li { display: grid; grid-template-rows: 44px auto; gap: 4px; min-width: 0; }
+.arrivals-bars li::before { content: ""; grid-area: 1 / 1; align-self: end; height: 2px; border-radius: 2px; background: var(--line); }
+.arrivals-bar { grid-area: 1 / 1; align-self: end; display: block; min-height: 0; border-radius: 4px 4px 2px 2px; background: color-mix(in srgb, var(--brand-leaf) 50%, transparent); }
+.arrivals-bars li.is-latest .arrivals-bar { background: var(--brand); }
+.arrivals-bars li.is-empty .arrivals-bar { display: none; }
+.arrivals-day { color: var(--muted); font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
+.arrivals-source { margin: 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--subtle); font-size: 12px; line-height: 1.5; }
+/* The town page is the rate-cards container; the strip lays out in three columns once that is wide enough. */
+@container rate-cards (min-width: 700px) {
+  .arrivals-strip { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(200px, 250px); align-items: center; column-gap: 24px; }
+  .arrivals-pace { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .arrivals-source { grid-column: 1 / -1; }
+}
+
+.arrivals-leaders { padding: 0; overflow: hidden; container: arrivals-leaders / inline-size; }
+.arrivals-leaders ol { margin: 0; padding: 0; list-style: none; }
+/* One row per market, read left to right: who, how the week went day by day, how that compares, how much in all. */
+.arrivals-leaders li, .arrivals-leaders-head { display: grid; grid-template-columns: 28px minmax(150px, 1fr) minmax(120px, 150px) minmax(160px, 1fr) minmax(130px, 160px); align-items: center; column-gap: 24px;
+  padding: 10px 20px; }
+.arrivals-leaders li { min-height: 68px; border-top: 1px solid var(--line); }
+.arrivals-leaders-head { padding-block: 9px; border-bottom: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font-size: 11.5px; font-weight: 650; letter-spacing: .02em; }
+.arrivals-leaders-head > span:last-child { text-align: right; }
+.arrivals-leaders li:first-child { border-top: 0; }
+.arrivals-leaders li.is-mine { background: var(--brand-tint); }
+.arrivals-rank { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; color: var(--muted); font-size: 12.5px; font-weight: 650;
+  font-variant-numeric: tabular-nums; box-shadow: inset 0 0 0 1px var(--line); }
+.arrivals-leaders li.is-first .arrivals-rank { background: var(--brand); color: var(--surface); box-shadow: none; }
+.arrivals-name { display: grid; gap: 1px; min-width: 0; }
+.arrivals-name > a, .arrivals-name > span { overflow: hidden; color: var(--ink); font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+.arrivals-name > a:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+.arrivals-name small { overflow: hidden; color: var(--muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.arrivals-spark { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); align-items: end; gap: 4px; height: 34px; }
+/* Past days in a softened leaf green, the latest report day in full brand green: distinct in light and dark alike. */
+.arrivals-spark > span { display: block; min-height: 0; border-radius: 3px 3px 1px 1px; background: color-mix(in srgb, var(--brand-leaf) 50%, transparent); }
+.arrivals-spark > span.is-latest { background: var(--brand); }
+.arrivals-spark > span.is-empty { justify-self: center; width: 4px; height: 4px; border-radius: 999px; background: var(--line-strong); }
+.arrivals-status { display: grid; justify-items: start; gap: 4px; min-width: 0; }
+.arrivals-status small { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.arrivals-chip .chip-short { display: none; }
+.arrivals-chip.is-none { min-width: 26px; justify-content: center; background: var(--surface-2); color: var(--muted); }
+.arrivals-total { display: grid; gap: 7px; justify-items: end; min-width: 0; }
+.arrivals-meter { display: block; width: 100%; max-width: 120px; height: 4px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.arrivals-meter span { display: block; height: 100%; border-radius: 999px; background: var(--brand-leaf); }
+.arrivals-value { color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; }
+.arrivals-value strong { color: var(--ink); font-size: 16px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.arrivals-leaders-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 18px; border-top: 1px solid var(--line);
+  background: var(--surface-2); color: var(--muted); font-size: 13px; line-height: 1.5; }
+.arrivals-leaders-foot > span { flex: 1 1 auto; min-width: 0; }
+/* Below a full table's width: two lines a market. The name with its district, and the week's total; under them the
+   pace tag with the latest day's figure, and the week chart at the right under the total. The size bar is left out on
+   these widths: the rank already says it. */
+@container arrivals-leaders (max-width: 760px) {
+  .arrivals-leaders-head { display: none; }
+  .arrivals-leaders li { grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-areas: "rank name total" ". status spark";
+    column-gap: 12px; row-gap: 6px; min-height: 0; padding: 12px 16px; }
+  .arrivals-rank { grid-area: rank; }
+  .arrivals-name { grid-area: name; display: flex; align-items: baseline; gap: 6px; }
+  /* The market's name never shrinks; a long district name gives way first. */
+  .arrivals-name > a, .arrivals-name > span { flex: none; max-width: 100%; }
+  .arrivals-name small { flex: 1 1 auto; min-width: 0; }
+  .arrivals-name small:not(:empty)::before { content: "· "; }
+  .arrivals-status { grid-area: status; display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; min-width: 0; }
+  .arrivals-status small { overflow: hidden; text-overflow: ellipsis; }
+  .arrivals-total { grid-area: total; align-self: center; }
+  .arrivals-meter { display: none; }
+  .arrivals-spark { grid-area: spark; justify-self: end; align-self: center; width: 112px; height: 24px; gap: 3px; }
+  .arrivals-leaders-foot { padding: 10px 16px; }
+}
+/* Phones: the short pace word ("↑ Busier"), smaller type and a narrower week chart. */
+@container arrivals-leaders (max-width: 460px) {
+  .arrivals-leaders li { grid-template-columns: 22px minmax(0, 1fr) auto; column-gap: 10px; padding: 11px 14px; }
+  .arrivals-rank { width: 22px; height: 22px; font-size: 11.5px; }
+  .arrivals-name > a, .arrivals-name > span { font-size: 14.5px; }
+  .arrivals-name small { font-size: 12px; }
+  .arrivals-status { gap: 8px; }
+  .arrivals-chip { flex: none; min-height: 22px; padding: 0 8px; font-size: 11.5px; }
+  .arrivals-chip .chip-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .arrivals-chip .chip-short { display: inline; }
+  .arrivals-value strong { font-size: 15px; }
+  .arrivals-spark { width: 84px; height: 22px; }
+  .arrivals-leaders-foot { padding: 10px 14px; font-size: 12.5px; }
+}
+
+.arrivals-season { container: arrivals-season / inline-size; }
+/* (Rules for its children only: a container query never restyles the container itself.) */
+.arrivals-season-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px; }
+.arrivals-season-head > div { flex: 1 1 320px; min-width: 0; }
+.arrivals-scope { flex: none; max-width: 100%; }
+.arrivals-scope select { max-width: min(260px, 60vw); text-overflow: ellipsis; }
+.arrivals-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin: 16px 0 0; }
+.arrivals-facts > div { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
+.arrivals-facts dt { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.arrivals-facts dd { margin: 2px 0 0; color: var(--ink); font-size: 19px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.arrivals-facts dd.arrivals-fact-sub { margin-top: 2px; color: var(--muted); font-size: 12.5px; font-weight: 500; letter-spacing: 0; line-height: 1.45; }
+.arrivals-ahead { margin: 14px 0 4px; color: var(--ink-2); font-size: 14px; font-weight: 550; line-height: 1.5; }
+@container arrivals-season (max-width: 480px) {
+  .arrivals-scope { width: 100%; }
+  .arrivals-scope select { flex: 1; max-width: none; }
+  .arrivals-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .arrivals-facts > div { padding: 10px 12px; }
+  .arrivals-facts > div:nth-child(3) { grid-column: 1 / -1; }
+  .arrivals-facts dd { font-size: 17px; }
 }
