@@ -16,6 +16,7 @@ import { supplyRoutes } from "./supply-routes";
 import { createAssistantRoutes } from "./assistant/routes";
 import type { Env } from "./env";
 import { marketRoutes } from "./market-routes";
+import { events } from "./events";
 import { EVENING_CRON, scheduled } from "./scheduled";
 
 /**
@@ -55,6 +56,7 @@ app.route("/", supplyRoutes);
 // Tools call existing public endpoints in-process, so the assistant reads exactly what the UI reads.
 app.route("/", createAssistantRoutes((path, init, env) => Promise.resolve(app.request(`/api/v1${path}`, init, env))));
 app.route("/", marketRoutes);
+app.route("/", events);
 
 export { EVENING_CRON };
 
