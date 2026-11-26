@@ -3,6 +3,7 @@ import type { AssistantConfig } from "./assistant/providers";
 export type Env = {
   Bindings: {
     DB: D1Database;
+    // Anonymous product analytics event collection uses the existing D1 database.
     CORS_ORIGIN?: string;
     INGESTION_TOKEN?: string;
     ADMIN_TOKEN?: string;
