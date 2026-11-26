@@ -5,6 +5,7 @@ import { AppErrorBoundary } from "../components/AppErrorBoundary";
 import { LoadingState } from "../components/State";
 import { MarketDataPage } from "../pages/CooperativeMarketPage";
 import { LanguageProvider } from "../services/language";
+import { AnalyticsTracker } from "../services/analytics-tracker";
 
 const HomePage = lazy(() => import("../pages/HomePage").then((module) => ({ default: module.HomePage })));
 const SellOrHoldPage = lazy(() => import("../pages/SellOrHoldPage").then((module) => ({ default: module.SellOrHoldPage })));
@@ -30,7 +31,7 @@ const ProductObservatoryPage = lazy(() => import("../pages/ProductObservatory"))
 
 export function App() {
   return (
-    <LanguageProvider><BrowserRouter>
+    <LanguageProvider><BrowserRouter><AnalyticsTracker />
       <AppErrorBoundary><Routes>
         <Route path="admin/analytics" element={<Suspense fallback={<LoadingState />}><ProductObservatoryPage /></Suspense>} />
         <Route element={<AppShell />}>
