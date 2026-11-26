@@ -10,7 +10,7 @@ events.post("/events", async (c) => {
   try { body = await c.req.json(); } catch { return c.json({ error: "Invalid JSON" }, 400); }
   const event = safeText(body.event, 40);
   if (!event || !allowedEvents.has(event)) return c.json({ error: "Invalid event" }, 400);
-  const session = safeText(body.session_id, 64);
+  const session = safeText(body.anonymous_id, 64);
   if (session && !/^[a-zA-Z0-9_-]{16,64}$/.test(session)) return c.json({ error: "Invalid session" }, 400);
   const page = safeText(body.page_path, 300);
   const pageType = safeText(body.page_type, 60);
