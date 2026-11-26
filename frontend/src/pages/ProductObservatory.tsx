@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
-import { Activity, ArrowUpRight, Eye, MousePointerClick, Users, RefreshCw, LockKeyhole } from "lucide-react";
+import { Activity, ArrowUpRight, Eye, Users, RefreshCw, LockKeyhole } from "lucide-react";
 
 const API=(import.meta.env.VITE_API_BASE_URL??"http://127.0.0.1:8787/api/v1").replace(/\/$/,"");
 type Data={days:number;summary:any;trend:any[];features:any[];varieties:any[];acquisition:any[];recent:any[]};
