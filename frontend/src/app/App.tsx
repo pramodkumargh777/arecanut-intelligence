@@ -25,11 +25,14 @@ const NotFoundPage = lazy(() => import("../pages/NotFoundPage").then((module) =>
 const MarketPage = lazy(() => import("../pages/MarketPage").then((module) => ({ default: module.MarketPage })));
 const MarketIndexPage = lazy(() => import("../pages/MarketPage").then((module) => ({ default: module.MarketIndexPage })));
 const ForecastsPage = lazy(() => import("../pages/ForecastsPage").then((module) => ({ default: module.ForecastsPage })));
+const ProductObservatoryPage = lazy(() => import("../pages/ProductObservatory"));
+
 
 export function App() {
   return (
     <LanguageProvider><BrowserRouter>
       <AppErrorBoundary><Routes>
+        <Route path="admin/analytics" element={<Suspense fallback={<LoadingState />}><ProductObservatoryPage /></Suspense>} />
         <Route element={<AppShell />}>
           <Route index element={<Suspense fallback={<LoadingState />}><HomePage /></Suspense>} />
           {/* The same rates screen at an address of its own per variety, for search engines and shared links. */}
