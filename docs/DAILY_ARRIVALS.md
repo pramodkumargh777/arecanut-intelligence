@@ -185,8 +185,20 @@ market's months. A daily *file* import into `market_arrivals` does not refresh i
 KRAMA import of that month corrects it. The AGMARKNET 2.0 monthly totals are not used here: some of their months are far
 off (Kadur's 2015 total reads 196,614 t).
 
-**Unchanged:** the arrival forecast gate (it still counts `market_arrivals` weeks) and
-`/supply/arrivals/price-comparison`.
+**Arrival forecast history check** (`forecast` on `/supply/arrivals`): with `DAILY_ARRIVALS_IN_SUPPLY` on, it counts
+the weeks with a reported daily document as well as file-imported weeks (674 weeks in production on 27 Nov 2026, so
+the check reads `eligible_for_evaluation`; nothing is published until a model beats the naive baseline). It reads only
+the documents' period index (about 60 ms). Other states count file imports alone.
+
+**`GET /api/v1/supply/arrivals/price-comparison`** (Analytics, "Arrivals versus price") pairs daily arrivals, under the
+same precedence as the Supply page, with reviewer-verified AGMARKNET prices for the same market, date and exact source
+variety:
+- Arrivals are summed over grades. A variety AGMARKNET priced in more than one grade that day is left unpaired rather
+  than picking one.
+- The arrival reports' own prices are never used.
+- Only the span of dates with a verified price is read (daily AGMARKNET prices start on 4 Nov 2026), so a request reads
+  about 90,000 rows, not a year of arrivals.
+- Each pair carries `arrival_source`. The file-import pairs are unchanged, and the daily part fails soft.
 
 ## Production rollout
 

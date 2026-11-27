@@ -395,6 +395,53 @@ export async function dailyArrivalBuckets(db: D1Database, query: { granularity: 
       source_url: DAILY_SOURCES[row.source_key].url, file_name: null, imported_at: row.imported_at, authorization_note: DAILY_SOURCES[row.source_key].note })) };
 }
 
+/**
+ * Weeks (Monday buckets) with at least one reported arrival day, for the arrival-forecast history check: the days of the
+ * daily reports (each KRAMA document covers one date) together with file-imported arrival rows. Both daily sources are
+ * Karnataka-only, so other states count file imports alone. Reads only the documents' period index (no payloads): about
+ * 5,000 entries for 12 years, ~60 ms in production.
+ */
+export async function arrivalHistoryWeeks(db: D1Database, state: string): Promise<number> {
+  const sources = DAILY_SOURCE_KEYS.map((key) => `'${key}'`).join(", ");
+  const daily = state === STATE
+    ? `UNION SELECT ${bucketSql("weekly", "period_start")} FROM arrival_daily_documents
+        WHERE source_key IN (${sources}) AND status = 'reported' AND period_start = period_end`
+    : "";
+  const row = await db.prepare(`SELECT COUNT(DISTINCT week) AS weeks FROM (
+      SELECT ${bucketSql("weekly", "observation_date")} AS week FROM market_arrivals WHERE commodity_code = 'arecanut' AND state = ? AND measure = 'arrival'
+      ${daily})`).bind(state).first<{ weeks: number }>();
+  return Number(row?.weeks ?? 0);
+}
+
+/**
+ * Daily arrivals (same precedence as the Supply page) per market, date and exact source variety, summed over grades, each
+ * paired with the reviewer-verified AGMARKNET price for that market, date and variety. Only an unambiguous price pairs:
+ * when AGMARKNET published that variety in more than one grade that day, the day is left unpaired rather than picking one.
+ * The arrival reports' own prices are not used.
+ */
+export async function dailyArrivalPricePairs(db: D1Database, state: string, from: string, to: string): Promise<Row[]> {
+  const verified = "o.source_id = 'source-agmarknet' AND o.validation_status = 'verified' AND o.commodity_name = 'Arecanut'";
+  // Only days with a verified price can pair, and those are few (daily AGMARKNET prices start on 4 Nov 2026): reading the
+  // year of arrivals before them cost about 295,000 row reads per request in production; this narrows it to those days.
+  const span = await db.prepare(`SELECT MIN(reporting_date) AS first, MAX(reporting_date) AS last FROM market_price_observations o
+    WHERE ${verified} AND reporting_date BETWEEN ? AND ?`).bind(from, to).first<{ first: string | null; last: string | null }>();
+  if (!span?.first || !span.last) return [];
+  const { sql, args } = pickedDailySql({ state, from: span.first, to: span.last });
+  const rows = await db.prepare(`${sql},
+    days AS (SELECT observation_date, market, MAX(district) AS district, variety, SUM(quantity_original) AS quantity_original, MAX(unit_original) AS unit_original,
+        ROUND(SUM(quantity_tonnes), 3) AS quantity_tonnes, MAX(source_key) AS arrival_source
+      FROM picked WHERE mapping_status IS NOT 'unmapped' AND market IS NOT NULL
+      GROUP BY observation_date, market, variety HAVING COUNT(DISTINCT unit_original) = 1 AND SUM(unit_status = 'unknown_unit') = 0),
+    priced AS (SELECT d.*, o.minimum_price, o.maximum_price, o.modal_price, o.price_unit, o.price_basis, o.source_record_id,
+        COUNT(*) OVER (PARTITION BY d.observation_date, d.market, d.variety) AS prices
+      FROM days d JOIN markets m ON m.state = ? AND lower(m.name) = lower(d.market) AND m.mapping_status = 'verified'
+      JOIN market_price_observations o ON o.market_id = m.id AND o.reporting_date = d.observation_date AND o.original_variety_name = d.variety AND ${verified})
+    SELECT observation_date, market, district, variety, quantity_original, unit_original, quantity_tonnes, arrival_source,
+      minimum_price, maximum_price, modal_price, price_unit, price_basis, source_record_id
+    FROM priced WHERE prices = 1 ORDER BY observation_date DESC, market LIMIT 500`).bind(...args, state).all();
+  return rows.results as Row[];
+}
+
 const MAX_DAY_RANGE = 31;
 
 /** Public read of the stored daily rows as published, with provenance; the same precedence as the Supply page. */
