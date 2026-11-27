@@ -32,7 +32,8 @@ export type SupplyArrivals = {
   forecast: ForecastGate; message: string | null; notes: string[];
 };
 export type ArrivalPricePair = { observation_date: string; market: string; district: string | null; variety: string; quantity_original: number | null; unit_original: string | null;
-  quantity_tonnes: number | null; minimum_price: number | null; maximum_price: number | null; modal_price: number; price_unit: string; price_basis: string | null; source_record_id: string | null };
+  quantity_tonnes: number | null; arrival_source?: "krama_arrivals" | "agmarknet_v2_daily" | "agmarknet"; minimum_price: number | null; maximum_price: number | null;
+  modal_price: number; price_unit: string; price_basis: string | null; source_record_id: string | null };
 export type ArrivalPriceComparison = { state: string; requested_range: { from: string; to: string }; pairs: ArrivalPricePair[]; method: string; caution: string; message: string | null };
 export type Granularity = "daily" | "weekly" | "monthly" | "seasonal";
 

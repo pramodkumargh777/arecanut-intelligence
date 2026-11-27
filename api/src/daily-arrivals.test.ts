@@ -258,6 +258,62 @@ describe("GET /supply/arrivals with daily arrivals", () => {
     const daily = await supply("granularity=daily&from=2026-10-01&to=2026-10-01");
     expect(daily.measures.arrival).toEqual([expect.objectContaining({ quantity_tonnes: 6, markets_reporting: 2 })]);
   });
+
+  it("counts the daily reports' weeks in the arrival-forecast history check", async () => {
+    const row = [["SIRSI", "Rashi", "Average", "65", "Quintal", "1", "2", "1"]];
+    // 1 and 2 Oct share a Monday week; 13 Oct and 13 Nov are two more.
+    await post("/admin/arrivals/daily/import", { source_key: "krama_arrivals",
+      documents: ["2026-10-01", "2026-10-02", "2026-10-13", "2026-11-13"].map((date) => kramaDoc(date, table(row).replaceAll("13/11/2026", dmy(date)))) });
+    expect((await supply("granularity=weekly")).forecast).toMatchObject({ status: "suppressed", points: 0 });
+    env.DAILY_ARRIVALS_IN_SUPPLY = "true";
+    expect((await supply("granularity=weekly")).forecast).toMatchObject({ status: "suppressed", points: 3, minimum: 104 });
+    // Another state has no daily reports: file imports only.
+    expect((await supply("granularity=weekly&state=Kerala")).forecast).toMatchObject({ points: 0 });
+  });
+});
+
+describe("GET /supply/arrivals/price-comparison with daily arrivals", () => {
+  const pairs = () => get("/supply/arrivals/price-comparison?from=2026-09-01&to=2026-10-31");
+  function priceRow(id: string, marketId: string, variety: string, modal: number, grade: string | null, status = "verified") {
+    db.sqlite.prepare(`INSERT INTO market_price_observations(id,source_id,source_record_id,market_id,reporting_date,commodity_name,original_commodity_name,variety_name,
+      original_variety_name,minimum_price,maximum_price,modal_price,original_unit,price_unit,validation_status,raw_payload,price_basis,grade)
+      VALUES(?,'source-agmarknet',?,?,'2026-10-01','Arecanut','Arecanut(Betelnut/Supari)',?,?,?,?,?,'Rs/Quintal','INR/quintal',?,'{}','APMC_MODAL',?)`)
+      .run(id, `rec-${id}`, marketId, variety, variety, modal - 2000, modal + 2000, modal, status, grade);
+  }
+  beforeEach(async () => {
+    db.sqlite.prepare("INSERT OR IGNORE INTO markets(id,name,district,state,mapping_status) VALUES('m-sirsi-apmc','Sirsi APMC','Uttara Kannada','Karnataka','verified')").run();
+    await post("/admin/arrivals/daily/import", { source_key: "krama_arrivals", documents: [kramaDoc("2026-10-01", table([
+      ["SIRSI", "Rashi", "Average", "65", "Quintal", "1", "2", "99999"], ["SIRSI", "Rashi", "FAQ", "10", "Quintal", "1", "2", "88888"],
+      ["SIRSI", "Chali", "Average", "40", "Quintal", "1", "2", "1"], ["SIRSI", "Bette", "Average", "5", "Quintal", "1", "2", "1"]]))] });
+    const id = (db.sqlite.prepare("SELECT id FROM markets WHERE name='Sirsi APMC' AND state='Karnataka'").get() as { id: string }).id;
+    priceRow("p-rashi", id, "Rashi", 45000, "Local");                                     // one verified price: paired
+    priceRow("p-chali-1", id, "Chali", 40000, "Local"); priceRow("p-chali-2", id, "Chali", 38000, "Medium"); // two grades: ambiguous
+    priceRow("p-bette", id, "Bette", 36000, "Local", "validated");                         // not reviewed: never paired
+  });
+
+  it("is unchanged while the flag is off", async () => {
+    expect((await pairs()).pairs).toEqual([]);
+  });
+
+  it("pairs each market-day-variety with its one verified AGMARKNET price, summing grades and never using KRAMA's prices", async () => {
+    env.DAILY_ARRIVALS_IN_SUPPLY = "true";
+    const body = await pairs();
+    expect(body.pairs).toEqual([expect.objectContaining({ observation_date: "2026-10-01", market: "Sirsi APMC", variety: "Rashi", quantity_original: 75,
+      unit_original: "Quintal", quantity_tonnes: 7.5, arrival_source: "krama_arrivals", modal_price: 45000, price_basis: "APMC_MODAL" })]);
+    expect(body.message).toBeNull();
+    expect(body.method).toMatch(/KRAMA/);
+  });
+
+  it("falls back to file-import pairs alone if the daily tables are missing", async () => {
+    env.DAILY_ARRIVALS_IN_SUPPLY = "true";
+    db.sqlite.exec("DROP VIEW market_arrival_days_current");
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await app.request("/api/v1/supply/arrivals/price-comparison?from=2026-09-01&to=2026-10-31", {}, env);
+    expect(response.status).toBe(200);
+    expect((await response.json() as any).pairs).toEqual([]);
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
 });
 
 describe("index usage", () => {

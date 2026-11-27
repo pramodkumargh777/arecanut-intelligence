@@ -10,7 +10,7 @@ import {
 } from "./supply";
 import { bearerMatches } from "./auth";
 import { AGMARKNET_V2_ARRIVALS_SOURCE, AGMARKNET_V2_GO_LIVE, AGMARKNET_V2_SOURCE_ID, AGMARKNET_V2_SOURCE_NAME, AGMARKNET_V2_SOURCE_URL } from "./agmarknet-v2-arrivals";
-import { DAILY_SOURCE_KEYS, dailyArrivalBuckets } from "./daily-arrivals";
+import { DAILY_SOURCE_KEYS, arrivalHistoryWeeks, dailyArrivalBuckets, dailyArrivalPricePairs } from "./daily-arrivals";
 import { LIFECYCLES, sqlStates, statesBefore, statesOf } from "../../shared/lifecycles";
 import { refusal } from "./lifecycle-guards";
 
@@ -332,6 +332,12 @@ supplyRoutes.get("/supply/arrivals", async (c) => {
   ]);
   let rows = series.results as Record<string, string | number | null>[];
   let marketRows = markets.results as Record<string, string | number | null>[];
+  // History for the arrival-forecast check: file imports, plus the daily reports' days when those are shown (fails soft).
+  let historyWeeks = Number((history.results[0] as { weeks: number } | undefined)?.weeks ?? 0);
+  if (dailyEnabled) {
+    try { historyWeeks = Math.max(historyWeeks, await arrivalHistoryWeeks(db, state)); }
+    catch (error) { console.error("Daily arrival history left out of the forecast check", error); }
+  }
   const sources = batches.results as Record<string, string | null>[];
   const notes = ["Arrivals and traded quantities are separate measures and are never added together.",
     "Weekly buckets start on Monday; seasons follow IMD meteorological seasons, not the arecanut harvest calendar."];
@@ -380,7 +386,7 @@ supplyRoutes.get("/supply/arrivals", async (c) => {
     },
     markets: marketRows, sources,
     seasons: granularity === "seasonal" ? IMD_SEASONS : undefined,
-    forecast: forecastEligibility("arrivals", Number((history.results[0] as { weeks: number } | undefined)?.weeks ?? 0)),
+    forecast: forecastEligibility("arrivals", historyWeeks),
     message: rows.length ? null
       : "No arrival or traded-quantity records exist for this selection. The AGMARKNET daily API resource carries no arrival quantities, and eNAM offers no public API; records appear only after an authorized file import.",
     notes,
@@ -456,7 +462,7 @@ supplyRoutes.get("/supply/arrivals/price-comparison", async (c) => {
   if ("error" in range) return c.json({ error: range.error }, 400);
   const state = c.req.query("state") ?? "Karnataka";
   const rows = await c.env.DB.prepare(`SELECT a.observation_date, a.market, a.district, a.variety, a.quantity_original, a.unit_original, a.quantity_tonnes,
-      o.minimum_price, o.maximum_price, o.modal_price, o.price_unit, o.price_basis, o.source_record_id
+      'agmarknet' AS arrival_source, o.minimum_price, o.maximum_price, o.modal_price, o.price_unit, o.price_basis, o.source_record_id
     FROM market_arrivals a
     JOIN markets m ON m.state=a.state AND lower(m.name)=lower(a.market)
     JOIN market_price_observations o ON o.market_id=m.id AND o.reporting_date=a.observation_date AND o.original_variety_name=a.variety
@@ -464,10 +470,18 @@ supplyRoutes.get("/supply/arrivals/price-comparison", async (c) => {
       AND a.observation_date BETWEEN ? AND ? AND o.source_id='source-agmarknet' AND o.validation_status='verified'
       AND m.mapping_status='verified' AND o.commodity_name='Arecanut'
     ORDER BY a.observation_date DESC, a.market LIMIT 500`).bind(COMMODITY, state, range.from, range.to).all();
-  return c.json({ state, requested_range: range, pairs: rows.results,
-    method: "Pairs AGMARKNET arrivals with reviewer-verified AGMARKNET price observations for the same market, reporting date and exact source variety. Rows without a variety are not paired.",
+  let pairs = rows.results as Record<string, string | number | null>[];
+  // Daily arrivals (KRAMA first) pair the same way; a market-day with file imports keeps those (pickedDailySql). Fails soft.
+  if (c.env.DAILY_ARRIVALS_IN_SUPPLY === "true") {
+    try {
+      const daily = await dailyArrivalPricePairs(c.env.DB, state, range.from, range.to);
+      pairs = [...pairs, ...daily].sort((a, b) => String(b.observation_date).localeCompare(String(a.observation_date)) || String(a.market).localeCompare(String(b.market))).slice(0, 500);
+    } catch (error) { console.error("Daily arrivals left out of /supply/arrivals/price-comparison", error); }
+  }
+  return c.json({ state, requested_range: range, pairs,
+    method: "Pairs arrivals (KRAMA daily reports from Karnataka's Department of Agricultural Marketing, AGMARKNET date-wise reports for days KRAMA lacks, and authorized AGMARKNET file imports) with reviewer-verified AGMARKNET price observations for the same market, reporting date and exact source variety. Arrivals are summed over grades; a variety AGMARKNET priced in more than one grade that day is not paired. Rows without a variety are not paired.",
     caution: "Co-movement between arrivals and prices is descriptive only and does not establish cause.",
-    message: rows.results.length ? null : "No same-day, same-variety AGMARKNET arrival and price pairs exist for this range." });
+    message: pairs.length ? null : "No same-day, same-variety arrival and verified price pairs exist for this range." });
 });
 
 // ------------------------------------------------------------------------------------------------
