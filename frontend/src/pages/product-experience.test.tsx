@@ -1012,16 +1012,40 @@ describe("town pages", () => {
     expect(new Set(MARKET_PLACES.map((place) => place.slug)).size).toBe(MARKET_PLACES.length);
   });
 
+  it("names only the sources a page shows, keeps town and variety titles short, and sources every grade note", async () => {
+    const { varietySeo, marketSeo, SEO_PAGES } = await import("../services/seo-pages");
+    const { GRADE_NOTES, GUIDE_PATH, VARIETY_HUB_PATH } = await import("../services/guides");
+    const rashi = VARIETIES.find((variety) => variety.key === "rashi")!;
+    expect(varietySeo(rashi).kn.description).toMatch(/ಟಿಎಂಎಸ್/);
+    expect(varietySeo(rashi, ["mamcos", "tss"]).kn.description).not.toMatch(/ಟಿಎಂಎಸ್/);
+    expect(varietySeo(rashi).kn.title).not.toMatch(/ಅಡಿಕೆ ನಾಡಿ/);
+    expect(marketSeo(MARKET_PLACES[0]).kn.title).not.toMatch(/ಅಡಿಕೆ ನಾಡಿ/);
+    expect(SEO_PAGES.map((page) => page.path)).toEqual(expect.arrayContaining([VARIETY_HUB_PATH, GUIDE_PATH]));
+    for (const [key, note] of Object.entries(GRADE_NOTES)) {
+      expect(VARIETIES.some((variety) => variety.key === key)).toBe(true);
+      expect(note.sources.length).toBeGreaterThan(0);
+      expect(note.sources.every((source) => source.url.startsWith("https://"))).toBe(true);
+      expect(note.text.kn.length && note.text.en.length).toBeTruthy();
+    }
+  });
+
+  it("serves private client-only pages through the noindex shell, and nothing else", () => {
+    const rules = readFileSync("frontend/public/_redirects", "utf8").split("\n").filter((line) => line.trim() && !line.startsWith("#"))
+      .map((line) => line.trim().split(/\s+/));
+    expect(rules.filter(([, , status]) => status === "200").map(([from, to]) => [from, to])).toEqual([["/workspace", "/404.html"], ["/data-quality", "/404.html"]]);
+    expect(rules.every(([from]) => !from.includes("*"))).toBe(true);
+  });
+
   it("dates search snippets with the newest rates, and only when they are fresh", () => {
     const home = seoPage("/")!;
     const rows = [
-      { name: "ರಾಶಿ", date: "2026-11-19", price: 52400 }, { name: "ರಾಶಿ", date: "2026-11-18", price: 51000 },
+      { name: "ರಾಶಿ", date: "2026-11-19", price: 52400 }, { name: "ರಾಶಿ", date: "2026-11-18", price: 51000 }, // a day older: not quoted under the 19 Nov date
       { name: "ರಾಶಿ", date: "2026-11-01", price: 40000 }, // too old to share the 19 Nov date
       { name: "ಚಾಲಿ", date: "2026-11-19", price: 46000 }, { name: "ಬೆಟ್ಟೆ", date: "2026-11-19", price: 50000 },
     ];
     const dated = withSnippet(home, snippetFrom(rows, 2, "2026-11-19"));
     expect(dated.kn.title).toBe("ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆ 19 ನವೆಂಬರ್ · Arecanut price today | ಅಡಿಕೆ ನಾಡಿ");
-    expect(dated.kn.description).toMatch(/^19 ನವೆಂಬರ್ ಧಾರಣೆ: ರಾಶಿ ₹51,000–₹52,400, ಚಾಲಿ ₹46,000\. ಇಂದಿನ/);
+    expect(dated.kn.description).toMatch(/^19 ನವೆಂಬರ್ ಧಾರಣೆ: ರಾಶಿ ₹52,400, ಚಾಲಿ ₹46,000\. ಇಂದಿನ/);
     expect(dated.en).toEqual(home.en);
     expect(isDatedTitle(dated.kn.title, home.kn)).toBe(true);
     expect(isDatedTitle(home.kn.title, home.kn)).toBe(false);
@@ -1031,7 +1055,7 @@ describe("town pages", () => {
     expect(withSnippet(home, snippetFrom([], 2, "2026-11-19"))).toBe(home);
     const rashi = seoPage("/variety/rashi")!;
     const variety = withSnippet(rashi, snippetFrom(rows.slice(0, 2).map((row) => ({ ...row, name: "" })), 1, "2026-11-20"));
-    expect(variety.kn.description.startsWith("19 ನವೆಂಬರ್ ಧಾರಣೆ: ₹51,000–₹52,400. ")).toBe(true);
+    expect(variety.kn.description.startsWith("19 ನವೆಂಬರ್ ಧಾರಣೆ: ₹52,400. ")).toBe(true);
     expect(isDatedTitle(variety.kn.title, rashi.kn)).toBe(true);
   });
 });
@@ -1154,7 +1178,7 @@ describe("pages search engines may index", () => {
 describe("search result descriptions", () => {
   it("keeps every page's description short enough for a results page (Kannada glyphs are wide)", async () => {
     const { SEO_PAGES, MARKETS_SEO, marketSeo, varietySeo } = await import("../services/seo-pages");
-    const pages = [...SEO_PAGES, MARKETS_SEO, ...MARKET_PLACES.map(marketSeo), ...VARIETIES.map(varietySeo)];
+    const pages = [...SEO_PAGES, MARKETS_SEO, ...MARKET_PLACES.map(marketSeo), ...VARIETIES.map((variety) => varietySeo(variety))];
     const tooLong = pages.filter((page) => page.kn.description.length > 130).map((page) => `${page.path} (${page.kn.description.length})`);
     expect(tooLong).toEqual([]);
   });

@@ -2035,3 +2035,20 @@ a.chat-cite:hover { border-color: var(--brand); color: var(--brand); }
   .arrivals-facts > div:nth-child(3) { grid-column: 1 / -1; }
   .arrivals-facts dd { font-size: 17px; }
 }
+
+/* Rashi and Chali guide: prose paragraphs and a comparison table whose cells wrap (tables elsewhere stay on one line). */
+.guide-text { margin: 0; max-width: 760px; color: var(--ink-2); font-size: 14px; line-height: 1.7; }
+.guide-table th, .guide-table td { white-space: normal; vertical-align: top; line-height: 1.55; }
+.guide-table thead th:not(:first-child) { min-width: 160px; }
+.guide-table tbody th { position: sticky; top: auto; left: 0; z-index: 1; min-width: 96px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; }
+@media (max-width: 560px) {
+  /* Phones: no sideways scrolling. A header row names the two columns, and each row's label sits above its two cells. */
+  .guide-table, .guide-table thead, .guide-table tbody { display: block; }
+  .guide-table tr { display: grid; grid-template-columns: 1fr 1fr; }
+  .guide-table thead th { position: static; }
+  .guide-table thead th:first-child { display: none; }
+  .guide-table thead th:not(:first-child) { min-width: 0; }
+  .guide-table tbody th { grid-column: 1 / -1; position: static; min-width: 0; padding: 10px 12px 0; border-bottom: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; }
+  .guide-table td { position: static; }
+  .guide-table td:first-of-type { padding-right: 6px; }
+}
