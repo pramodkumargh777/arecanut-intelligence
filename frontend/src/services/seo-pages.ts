@@ -8,6 +8,7 @@
  */
 import { VARIETIES, type GrowerVariety } from "./varieties";
 import { COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKETS_PATH, marketFromPath, marketPath, type MarketPlace } from "./markets";
+import { GUIDE_PATH, VARIETY_HUB_PATH } from "./guides";
 
 export type SeoText = { title: string; description: string };
 export type SeoPage = { path: string; label: { kn: string; en: string }; kn: SeoText; en: SeoText };
@@ -151,6 +152,20 @@ export const SEO_PAGES: SeoPage[] = [
     kn: { title: "ಅಡಿಕೆ ಗುಣಮಟ್ಟ ಪರೀಕ್ಷೆ · Arecanut quality | ಅಡಿಕೆ ನಾಡಿ", description: "ಅಡಿಕೆ ಗುಣಮಟ್ಟ ಪರೀಕ್ಷೆಯ ದಾಖಲೆಗಳು." },
     en: { title: "Arecanut quality inspection records | Areca Pulse", description: "Arecanut quality inspection records." },
   },
+  {
+    path: VARIETY_HUB_PATH, label: { kn: "ಅಡಿಕೆ ತಳಿಗಳು ಮತ್ತು ದರ್ಜೆಗಳು", en: "Arecanut varieties and grades" },
+    kn: { title: "ಅಡಿಕೆ ತಳಿಗಳು ಮತ್ತು ದರ್ಜೆಗಳು · Arecanut grades explained | ಅಡಿಕೆ ನಾಡಿ",
+      description: "ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ, ಆಪಿ, ಬಿಳೆಗೋಟು, ಸಿಪ್ಪೆಗೋಟು ಮತ್ತು ಇತರ ಅಡಿಕೆ ದರ್ಜೆಗಳು: ಪ್ರತಿಯೊಂದರ ವಿವರ ಮತ್ತು ಇಂದಿನ ಧಾರಣೆ." },
+    en: { title: "Arecanut varieties and grades explained | Areca Pulse",
+      description: "Every arecanut grade the cooperatives publish, from Rashi and Chali to Bette, Api, Bilegotu and Sippegotu: what each is, with today's rate." },
+  },
+  {
+    path: GUIDE_PATH, label: { kn: "ರಾಶಿ ಮತ್ತು ಚಾಲಿ ವ್ಯತ್ಯಾಸ", en: "Rashi vs Chali" },
+    kn: { title: "ರಾಶಿ ಮತ್ತು ಚಾಲಿ ಅಡಿಕೆ ವ್ಯತ್ಯಾಸ · Rashi vs Chali arecanut | ಅಡಿಕೆ ನಾಡಿ",
+      description: "ರಾಶಿ (ಕೆಂಪು) ಮತ್ತು ಚಾಲಿ (ಬಿಳಿ) ಅಡಿಕೆ ಹೇಗೆ ತಯಾರಾಗುತ್ತವೆ, ಅವುಗಳ ದರ್ಜೆಗಳು ಮತ್ತು ಎಲ್ಲಿಗೆ ಹೋಗುತ್ತವೆ, ಟಿಎಸ್‌ಎಸ್ ಪ್ರಕಟಣೆಗಳ ಆಧಾರದಲ್ಲಿ." },
+    en: { title: "Rashi vs Chali arecanut: how they differ | Areca Pulse",
+      description: "How red (Rashi) and white (Chali) arecanut are made, their grades and where each goes, based on TSS Sirsi's published pages." },
+  },
 ];
 
 /** Each variety has its own address, so a search for "Rashi arecanut price" can land on that variety's rates. */
@@ -182,16 +197,23 @@ export const varietyNames = (variety: GrowerVariety) => ({
  */
 const VARIETY_SEARCH_NAMES: Record<string, { kn: string; en: string }> = { rashi: { kn: "ಕೆಂಪು ಅಡಿಕೆ", en: "kempu adike" } };
 
-export function varietySeo(variety: GrowerVariety): SeoPage {
+/**
+ * A variety's page. `shown` names the cooperatives whose rates the written page carries, so its description never names
+ * a source the page does not show; without it (the app), every source publishing the grade is named.
+ */
+export function varietySeo(variety: GrowerVariety, shown?: readonly string[]): SeoPage {
   const name = varietyNames(variety);
   // Growers search "chali adike rate today", so titles use their words; names already saying areca stay as they are.
   const adike = /areca/i.test(variety.en) ? variety.en : `${variety.en} adike`;
   const also = VARIETY_SEARCH_NAMES[variety.key];
-  const sources = (["mamcos", "tss", "tms"] as const).filter((source) => variety.labels[source]?.length);
+  // Array.isArray: pages are also built with VARIETIES.map(varietySeo), which passes an index here.
+  const only = Array.isArray(shown) ? shown : undefined;
+  const sources = (["mamcos", "tss", "tms"] as const).filter((source) => variety.labels[source]?.length && (!only || only.includes(source)));
   const where = (language: "kn" | "en") => listOf(sources.map((source) => SOURCE_PLACES[source][language]), language);
   return {
     path: varietyPath(variety.key), label: { kn: `${name.kn} ಧಾರಣೆ`, en: `${name.en} price` },
-    kn: { title: `${name.kn} ಧಾರಣೆ ಇಂದು · ${adike} rate today | ಅಡಿಕೆ ನಾಡಿ`,
+    // No "| ಅಡಿಕೆ ನಾಡಿ": Kannada letters are wide, and the brand is already in og:site_name.
+    kn: { title: `${name.kn} ಧಾರಣೆ ಇಂದು · ${adike} rate today`,
       // Growers also write ರೇಟ್ ("ಸಿಪ್ಪೆ ಅಡಿಕೆ ರೇಟ್"), so the description says both.
       description: `${name.kn}${also ? ` (${also.kn})` : ""} ಇಂದಿನ ರೇಟ್: ${sources.map((source) => SOURCE_MAIN_BRANCH[source]).join(", ")} ಶಾಖೆವಾರು ಧಾರಣೆ, ದಿನಾಂಕ ಮತ್ತು ಮೂಲದೊಂದಿಗೆ.` },
     en: { title: `${adike} rate today: ${name.en} price at ${listOf(sources.map((source) => source.toUpperCase()), "en")} | Areca Pulse`,
@@ -218,7 +240,7 @@ export function marketSeo(place: MarketPlace): SeoPage {
   const en = place.alias ? `${place.en} (${place.alias})` : place.en;
   return {
     path: marketPath(place.slug), label: { kn: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ`, en: `${place.en} arecanut rate` },
-    kn: { title: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ ಇಂದು · ${en} adike rate today | ಅಡಿಕೆ ನಾಡಿ`,
+    kn: { title: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ ಇಂದು · ${en} adike rate today`,
       // Under about 130 Kannada characters, so a results page shows it whole; the district is on the page itself.
       description: `${place.kn} ಇಂದಿನ ಅಡಿಕೆ ರೇಟ್: ${join("kn")} ದರಗಳು. ರಾಶಿ, ಚಾಲಿ, ಬೆಟ್ಟೆ ಮತ್ತು ಇತರ ತಳಿಗಳು, ದಿನಾಂಕದೊಂದಿಗೆ.` },
     en: { title: `${en} adike rate today: ${join("en")} arecanut prices | Areca Pulse`,
@@ -236,8 +258,12 @@ const KN_MONTHS = ["ಜನವರಿ", "ಫೆಬ್ರವರಿ", "ಮಾರ್�
 /** "19 ನವೆಂಬರ್" for 2026-11-19, as Kannada papers date their rate columns. */
 export const knDate = (date: string) => `${Number(date.slice(8, 10))} ${KN_MONTHS[Number(date.slice(5, 7)) - 1]}`;
 
-/** Rates quoted together must be at most this many days older than the newest, so one date honestly covers them. */
-const SNIPPET_WINDOW_DAYS = 2;
+/**
+ * Rates quoted together must be at most this many days older than the newest, so one date honestly covers them. Zero:
+ * a snippet dated "26 ನವೆಂಬರ್" quotes only rates reported on 26 November (an SEO audit found older branches' rates under
+ * the newest date, 27 Nov 2026).
+ */
+const SNIPPET_WINDOW_DAYS = 0;
 /** A snippet is written only when its date is this recent at build time; otherwise the page keeps its plain title. */
 const SNIPPET_MAX_AGE_DAYS = 4;
 

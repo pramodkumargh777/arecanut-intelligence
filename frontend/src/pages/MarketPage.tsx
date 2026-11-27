@@ -7,6 +7,7 @@ import { DEFAULT_COMMODITY } from "../../../shared/commodities";
 import { AboutData } from "../components/AboutData";
 import { TownArrivals } from "../components/MarketArrivals";
 import { PageFaq } from "../components/PageFaq";
+import { PageAbout } from "../components/PageAbout";
 import { ShareButton } from "../components/ShareButton";
 import { ErrorState, SkeletonRows } from "../components/State";
 import { api } from "../services/api";
@@ -236,6 +237,7 @@ export function MarketPage() {
     </nav>
 
     <AboutData title={copy.about}><p>{copy.aboutText}</p></AboutData>
+    <PageAbout path={marketPath(place.slug)} />
     <PageFaq path={marketPath(place.slug)} />
   </div>;
 }

@@ -4,11 +4,14 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { MARKETS_SEO, marketSeo, SEO_PAGES, snippetFrom, varietyNames, varietySeo, withSnippet, type SeoPage } from "./src/services/seo-pages";
 import { agmarknetVarietyName } from "./src/services/agmarknetVarieties";
-import { COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKET_PLACES, sortByCatalogue, varietyForLabel, type MarketPlace } from "./src/services/markets";
-import { VARIETIES, type GrowerVariety } from "./src/services/varieties";
+import { COOPERATIVE_NAMES, COOPERATIVE_ORDER, MARKET_PLACES, marketPath, sortByCatalogue, varietyForLabel, type MarketPlace } from "./src/services/markets";
+import { VARIETIES, VARIETY_GROUPS, type GrowerVariety } from "./src/services/varieties";
 import { PLACE_NAMES_KN } from "./src/services/places";
 import type { CooperativeQuote } from "./src/services/cooperative";
 import { FAQ_FILE, faqJsonLd, UPDATE_QUESTION, type FaqFile, type FaqItem } from "./src/services/faq";
+import { ABOUT_FILE, type AboutEntry, type AboutFile } from "./src/services/about";
+import { GRADE_NOTES, GUIDE_PATH, RASHI_CHALI_GUIDE, VARIETY_HUB_PATH, VARIETY_HUB_TEXT } from "./src/services/guides";
+
 import { MONTH_NAMES_KN } from "../shared/dates";
 
 /** Where the site is served. Link previews and the sitemap need absolute addresses. */
@@ -59,7 +62,7 @@ function pageHtml(html: string, siteUrl: string, page: SeoPage, linked: SeoPage[
   return html.replace(/<div id="root">(?:<!--static-->[\s\S]*?<!--\/static-->)?<\/div>/, () => block);
 }
 
-type Rate = { source: "mamcos" | "tss"; branch: string; reporting_date: string; minimum_price: number | null; maximum_price: number | null; average_price: number | null };
+type Rate = { source: "mamcos" | "tss" | "tms"; branch: string; reporting_date: string; minimum_price: number | null; maximum_price: number | null; average_price: number | null };
 
 /** Rates older than this are left out of the written pages; the live screen marks them as old instead. */
 const STATIC_RATE_DAYS = 30;
@@ -73,7 +76,8 @@ async function latestRates(apiUrl: string) {
   const oldest = new Date(Date.now() - STATIC_RATE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   for (const variety of VARIETIES) {
     const rows: Rate[] = [];
-    for (const source of ["mamcos", "tss"] as const) for (const label of variety.labels[source] ?? []) {
+    // TMS too, so a variety page writes every cooperative its live page shows (its description names only these).
+    for (const source of ["mamcos", "tss", "tms"] as const) for (const label of variety.labels[source] ?? []) {
       const response = await fetch(`${apiUrl}/cooperative/prices?${new URLSearchParams({ source, variety: label, commodity: "arecanut", limit: "10" })}`, { signal: AbortSignal.timeout(20_000) });
       if (!response.ok) throw new Error(`${source} ${label}: HTTP ${response.status}`);
       const body = await response.json() as { latest_by_branch?: Omit<Rate, "source">[] };
@@ -84,8 +88,9 @@ async function latestRates(apiUrl: string) {
   return rates;
 }
 
-const SOURCE_NAMES = { mamcos: "ಮ್ಯಾಮ್ಕೋಸ್ · MAMCOS", tss: "ಟಿಎಸ್‌ಎಸ್ · TSS" };
-const rupees = (value: number | null) => value === null ? "" : `₹${value.toLocaleString("en-IN")}`;
+const SOURCE_NAMES = { mamcos: "ಮ್ಯಾಮ್ಕೋಸ್ · MAMCOS", tss: "ಟಿಎಸ್‌ಎಸ್ · TSS", tms: "ಟಿಎಂಎಸ್ · TMS" };
+/** Whole rupees: TMS publishes paise (₹41,797.17). */
+const rupees = (value: number | null) => value === null ? "" : `₹${Math.round(value).toLocaleString("en-IN")}`;
 const dayText = (date: string) => day(date);
 const day = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -101,15 +106,6 @@ function rateTable(rows: Rate[]) {
   return `<table><thead><tr><th>ಸಂಘ · Cooperative</th><th>ಶಾಖೆ · Branch</th><th>ದಿನಾಂಕ · Date</th><th>ಸರಾಸರಿ · Average</th><th>ಕನಿಷ್ಠ – ಗರಿಷ್ಠ · Range</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
-/** A variety's latest rates as plain HTML: the same branches, dates and prices the rates screen shows once it loads. */
-function ratesHtml(variety: GrowerVariety, rows: Rate[]) {
-  const name = varietyNames(variety);
-  return `<main class="static-page"><h1>${escapeHtml(name.kn)} ಧಾರಣೆ · ${escapeHtml(name.en)} price</h1>`
-    + `<p>ಇತ್ತೀಚಿನ ವರದಿಯಾದ ದರಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ರೂಪಾಯಿಗಳಲ್ಲಿ. Latest reported rates, in rupees per quintal.</p>`
-    + rateTable(rows)
-    + `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ. Rates as each cooperative publishes them.</p></main>`;
-}
-
 /** The home page: its heading and text, then the latest rates of the everyday varieties, each under its own heading. */
 function homeHtml(page: SeoPage, rates: Map<string, Rate[]>) {
   const sections = VARIETIES.filter((variety) => variety.everyday && rates.has(variety.key)).map((variety) => {
@@ -122,7 +118,7 @@ function homeHtml(page: SeoPage, rates: Map<string, Rate[]>) {
 }
 
 /** `short` is the Kannada variety name a search snippet quotes; empty when there is no established one to quote. */
-type PlaceRate = { source: string; name: string; short: string; date: string; price: number | null; minimum: number | null; maximum: number | null };
+type PlaceRate = { source: string; name: string; short: string; date: string; price: number | null; minimum: number | null; maximum: number | null; key?: string };
 
 /**
  * Each town's latest rates from every source it has, read from the public API when the site is built. A town whose
@@ -140,7 +136,8 @@ async function placeRates(apiUrl: string, place: MarketPlace) {
     for (const row of sortByCatalogue(source, body.data.filter((item) => item.reporting_date >= oldest))) {
       const variety = varietyForLabel(source, row.variety);
       rows.push({ source: `${COOPERATIVE_NAMES[source].kn} · ${COOPERATIVE_NAMES[source].en}`, name: source === "tumcos" ? "ಅಡಿಕೆ · Arecanut" : variety ? `${variety.kn} · ${variety.en}` : row.variety,
-        short: source === "tumcos" ? "ಅಡಿಕೆ" : variety?.kn ?? "", date: row.reporting_date, price: row.average_price, minimum: row.minimum_price, maximum: row.maximum_price });
+        short: source === "tumcos" ? "ಅಡಿಕೆ" : variety?.kn ?? "", date: row.reporting_date, price: row.average_price, minimum: row.minimum_price, maximum: row.maximum_price,
+        key: source === "tumcos" ? undefined : variety?.key });
     }
   }
   const apmcId = place.apmc ? await marketId(apiUrl, place.apmc) : null;
@@ -234,14 +231,15 @@ function historyHtml(place: MarketPlace, history: PlaceHistory) {
 }
 
 /** A town's rates as plain HTML, the same rows the town page shows once it loads. */
-function placeHtml(place: MarketPlace, rows: PlaceRate[], history: PlaceHistory | null = null) {
+function placeHtml(place: MarketPlace, rows: PlaceRate[], history: PlaceHistory | null = null, about: AboutEntry | null = null) {
   const body = rows.map((row) => `<tr><td>${escapeHtml(row.source)}</td><td>${escapeHtml(row.name)}</td><td><time datetime="${row.date}">${day(row.date)}</time></td><td>${rupees(row.price)}</td><td>${row.minimum !== null && row.maximum !== null ? `${rupees(row.minimum)} – ${rupees(row.maximum)}` : ""}</td></tr>`).join("");
   return `<main class="static-page">`
-    + `<h1>${escapeHtml(place.kn)} ಅಡಿಕೆ ಧಾರಣೆ · ${escapeHtml(place.en)} arecanut rates</h1>`
+    // The older spelling too ("Shimoga"), which AGMARKNET and many searches still use.
+    + `<h1>${escapeHtml(place.kn)} ಅಡಿಕೆ ಧಾರಣೆ · ${escapeHtml(place.en)}${place.alias ? ` (${escapeHtml(place.alias)})` : ""} arecanut rates</h1>`
     + `<p>${escapeHtml(place.district.kn)} ಜಿಲ್ಲೆ · ${escapeHtml(place.district.en)} district. ಇತ್ತೀಚಿನ ವರದಿಯಾದ ದರಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. Latest reported rates, per quintal.</p>`
     + `<table><thead><tr><th>ಮೂಲ · Source</th><th>ತಳಿ · Variety</th><th>ದಿನಾಂಕ · Date</th><th>ದರ · Rate</th><th>ಕನಿಷ್ಠ – ಗರಿಷ್ಠ · Range</th></tr></thead><tbody>${body}</tbody></table>`
     + `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆ; ಮೂಲಗಳನ್ನು ಒಟ್ಟುಗೂಡಿಸಿಲ್ಲ. Rates as each source publishes them; sources are never combined.</p>`
-    + (history ? historyHtml(place, history) : "") + `</main>`;
+    + (about ? aboutHtml(about) : "") + (history ? historyHtml(place, history) : "") + `</main>`;
 }
 
 /* ---------- "today's rates" questions, sitemap dates and breadcrumbs ---------- */
@@ -255,27 +253,36 @@ const branchNames = (branch: string) => {
   return { kn: PLACE_NAMES_KN[branch.toUpperCase()] ?? en, en };
 };
 
+/**
+ * "What is today's <source> <variety> rate?", answered from that source's newest report day: one branch's average, or
+ * the range across its branches with the highest named. Null when the source has no rate for the variety.
+ */
+function sourceRateItem(variety: GrowerVariety, source: Rate["source"], rates: Rate[]): FaqItem | null {
+  const rows = rates.filter((row) => row.source === source && row.average_price !== null);
+  if (!rows.length) return null;
+  const date = newestOf(rows.map((row) => row.reporting_date));
+  const day = rows.filter((row) => row.reporting_date === date).sort((a, b) => b.average_price! - a.average_price!);
+  const src = COOPERATIVE_NAMES[source], top = day[0], low = day.at(-1)!, top_ = branchNames(top.branch);
+  const one = day.length === 1 || Math.round(top.average_price!) === Math.round(low.average_price!);
+  return {
+    q: { kn: `ಇಂದಿನ ${src.kn} ${variety.kn} ಧಾರಣೆ ಎಷ್ಟು?`, en: `What is today's ${src.en} ${variety.en} rate?` },
+    a: one ? {
+      kn: `${src.kn} ${top_.kn} ಶಾಖೆಯಲ್ಲಿ ${variety.kn} ಸರಾಸರಿ ದರ ${whole(top.average_price)}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. ವರದಿ ದಿನಾಂಕ: ${knDay(date)}.`,
+      en: `${src.en} ${top_.en}: ${variety.en} averaged ${whole(top.average_price)} per quintal in the ${dayText(date)} report.`,
+    } : {
+      kn: `${src.kn} ${variety.kn}: ${day.length} ಶಾಖೆಗಳ ಸರಾಸರಿ ದರ ${whole(low.average_price)} ರಿಂದ ${whole(top.average_price)}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. ಅತಿ ಹೆಚ್ಚು: ${top_.kn} ${whole(top.average_price)}. ವರದಿ ದಿನಾಂಕ: ${knDay(date)}.`,
+      en: `${src.en} ${variety.en}: branch averages from ${whole(low.average_price)} to ${whole(top.average_price)} per quintal across ${day.length} branches in the ${dayText(date)} report; highest at ${top_.en}.`,
+    },
+  };
+}
+
 /** Home page questions: the latest MAMCOS and TSS Rashi and Chali rates, from the rates written into the page. */
 function homeFaq(rates: Map<string, Rate[]>): FaqItem[] {
   const items: FaqItem[] = [];
   for (const variety of VARIETIES.filter((item) => item.key === "rashi" || item.key === "chali")) {
     for (const source of ["mamcos", "tss"] as const) {
-      const rows = (rates.get(variety.key) ?? []).filter((row) => row.source === source && row.average_price !== null);
-      if (!rows.length) continue;
-      const date = newestOf(rows.map((row) => row.reporting_date));
-      const day = rows.filter((row) => row.reporting_date === date).sort((a, b) => b.average_price! - a.average_price!);
-      const src = COOPERATIVE_NAMES[source], top = day[0], low = day.at(-1)!, top_ = branchNames(top.branch);
-      const one = day.length === 1 || top.average_price === low.average_price;
-      items.push({
-        q: { kn: `ಇಂದಿನ ${src.kn} ${variety.kn} ಧಾರಣೆ ಎಷ್ಟು?`, en: `What is today's ${src.en} ${variety.en} rate?` },
-        a: one ? {
-          kn: `${src.kn} ${top_.kn} ಶಾಖೆಯಲ್ಲಿ ${variety.kn} ಸರಾಸರಿ ದರ ${whole(top.average_price)}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. ವರದಿ ದಿನಾಂಕ: ${knDay(date)}.`,
-          en: `${src.en} ${top_.en}: ${variety.en} averaged ${whole(top.average_price)} per quintal in the ${dayText(date)} report.`,
-        } : {
-          kn: `${src.kn} ${variety.kn}: ${day.length} ಶಾಖೆಗಳ ಸರಾಸರಿ ದರ ${whole(low.average_price)} ರಿಂದ ${whole(top.average_price)}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ. ಅತಿ ಹೆಚ್ಚು: ${top_.kn} ${whole(top.average_price)}. ವರದಿ ದಿನಾಂಕ: ${knDay(date)}.`,
-          en: `${src.en} ${variety.en}: branch averages from ${whole(low.average_price)} to ${whole(top.average_price)} per quintal across ${day.length} branches in the ${dayText(date)} report; highest at ${top_.en}.`,
-        },
-      });
+      const item = sourceRateItem(variety, source, rates.get(variety.key) ?? []);
+      if (item) items.push(item);
     }
   }
   return items.length ? [...items, UPDATE_QUESTION] : [];
@@ -325,6 +332,155 @@ function apmcSnippetName(label: string) {
   return kn !== label ? kn : "";
 }
 
+/* ---------- "about this town / grade" text, the variety hub and the Rashi and Chali guide ---------- */
+
+type RecentMarket = { market: string; last_date: string | null; last_quintals: number | null; week_quintals: number; week_days: number; usual_quintals: number | null };
+type Recent = { week: { from: string; to: string }; markets: RecentMarket[] };
+
+/** Each APMC's arrivals over the last report week (KRAMA), read once per build; a failure leaves the sentence out. */
+async function recentArrivals(apiUrl: string): Promise<Recent | null> {
+  const response = await fetch(`${apiUrl}/supply/arrivals/recent`, { signal: AbortSignal.timeout(20_000) });
+  if (!response.ok) throw new Error(`recent arrivals: HTTP ${response.status}`);
+  const body = await response.json() as Recent;
+  return body.week && Array.isArray(body.markets) ? body : null;
+}
+
+const quintals = (value: number) => Math.round(value).toLocaleString("en-IN");
+const knList = (items: string[]) => items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} ಮತ್ತು ${items.at(-1)}`;
+const enList = (items: string[]) => items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+
+/**
+ * A town's "about" text, only from facts the build reads: which sources the page carries and what kind of rate each
+ * publishes, the grades reported there recently, and the APMC's arrivals over the last report week.
+ */
+function townAbout(place: MarketPlace, rows: PlaceRate[], recent: Recent | null): AboutEntry {
+  const kinds: { kn: string; en: string }[] = [];
+  const branch = (name: string) => branchNames(name);
+  if (place.branches.mamcos) kinds.push({ kn: `ಮ್ಯಾಮ್ಕೋಸ್ ${branch(place.branches.mamcos).kn} ಶಾಖೆಯ ಸರಾಸರಿ ದರ`, en: `the MAMCOS ${branch(place.branches.mamcos).en} branch average` });
+  if (place.branches.tss) kinds.push({ kn: `ಟಿಎಸ್‌ಎಸ್ ${branch(place.branches.tss).kn} ಟೆಂಡರ್ ಸರಾಸರಿ ದರ`, en: `the TSS ${branch(place.branches.tss).en} tender average` });
+  if (place.branches.tms) kinds.push({ kn: "ಟಿಎಂಎಸ್ ಟೆಂಡರ್ ಸರಾಸರಿ ದರ", en: "the TMS tender average" });
+  if (place.branches.tumcos) kinds.push({ kn: "ಟಮ್ಕೋಸ್ ಸರಾಸರಿ ದರ (ತಳಿ ತಿಳಿಸುವುದಿಲ್ಲ)", en: "the TUMCOS average (variety not stated)" });
+  if (place.apmc) kinds.push({ kn: `${place.kn} ಎಪಿಎಂಸಿಯ ಮೋಡಲ್ ದರ (AGMARKNET)`, en: `the ${place.apmc} modal price (AGMARKNET)` });
+  const names = place.alias ? { kn: `; ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ${place.en} ಅಥವಾ ${place.alias}`, en: `, also spelt ${place.alias}` } : { kn: "", en: "" };
+  const paragraphs: { kn: string; en: string }[] = [{
+    kn: `${place.kn} (${place.district.kn} ಜಿಲ್ಲೆ${names.kn}) ಅಡಿಕೆ ಧಾರಣೆಗೆ ಈ ಪುಟದ ಮೂಲಗಳು: ${knList(kinds.map((kind) => kind.kn))}.${kinds.length > 1 ? " ಇವು ಬೇರೆ ಬೇರೆ ಬಗೆಯ ದರಗಳು, ಆದ್ದರಿಂದ ಪಕ್ಕಪಕ್ಕ ತೋರಿಸಲಾಗಿದೆ, ಒಟ್ಟುಗೂಡಿಸಿಲ್ಲ." : ""}`,
+    en: `${place.en} (${place.district.en} district${names.en}): this page carries ${enList(kinds.map((kind) => kind.en))}.${kinds.length > 1 ? " These are different kinds of rate, so they are shown side by side, never combined." : ""}`,
+  }];
+  const grades = [...new Map(rows.filter((row) => row.short).map((row) => [row.short, row.name.split(" · ")[1] ?? row.name.replace(/\s*\(.*\)$/, "")])).entries()].slice(0, 8);
+  if (grades.length) paragraphs.push({
+    kn: `ಇಲ್ಲಿ ಇತ್ತೀಚೆಗೆ ವರದಿಯಾದ ತಳಿಗಳು: ${grades.map(([kn]) => kn).join(", ")}.`,
+    en: `Grades reported here recently: ${grades.map(([, en]) => en).join(", ")}.`,
+  });
+  const market = place.apmc ? recent?.markets.find((item) => item.market === place.apmc) : undefined;
+  if (recent && market && market.week_quintals > 0) {
+    const span = { kn: `${knDay(recent.week.from)}–${knDay(recent.week.to)}`, en: `${dayText(recent.week.from)} to ${dayText(recent.week.to)}` };
+    const usual = market.usual_quintals ? { kn: ` ಸಾಮಾನ್ಯ ವರದಿ ದಿನದಲ್ಲಿ ಸುಮಾರು ${quintals(market.usual_quintals)} ಕ್ವಿಂಟಾಲ್ ಬರುತ್ತದೆ.`, en: ` A usual report day brings about ${quintals(market.usual_quintals)} quintals.` } : { kn: "", en: "" };
+    paragraphs.push({
+      kn: `ಕೃಷಿ ಮಾರಾಟ ಇಲಾಖೆಯ KRAMA ವರದಿಯಂತೆ ${span.kn} ನಡುವೆ ${market.week_days} ವರದಿ ದಿನಗಳಲ್ಲಿ ${place.kn} ಎಪಿಎಂಸಿಗೆ ${quintals(market.week_quintals)} ಕ್ವಿಂಟಾಲ್ ಅಡಿಕೆ ಬಂದಿದೆ.${usual.kn}`,
+      en: `KRAMA (Karnataka's agricultural marketing department) reports ${quintals(market.week_quintals)} quintals of arecanut arriving at ${place.apmc} over ${market.week_days} report days, ${span.en}.${usual.en}`,
+    });
+  }
+  const links = [...new Set(rows.map((row) => row.key).filter((key): key is string => !!key))].slice(0, 8)
+    .map((key) => VARIETIES.find((variety) => variety.key === key)!).map((variety) => ({ path: varietySeo(variety).path, label: { kn: `${variety.kn} ಧಾರಣೆ`, en: `${variety.en} rate` } }));
+  return { title: { kn: `${place.kn} ಮಾರುಕಟ್ಟೆ ಬಗ್ಗೆ`, en: `About ${place.en}'s market` }, paragraphs, links };
+}
+
+/** The towns whose page carries a cooperative branch, by source and branch name. */
+const townOf = (source: Rate["source"], branch: string) => MARKET_PLACES.find((place) => place.branches[source]?.toUpperCase() === branch.toUpperCase());
+
+/** A grade's "about" text: what its sources say it is (if any describe it), and who publishes its rate under which label. */
+function varietyAbout(variety: GrowerVariety, rows: Rate[]): AboutEntry {
+  const note = GRADE_NOTES[variety.key];
+  const paragraphs: { kn: string; en: string }[] = note ? [note.text] : variety.note ? [variety.note] : [];
+  const sources = (["mamcos", "tss", "tms"] as const).filter((source) => variety.labels[source]?.length);
+  const labels = sources.map((source) => ({ source, labels: variety.labels[source]!.map((label) => `“${label}”`).join(" / ") }));
+  if (labels.length) paragraphs.push({
+    kn: `ಈ ದರ್ಜೆಯನ್ನು ${knList(labels.map((item) => `${COOPERATIVE_NAMES[item.source].kn} ${item.labels}`))} ಹೆಸರಿನಲ್ಲಿ ${labels.length > 1 ? "ಪ್ರಕಟಿಸುತ್ತವೆ" : "ಪ್ರಕಟಿಸುತ್ತದೆ"}.`,
+    en: `Published as ${enList(labels.map((item) => `${item.labels} by ${COOPERATIVE_NAMES[item.source].en}`))}.`,
+  });
+  const branches = [...new Map(rows.map((row) => [`${row.source}|${row.branch.toUpperCase()}`, row])).values()];
+  if (branches.length) {
+    const by = (language: "kn" | "en") => sources.filter((source) => branches.some((row) => row.source === source))
+      .map((source) => `${COOPERATIVE_NAMES[source][language]} (${branches.filter((row) => row.source === source).map((row) => branchNames(row.branch)[language]).join(", ")})`);
+    paragraphs.push({ kn: `ಕಳೆದ 30 ದಿನಗಳಲ್ಲಿ ದರ ಪ್ರಕಟಿಸಿದ ಶಾಖೆಗಳು: ${knList(by("kn"))}.`, en: `Branches that published a rate in the last 30 days: ${enList(by("en"))}.` });
+  } else paragraphs.push({ kn: "ಕಳೆದ 30 ದಿನಗಳಲ್ಲಿ ಈ ದರ್ಜೆಯ ದರ ವರದಿಯಾಗಿಲ್ಲ.", en: "No rate for this grade was reported in the last 30 days." });
+  const towns = [...new Map(branches.map((row) => townOf(row.source, row.branch)).filter((place): place is MarketPlace => !!place).map((place) => [place.slug, place])).values()];
+  const links = [
+    ...towns.map((place) => ({ path: marketPath(place.slug), label: { kn: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ`, en: `${place.en} arecanut rate` } })),
+    ...(variety.group === "rashi" || variety.group === "chali" ? [{ path: GUIDE_PATH, label: { kn: "ರಾಶಿ ಮತ್ತು ಚಾಲಿ ವ್ಯತ್ಯಾಸ", en: "Rashi vs Chali" } }] : []),
+    { path: VARIETY_HUB_PATH, label: { kn: "ಎಲ್ಲಾ ಅಡಿಕೆ ದರ್ಜೆಗಳು", en: "All arecanut grades" } },
+  ];
+  return { title: { kn: `${variety.kn} ಬಗ್ಗೆ`, en: `About ${variety.en}` }, paragraphs, links, sources: note?.sources };
+}
+
+/** An "about" entry as plain HTML: heading, both languages' paragraphs, its links and sources. */
+function aboutHtml(entry: AboutEntry) {
+  return `<h2>${escapeHtml(entry.title.kn)} · ${escapeHtml(entry.title.en)}</h2>`
+    + entry.paragraphs.map((paragraph) => `<p lang="kn">${escapeHtml(paragraph.kn)}</p><p lang="en">${escapeHtml(paragraph.en)}</p>`).join("")
+    + (entry.links?.length ? `<ul>${entry.links.map((link) => `<li><a href="${link.path}">${escapeHtml(link.label.kn)} · ${escapeHtml(link.label.en)}</a></li>`).join("")}</ul>` : "")
+    + (entry.sources?.length ? `<p>ಮೂಲ · Source: ${entry.sources.map((source) => `<a href="${source.url}" rel="noopener">${escapeHtml(source.label)}</a>`).join(", ")}</p>` : "");
+}
+
+/** A variety page as plain HTML: heading, latest rates (when there are any), then what the grade is and who reports it. */
+function varietyHtml(variety: GrowerVariety, rows: Rate[], about: AboutEntry) {
+  const name = varietyNames(variety);
+  return `<main class="static-page"><h1>${escapeHtml(name.kn)} ಧಾರಣೆ · ${escapeHtml(name.en)} price</h1>`
+    + (rows.length
+      ? `<h2>ಇತ್ತೀಚಿನ ಧಾರಣೆ · Latest rates</h2><p>ಇತ್ತೀಚಿನ ವರದಿಯಾದ ದರಗಳು, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ರೂಪಾಯಿಗಳಲ್ಲಿ. Latest reported rates, in rupees per quintal.</p>`
+        + rateTable(rows) + `<p>ದರಗಳು ಮೂಲ ಪ್ರಕಟಿಸಿದಂತೆಯೇ. Rates as each cooperative publishes them.</p>`
+      : "")
+    + aboutHtml(about) + `</main>`;
+}
+
+/** A variety's questions: its latest rate per cooperative, and how often rates are updated. */
+function varietyFaq(variety: GrowerVariety, rows: Rate[]): FaqItem[] {
+  const items: FaqItem[] = [];
+  for (const source of ["mamcos", "tss", "tms"] as const) {
+    const item = sourceRateItem(variety, source, rows);
+    if (item) items.push(item);
+  }
+  // What the grade is sits in its "about" section just above, so it is not repeated as a question.
+  return items.length ? [...items, UPDATE_QUESTION] : [];
+}
+
+/** The variety hub as plain HTML: every grade by group, linked, with the guide first. */
+function hubHtml() {
+  const text = VARIETY_HUB_TEXT;
+  const groups = VARIETY_GROUPS.map((group) => `<h2>${escapeHtml(group.kn)} · ${escapeHtml(group.en)}</h2><ul>${VARIETIES.filter((variety) => variety.group === group.key)
+    .map((variety) => `<li><a href="${varietySeo(variety).path}">${escapeHtml(variety.kn)} · ${escapeHtml(variety.en)}</a>${GRADE_NOTES[variety.key] ? ` — ${escapeHtml(GRADE_NOTES[variety.key].text.en.split(". ")[0])}.` : ""}</li>`).join("")}</ul>`).join("");
+  return `<main class="static-page"><h1>${escapeHtml(text.kn.title)} · ${escapeHtml(text.en.title)}</h1><p lang="kn">${escapeHtml(text.kn.intro)}</p><p lang="en">${escapeHtml(text.en.intro)}</p>`
+    + `<p><a href="${GUIDE_PATH}">${escapeHtml(text.kn.guide)} · ${escapeHtml(text.en.guide)}</a></p>${groups}<p>${escapeHtml(text.kn.sources)} ${escapeHtml(text.en.sources)}</p></main>`;
+}
+
+/** The Rashi and Chali guide as plain HTML, the same text the page shows. */
+function guideHtml() {
+  const guide = RASHI_CHALI_GUIDE;
+  const both = (text: { kn: string; en: string }) => `<p lang="kn">${escapeHtml(text.kn)}</p><p lang="en">${escapeHtml(text.en)}</p>`;
+  const rows = guide.table.rows.map((row) => `<tr><th scope="row">${escapeHtml(row.label.kn)} · ${escapeHtml(row.label.en)}</th><td>${escapeHtml(row.rashi.kn)} · ${escapeHtml(row.rashi.en)}</td><td>${escapeHtml(row.chali.kn)} · ${escapeHtml(row.chali.en)}</td></tr>`).join("");
+  return `<main class="static-page"><h1>${escapeHtml(guide.title.kn)} · ${escapeHtml(guide.title.en)}</h1>${both(guide.intro)}`
+    + guide.sections.map((section) => `<h2>${escapeHtml(section.heading.kn)} · ${escapeHtml(section.heading.en)}</h2>${both(section.text)}`).join("")
+    + `<h2>${escapeHtml(guide.table.heading.kn)} · ${escapeHtml(guide.table.heading.en)}</h2><table><thead><tr><th></th><th>${escapeHtml(guide.table.columns.rashi.kn)} · ${escapeHtml(guide.table.columns.rashi.en)}</th><th>${escapeHtml(guide.table.columns.chali.kn)} · ${escapeHtml(guide.table.columns.chali.en)}</th></tr></thead><tbody>${rows}</tbody></table>`
+    + `<h2>${escapeHtml(guide.prices.heading.kn)} · ${escapeHtml(guide.prices.heading.en)}</h2>${both(guide.prices.text)}`
+    + `<p><a href="/variety/rashi">ರಾಶಿ ಅಡಿಕೆ ಧಾರಣೆ · Rashi arecanut price</a> · <a href="/variety/chali">ಚಾಲಿ ಅಡಿಕೆ ಧಾರಣೆ · Chali arecanut price</a></p>`
+    + `<p>ಮೂಲಗಳು · Sources: ${guide.sources.map((source) => `<a href="${source.url}" rel="noopener">${escapeHtml(source.label)}</a>`).join(", ")}</p></main>`;
+}
+
+/**
+ * The page Cloudflare Pages serves, with a real 404 status, for any address that has no file: the app shell (which
+ * shows "Page not found" for an unknown route), marked noindex and without a canonical address. Client-only private
+ * pages (workspace, data quality) are rewritten to it with a 200 in public/_redirects.
+ */
+function notFoundHtml(home: string, siteUrl: string) {
+  const page: SeoPage = { path: "/404", label: { kn: "ಪುಟ ಸಿಗಲಿಲ್ಲ", en: "Page not found" },
+    kn: { title: "ಪುಟ ಸಿಗಲಿಲ್ಲ · Page not found | ಅಡಿಕೆ ನಾಡಿ", description: "ಈ ವಿಳಾಸದಲ್ಲಿ ಪುಟ ಇಲ್ಲ. ಇಂದಿನ ಅಡಿಕೆ ಧಾರಣೆಗೆ ಮುಖಪುಟ ನೋಡಿ." },
+    en: { title: "Page not found | Areca Pulse", description: "There is no page at this address. See the home page for today's arecanut rates." } };
+  const content = `<main class="static-page"><h1>ಪುಟ ಸಿಗಲಿಲ್ಲ · Page not found</h1><p lang="kn">${escapeHtml(page.kn.description)}</p><p lang="en">${escapeHtml(page.en.description)}</p></main>`;
+  return pageHtml(home, siteUrl, page, [], content)
+    .replace(/\s*<link rel="canonical"[^>]*>/, "")
+    .replace(/\s*<meta property="og:url"[^>]*>/, "")
+    .replace("</head>", `  <meta name="robots" content="noindex" />\n  </head>`);
+}
+
 /** Public contact address. Also in src/services/brand.tsx (footer) and index.html (structured data). */
 const CONTACT_EMAIL = "contact@adikenaadi.com";
 
@@ -359,15 +515,22 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
         try { rates = await latestRates(apiUrl.replace(/\/+$/, "")); }
         catch (error) { console.warn(`Latest rates were not written into the variety pages: ${error instanceof Error ? error.message : error}`); }
       }
-      const varieties = VARIETIES.filter((variety) => rates.has(variety.key));
+      // Every grade gets its own page, so no link the app makes ends in a 404; only those with recent rates go in the
+      // sitemap and the page links (a page with no rates is thin). A page names only the cooperatives it shows.
+      const shownBy = (variety: GrowerVariety) => {
+        const rows = rates.get(variety.key) ?? [];
+        return rows.length ? [...new Set(rows.map((row) => row.source))] : undefined;
+      };
       // Search listings use the dated pages; the links between pages keep their plain labels either way.
-      const varietyPages = varieties.map((variety) => withSnippet(varietySeo(variety),
-        snippetFrom(rates.get(variety.key)!.map((row) => ({ name: "", date: row.reporting_date, price: row.average_price })), 1)));
+      const allVarietyPages = VARIETIES.map((variety) => withSnippet(varietySeo(variety, shownBy(variety)),
+        snippetFrom((rates.get(variety.key) ?? []).map((row) => ({ name: "", date: row.reporting_date, price: row.average_price })), 1)));
+      const varietyPages = allVarietyPages.filter((_, index) => rates.has(VARIETIES[index].key));
       const homeSnippet = snippetFrom(VARIETIES.filter((variety) => variety.everyday && rates.has(variety.key))
         .flatMap((variety) => rates.get(variety.key)!.map((row) => ({ name: variety.kn, date: row.reporting_date, price: row.average_price }))));
-      // Each page's newest report date (the sitemap's <lastmod>) and its "today's rates" questions.
+      // Each page's newest report date (the sitemap's <lastmod>), its "today's rates" questions and its "about" text.
       const lastmod = new Map<string, string>();
       const faq: FaqFile = {};
+      const about: AboutFile = {};
       const write = (page: SeoPage, content = "", structured: object[] = []) => {
         const file = resolve(outDir, page.path === "/" ? "index.html" : `${page.path.slice(1)}.html`);
         const questions = faq[page.path];
@@ -385,22 +548,36 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
       faq["/"] = homeFaq(rates);
       for (const page of SEO_PAGES) {
         if (page.path === "/") write(withSnippet(page, homeSnippet), homeHtml(page, rates));
+        else if (page.path === VARIETY_HUB_PATH) write(page, hubHtml(), [breadcrumbs(siteUrl, [["ಅಡಿಕೆ ದರ್ಜೆಗಳು", VARIETY_HUB_PATH]])]);
+        else if (page.path === GUIDE_PATH) write(page, guideHtml(), [breadcrumbs(siteUrl, [["ಅಡಿಕೆ ದರ್ಜೆಗಳು", VARIETY_HUB_PATH], ["ರಾಶಿ ಮತ್ತು ಚಾಲಿ", GUIDE_PATH]])]);
         else write(page);
+      }
+      // Arrivals for the towns' "about" text: one request for every market; without it the sentence is left out.
+      let recent: Recent | null = null;
+      if (apiUrl?.startsWith("https://")) {
+        try { recent = await recentArrivals(apiUrl.replace(/\/+$/, "")); }
+        catch (error) { console.warn(`Arrivals were not written into the town pages: ${error instanceof Error ? error.message : error}`); }
       }
       const townDates: string[] = [];
       for (const [index, place] of MARKET_PLACES.entries()) {
         let content = "";
         let rows: PlaceRate[] = [];
+        const path = MARKET_PAGES[index + 1].path;
         if (apiUrl?.startsWith("https://")) {
           const api = apiUrl.replace(/\/+$/, "");
           // The year of history is extra: if it cannot be read, the page still gets its latest rates.
           let history: PlaceHistory | null = null;
           try { history = await placeHistory(api, place); }
           catch (error) { console.warn(`History was not written into ${place.en}'s page: ${error instanceof Error ? error.message : error}`); }
-          try { rows = await placeRates(api, place); if (rows.length || history) content = placeHtml(place, rows, history); }
+          try {
+            rows = await placeRates(api, place);
+            if (rows.length || history) {
+              about[path] = townAbout(place, rows, recent);
+              content = placeHtml(place, rows, history, about[path]);
+            }
+          }
           catch (error) { console.warn(`Rates were not written into ${place.en}'s page: ${error instanceof Error ? error.message : error}`); }
         }
-        const path = MARKET_PAGES[index + 1].path;
         if (rows.length) { lastmod.set(path, newestOf(rows.map((row) => row.date))); townDates.push(lastmod.get(path)!); }
         faq[path] = townFaq(place, rows);
         // A town's cooperative rates lead its snippet when fresh; its APMC's named varieties stand in when they are not.
@@ -410,11 +587,18 @@ function seo(siteUrl: string, apiUrl: string | undefined): Plugin {
       }
       if (townDates.length) lastmod.set(MARKETS_SEO.path, newestOf(townDates));
       write(MARKETS_SEO, "", [breadcrumbs(siteUrl, [["ಮಾರುಕಟ್ಟೆ", MARKETS_SEO.path]])]);
-      varieties.forEach((variety, index) => {
-        lastmod.set(varietyPages[index].path, newestOf(rates.get(variety.key)!.map((row) => row.reporting_date)));
-        write(varietyPages[index], ratesHtml(variety, rates.get(variety.key)!), [breadcrumbs(siteUrl, [[`${variety.kn} ಧಾರಣೆ`, varietyPages[index].path]])]);
+      VARIETIES.forEach((variety, index) => {
+        const page = allVarietyPages[index], rows = rates.get(variety.key) ?? [];
+        if (rows.length) lastmod.set(page.path, newestOf(rows.map((row) => row.reporting_date)));
+        // The grade's "about" text is written on every build; its rates and questions only when they were read.
+        about[page.path] = varietyAbout(variety, rows);
+        faq[page.path] = varietyFaq(variety, rows);
+        write(page, varietyHtml(variety, rows, about[page.path]),
+          [breadcrumbs(siteUrl, [["ಅಡಿಕೆ ದರ್ಜೆಗಳು", VARIETY_HUB_PATH], [`${variety.kn} ಧಾರಣೆ`, page.path]])]);
       });
       writeFileSync(resolve(outDir, FAQ_FILE.slice(1)), JSON.stringify(Object.fromEntries(Object.entries(faq).filter(([, items]) => items.length))));
+      writeFileSync(resolve(outDir, ABOUT_FILE.slice(1)), JSON.stringify(about));
+      writeFileSync(resolve(outDir, "404.html"), notFoundHtml(home, siteUrl));
       // <lastmod> is the newest report date each page shows, not the build date: a rebuild with no new rates changes nothing.
       if (lastmod.size) {
         const entry = (path: string) => `  <url><loc>${siteUrl}${path}</loc>${lastmod.has(path) ? `<lastmod>${lastmod.get(path)}</lastmod>` : ""}</url>`;

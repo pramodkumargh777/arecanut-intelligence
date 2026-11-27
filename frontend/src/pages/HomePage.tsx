@@ -3,6 +3,7 @@ import { ArrowDown, ArrowRight, ArrowUp, ChevronDown, ExternalLink, MapPin, Minu
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AboutData } from "../components/AboutData";
 import { PageFaq } from "../components/PageFaq";
+import { PageAbout } from "../components/PageAbout";
 import { ShareButton } from "../components/ShareButton";
 import { useChangeFlash } from "../components/useChangeFlash";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -807,6 +808,8 @@ export function HomePage() {
       <p>{copy.notComparable}</p>
       <p>{copy.changeNote}</p>
     </AboutData>
-    <PageFaq path="/" />
+    {/* A variety's own page carries that grade's description and questions; the home page keeps its own. */}
+    {pageVariety && <PageAbout path={varietyPath(variety.key)} />}
+    <PageFaq path={pageVariety ? varietyPath(variety.key) : "/"} />
   </div>;
 }

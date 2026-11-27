@@ -21,6 +21,8 @@ const ForecastEvaluationPage = lazy(() => import("../pages/ForecastEvaluationPag
 const SupplyPage = lazy(() => import("../pages/SupplyPage").then((module) => ({ default: module.SupplyPage })));
 const AssistantPage = lazy(() => import("../pages/AssistantPage").then((module) => ({ default: module.AssistantPage })));
 const WorkspacePage = lazy(() => import("../pages/WorkspacePage").then((module) => ({ default: module.WorkspacePage })));
+const VarietyHubPage = lazy(() => import("../pages/GuidePages").then((module) => ({ default: module.VarietyHubPage })));
+const RashiChaliGuidePage = lazy(() => import("../pages/GuidePages").then((module) => ({ default: module.RashiChaliGuidePage })));
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
 const MarketPage = lazy(() => import("../pages/MarketPage").then((module) => ({ default: module.MarketPage })));
 const MarketIndexPage = lazy(() => import("../pages/MarketPage").then((module) => ({ default: module.MarketIndexPage })));
@@ -33,6 +35,9 @@ export function App() {
         <Route element={<AppShell />}>
           <Route index element={<Suspense fallback={<LoadingState />}><HomePage /></Suspense>} />
           {/* The same rates screen at an address of its own per variety, for search engines and shared links. */}
+          {/* Every grade, and the guide to the two main types: reference pages for searches such as "ರಾಶಿ ಚಾಲಿ ವ್ಯತ್ಯಾಸ". */}
+          <Route path="variety" element={<Suspense fallback={<LoadingState />}><VarietyHubPage /></Suspense>} />
+          <Route path="guide/rashi-vs-chali" element={<Suspense fallback={<LoadingState />}><RashiChaliGuidePage /></Suspense>} />
           <Route path="variety/:key" element={<Suspense fallback={<LoadingState />}><HomePage /></Suspense>} />
           {/* One page per town, for searches such as "Sirsi adike rate". */}
           <Route path="market" element={<Suspense fallback={<LoadingState />}><MarketIndexPage /></Suspense>} />

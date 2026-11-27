@@ -1,0 +1,10 @@
+# Cloudflare Pages. Every public page has its own written HTML file; any other address gets 404.html with a real 404
+# status (written by the build: the app shell, noindex, showing "Page not found").
+#
+# Client-only pages, private to each visitor or reviewer, have no written file: they load that same noindex shell with
+# a 200, and the app opens the page.
+/workspace     /404.html  200
+/data-quality  /404.html  200
+# Old addresses the app used to redirect itself.
+/history       /monthly-trends            301
+/intelligence  /intelligence/production   301
