@@ -27,7 +27,7 @@ const COPY = defineCopy({
   },
   kn: {
     title: "ಮಾರುಕಟ್ಟೆ ಹೋಲಿಕೆ", intro: "ಪ್ರತಿ ಮಾರುಕಟ್ಟೆಯ ಇತ್ತೀಚಿನ ಪರಿಶೀಲಿತ ಮಾದರಿ ದರವನ್ನು ಹೋಲಿಸಿ. ದರ ಎಷ್ಟು ಹೊಸದು ಮತ್ತು ಹೋಲಿಸಬಹುದೇ ಎಂದು ತಿಳಿಯಲು ದಿನಾಂಕಗಳನ್ನು ತೋರಿಸಲಾಗಿದೆ.",
-    reportedVariety: "ವರದಿಯಾದ ತಳಿ", selectVariety: "ತಳಿ ಆಯ್ಕೆಮಾಡಿ", markets: "ಮಾರುಕಟ್ಟೆಗಳು",
+    reportedVariety: "ವರದಿಯಾದ ತಳಿ", selectVariety: "ತಳಿ ಆರಿಸಿ", markets: "ಮಾರುಕಟ್ಟೆಗಳು",
     rankedTitle: "ಅದೇ ದಿನಾಂಕದ ಶ್ರೇಣೀಕೃತ ಹೋಲಿಕೆ",
     rankedHint: (ranked: number, total: number, variety: string, date: string) => `ಪಟ್ಟಿ: ಕನಿಷ್ಠ–ಗರಿಷ್ಠ · ಚುಕ್ಕೆ: ಮಾದರಿ ದರ · ${date} ರಂದು ${total} ರಲ್ಲಿ ${ranked} ಮಾರುಕಟ್ಟೆಗಳು ${variety} ವರದಿ ಮಾಡಿವೆ; ಬೇರೆ ದಿನಾಂಕಗಳಲ್ಲಿ ವರದಿ ಮಾಡಿದವನ್ನು ಬಿಡಲಾಗಿದೆ`,
     sameDate: "ಅದೇ ವರದಿ ದಿನಾಂಕ", modalPrice: "ಮಾದರಿ ದರ",

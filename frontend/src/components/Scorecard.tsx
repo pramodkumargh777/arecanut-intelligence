@@ -46,7 +46,7 @@ const COPY = defineCopy({
   },
   kn: {
     tone: { good: "ಸರಿ", warn: "ಗಮನಿಸಿ", bad: "ಲಭ್ಯವಿಲ್ಲ", neutral: "ಮಾಹಿತಿ" },
-    loading: "ತರಲಾಗುತ್ತಿದೆ", reading: "ಇತ್ತೀಚಿನ ಪ್ರಕಟಿತ ದಾಖಲೆಗಳನ್ನು ಓದಲಾಗುತ್ತಿದೆ", details: "ವಿವರ", source: "ಮೂಲ",
+    loading: "ಲೋಡ್ ಆಗುತ್ತಿದೆ", reading: "ಇತ್ತೀಚಿನ ಪ್ರಕಟಿತ ದಾಖಲೆಗಳನ್ನು ಓದಲಾಗುತ್ತಿದೆ", details: "ವಿವರ", source: "ಮೂಲ",
     title: "ಮಾಹಿತಿ ಸ್ಥಿತಿ ಪಟ್ಟಿ",
     intro: "ಆಯ್ದ ಮೂಲ ಮತ್ತು ಬೆಳೆಯ ದತ್ತಾಂಶದ ಸ್ಥಿತಿ. ದಿನಾಂಕಗಳು ಮಾರುಕಟ್ಟೆ ವರದಿ ದಿನಾಂಕಗಳು (ಭಾರತೀಯ ಕಾಲಮಾನ); ಇಲ್ಲಿ ಯಾವುದೂ ನೇರ ಪ್ರಸಾರವಲ್ಲ.",
     forecast: {
@@ -64,8 +64,8 @@ const COPY = defineCopy({
     coverage: "ವರದಿಯ ವ್ಯಾಪ್ತಿ", markets: (n: number) => `${n} ಮಾರುಕಟ್ಟೆಗಳು`,
     ofBranches: (n: number, of: number) => `${of} ರಲ್ಲಿ ${n} ಶಾಖೆಗಳು`,
     coverageLater: "ದಾಖಲೆಗಳು ಪ್ರಕಟವಾದ ನಂತರ ವ್ಯಾಪ್ತಿ ತೋರಿಸಲಾಗುತ್ತದೆ.",
-    officialCoverage: (date: string, variety: string, needed: number) => `${date} ರಂದು ${variety} ತಳಿಗೆ ಪರಿಶೀಲಿಸಿದ ಮಾರುಕಟ್ಟೆಗಳು. ಮಾನದಂಡ ಸೂಚ್ಯಂಕಕ್ಕೆ ಕನಿಷ್ಠ ${needed} ಬೇಕು.`,
-    branchCoverage: (variety: string, date: string, needed: number) => `${date} ರಂದು ${variety} ವರದಿ ಮಾಡಿದ ಶಾಖೆಗಳು; ಶಾಖೆ-ಸರಾಸರಿ ಮಾನದಂಡಕ್ಕೆ ${needed} ಬೇಕು.`,
+    officialCoverage: (date: string, variety: string, needed: number) => `${date} ರಂದು ${variety} ತಳಿಗೆ ಪರಿಶೀಲಿಸಿದ ಮಾರುಕಟ್ಟೆಗಳು. ಉಲ್ಲೇಖ ಸೂಚ್ಯಂಕಕ್ಕೆ ಕನಿಷ್ಠ ${needed} ಬೇಕು.`,
+    branchCoverage: (variety: string, date: string, needed: number) => `${date} ರಂದು ${variety} ವರದಿ ಮಾಡಿದ ಶಾಖೆಗಳು; ಶಾಖೆ-ಸರಾಸರಿ ಉಲ್ಲೇಖ ದರಕ್ಕೆ ${needed} ಬೇಕು.`,
     history: "ಹಿಂದಿನ ದತ್ತಾಂಶದ ಸಂಪೂರ್ಣತೆ", notIntegrated: "ಸಂಪರ್ಕಿಸಿಲ್ಲ", noMonthly: "ಈ ಬೆಳೆಗೆ ತಿಂಗಳ ಇತಿಹಾಸದ ಮೂಲ ಸಂಪರ್ಕಿಸಿಲ್ಲ.",
     historyDetail: (observed: number, expected: number, from: string, to: string, latest: string | null, flagged: number) =>
       `ಕರ್ನಾಟಕ ರಾಶಿಗೆ ${expected} ತಿಂಗಳುಗಳಲ್ಲಿ ${observed} ತಿಂಗಳ ದಾಖಲೆ ಇದೆ (${from} – ${to}). ಇತ್ತೀಚಿನ ದಾಖಲಿತ ತಿಂಗಳು: ${latest ?? "ಯಾವುದೂ ಇಲ್ಲ"}. ${flagged} ತಿಂಗಳುಗಳಿಗೆ ಪರಿಶೀಲನಾ ಗುರುತು ಇದೆ.`,

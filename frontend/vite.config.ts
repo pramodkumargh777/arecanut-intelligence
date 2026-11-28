@@ -360,7 +360,7 @@ function townAbout(place: MarketPlace, rows: PlaceRate[], recent: Recent | null)
   if (place.branches.tss) kinds.push({ kn: `ಟಿಎಸ್‌ಎಸ್ ${branch(place.branches.tss).kn} ಟೆಂಡರ್ ಸರಾಸರಿ ದರ`, en: `the TSS ${branch(place.branches.tss).en} tender average` });
   if (place.branches.tms) kinds.push({ kn: "ಟಿಎಂಎಸ್ ಟೆಂಡರ್ ಸರಾಸರಿ ದರ", en: "the TMS tender average" });
   if (place.branches.tumcos) kinds.push({ kn: "ಟಮ್ಕೋಸ್ ಸರಾಸರಿ ದರ (ತಳಿ ತಿಳಿಸುವುದಿಲ್ಲ)", en: "the TUMCOS average (variety not stated)" });
-  if (place.apmc) kinds.push({ kn: `${place.kn} ಎಪಿಎಂಸಿಯ ಮೋಡಲ್ ದರ (AGMARKNET)`, en: `the ${place.apmc} modal price (AGMARKNET)` });
+  if (place.apmc) kinds.push({ kn: `${place.kn} ಎಪಿಎಂಸಿಯ ಮಾದರಿ ದರ (AGMARKNET)`, en: `the ${place.apmc} modal price (AGMARKNET)` });
   const names = place.alias ? { kn: `; ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ${place.en} ಅಥವಾ ${place.alias}`, en: `, also spelt ${place.alias}` } : { kn: "", en: "" };
   const paragraphs: { kn: string; en: string }[] = [{
     kn: `${place.kn} (${place.district.kn} ಜಿಲ್ಲೆ${names.kn}) ಅಡಿಕೆ ಧಾರಣೆಗೆ ಈ ಪುಟದ ಮೂಲಗಳು: ${knList(kinds.map((kind) => kind.kn))}.${kinds.length > 1 ? " ಇವು ಬೇರೆ ಬೇರೆ ಬಗೆಯ ದರಗಳು, ಆದ್ದರಿಂದ ಪಕ್ಕಪಕ್ಕ ತೋರಿಸಲಾಗಿದೆ, ಒಟ್ಟುಗೂಡಿಸಿಲ್ಲ." : ""}`,
@@ -408,7 +408,7 @@ function varietyAbout(variety: GrowerVariety, rows: Rate[]): AboutEntry {
   const links = [
     ...towns.map((place) => ({ path: marketPath(place.slug), label: { kn: `${place.kn} ಅಡಿಕೆ ಧಾರಣೆ`, en: `${place.en} arecanut rate` } })),
     ...(variety.group === "rashi" || variety.group === "chali" ? [{ path: GUIDE_PATH, label: { kn: "ರಾಶಿ ಮತ್ತು ಚಾಲಿ ವ್ಯತ್ಯಾಸ", en: "Rashi vs Chali" } }] : []),
-    { path: VARIETY_HUB_PATH, label: { kn: "ಎಲ್ಲಾ ಅಡಿಕೆ ದರ್ಜೆಗಳು", en: "All arecanut grades" } },
+    { path: VARIETY_HUB_PATH, label: { kn: "ಎಲ್ಲ ಅಡಿಕೆ ದರ್ಜೆಗಳು", en: "All arecanut grades" } },
   ];
   return { title: { kn: `${variety.kn} ಬಗ್ಗೆ`, en: `About ${variety.en}` }, paragraphs, links, sources: note?.sources };
 }

@@ -5,7 +5,7 @@ import { defineCopy, useLanguage } from "../services/language";
 /** Defaults follow the reader's language; pages that pass their own label decide its language themselves. */
 const STATE_COPY = defineCopy({
   en: { loading: "Loading market data", retry: "Retry" },
-  kn: { loading: "ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶ ತರಲಾಗುತ್ತಿದೆ", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ" },
+  kn: { loading: "ಮಾರುಕಟ್ಟೆ ದತ್ತಾಂಶ ಲೋಡ್ ಆಗುತ್ತಿದೆ", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ" },
 });
 
 export function LoadingState({ label }: { label?: string }) {

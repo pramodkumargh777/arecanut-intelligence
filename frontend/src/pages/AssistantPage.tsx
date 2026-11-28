@@ -15,7 +15,7 @@ import { formatCalendarDate, formatCalendarMonth, formatPeriodKannada } from "..
 const TOPICS: { key: string; icon: LucideIcon; title: Record<Language, string>; questions: Record<Language, string[]> }[] = [
   { key: "prices", icon: IndianRupee, title: { en: "Prices", kn: "ದರಗಳು" }, questions: {
     en: ["What is the latest Rashi price?", "Compare Chali prices across markets", "Should I sell Rashi now or wait?"],
-    kn: ["ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?", "ಚಾಲಿ ದರವನ್ನು ಮಾರುಕಟ್ಟೆಗಳಲ್ಲಿ ಹೋಲಿಸಿ", "ರಾಶಿ ಈಗ ಮಾರಬೇಕೇ ಕಾಯಬೇಕೇ?"] } },
+    kn: ["ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ದರ ಎಷ್ಟು?", "ಚಾಲಿ ದರವನ್ನು ಮಾರುಕಟ್ಟೆಗಳಲ್ಲಿ ಹೋಲಿಸಿ", "ರಾಶಿ ಈಗ ಮಾರಬೇಕೇ ಕಾಯಬೇಕೇ?"] } },
   { key: "crop", icon: Sprout, title: { en: "Crop care", kn: "ಬೆಳೆ ಆರೈಕೆ" }, questions: {
     en: ["How to manage koleroga (Mahali)?", "How to manage yellow leaf disease?", "How to prepare Bordeaux mixture?"],
     kn: ["ಕೊಳೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", "ಹಳದಿ ಎಲೆ ರೋಗ ನಿರ್ವಹಣೆ ಹೇಗೆ?", "ಬೋರ್ಡೋ ದ್ರಾವಣ ತಯಾರಿಕೆ ಹೇಗೆ?"] } },
@@ -66,7 +66,7 @@ const COPY = defineCopy({
     rates: "ಈ ಉತ್ತರದ ದರಗಳು", figures: "ಅಂಕಿಗಳು", sources: "ಮೂಲಗಳು", sourceCount: (count: number) => `ಮೂಲಗಳು · ${count}`, page: "ಪು.", missing: "ಲಭ್ಯವಿಲ್ಲ",
     copy: "ನಕಲಿಸಿ", copied: "ನಕಲಿಸಲಾಗಿದೆ", share: "ಹಂಚಿಕೊಳ್ಳಿ", shareOpening: "ತೆರೆಯುತ್ತಿದೆ…", shareDone: "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ", shareWhatsapp: "ವಾಟ್ಸಾಪ್ ತೆರೆಯಿತು", shareAria: "ಈ ಉತ್ತರವನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
     helpful: "ಉಪಯುಕ್ತ", notHelpful: "ಉಪಯುಕ್ತವಲ್ಲ", thanks: "ಪ್ರತಿಕ್ರಿಯೆಗೆ ಧನ್ಯವಾದ",
-    followUps: "ಮುಂದೆ ಕೇಳಿ", followUpRead: "ಹಿಂದಿನ ಪ್ರಶ್ನೆಯೊಂದಿಗೆ ಅರ್ಥೈಸಲಾಗಿದೆ",
+    followUps: "ಇದನ್ನೂ ಕೇಳಬಹುದು", followUpRead: "ಹಿಂದಿನ ಪ್ರಶ್ನೆಯ ಮುಂದುವರಿಕೆಯಾಗಿ ತಿಳಿಯಲಾಗಿದೆ",
     how: "ಈ ಉತ್ತರವನ್ನು ಹೇಗೆ ತಯಾರಿಸಲಾಯಿತು",
     llm: { used: "ಕೆಳಗಿನ ದತ್ತಾಂಶದಿಂದ ಸಹಾಯಕ ಬರೆದದ್ದು; ಪ್ರತಿ ಅಂಕಿಯನ್ನು ಅದರ ಮೂಲದೊಂದಿಗೆ ಪರಿಶೀಲಿಸಲಾಗಿದೆ.", not_configured: "ದತ್ತಾಂಶದಿಂದ ನೇರವಾಗಿ ಬರೆದದ್ದು (ಭಾಷಾ ಮಾದರಿ ಇಲ್ಲ).",
       disabled: "ನೀವು ಕೇಳಿದಂತೆ ದತ್ತಾಂಶದಿಂದ ನೇರವಾಗಿ ಬರೆದದ್ದು.", skipped_injection: "ಪ್ರಶ್ನೆ ವ್ಯವಸ್ಥೆಗೆ ಸೂಚನೆಯಂತಿತ್ತು, ಆದ್ದರಿಂದ ದತ್ತಾಂಶದಿಂದ ನೇರವಾಗಿ ಬರೆದದ್ದು.",
@@ -92,7 +92,7 @@ export function followUps(answer: AssistantAnswer, language: Language): string[]
     kn ? `${name} ದರವನ್ನು ಮಾರುಕಟ್ಟೆಗಳಲ್ಲಿ ಹೋಲಿಸಿ` : `Compare ${name} prices across markets`,
     kn ? `${name} ಈಗ ಮಾರಬೇಕೇ ಕಾಯಬೇಕೇ?` : `Should I sell ${name} now or wait?`,
     kn ? `ಮುಂದಿನ ತಿಂಗಳ ${name} ದರದ ಮುನ್ಸೂಚನೆ ಏನು?` : `${name} price forecast`,
-    kn ? `${name} ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?` : `What is the latest ${name} price?`,
+    kn ? `${name} ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ದರ ಎಷ್ಟು?` : `What is the latest ${name} price?`,
   ];
   if (tools.has("get_current_prices")) return [priceQuestions[0], priceQuestions[1], priceQuestions[2]];
   if (tools.has("compare_markets") || tools.has("get_price_forecast") || tools.has("calculate_sell_hold") || tools.has("get_historical_prices")) {
@@ -143,9 +143,9 @@ function useReveal(text: string, animate: boolean) {
 
 /** Kind-of-price words at the end of a server label, and how they read in Kannada. */
 const MEASURES: [RegExp, Record<Language, string>][] = [
-  [/\s*latest modal price$/i, { en: "latest modal", kn: "ಇತ್ತೀಚಿನ ಮೋಡಲ್ ದರ" }],
-  [/\s*arrival-weighted modal price$/i, { en: "arrival-weighted modal", kn: "ಆವಕ ಆಧಾರಿತ ಮೋಡಲ್ ದರ" }],
-  [/\s*modal price$/i, { en: "modal", kn: "ಮೋಡಲ್ ದರ" }],
+  [/\s*latest modal price$/i, { en: "latest modal", kn: "ಇತ್ತೀಚಿನ ಮಾದರಿ ದರ" }],
+  [/\s*arrival-weighted modal price$/i, { en: "arrival-weighted modal", kn: "ಆವಕ ಆಧಾರಿತ ಮಾದರಿ ದರ" }],
+  [/\s*modal price$/i, { en: "modal", kn: "ಮಾದರಿ ದರ" }],
   [/\s*branch average$/i, { en: "branch average", kn: "ಶಾಖೆಯ ಸರಾಸರಿ" }],
 ];
 

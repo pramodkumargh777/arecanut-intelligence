@@ -29,7 +29,7 @@ export const SEO_PAGES: SeoPage[] = [
     path: "/prices", label: { kn: "ಅಡಿಕೆ ಮಾರುಕಟ್ಟೆ ದರಗಳು", en: "Arecanut market rates" },
     kn: {
       title: "ಅಡಿಕೆ ಮಾರುಕಟ್ಟೆ ದರಗಳು · Arecanut market rates | ಅಡಿಕೆ ನಾಡಿ",
-      description: "ಮ್ಯಾಮ್ಕೋಸ್, ಟಿಎಸ್‌ಎಸ್, ಟಮ್ಕೋಸ್ ಮತ್ತು ಎಪಿಎಂಸಿ ಅಡಿಕೆ ದರಗಳನ್ನು ಮಾರುಕಟ್ಟೆ, ತಳಿವಾರು ಹುಡುಕಿ: ಕನಿಷ್ಠ, ಗರಿಷ್ಠ, ಸರಾಸರಿ ಬೆಲೆ.",
+      description: "ಮ್ಯಾಮ್ಕೋಸ್, ಟಿಎಸ್‌ಎಸ್, ಟಮ್ಕೋಸ್ ಮತ್ತು ಎಪಿಎಂಸಿ ಅಡಿಕೆ ದರಗಳನ್ನು ಮಾರುಕಟ್ಟೆ, ತಳಿವಾರು ಹುಡುಕಿ: ಕನಿಷ್ಠ, ಗರಿಷ್ಠ, ಸರಾಸರಿ ದರ.",
     },
     en: {
       title: "Arecanut market rates by market and variety | Areca Pulse",

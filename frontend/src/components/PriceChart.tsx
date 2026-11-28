@@ -36,7 +36,7 @@ const COPY = defineCopy({
     caption: (markers: boolean, monthly: boolean) => `${markers ? "Each marker is a reported value; the" : "The"} line joins reported values and no price is estimated between them${monthly ? "" : ". Dates without a report may be non-trading days"}.`,
   },
   kn: {
-    defaultLabel: "ಅಧಿಕೃತ ಮಾದರಿ ದರದ ಮಾನದಂಡ ಸೂಚ್ಯಂಕ",
+    defaultLabel: "ಅಧಿಕೃತ ಮಾದರಿ ದರದ ಉಲ್ಲೇಖ ಸೂಚ್ಯಂಕ",
     reports: (n: number) => `${n} ವರದಿಗಳು`,
     places: (n: number, branches: boolean) => branches ? `${n} ಶಾಖೆಗಳು` : `${n} ಮಾರುಕಟ್ಟೆಗಳು`,
     withoutReport: (n: number, monthly: boolean, inRange: boolean) => `${inRange ? "ಆಯ್ದ ಅವಧಿಯಲ್ಲಿ " : ""}ವರದಿ ಇಲ್ಲದ ${n} ${monthly ? "ತಿಂಗಳು" : "ದಿನಗಳು"}`,
@@ -46,11 +46,11 @@ const COPY = defineCopy({
     reportingMonth: "ವರದಿ ತಿಂಗಳು", reportingDate: "ವರದಿ ದಿನಾಂಕ", weightedPrice: "ತೂಕದ ಸರಾಸರಿ ದರ", reportedAverage: "ವರದಿಯಾದ ಸರಾಸರಿ", index: "ಸೂಚ್ಯಂಕ",
     branches: "ಶಾಖೆಗಳು", markets: "ಮಾರುಕಟ್ಟೆಗಳು",
     trendLater: (monthly: boolean) => `ಎರಡನೇ ${monthly ? "ವರದಿ ತಿಂಗಳು" : "ವರದಿ ದಿನಾಂಕ"} ಬಂದ ನಂತರ ಪ್ರವೃತ್ತಿ ರೇಖೆ ಕಾಣಿಸುತ್ತದೆ. ಅಲ್ಲಿಯವರೆಗೆ ಏನನ್ನೂ ಅಂದಾಜು ಮಾಡುವುದಿಲ್ಲ.`,
-    aria: (label: string, unit: string, coverage: string, source: boolean) => `${label}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ರೂಪಾಯಿಗಳಲ್ಲಿ${unit}. ${coverage}. ರೇಖೆಯು ವರದಿಯಾದ ದರಗಳನ್ನು ಜೋಡಿಸುತ್ತದೆ; ವರದಿ ಇಲ್ಲದ ದಿನಗಳಿಗೆ ಯಾವುದೇ ದರ ಅಂದಾಜು ಮಾಡುವುದಿಲ್ಲ. ನಿಖರ ಮೌಲ್ಯಗಳಿಗೆ ${source ? "ಮೂಲ" : "ಸೂಚ್ಯಂಕ"} ದಾಖಲೆಗಳನ್ನು ತೆರೆಯಿರಿ.`,
+    aria: (label: string, unit: string, coverage: string, source: boolean) => `${label}, ಪ್ರತಿ ಕ್ವಿಂಟಾಲ್‌ಗೆ ರೂಪಾಯಿಗಳಲ್ಲಿ${unit}. ${coverage}. ಗೆರೆ ವರದಿಯಾದ ದಿನಗಳನ್ನು ಮಾತ್ರ ಸೇರಿಸುತ್ತದೆ; ವರದಿ ಇಲ್ಲದ ದಿನಗಳ ದರವನ್ನು ಊಹಿಸಿಲ್ಲ. ನಿಖರ ಮೌಲ್ಯಗಳಿಗೆ ${source ? "ಮೂಲ" : "ಸೂಚ್ಯಂಕ"} ದಾಖಲೆಗಳನ್ನು ತೆರೆಯಿರಿ.`,
     noReport: "ಈ ದಿನ ವರದಿ ಇಲ್ಲ. ಯಾವುದೇ ದರ ಅಂದಾಜು ಮಾಡಿಲ್ಲ.", isolated: "ಒಂಟಿ ವರದಿ",
     latest: "ಇತ್ತೀಚಿನದು", change: "ಅವಧಿಯಲ್ಲಿ ಬದಲಾವಣೆ", since: (date: string) => `${date} ರಿಂದ`, high: "ಗರಿಷ್ಠ", low: "ಕನಿಷ್ಠ", average: "ಸರಾಸರಿ",
     events: "ಏನು ನಡೆಯಿತು", eventsAria: "ಚಾರ್ಟ್‌ನಲ್ಲಿ ಗುರುತಿಸಿದ ನೀತಿ ಮತ್ತು ತೆರಿಗೆ ಘಟನೆಗಳು", inForce: "ಜಾರಿ", source: "ಮೂಲ",
-    caption: (markers: boolean, monthly: boolean) => `${markers ? "ಪ್ರತಿ ಚುಕ್ಕೆ ಒಂದು ವರದಿಯಾದ ದರ; " : ""}ರೇಖೆಯು ವರದಿಯಾದ ದರಗಳನ್ನು ಜೋಡಿಸುತ್ತದೆ, ನಡುವೆ ಯಾವುದೇ ದರ ಅಂದಾಜು ಮಾಡುವುದಿಲ್ಲ${monthly ? "" : ". ವರದಿ ಇಲ್ಲದ ದಿನಗಳು ವಹಿವಾಟು ಇಲ್ಲದ ದಿನಗಳಾಗಿರಬಹುದು"}.`,
+    caption: (markers: boolean, monthly: boolean) => `${markers ? "ಪ್ರತಿ ಚುಕ್ಕೆ ಒಂದು ವರದಿಯಾದ ದರ; " : ""}ಗೆರೆ ವರದಿಯಾದ ದಿನಗಳನ್ನು ಮಾತ್ರ ಸೇರಿಸುತ್ತದೆ; ನಡುವಿನ ದಿನಗಳ ದರವನ್ನು ಊಹಿಸಿಲ್ಲ${monthly ? "" : ". ವರದಿ ಇಲ್ಲದ ದಿನಗಳು ವಹಿವಾಟು ಇಲ್ಲದ ದಿನಗಳಾಗಿರಬಹುದು"}.`,
   },
 });
 
