@@ -48,7 +48,7 @@ const advancedGroups = [
     { to: "/forecasts", label: "Price outlook", kn: "ದರ ಮುನ್ನೋಟ", icon: FlaskConical, end: true },
     { to: "/forecasts/evaluation", label: "Forecast evaluation", kn: "ಅಂದಾಜಿನ ಪರಿಶೀಲನೆ", icon: Gauge },
   ] },
-  { label: "Workspace", kn: "ಸಾಧನಗಳು", items: [
+  { label: "Workspace", kn: "ಲೆಕ್ಕಾಚಾರ", items: [
     // Hidden from the menu for now: no organization uses it yet. The page still works at /workspace.
     // { to: "/workspace", label: "Organization dashboard", kn: "ಸಂಸ್ಥೆಯ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", icon: LayoutDashboard },
     { to: "/decision-tools", label: "Decision tools", kn: "ಲೆಕ್ಕಾಚಾರ ಸಾಧನಗಳು", icon: Calculator },

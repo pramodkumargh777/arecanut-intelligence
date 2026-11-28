@@ -5,7 +5,7 @@ import { defineCopy } from "./language";
  * Words used on many pages, translated once so a term reads the same everywhere. Page-specific sentences live beside
  * their page. Glossary: ದರ price · ಮಾದರಿ ದರ modal price · ಸರಾಸರಿ average · ಕನಿಷ್ಠ/ಗರಿಷ್ಠ min/max · ಮಧ್ಯಾಂಕ median (grower-facing labels: ಸಾಮಾನ್ಯ) ·
  * ಶಾಖೆ branch · ಮಾರುಕಟ್ಟೆ market · ತಳಿ variety · ದರ್ಜೆ grade · ವರದಿ ದಿನಾಂಕ reporting date · ಮೂಲ source · ಆವಕ arrivals ·
- * ಮುನ್ಸೂಚನೆ forecast · ಉಲ್ಲೇಖ ದರ reference/benchmark price (forecast baselines stay ಮಾನದಂಡ) · ವ್ಯಾಪ್ತಿ coverage · ಪರಿಶೀಲನೆ review.
+ * ಮುನ್ಸೂಚನೆ forecast · ಉಲ್ಲೇಖ ದರ reference/benchmark price · ಮೂಲ ಅಂದಾಜು forecast baseline (ಮಾನದಂಡ only for "standards", e.g. ICAR-CPCRI criteria) · ವ್ಯಾಪ್ತಿ coverage · ಪರಿಶೀಲನೆ review.
  */
 export const COMMON = defineCopy({
   en: {
