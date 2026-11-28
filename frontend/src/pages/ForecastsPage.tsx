@@ -125,7 +125,7 @@ const COPY = defineCopy({
     holdoutAria: "ಪರೀಕ್ಷಾ ಅವಧಿಯ ಅಂದಾಜುಗಳು", holdoutCaption: "ನಿಖರ ಪರೀಕ್ಷಾ ಗುರಿಗಳು; ಹಿಂದಿನ ದತ್ತಾಂಶದ ಮೌಲ್ಯಮಾಪನ",
     target: "ಗುರಿ", trainingThrough: "ತರಬೇತಿ ವರೆಗೆ", actual: "ನಿಜವಾದ ದರ", lastValue: "ಕೊನೆಯ ಮೌಲ್ಯ", seasonalNaive: "ಋತುಮಾನ ಸರಳ",
     snapshotTitle: "ಪುನರುತ್ಪಾದಿಸಬಹುದಾದ ಮೂಲ ಸಂಗ್ರಹ", snapshotHint: (id: string, hash: string) => `ಸಂಗ್ರಹ ${id} · SHA-256 ${hash}`, exportJson: "ಮೌಲ್ಯಮಾಪನ JSON ಡೌನ್‌ಲೋಡ್",
-    inputs: "ತಿಂಗಳ ಮೂಲ ದತ್ತಾಂಶ ನೋಡಿ", inputLine: (month: string, price: string, fetched: string) => `${month}: ${price} · ತಂದ ಸಮಯ ${fetched} ·`, archivedReport: "ಸಂಗ್ರಹಿತ ವರದಿ",
+    inputs: "ತಿಂಗಳ ಮೂಲ ದತ್ತಾಂಶ ನೋಡಿ", inputLine: (month: string, price: string, fetched: string) => `${month}: ${price} · ಸಂಗ್ರಹಿಸಿದ ಸಮಯ ${fetched} ·`, archivedReport: "ಸಂಗ್ರಹಿತ ವರದಿ",
     runTitle: "ಪುನರುತ್ಪಾದಿಸಬಹುದಾದ ಮೌಲ್ಯಮಾಪನ ನಡೆಸಿ", runHint: "ಪರಿಶೀಲಕರ ಪ್ರವೇಶ ಬೇಕು. ಪ್ರತಿ ಮೌಲ್ಯಮಾಪನವು ತಡೆಹಿಡಿದ ಫಲಿತಾಂಶಗಳನ್ನೂ ಸೇರಿ ಬದಲಾಗದ ಸಂಗ್ರಹವನ್ನು ಉಳಿಸುತ್ತದೆ. ಸಂಕೀರ್ಣ AI ಮಾದರಿಯನ್ನು ತರಬೇತಿಗೊಳಿಸುವುದಿಲ್ಲ.",
     token: "ಮುನ್ಸೂಚನೆ ಪರಿಶೀಲಕರ ಟೋಕನ್", evaluating: "ಮೌಲ್ಯಮಾಪನ ನಡೆಯುತ್ತಿದೆ...", evaluate: "ಆಯ್ದ ತಳಿಯನ್ನು ಮೌಲ್ಯಮಾಪನ ಮಾಡಿ", clearToken: "ಟೋಕನ್ ತೆರವುಗೊಳಿಸಿ",
     stored: (status: string) => `ಮೌಲ್ಯಮಾಪನ ಉಳಿಸಲಾಗಿದೆ. ಪ್ರಕಟಣಾ ಸ್ಥಿತಿ: ${status}.`,

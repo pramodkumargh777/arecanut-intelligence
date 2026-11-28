@@ -3,9 +3,9 @@ import { defineCopy } from "./language";
 
 /**
  * Words used on many pages, translated once so a term reads the same everywhere. Page-specific sentences live beside
- * their page. Glossary: ದರ price · ಮಾದರಿ ದರ modal price · ಸರಾಸರಿ average · ಕನಿಷ್ಠ/ಗರಿಷ್ಠ min/max · ಮಧ್ಯಮ median ·
+ * their page. Glossary: ದರ price · ಮಾದರಿ ದರ modal price · ಸರಾಸರಿ average · ಕನಿಷ್ಠ/ಗರಿಷ್ಠ min/max · ಮಧ್ಯಾಂಕ median (grower-facing labels: ಸಾಮಾನ್ಯ) ·
  * ಶಾಖೆ branch · ಮಾರುಕಟ್ಟೆ market · ತಳಿ variety · ದರ್ಜೆ grade · ವರದಿ ದಿನಾಂಕ reporting date · ಮೂಲ source · ಆವಕ arrivals ·
- * ಮುನ್ಸೂಚನೆ forecast · ಮಾನದಂಡ ದರ benchmark · ವ್ಯಾಪ್ತಿ coverage · ಪರಿಶೀಲನೆ review.
+ * ಮುನ್ಸೂಚನೆ forecast · ಉಲ್ಲೇಖ ದರ reference/benchmark price (forecast baselines stay ಮಾನದಂಡ) · ವ್ಯಾಪ್ತಿ coverage · ಪರಿಶೀಲನೆ review.
  */
 export const COMMON = defineCopy({
   en: {
@@ -35,16 +35,16 @@ export const COMMON = defineCopy({
     source: "ಮೂಲ", sources: "ಮೂಲಗಳು", variety: "ತಳಿ", exactVariety: "ನಿಖರ ತಳಿ", grade: "ದರ್ಜೆ", market: "ಮಾರುಕಟ್ಟೆ",
     district: "ಜಿಲ್ಲೆ", branch: "ಶಾಖೆ", location: "ಸ್ಥಳ", state: "ರಾಜ್ಯ", date: "ದಿನಾಂಕ", month: "ತಿಂಗಳು", year: "ವರ್ಷ",
     reportingDate: "ವರದಿ ದಿನಾಂಕ", reportingMonth: "ವರದಿ ತಿಂಗಳು", minimum: "ಕನಿಷ್ಠ", maximum: "ಗರಿಷ್ಠ", average: "ಸರಾಸರಿ",
-    modal: "ಮಾದರಿ ದರ", median: "ಮಧ್ಯಮ", reportedAverage: "ವರದಿಯಾದ ಸರಾಸರಿ", arrivals: "ಆವಕ", unit: "ಘಟಕ", status: "ಸ್ಥಿತಿ",
+    modal: "ಮಾದರಿ ದರ", median: "ಮಧ್ಯಾಂಕ", reportedAverage: "ವರದಿಯಾದ ಸರಾಸರಿ", arrivals: "ಆವಕ", unit: "ಘಟಕ", status: "ಸ್ಥಿತಿ",
     quality: "ಗುಣಮಟ್ಟ", value: "ಮೌಲ್ಯ", note: "ಟಿಪ್ಪಣಿ", period: "ಅವಧಿ", count: "ಸಂಖ್ಯೆ", total: "ಒಟ್ಟು",
     perQuintal: "₹/ಕ್ವಿಂಟಾಲ್", inrQuintal: "₹/ಕ್ವಿಂಟಾಲ್", unitAssumed: "ಘಟಕ ಊಹಿಸಲಾಗಿದೆ", unitConfirmed: "ಘಟಕ ದೃಢಪಟ್ಟಿದೆ",
-    retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ", reset: "ಮರುಹೊಂದಿಸಿ", resetFilters: "ಫಿಲ್ಟರ್ ತೆರವುಗೊಳಿಸಿ", clearFilters: "ಎಲ್ಲಾ ಫಿಲ್ಟರ್ ತೆರವುಗೊಳಿಸಿ", search: "ಹುಡುಕಿ", moreFilters: "ಇನ್ನಷ್ಟು ಫಿಲ್ಟರ್", active: "ಸಕ್ರಿಯ",
-    from: "ಇಂದ", to: "ವರೆಗೆ", reportingPeriod: "ವರದಿ ಅವಧಿ", all: "ಎಲ್ಲಾ", allBranches: "ಎಲ್ಲಾ ಶಾಖೆಗಳು", allMarkets: "ಎಲ್ಲಾ ಮಾರುಕಟ್ಟೆಗಳು",
-    allDistricts: "ಎಲ್ಲಾ ಜಿಲ್ಲೆಗಳು", allGrades: "ಎಲ್ಲಾ ದರ್ಜೆಗಳು", allVarieties: "ಎಲ್ಲಾ ತಳಿಗಳು",
+    retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ", reset: "ಮರುಹೊಂದಿಸಿ", resetFilters: "ಫಿಲ್ಟರ್ ತೆರವುಗೊಳಿಸಿ", clearFilters: "ಎಲ್ಲ ಫಿಲ್ಟರ್ ತೆರವುಗೊಳಿಸಿ", search: "ಹುಡುಕಿ", moreFilters: "ಇನ್ನಷ್ಟು ಫಿಲ್ಟರ್", active: "ಸಕ್ರಿಯ",
+    from: "ಇಂದ", to: "ವರೆಗೆ", reportingPeriod: "ವರದಿ ಅವಧಿ", all: "ಎಲ್ಲ", allBranches: "ಎಲ್ಲ ಶಾಖೆಗಳು", allMarkets: "ಎಲ್ಲ ಮಾರುಕಟ್ಟೆಗಳು",
+    allDistricts: "ಎಲ್ಲ ಜಿಲ್ಲೆಗಳು", allGrades: "ಎಲ್ಲ ದರ್ಜೆಗಳು", allVarieties: "ಎಲ್ಲ ತಳಿಗಳು",
     exportCsv: "CSV ಡೌನ್‌ಲೋಡ್", exportMatchingCsv: "ಹೊಂದುವ ದಾಖಲೆಗಳ CSV ಡೌನ್‌ಲೋಡ್", exportPage: "ಈ ಪುಟ ಡೌನ್‌ಲೋಡ್", previous: "ಹಿಂದಿನದು", next: "ಮುಂದಿನದು",
     page: (current: number, total: number) => `${total} ರಲ್ಲಿ ${current}ನೇ ಪುಟ`,
     notReported: "ವರದಿಯಾಗಿಲ್ಲ", unavailable: "ಲಭ್ಯವಿಲ್ಲ", never: "ಎಂದೂ ಇಲ್ಲ", unknown: "ಗೊತ್ತಿಲ್ಲ", none: "ಯಾವುದೂ ಇಲ್ಲ", yes: "ಹೌದು", no: "ಇಲ್ಲ",
-    loading: "ತರಲಾಗುತ್ತಿದೆ", save: "ಉಳಿಸಿ", delete: "ಅಳಿಸಿ", cancel: "ರದ್ದುಮಾಡಿ", apply: "ಅನ್ವಯಿಸಿ", refresh: "ನವೀಕರಿಸಿ", open: "ತೆರೆಯಿರಿ",
+    loading: "ಲೋಡ್ ಆಗುತ್ತಿದೆ", save: "ಉಳಿಸಿ", delete: "ಅಳಿಸಿ", cancel: "ರದ್ದುಮಾಡಿ", apply: "ಅನ್ವಯಿಸಿ", refresh: "ನವೀಕರಿಸಿ", open: "ತೆರೆಯಿರಿ",
     approve: "ಅನುಮೋದಿಸಿ", reject: "ತಿರಸ್ಕರಿಸಿ", invalidRange: "'ಇಂದ' ದಿನಾಂಕ 'ವರೆಗೆ' ದಿನಾಂಕದ ನಂತರ ಇರಬಾರದು.",
     sourceRequest: "ಮೂಲ ವಿನಂತಿ", rows: (count: number) => `${count.toLocaleString("en-IN")} ಸಾಲುಗಳು`,
     branches: (count: number) => `${count} ಶಾಖೆಗಳು`, markets: (count: number) => `${count} ಮಾರುಕಟ್ಟೆಗಳು`,
@@ -52,7 +52,7 @@ export const COMMON = defineCopy({
     days: (count: number) => `${count} ದಿನ`, months: (count: number) => `${count} ತಿಂಗಳು`,
     sortHint: "ವಿಂಗಡಿಸಿ", experimental: "ಪ್ರಾಯೋಗಿಕ", notAdvice: "ವ್ಯಾಪಾರ ಸಲಹೆ ಅಲ್ಲ",
     fetchStatus: { succeeded: "ಯಶಸ್ವಿ", failed: "ವಿಫಲ", running: "ನಡೆಯುತ್ತಿದೆ", partial: "ಭಾಗಶಃ ಯಶಸ್ವಿ", skipped: "ಬಿಡಲಾಗಿದೆ" },
-    datePresets: { all: "ಎಲ್ಲಾ ವರದಿ ದಿನಾಂಕಗಳು", "7d": "ಕಳೆದ 7 ದಿನ", "30d": "ಕಳೆದ 30 ದಿನ", "90d": "ಕಳೆದ 90 ದಿನ", "365d": "ಕಳೆದ 12 ತಿಂಗಳು", ytd: "ಈ ವರ್ಷ ಇಲ್ಲಿಯವರೆಗೆ", custom: "ನಿಮ್ಮ ಆಯ್ಕೆಯ ಅವಧಿ" },
+    datePresets: { all: "ಎಲ್ಲ ವರದಿ ದಿನಾಂಕಗಳು", "7d": "ಕಳೆದ 7 ದಿನ", "30d": "ಕಳೆದ 30 ದಿನ", "90d": "ಕಳೆದ 90 ದಿನ", "365d": "ಕಳೆದ 12 ತಿಂಗಳು", ytd: "ಈ ವರ್ಷ ಇಲ್ಲಿಯವರೆಗೆ", custom: "ನಿಮ್ಮ ಆಯ್ಕೆಯ ಅವಧಿ" },
   },
 });
 

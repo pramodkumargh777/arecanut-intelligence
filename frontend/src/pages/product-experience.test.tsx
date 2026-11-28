@@ -1091,7 +1091,7 @@ describe("assistant conversation", () => {
     const html = render(<AssistantPage />, "/assistant");
     expect(html).toContain("ಹೀಗೆ ಕೇಳಿ ನೋಡಿ");
     for (const topic of ["ದರಗಳು", "ಬೆಳೆ ಆರೈಕೆ", "ಮಾರುಕಟ್ಟೆ ಮತ್ತು ಹವಾಮಾನ"]) expect(html).toContain(topic);
-    expect(html).toContain("ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ಬೆಲೆ ಎಷ್ಟು?");
+    expect(html).toContain("ರಾಶಿ ಅಡಿಕೆಯ ಇತ್ತೀಚಿನ ದರ ಎಷ್ಟು?");
     expect(html).toContain("ಬೋರ್ಡೋ ದ್ರಾವಣ ತಯಾರಿಕೆ ಹೇಗೆ?");
     expect(html).not.toContain("What is the latest Rashi price?");
     // The assistant has its own mark beside the title, distinct from the site logo in the top bar.
@@ -1156,7 +1156,7 @@ describe("rate tile labels", () => {
     expect(rateLabel("Sirsi APMC (Uttara Kannada) – Chali modal price", "AGMARKNET daily", "en")).toEqual({ title: "Sirsi APMC · Chali", measure: "modal" });
     expect(rateLabel("TSS Sirsi – RASHI branch average", "TSS", "en")).toEqual({ title: "Sirsi · RASHI", measure: "branch average" });
     expect(rateLabel("MAMCOS median of branch averages – RASHI EDI", "MAMCOS", "en")).toEqual({ title: "Median of branch averages · RASHI EDI", measure: null });
-    expect(rateLabel("Karnataka monthly arrival-weighted modal price – Rashi", "AGMARKNET monthly", "kn")).toEqual({ title: "Karnataka monthly · Rashi", measure: "ಆವಕ ಆಧಾರಿತ ಮೋಡಲ್ ದರ" });
+    expect(rateLabel("Karnataka monthly arrival-weighted modal price – Rashi", "AGMARKNET monthly", "kn")).toEqual({ title: "Karnataka monthly · Rashi", measure: "ಆವಕ ಆಧಾರಿತ ಮಾದರಿ ದರ" });
     expect(rateLabel("Reference index – Rashi", "Areca Pulse reference index", "en")).toEqual({ title: "Reference index · Rashi", measure: null });
   });
 });

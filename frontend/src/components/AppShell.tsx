@@ -48,7 +48,7 @@ const advancedGroups = [
     { to: "/forecasts", label: "Price outlook", kn: "ದರ ಮುನ್ನೋಟ", icon: FlaskConical, end: true },
     { to: "/forecasts/evaluation", label: "Forecast evaluation", kn: "ಅಂದಾಜಿನ ಪರಿಶೀಲನೆ", icon: Gauge },
   ] },
-  { label: "Workspace", kn: "ಕಾರ್ಯಕ್ಷೇತ್ರ", items: [
+  { label: "Workspace", kn: "ಸಾಧನಗಳು", items: [
     // Hidden from the menu for now: no organization uses it yet. The page still works at /workspace.
     // { to: "/workspace", label: "Organization dashboard", kn: "ಸಂಸ್ಥೆಯ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", icon: LayoutDashboard },
     { to: "/decision-tools", label: "Decision tools", kn: "ಲೆಕ್ಕಾಚಾರ ಸಾಧನಗಳು", icon: Calculator },
@@ -102,9 +102,9 @@ const SHELL_COPY = defineCopy({
   kn: {
     skip: "ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ", openMenu: "ಮೆನು ತೆರೆಯಿರಿ", closeMenu: "ಮೆನು ಮುಚ್ಚಿ", closeNavigation: "ಮೆನು ಮುಚ್ಚಿ", navigation: "ಮುಖ್ಯ ಮೆನು",
     moreTools: "ಹೆಚ್ಚಿನ ಸಾಧನಗಳು", marketTools: "ಮಾರುಕಟ್ಟೆ ಸಾಧನಗಳು", tools: "ಸಾಧನಗಳು", commodity: "ಬೆಳೆ", search: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ · Enter", searchLabel: "ಮಾರುಕಟ್ಟೆ ಹುಡುಕಿ, Enter ಒತ್ತಿ",
-    region: "ಕರ್ನಾಟಕ", tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.", taglineHint: "ನಿಮ್ಮ ಮುಂದಿನ ಹೆಜ್ಜೆಗೆ ದರಗಳು, ಪ್ರವೃತ್ತಿಗಳು ಮತ್ತು ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ.",
+    region: "ಕರ್ನಾಟಕ", tagline: "ಮಾರುಕಟ್ಟೆ ತಿಳಿಯಿರಿ. ಅವಕಾಶ ಗುರುತಿಸಿ.", taglineHint: "ದರ, ಏರಿಳಿತ ಮತ್ತು ಮಾರುಕಟ್ಟೆ ಮಾಹಿತಿ ಒಂದೇ ಕಡೆ.",
     notFound: "ಪುಟ ಸಿಗಲಿಲ್ಲ", noSource: "ದತ್ತಾಂಶ ಇಲ್ಲ",
-    noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಂರಚಿತ",
+    noSourceFor: (name: string) => `${name} ಗೆ ದತ್ತಾಂಶ ಮೂಲ ಇಲ್ಲ`, unknown: (code: string) => `ಗೊತ್ತಿಲ್ಲ: ${code}`, configured: "ಸಿದ್ಧವಿದೆ",
     switchDark: "ಡಾರ್ಕ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ", switchLight: "ಲೈಟ್ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ",
     collapse: "ಮೆನು ಕಿರಿದಾಗಿಸಿ", expand: "ಮೆನು ವಿಸ್ತರಿಸಿ",
   },

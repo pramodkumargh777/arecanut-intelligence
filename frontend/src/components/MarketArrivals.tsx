@@ -108,9 +108,9 @@ const COPY = defineCopy({
     ahead: { rise: "ಮುಂದಿನ ಎರಡು ತಿಂಗಳಲ್ಲಿ ಆವಕ ಸಾಮಾನ್ಯವಾಗಿ ಹೆಚ್ಚುತ್ತದೆ.", ease: "ಮುಂದಿನ ಎರಡು ತಿಂಗಳಲ್ಲಿ ಆವಕ ಸಾಮಾನ್ಯವಾಗಿ ಕಡಿಮೆಯಾಗುತ್ತದೆ.", steady: "ಮುಂದಿನ ಎರಡು ತಿಂಗಳಲ್ಲಿ ಆವಕ ಸಾಮಾನ್ಯವಾಗಿ ಸ್ಥಿರವಾಗಿರುತ್ತದೆ." },
     typical: "ಸಾಮಾನ್ಯ ವರ್ಷ", range: "ಹೆಚ್ಚಿನ ವರ್ಷಗಳ ವ್ಯಾಪ್ತಿ", now: "ಈಗ",
     seasonDescription: (place: string) => `ವರ್ಷದ ಅಡಿಕೆ ಆವಕದಲ್ಲಿ ತಿಂಗಳವಾರು ಪಾಲು, ${place}`,
-    yearsUsed: (first: number, last: number, count: number) => `ಸಾಮಾನ್ಯ ವರ್ಷ: ${first}–${last} ನಡುವಿನ ${count} ಪೂರ್ಣ ವರ್ಷಗಳ ಮಧ್ಯಮ ಮೌಲ್ಯ. ವ್ಯಾಪ್ತಿಯಲ್ಲಿ ಅತಿ ಹೆಚ್ಚು ಮತ್ತು ಅತಿ ಕಡಿಮೆ ವರ್ಷ ಸೇರಿಲ್ಲ.`,
+    yearsUsed: (first: number, last: number, count: number) => `ಸಾಮಾನ್ಯ ವರ್ಷ: ${first}–${last} ನಡುವಿನ ${count} ಪೂರ್ಣ ವರ್ಷಗಳ ಮಧ್ಯಾಂಕ ಮೌಲ್ಯ. ವ್ಯಾಪ್ತಿಯಲ್ಲಿ ಅತಿ ಹೆಚ್ಚು ಮತ್ತು ಅತಿ ಕಡಿಮೆ ವರ್ಷ ಸೇರಿಲ್ಲ.`,
     notEnough: "ಈ ಮಾರುಕಟ್ಟೆಗೆ ಇನ್ನೂ ಸಾಕಷ್ಟು ಪೂರ್ಣ ವರ್ಷಗಳ ವರದಿ ಇಲ್ಲ.",
-    loading: "ಆವಕದ ಮಾಹಿತಿ ತರಲಾಗುತ್ತಿದೆ", failed: "ಆವಕದ ಮಾಹಿತಿ ತರಲಾಗಲಿಲ್ಲ.", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+    loading: "ಆವಕದ ಮಾಹಿತಿ ಲೋಡ್ ಆಗುತ್ತಿದೆ", failed: "ಆವಕದ ಮಾಹಿತಿ ಲೋಡ್ ಆಗಲಿಲ್ಲ.", retry: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
     months: (from: number, to: number) => from === to ? MONTH_NAMES_KN[from - 1] : `${MONTH_NAMES_KN[from - 1]}–${MONTH_NAMES_KN[to - 1]}`,
   },
 });

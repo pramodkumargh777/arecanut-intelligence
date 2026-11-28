@@ -4,7 +4,7 @@ import { useLanguage } from "../services/language";
 
 function ChartLoading() {
   const { language } = useLanguage();
-  return <LoadingState label={language === "kn" ? "ಚಾರ್ಟ್ ತರಲಾಗುತ್ತಿದೆ" : "Loading chart"} />;
+  return <LoadingState label={language === "kn" ? "ಚಾರ್ಟ್ ಲೋಡ್ ಆಗುತ್ತಿದೆ" : "Loading chart"} />;
 }
 
 // echarts is large; charts load on demand like PriceChart so table-only views stay light.
